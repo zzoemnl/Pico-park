@@ -33,3 +33,4 @@ niveles.py
 ● Distribución de tareas entre integrantes:
 male: documentacion, textual, teorico, ideas, niveles, etc
 zoe: visual, codigo, sprites
+.
