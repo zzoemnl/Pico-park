@@ -154,8 +154,8 @@ def main():
     pygame.display.set_caption("Juego con 2 Personajes - Subir Encima")
     reloj = pygame.time.Clock()
 
-    jugador1 = crear_personaje(100, 300, "Verde oscuro")
-    jugador2 = crear_personaje(300, 300, "Azul")
+    jugador1 = crear_personaje(100, 300, "Celeste")
+    jugador2 = crear_personaje(300, 300, "Violeta")
 
     suelo = pygame.Rect(0, 520, ANCHO, 80)
 
