@@ -17,9 +17,6 @@ ALTO_PERSONAJE = 85
 # Dimensión de la Hitbox (física centrada)
 ANCHO_HITBOX = 45
 ALTO_HITBOX = ALTO_PERSONAJE
-
-# Tamaño de la caja
-TAMANO_CAJA = 60
 COLOR_JUGADOR1 = "Celeste"
 COLOR_JUGADOR2 = "Violeta"
 # Rutas
@@ -43,7 +40,7 @@ def cargar_sprites(nombre_color):
         "caminar-3",
         "caminar-4",
         "caminar-5",
-        "caminar-6",        
+        "caminar-6",
         "caminar-7",
         "caminar-8",
         "saltar",
@@ -104,32 +101,7 @@ def crear_personaje(x, y, color_carpeta):
     }
 
 
-def crear_caja(x, y):
-    ruta_caja = os.path.join(DIRECTORIO_ACTUAL, "caja.png")
-    sprite_caja = None
-
-    if os.path.isfile(ruta_caja):
-        try:
-            img = pygame.image.load(ruta_caja).convert_alpha()
-            sprite_caja = pygame.transform.scale(img, (TAMANO_CAJA, TAMANO_CAJA))
-        except pygame.error:
-            pass
-
-    if sprite_caja is None:
-        sprite_caja = pygame.Surface((TAMANO_CAJA, TAMANO_CAJA))
-        sprite_caja.fill((139, 69, 19))
-
-    return {
-        "x_inicial": x,
-        "y_inicial": y,
-        "rect": pygame.Rect(x, y, TAMANO_CAJA, TAMANO_CAJA),
-        "vel_y": 0,
-        "en_suelo": False,
-        "sprite": sprite_caja,
-    }
-
-
-def reiniciar_juego(p1, p2, caja):
+def reiniciar_juego(p1, p2):
     for p in (p1, p2):
         p["hitbox"].x = p["x_inicial"]
         p["hitbox"].y = p["y_inicial"]
@@ -140,10 +112,6 @@ def reiniciar_juego(p1, p2, caja):
         p["direccion_empuje"] = 0
         p["tiempo_quieto"] = 0
         p["mostrando_pestañeo"] = False
-
-    caja["rect"].x = caja["x_inicial"]
-    caja["rect"].y = caja["y_inicial"]
-    caja["vel_y"] = 0
 
 
 # ============================================================
@@ -199,24 +167,12 @@ def obtener_estado(p):
         return "pestañear"
     return "quieto"
 
+
 # ============================================================
 # FÍSICA Y COLISIONES
 # ============================================================
 
-def actualizar_caja(caja, suelo, pantalla_rect):
-    caja["vel_y"] += GRAVEDAD
-    caja["rect"].y += int(caja["vel_y"])
-
-    if caja["rect"].colliderect(suelo):
-        if caja["vel_y"] >= 0:
-            caja["rect"].bottom = suelo.top
-            caja["vel_y"] = 0
-            caja["en_suelo"] = True
-
-    caja["rect"].clamp_ip(pantalla_rect)
-
-
-def resolver_colisiones(p1, p2, caja, suelo, pantalla_rect):
+def resolver_colisiones(p1, p2, suelo, pantalla_rect):
     hb1 = p1["hitbox"]
     hb2 = p2["hitbox"]
 
@@ -238,20 +194,6 @@ def resolver_colisiones(p1, p2, caja, suelo, pantalla_rect):
     # Reiniciar estado de empuje por defecto
     p1["empujando"] = False
     p1["direccion_empuje"] = 0
-
-    # Colisión Horizontal con Caja
-    if hb1.colliderect(caja["rect"]):
-        if hb1.bottom > caja["rect"].top + 10:
-            if p1["vel_x"] > 0:
-                caja["rect"].x += p1["vel_x"]
-                hb1.right = caja["rect"].left
-                p1["empujando"] = True
-                p1["direccion_empuje"] = 1
-            elif p1["vel_x"] < 0:
-                caja["rect"].x += p1["vel_x"]
-                hb1.left = caja["rect"].right
-                p1["empujando"] = True
-                p1["direccion_empuje"] = -1
 
     # Colisión Horizontal entre Jugadores
     if not p2_encima and hb1.colliderect(hb2):
@@ -277,19 +219,13 @@ def resolver_colisiones(p1, p2, caja, suelo, pantalla_rect):
     if p2_encima:
         hb2.y += (hb1.y - y_anterior)
 
-    # Colisión Vertical con Caja
-    if hb1.colliderect(caja["rect"]):
-        if p1["vel_y"] >= 0 and hb1.bottom - p1["vel_y"] <= caja["rect"].top + 12:
-            hb1.bottom = caja["rect"].top
-            p1["vel_y"] = 0
-            p1["en_suelo"] = True
-        elif p1["vel_y"] < 0 and hb1.top < caja["rect"].bottom:
-            hb1.top = caja["rect"].bottom
-            p1["vel_y"] = 0
-
     # Colisión Vertical entre Personajes
     if not p2_encima and hb1.colliderect(hb2):
-        superposicion = (hb1.right > hb2.left + 10 and hb1.left < hb2.right - 10)
+        superposicion = (
+            hb1.right > hb2.left + 10
+            and hb1.left < hb2.right - 10
+        )
+
         if p1["vel_y"] >= 0 and hb1.top < hb2.top and superposicion:
             hb1.bottom = hb2.top
             p1["vel_y"] = 0
@@ -351,7 +287,6 @@ def main():
 
     jugador1 = crear_personaje(100, 0, COLOR_JUGADOR1)
     jugador2 = crear_personaje(300, 0, COLOR_JUGADOR2)
-    caja = crear_caja(450, 0)
     suelo = pygame.Rect(0, 520, ANCHO, 80)
 
     ejecutando = True
@@ -362,38 +297,45 @@ def main():
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 ejecutando = False
+
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 if btn_reiniciar.collidepoint(evento.pos):
-                    reiniciar_juego(jugador1, jugador2, caja)
+                    reiniciar_juego(jugador1, jugador2)
+
             if evento.type == pygame.KEYDOWN and evento.key == pygame.K_r:
-                reiniciar_juego(jugador1, jugador2, caja)
+                reiniciar_juego(jugador1, jugador2)
 
         teclas = pygame.key.get_pressed()
 
         # Controles Jugador 1
         jugador1["vel_x"] = 0
+
         if teclas[pygame.K_LEFT]:
             jugador1["vel_x"] = -jugador1["velocidad_mov"]
+
         if teclas[pygame.K_RIGHT]:
             jugador1["vel_x"] = jugador1["velocidad_mov"]
+
         if teclas[pygame.K_UP] and jugador1["en_suelo"]:
             jugador1["vel_y"] = jugador1["fuerza_salto"]
             jugador1["en_suelo"] = False
 
         # Controles Jugador 2
         jugador2["vel_x"] = 0
+
         if teclas[pygame.K_a]:
             jugador2["vel_x"] = -jugador2["velocidad_mov"]
+
         if teclas[pygame.K_d]:
             jugador2["vel_x"] = jugador2["velocidad_mov"]
+
         if teclas[pygame.K_w] and jugador2["en_suelo"]:
             jugador2["vel_y"] = jugador2["fuerza_salto"]
             jugador2["en_suelo"] = False
 
         # Actualizar Física
-        actualizar_caja(caja, suelo, pantalla_rect)
-        resolver_colisiones(jugador1, jugador2, caja, suelo, pantalla_rect)
-        resolver_colisiones(jugador2, jugador1, caja, suelo, pantalla_rect)
+        resolver_colisiones(jugador1, jugador2, suelo, pantalla_rect)
+        resolver_colisiones(jugador2, jugador1, suelo, pantalla_rect)
 
         jugador1["hitbox"].clamp_ip(pantalla_rect)
         jugador2["hitbox"].clamp_ip(pantalla_rect)
@@ -401,8 +343,6 @@ def main():
         # Dibujado
         pantalla.fill((30, 30, 30))
         pygame.draw.rect(pantalla, (100, 100, 100), suelo)
-
-        pantalla.blit(caja["sprite"], caja["rect"])
 
         dibujar_personaje(pantalla, jugador1)
         dibujar_personaje(pantalla, jugador2)
