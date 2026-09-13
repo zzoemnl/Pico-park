@@ -58,5 +58,10 @@ pyinstaller --noconfirm --clean --windowed --name PicoPark_sin_caja `
   --add-data "Fuentes;Fuentes" `
   basico_sin_caja.py
 
+pyinstaller --noconfirm --clean --windowed --name PicoPark_muerte `
+  --add-data "Personajes;Personajes" `
+  --add-data "Fuentes;Fuentes" `
+  muerte.py
+
 Los ejecutables estan en:
 dist\PicoPark\
