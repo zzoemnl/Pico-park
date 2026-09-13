@@ -33,3 +33,30 @@ niveles.py
 ● Distribución de tareas entre integrantes:
 male: documentacion, textual, teorico, ideas, niveles, etc
 zoe: visual, codigo, sprites
+
+
+Generar el ejecutable
+
+Crear el entorno virtual:
+python -m venv .venv
+
+Activarlo:
+.\.venv\Scripts\Activate.ps1
+
+Instalar dependencias:
+python -m pip install -r requirements.txt
+python -m pip install pyinstaller
+
+Empaquetar:
+pyinstaller --noconfirm --clean --windowed --name PicoPark_empujar `
+  --add-data "Personajes;Personajes" `
+  --add-data "Fuentes;Fuentes" `
+  empujar.py
+
+pyinstaller --noconfirm --clean --windowed --name PicoPark_sin_caja `
+  --add-data "Personajes;Personajes" `
+  --add-data "Fuentes;Fuentes" `
+  basico_sin_caja.py
+
+Los ejecutables estan en:
+dist\PicoPark\
