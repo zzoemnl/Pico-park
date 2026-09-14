@@ -357,7 +357,7 @@ def pantalla_muerte(pantalla, reloj):
             print("Botón cargado:",ruta)
             return imagen
         
-        except pygame.error as error:
+        except (FileNotFoundError, pygame.error) as error:
             print("ERROR AL CARGAR:",ruta)
             print(error)
             return None
