@@ -20,7 +20,8 @@ ALTO_HITBOX = ALTO_PERSONAJE
 
 # Tamaño de la caja
 TAMANO_CAJA = 60
-
+COLOR_JUGADOR1 = "Celeste"
+COLOR_JUGADOR2 = "Violeta"
 # Rutas
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 RUTA_BASE = os.path.join(DIRECTORIO_ACTUAL, "Personajes")
@@ -40,10 +41,20 @@ def cargar_sprites(nombre_color):
         "caminar-1",
         "caminar-2",
         "caminar-3",
+        "caminar-4",
+        "caminar-5",
+        "caminar-6",        
+        "caminar-7",
+        "caminar-8",
         "saltar",
         "caminar-empujar-1",
         "caminar-empujar-2",
         "caminar-empujar-3",
+        "caminar-empujar-4",
+        "caminar-empujar-5",
+        "caminar-empujar-6",
+        "caminar-empujar-7",
+        "caminar-empujar-8",
         "saltar-empujar",
         "pestañear",
     ]
@@ -162,26 +173,31 @@ def actualizar_temporizadores(p):
 
 
 def obtener_estado(p):
+
     if not p["en_suelo"]:
+        if p["empujando"]:
+            return "saltar-empujar"
         return "saltar"
 
     if p["empujando"]:
         p["contador_anim"] += 1
         if p["contador_anim"] % 8 == 0:
-            p["frame_animacion"] = (p["frame_animacion"] % 3) + 1
+            p["frame_animacion"] += 1
+            if p["frame_animacion"] > 8:
+                p["frame_animacion"] = 1
         return f"caminar-empujar-{p['frame_animacion']}"
 
     if p["vel_x"] != 0:
         p["contador_anim"] += 1
         if p["contador_anim"] % 8 == 0:
-            p["frame_animacion"] = (p["frame_animacion"] % 3) + 1
+            p["frame_animacion"] += 1
+            if p["frame_animacion"] > 8:
+                p["frame_animacion"] = 1
         return f"caminar-{p['frame_animacion']}"
 
     if p["mostrando_pestañeo"]:
         return "pestañear"
-
     return "quieto"
-
 
 # ============================================================
 # FÍSICA Y COLISIONES
@@ -333,8 +349,8 @@ def main():
 
     btn_reiniciar = pygame.Rect(ANCHO - 130, 15, 115, 32)
 
-    jugador1 = crear_personaje(100, 0, "Verde oscuro")
-    jugador2 = crear_personaje(300, 0, "Azul")
+    jugador1 = crear_personaje(100, 0, COLOR_JUGADOR1)
+    jugador2 = crear_personaje(300, 0, COLOR_JUGADOR2)
     caja = crear_caja(450, 0)
     suelo = pygame.Rect(0, 520, ANCHO, 80)
 
