@@ -363,68 +363,40 @@ def pantalla_muerte(pantalla, reloj):
             return None
 
     boton_salir_normal = cargar_boton("boton-salir.png")
-
     boton_salir_apretado = cargar_boton("boton-salir-apretado.png")
-
     boton_reiniciar_normal = cargar_boton("boton-reiniciar.png")
-
     boton_reiniciar_apretado = cargar_boton("boton-reiniciar-apretado.png")
 
     # ========================================================
     # COMPROBAR IMÁGENES
     # ========================================================
 
-    if (
-        boton_salir_normal is None
+    if (boton_salir_normal is None
         or boton_salir_apretado is None
         or boton_reiniciar_normal is None
-        or boton_reiniciar_apretado is None
-    ):
+        or boton_reiniciar_apretado is None):
 
         print(
             "ERROR: No se pudieron cargar "
-            "los sprites de los botones."
-        )
-
+            "los sprites de los botones.")
         pygame.quit()
-
         sys.exit()
 
     # ========================================================
     # ESCALAR BOTONES
     # ========================================================
 
-    boton_reiniciar_normal = pygame.transform.scale(
-        boton_reiniciar_normal,
-        (260, 80)
-    )
-
-    boton_reiniciar_apretado = pygame.transform.scale(
-        boton_reiniciar_apretado,
-        (260, 80)
-    )
-
-    boton_salir_normal = pygame.transform.scale(
-        boton_salir_normal,
-        (260, 80)
-    )
-
-    boton_salir_apretado = pygame.transform.scale(
-        boton_salir_apretado,
-        (260, 80)
-    )
+    boton_reiniciar_normal = pygame.transform.scale(boton_reiniciar_normal,(260, 80))
+    boton_reiniciar_apretado = pygame.transform.scale(boton_reiniciar_apretado,(260, 80))
+    boton_salir_normal = pygame.transform.scale(boton_salir_normal,(260, 80))
+    boton_salir_apretado = pygame.transform.scale(boton_salir_apretado,(260, 80))
 
     # ========================================================
     # POSICIONES
     # ========================================================
 
-    boton_reiniciar = boton_reiniciar_normal.get_rect(
-        center=(ANCHO // 2 - 150, 400)
-    )
-
-    boton_salir = boton_salir_normal.get_rect(
-        center=(ANCHO // 2 + 150, 400)
-    )
+    boton_reiniciar = boton_reiniciar_normal.get_rect(center=(ANCHO // 2 - 150, 400))
+    boton_salir = boton_salir_normal.get_rect(center=(ANCHO // 2 + 150, 400))
 
     # ========================================================
     # BUCLE DE LA PANTALLA
@@ -433,99 +405,33 @@ def pantalla_muerte(pantalla, reloj):
     while True:
 
         for evento in pygame.event.get():
-
             if evento.type == pygame.QUIT:
-
                 pygame.quit()
-
                 sys.exit()
 
             if evento.type == pygame.MOUSEBUTTONDOWN:
-
                 # ====================================================
                 # BOTÓN REINICIAR
                 # ====================================================
 
-                if boton_reiniciar.collidepoint(
-                    evento.pos
-                ):
+                if boton_reiniciar.collidepoint(evento.pos):
 
-                    pantalla.fill(
-                        (25, 25, 25)
-                    )
-
-                    titulo = fuente_titulo.render(
-                        "¡Te moriste!",
-                        True,
-                        (255, 80, 80)
-                    )
-
-                    texto = fuente_texto.render(
-                        "¿Querés reiniciar o salir?",
-                        True,
-                        (255, 255, 255)
-                    )
-
-                    pantalla.blit(
-                        titulo,
-                        titulo.get_rect(
-                            center=(ANCHO // 2, 180)
-                        )
-                    )
-
-                    pantalla.blit(
-                        texto,
-                        texto.get_rect(
-                            center=(ANCHO // 2, 250)
-                        )
-                    )
-
-                    pantalla.blit(
-                        boton_reiniciar_apretado,
-                        boton_reiniciar
-                    )
-
-                    pantalla.blit(
-                        boton_salir_normal,
-                        boton_salir
-                    )
+                    titulo = fuente_titulo.render("¡Te moriste!",True,(255, 80, 80))
+                    texto = fuente_texto.render("¿Querés reiniciar o salir?",True,(255, 255, 255))
+                    pantalla.blit(titulo,titulo.get_rect(center=(ANCHO // 2, 180)))
+                    pantalla.blit(texto,texto.get_rect(center=(ANCHO // 2, 250)))
+                    pantalla.blit(boton_reiniciar_apretado,boton_reiniciar)
+                    pantalla.blit(boton_salir_normal,boton_salir)
 
                     pygame.display.flip()
-
                     pygame.time.delay(200)
-
-                    pantalla.fill(
-                        (25, 25, 25)
-                    )
-
-                    pantalla.blit(
-                        titulo,
-                        titulo.get_rect(
-                            center=(ANCHO // 2, 180)
-                        )
-                    )
-
-                    pantalla.blit(
-                        texto,
-                        texto.get_rect(
-                            center=(ANCHO // 2, 250)
-                        )
-                    )
-
-                    pantalla.blit(
-                        boton_reiniciar_normal,
-                        boton_reiniciar
-                    )
-
-                    pantalla.blit(
-                        boton_salir_normal,
-                        boton_salir
-                    )
-
+                    
+                    pantalla.blit(titulo,titulo.get_rect(center=(ANCHO // 2, 180)))
+                    pantalla.blit(texto,texto.get_rect(center=(ANCHO // 2, 250)))
+                    pantalla.blit(boton_reiniciar_normal,boton_reiniciar)
+                    pantalla.blit(boton_salir_normal,boton_salir)
                     pygame.display.flip()
-
                     pygame.time.delay(100)
-
                     return "reiniciar"
 
                 # ====================================================
@@ -537,8 +443,7 @@ def pantalla_muerte(pantalla, reloj):
                 ):
 
                     pantalla.fill(
-                        (25, 25, 25)
-                    )
+                        (25, 25, 25))
 
                     titulo = fuente_titulo.render(
                         "¡Te moriste!",
@@ -547,42 +452,17 @@ def pantalla_muerte(pantalla, reloj):
                     )
 
                     texto = fuente_texto.render(
-                        "¿Querés reiniciar o salir?",
-                        True,
-                        (255, 255, 255)
-                    )
+                        "¿Querés reiniciar o salir?",True,(255, 255, 255))
 
-                    pantalla.blit(
-                        titulo,
-                        titulo.get_rect(
-                            center=(ANCHO // 2, 180)
-                        )
-                    )
-
-                    pantalla.blit(
-                        texto,
-                        texto.get_rect(
-                            center=(ANCHO // 2, 250)
-                        )
-                    )
-
-                    pantalla.blit(
-                        boton_reiniciar_normal,
-                        boton_reiniciar
-                    )
-
-                    pantalla.blit(
-                        boton_salir_apretado,
-                        boton_salir
-                    )
+                    pantalla.blit(titulo,titulo.get_rect(center=(ANCHO // 2, 180)))
+                    pantalla.blit(texto,texto.get_rect(center=(ANCHO // 2, 250)))
+                    pantalla.blit(boton_reiniciar_normal,boton_reiniciar)
+                    pantalla.blit(boton_salir_apretado,boton_salir)
 
                     pygame.display.flip()
-
                     pygame.time.delay(200)
 
-                    pantalla.fill(
-                        (25, 25, 25)
-                    )
+                    pantalla.fill((25, 25, 25))
 
                     pantalla.blit(
                         titulo,
@@ -849,30 +729,11 @@ def main():
         # RENDERIZADO
         # ====================================================
 
-        pantalla.fill(
-            (30, 30, 30)
-        )
-
-        pygame.draw.rect(
-            pantalla,
-            (100, 100, 100),
-            suelo
-        )
-
-        dibujar_pinchos(
-            pantalla,
-            pinchos
-        )
-
-        dibujar_personaje(
-            pantalla,
-            jugador1
-        )
-
-        dibujar_personaje(
-            pantalla,
-            jugador2
-        )
+        pantalla.fill((30, 30, 30))
+        pygame.draw.rect(pantalla,(100, 100, 100),suelo)
+        dibujar_pinchos(pantalla,pinchos)
+        dibujar_personaje(pantalla,jugador1)
+        dibujar_personaje(pantalla,jugador2)
 
         pygame.display.flip()
 
