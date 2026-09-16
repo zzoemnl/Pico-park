@@ -24,7 +24,7 @@ COLOR_JUGADOR1 = "Celeste"
 COLOR_JUGADOR2 = "Violeta"
 # Rutas
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
-RUTA_BASE = os.path.join(DIRECTORIO_ACTUAL, "Personajes")
+RUTA_BASE = os.path.join(DIRECTORIO_ACTUAL, "Sprites", "Personajes")
 
 
 # ============================================================
@@ -342,7 +342,7 @@ def main():
     pygame.init()
     pantalla = pygame.display.set_mode((ANCHO, ALTO))
     pantalla_rect = pantalla.get_rect()
-    pygame.display.set_caption("Juego con 2 Personajes - Hitbox Centrada")
+    pygame.display.set_caption("CAJA - 2 personajes")
 
     reloj = pygame.time.Clock()
     fuente = pygame.font.SysFont("Arial", 14, bold=True)
