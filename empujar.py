@@ -408,7 +408,7 @@ def main():
         dibujar_personaje(pantalla, jugador2)
 
         dibujar_boton_reiniciar(pantalla, fuente, btn_reiniciar)
-
+                                                                     
         pygame.display.flip()
 
     pygame.quit()
