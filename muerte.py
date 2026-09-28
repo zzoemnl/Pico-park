@@ -20,8 +20,8 @@ COLOR_JUGADOR2 = "Violeta"
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 
 # Carpeta donde están los sprites de los botones
-RUTA_BOTONES = os.path.join(DIRECTORIO_ACTUAL,"botones")
-RUTA_BASE = os.path.join(DIRECTORIO_ACTUAL,"Personajes")
+RUTA_BOTONES = os.path.join(DIRECTORIO_ACTUAL, "Sprites", "Botones")
+RUTA_BASE = os.path.join(DIRECTORIO_ACTUAL, "Sprites", "Personajes")
 
 
 def cargar_sprites(nombre_color):

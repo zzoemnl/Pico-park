@@ -21,7 +21,7 @@ COLOR_JUGADOR1 = "Celeste"
 COLOR_JUGADOR2 = "Violeta"
 # Rutas
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
-RUTA_BASE = os.path.join(DIRECTORIO_ACTUAL, "Personajes")
+RUTA_BASE = os.path.join(DIRECTORIO_ACTUAL, "Sprites", "Personajes")
 
 
 # ============================================================

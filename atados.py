@@ -17,14 +17,29 @@ ALTO_PERSONAJE = 85
 # Dimensión de la Hitbox (física centrada)
 ANCHO_HITBOX = 45
 ALTO_HITBOX = ALTO_PERSONAJE
-
-# Tamaño de la caja
-TAMANO_CAJA = 60
 COLOR_JUGADOR1 = "Celeste"
 COLOR_JUGADOR2 = "Violeta"
+
+# ============================================================
+# CONFIGURACIÓN DE LA SOGA
+# ============================================================
+
+DISTANCIA_SOGA = 200
+COLOR_SOGA = (200, 160, 100)
+
+
 # Rutas
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 RUTA_BASE = os.path.join(DIRECTORIO_ACTUAL, "Sprites", "Personajes")
+
+# ============================================================
+# CONFIGURACIÓN DEL FONDO
+# ============================================================
+
+# Poné acá el nombre de tu imagen de fondo.
+# Ejemplo: "fondo.png"
+NOMBRE_FONDO = "fondo.png"
+RUTA_FONDO = os.path.join(DIRECTORIO_ACTUAL, NOMBRE_FONDO)
 
 
 # ============================================================
@@ -43,7 +58,7 @@ def cargar_sprites(nombre_color):
         "caminar-3",
         "caminar-4",
         "caminar-5",
-        "caminar-6",        
+        "caminar-6",
         "caminar-7",
         "caminar-8",
         "saltar",
@@ -101,35 +116,11 @@ def crear_personaje(x, y, color_carpeta):
         "direccion_empuje": 0,
         "tiempo_quieto": 0,
         "mostrando_pestañeo": False,
+        "moviendo": False,
     }
 
 
-def crear_caja(x, y):
-    ruta_caja = os.path.join(DIRECTORIO_ACTUAL, "caja.png")
-    sprite_caja = None
-
-    if os.path.isfile(ruta_caja):
-        try:
-            img = pygame.image.load(ruta_caja).convert_alpha()
-            sprite_caja = pygame.transform.scale(img, (TAMANO_CAJA, TAMANO_CAJA))
-        except pygame.error:
-            pass
-
-    if sprite_caja is None:
-        sprite_caja = pygame.Surface((TAMANO_CAJA, TAMANO_CAJA))
-        sprite_caja.fill((139, 69, 19))
-
-    return {
-        "x_inicial": x,
-        "y_inicial": y,
-        "rect": pygame.Rect(x, y, TAMANO_CAJA, TAMANO_CAJA),
-        "vel_y": 0,
-        "en_suelo": False,
-        "sprite": sprite_caja,
-    }
-
-
-def reiniciar_juego(p1, p2, caja):
+def reiniciar_juego(p1, p2):
     for p in (p1, p2):
         p["hitbox"].x = p["x_inicial"]
         p["hitbox"].y = p["y_inicial"]
@@ -140,10 +131,6 @@ def reiniciar_juego(p1, p2, caja):
         p["direccion_empuje"] = 0
         p["tiempo_quieto"] = 0
         p["mostrando_pestañeo"] = False
-
-    caja["rect"].x = caja["x_inicial"]
-    caja["rect"].y = caja["y_inicial"]
-    caja["vel_y"] = 0
 
 
 # ============================================================
@@ -187,7 +174,7 @@ def obtener_estado(p):
                 p["frame_animacion"] = 1
         return f"caminar-empujar-{p['frame_animacion']}"
 
-    if p["vel_x"] != 0:
+    if p["vel_x"] != 0 or p["moviendo"]:
         p["contador_anim"] += 1
         if p["contador_anim"] % 8 == 0:
             p["frame_animacion"] += 1
@@ -197,26 +184,15 @@ def obtener_estado(p):
 
     if p["mostrando_pestañeo"]:
         return "pestañear"
+
     return "quieto"
+
 
 # ============================================================
 # FÍSICA Y COLISIONES
 # ============================================================
 
-def actualizar_caja(caja, suelo, pantalla_rect):
-    caja["vel_y"] += GRAVEDAD
-    caja["rect"].y += int(caja["vel_y"])
-
-    if caja["rect"].colliderect(suelo):
-        if caja["vel_y"] >= 0:
-            caja["rect"].bottom = suelo.top
-            caja["vel_y"] = 0
-            caja["en_suelo"] = True
-
-    caja["rect"].clamp_ip(pantalla_rect)
-
-
-def resolver_colisiones(p1, p2, caja, suelo, pantalla_rect):
+def resolver_colisiones(p1, p2, suelo, pantalla_rect):
     hb1 = p1["hitbox"]
     hb2 = p2["hitbox"]
 
@@ -239,23 +215,10 @@ def resolver_colisiones(p1, p2, caja, suelo, pantalla_rect):
     p1["empujando"] = False
     p1["direccion_empuje"] = 0
 
-    # Colisión Horizontal con Caja
-    if hb1.colliderect(caja["rect"]):
-        if hb1.bottom > caja["rect"].top + 10:
-            if p1["vel_x"] > 0:
-                caja["rect"].x += p1["vel_x"]
-                hb1.right = caja["rect"].left
-                p1["empujando"] = True
-                p1["direccion_empuje"] = 1
-            elif p1["vel_x"] < 0:
-                caja["rect"].x += p1["vel_x"]
-                hb1.left = caja["rect"].right
-                p1["empujando"] = True
-                p1["direccion_empuje"] = -1
-
     # Colisión Horizontal entre Jugadores
     if not p2_encima and hb1.colliderect(hb2):
         margen_cabeza = 12
+
         if hb1.bottom <= hb2.top + margen_cabeza:
             hb1.bottom = hb2.top
             p1["vel_y"] = 0
@@ -265,6 +228,7 @@ def resolver_colisiones(p1, p2, caja, suelo, pantalla_rect):
                 hb1.right = hb2.left
                 p1["empujando"] = True
                 p1["direccion_empuje"] = 1
+
             elif p1["vel_x"] < 0:
                 hb1.left = hb2.right
                 p1["empujando"] = True
@@ -277,23 +241,18 @@ def resolver_colisiones(p1, p2, caja, suelo, pantalla_rect):
     if p2_encima:
         hb2.y += (hb1.y - y_anterior)
 
-    # Colisión Vertical con Caja
-    if hb1.colliderect(caja["rect"]):
-        if p1["vel_y"] >= 0 and hb1.bottom - p1["vel_y"] <= caja["rect"].top + 12:
-            hb1.bottom = caja["rect"].top
-            p1["vel_y"] = 0
-            p1["en_suelo"] = True
-        elif p1["vel_y"] < 0 and hb1.top < caja["rect"].bottom:
-            hb1.top = caja["rect"].bottom
-            p1["vel_y"] = 0
-
     # Colisión Vertical entre Personajes
     if not p2_encima and hb1.colliderect(hb2):
-        superposicion = (hb1.right > hb2.left + 10 and hb1.left < hb2.right - 10)
+        superposicion = (
+            hb1.right > hb2.left + 10
+            and hb1.left < hb2.right - 10
+        )
+
         if p1["vel_y"] >= 0 and hb1.top < hb2.top and superposicion:
             hb1.bottom = hb2.top
             p1["vel_y"] = 0
             p1["en_suelo"] = True
+
         elif p1["vel_y"] < 0 and hb1.bottom > hb2.bottom:
             hb1.top = hb2.bottom
             p1["vel_y"] = 0
@@ -307,31 +266,132 @@ def resolver_colisiones(p1, p2, caja, suelo, pantalla_rect):
 
 
 # ============================================================
+# SOGA
+# ============================================================
+
+def aplicar_restriccion_soga(p1, p2, distancia_maxima):
+    """
+    La soga solamente impide que los personajes se alejen entre sí
+    cuando ya llegaron a la distancia máxima.
+
+    IMPORTANTE:
+    - No mueve ninguna hitbox.
+    - No modifica la velocidad del otro personaje.
+    - No toca resolver_colisiones.
+    - Si uno intenta alejarse y el otro está quieto, el que intenta
+      moverse queda quieto en su lugar, pero sigue mostrando la
+      animación de caminar.
+    - Si los dos intentan alejarse en sentidos contrarios, ambos
+      quedan quietos en su lugar y siguen mostrando la animación.
+    """
+
+    centro1 = p1["hitbox"].center
+    centro2 = p2["hitbox"].center
+
+    dx = centro2[0] - centro1[0]
+    dy = centro2[1] - centro1[1]
+
+    distancia = (dx ** 2 + dy ** 2) ** 0.5
+
+    # Mientras no hayan llegado a los 200 px, la soga está floja.
+    if distancia < distancia_maxima or distancia == 0:
+        return
+
+    # Dirección desde el jugador 1 hacia el jugador 2.
+    direccion_x = dx / distancia
+
+    # Jugador 1 se aleja de jugador 2 si se mueve en la dirección
+    # contraria al vector que va de 1 hacia 2.
+    movimiento_aleja_p1 = p1["vel_x"] * (-direccion_x)
+
+    # Jugador 2 se aleja de jugador 1 si se mueve en la misma
+    # dirección que el vector que va de 1 hacia 2.
+    movimiento_aleja_p2 = p2["vel_x"] * direccion_x
+
+    if movimiento_aleja_p1 > 0:
+        p1["vel_x"] = 0
+
+    if movimiento_aleja_p2 > 0:
+        p2["vel_x"] = 0
+
+
+def dibujar_soga(pantalla, p1, p2):
+
+    centro1 = p1["hitbox"].center
+    centro2 = p2["hitbox"].center
+
+    pygame.draw.line(
+        pantalla,
+        COLOR_SOGA,
+        centro1,
+        centro2,
+        4
+    )
+
+
+# ============================================================
 # RENDERIZADO
 # ============================================================
 
 def dibujar_personaje(pantalla, p):
     actualizar_temporizadores(p)
+
     estado = obtener_estado(p)
-    sprite = p["sprites"].get(estado, p["sprites"]["quieto"])
+
+    sprite = p["sprites"].get(
+        estado,
+        p["sprites"]["quieto"]
+    )
 
     if p["vel_x"] > 0:
         p["mirando_derecha"] = True
+
     elif p["vel_x"] < 0:
         p["mirando_derecha"] = False
 
     if not p["mirando_derecha"]:
-        sprite = pygame.transform.flip(sprite, True, False)
+        sprite = pygame.transform.flip(
+            sprite,
+            True,
+            False
+        )
 
-    rect_sprite = sprite.get_rect(center=p["hitbox"].center)
-    pantalla.blit(sprite, rect_sprite)
+    rect_sprite = sprite.get_rect(
+        center=p["hitbox"].center
+    )
+
+    pantalla.blit(
+        sprite,
+        rect_sprite
+    )
 
 
 def dibujar_boton_reiniciar(pantalla, fuente, btn_rect):
-    pygame.draw.rect(pantalla, (180, 40, 40), btn_rect, border_radius=6)
-    pygame.draw.rect(pantalla, (255, 255, 255), btn_rect, 2, border_radius=6)
-    texto = fuente.render("Reiniciar (R)", True, (255, 255, 255))
-    pantalla.blit(texto, texto.get_rect(center=btn_rect.center))
+    pygame.draw.rect(
+        pantalla,
+        (180, 40, 40),
+        btn_rect,
+        border_radius=6
+    )
+
+    pygame.draw.rect(
+        pantalla,
+        (255, 255, 255),
+        btn_rect,
+        2,
+        border_radius=6
+    )
+
+    texto = fuente.render(
+        "Reiniciar (R)",
+        True,
+        (255, 255, 255)
+    )
+
+    pantalla.blit(
+        texto,
+        texto.get_rect(center=btn_rect.center)
+    )
 
 
 # ============================================================
@@ -339,81 +399,178 @@ def dibujar_boton_reiniciar(pantalla, fuente, btn_rect):
 # ============================================================
 
 def main():
+
     pygame.init()
-    pantalla = pygame.display.set_mode((ANCHO, ALTO))
+
+    pantalla = pygame.display.set_mode(
+        (ANCHO, ALTO)
+    )
+
     pantalla_rect = pantalla.get_rect()
-    pygame.display.set_caption("CAJA - 2 personajes")
+
+    # ========================================================
+    # CARGAR FONDO
+    # ========================================================
+
+    fondo = None
+
+    if os.path.isfile(RUTA_FONDO):
+        try:
+            fondo = pygame.image.load(RUTA_FONDO).convert()
+            fondo = pygame.transform.scale(fondo, (ANCHO, ALTO))
+        except pygame.error:
+            fondo = None
+
+    pygame.display.set_caption(
+        "Juego con 2 Personajes - Hitbox Centrada"
+    )
 
     reloj = pygame.time.Clock()
-    fuente = pygame.font.SysFont("Arial", 14, bold=True)
 
-    btn_reiniciar = pygame.Rect(ANCHO - 130, 15, 115, 32)
+    fuente = pygame.font.SysFont(
+        "Arial",
+        14,
+        bold=True
+    )
 
-    jugador1 = crear_personaje(100, 0, COLOR_JUGADOR1)
-    jugador2 = crear_personaje(300, 0, COLOR_JUGADOR2)
-    caja = crear_caja(450, 0)
-    suelo = pygame.Rect(0, 520, ANCHO, 80)
+    btn_reiniciar = pygame.Rect(
+        ANCHO - 130,
+        15,
+        115,
+        32
+    )
+
+    jugador1 = crear_personaje(
+        100,
+        0,
+        COLOR_JUGADOR1
+    )
+
+    jugador2 = crear_personaje(
+        300,
+        0,
+        COLOR_JUGADOR2
+    )
+
+    suelo = pygame.Rect(
+        0,
+        520,
+        ANCHO,
+        80
+    )
 
     ejecutando = True
 
     while ejecutando:
+
         reloj.tick(FPS)
 
         for evento in pygame.event.get():
+
             if evento.type == pygame.QUIT:
                 ejecutando = False
-            if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+
+            if (
+                evento.type == pygame.MOUSEBUTTONDOWN
+                and evento.button == 1
+            ):
+
                 if btn_reiniciar.collidepoint(evento.pos):
-                    reiniciar_juego(jugador1, jugador2, caja)
-            if evento.type == pygame.KEYDOWN and evento.key == pygame.K_r:
-                reiniciar_juego(jugador1, jugador2, caja)
+                    reiniciar_juego(
+                        jugador1,
+                        jugador2
+                    )
+
+            if (
+                evento.type == pygame.KEYDOWN
+                and evento.key == pygame.K_r
+            ):
+
+                reiniciar_juego(
+                    jugador1,
+                    jugador2
+                )
 
         teclas = pygame.key.get_pressed()
 
-        # Controles Jugador 1
+        # ====================================================
+        # CONTROLES JUGADOR 1
+        # ====================================================
+
         jugador1["vel_x"] = 0
+        jugador1["moviendo"] = False
+
         if teclas[pygame.K_LEFT]:
             jugador1["vel_x"] = -jugador1["velocidad_mov"]
+            jugador1["moviendo"] = True
+
         if teclas[pygame.K_RIGHT]:
             jugador1["vel_x"] = jugador1["velocidad_mov"]
-        if teclas[pygame.K_UP] and jugador1["en_suelo"]:
+            jugador1["moviendo"] = True
+
+        if (teclas[pygame.K_UP] and jugador1["en_suelo"]):
+
             jugador1["vel_y"] = jugador1["fuerza_salto"]
             jugador1["en_suelo"] = False
 
-        # Controles Jugador 2
+        # ====================================================
+        # CONTROLES JUGADOR 2
+        # ====================================================
+
         jugador2["vel_x"] = 0
+        jugador2["moviendo"] = False
+
         if teclas[pygame.K_a]:
             jugador2["vel_x"] = -jugador2["velocidad_mov"]
+            jugador2["moviendo"] = True
+
         if teclas[pygame.K_d]:
             jugador2["vel_x"] = jugador2["velocidad_mov"]
-        if teclas[pygame.K_w] and jugador2["en_suelo"]:
+            jugador2["moviendo"] = True
+
+        if (teclas[pygame.K_w] and jugador2["en_suelo"]):
             jugador2["vel_y"] = jugador2["fuerza_salto"]
             jugador2["en_suelo"] = False
 
-        # Actualizar Física
-        actualizar_caja(caja, suelo, pantalla_rect)
-        resolver_colisiones(jugador1, jugador2, caja, suelo, pantalla_rect)
-        resolver_colisiones(jugador2, jugador1, caja, suelo, pantalla_rect)
+        # ====================================================
+        # RESTRICCIÓN DE LA SOGA
+        # ====================================================
+        aplicar_restriccion_soga(jugador1,jugador2,DISTANCIA_SOGA)
+        # ====================================================
+        # ACTUALIZAR FÍSICA
+        # ====================================================
+
+        resolver_colisiones(jugador1,jugador2,suelo,pantalla_rect)
+        resolver_colisiones(jugador2,jugador1,suelo,pantalla_rect)
 
         jugador1["hitbox"].clamp_ip(pantalla_rect)
         jugador2["hitbox"].clamp_ip(pantalla_rect)
 
-        # Dibujado
-        pantalla.fill((30, 30, 30))
-        pygame.draw.rect(pantalla, (100, 100, 100), suelo)
+        # ====================================================
+        # DIBUJADO
+        # ====================================================
 
-        pantalla.blit(caja["sprite"], caja["rect"])
+        # Si existe la imagen de fondo, se muestra.
+        # Si todavía no existe, el juego sigue usando el fondo gris.
+        if fondo is not None:
+            pantalla.blit(fondo, (0, 0))
+        else:
+            pantalla.fill((30, 30, 30))
 
-        dibujar_personaje(pantalla, jugador1)
-        dibujar_personaje(pantalla, jugador2)
+        # El suelo sigue siendo invisible por ahora.
+        # Más adelante podemos hacer que coincida con el piso
+        # que tenga tu imagen de fondo.
 
-        dibujar_boton_reiniciar(pantalla, fuente, btn_reiniciar)
-                                                                     
+        # La soga se dibuja detrás de los personajes
+        dibujar_soga(pantalla,jugador1,jugador2)
+        dibujar_personaje(pantalla,jugador1)
+        dibujar_personaje(pantalla,jugador2)
+        dibujar_boton_reiniciar(pantalla,fuente,btn_reiniciar)
+
         pygame.display.flip()
 
     pygame.quit()
     sys.exit()
-
 
 if __name__ == "__main__":
     main()
