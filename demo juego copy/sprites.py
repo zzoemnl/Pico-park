@@ -1,7 +1,7 @@
 import os
 import pygame
 
-ANCHO, ALTO = 800, 600
+ANCHO, ALTO = 1375, 700
 FPS = 60
 ANCHO_PERSONAJE = 70
 ALTO_PERSONAJE = 85

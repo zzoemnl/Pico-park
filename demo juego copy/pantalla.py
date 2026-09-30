@@ -39,7 +39,7 @@ COLOR_BOTON_SALIR = (150, 45, 45)
 ANCHO_MUNDO = 3000
 
 # Cuando los personajes se separan más que esto, la pantalla se divide en dos.
-DISTANCIA_SPLIT = 600
+DISTANCIA_SPLIT = 1375
 
 
 # ============================================================
