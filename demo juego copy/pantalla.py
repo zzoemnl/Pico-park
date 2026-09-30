@@ -35,6 +35,12 @@ from agua import (
 COLOR_SOGA = (200, 160, 100)
 COLOR_BOTON_SALIR = (150, 45, 45)
 
+# Tamaño del mundo. La ventana sigue siendo 800x600, pero el nivel puede ser más largo.
+ANCHO_MUNDO = 3000
+
+# Cuando los personajes se separan más que esto, la pantalla se divide en dos.
+DISTANCIA_SPLIT = 600
+
 
 # ============================================================
 # DIBUJADO DE MECÁNICAS
@@ -155,13 +161,15 @@ def iniciar_mundo(mecanicas=None):
     usar_soga = "soga" in mecanicas
     usar_agua = "agua" in mecanicas
     usar_pinchos = "pinchos" in mecanicas
-    usar_llave = "llave" in mecanicas
+    # La llave y la puerta forman parte de TODOS los niveles.
+    usar_llave = True
 
     pantalla = pygame.display.get_surface()
     if pantalla is None:
         pantalla = pygame.display.set_mode((ANCHO, ALTO))
 
-    pantalla_rect = pantalla.get_rect()
+    # Rectángulo físico del mundo. La pantalla visible sigue siendo 800x600.
+    mundo_rect = pygame.Rect(0, 0, ANCHO_MUNDO, ALTO)
     reloj = pygame.time.Clock()
     fuente = pygame.font.SysFont("Arial", 14, bold=True)
     btn_salir = pygame.Rect(ANCHO - 120, 15, 105, 32)
@@ -169,11 +177,17 @@ def iniciar_mundo(mecanicas=None):
     jugador1 = crear_personaje(100, 0, COLOR_JUGADOR1)
     jugador2 = crear_personaje(300, 0, COLOR_JUGADOR2)
 
-    suelo = pygame.Rect(0, 520, ANCHO, 80)
+    # El piso ocupa todo el mundo, no solamente la parte visible.
+    suelo = pygame.Rect(0, 520, ANCHO_MUNDO, 80)
     caja = crear_caja(450, 0) if usar_caja else None
     pinchos = crear_pinchos() if usar_pinchos else []
-    llave = crear_llave(500, suelo.top - 46) if usar_llave else None
-    puerta = crear_puerta(710, suelo.top - 90) if usar_llave else None
+    # Están lejos del inicio: aparecen cuando los jugadores avanzan hasta esa zona.
+    llave = crear_llave(1400, suelo.top - 46) if usar_llave else None
+    puerta = crear_puerta(1900, suelo.top - 90) if usar_llave else None
+
+    # El agua ocupa todo el ancho del mundo cuando este mundo usa agua.
+    if usar_agua:
+        ZONA_AGUA.width = ANCHO_MUNDO
 
     ejecutando = True
 
@@ -269,7 +283,7 @@ def iniciar_mundo(mecanicas=None):
         # ====================================================
 
         if usar_caja:
-            actualizar_caja(caja, suelo, pantalla_rect)
+            actualizar_caja(caja, suelo, mundo_rect)
 
         # ====================================================
         # COLISIONES BÁSICAS
@@ -280,7 +294,7 @@ def iniciar_mundo(mecanicas=None):
                 jugador1,
                 jugador2,
                 suelo,
-                pantalla_rect,
+                mundo_rect,
                 caja if usar_caja else None,
                 jugador1["en_agua"]
             )
@@ -290,7 +304,7 @@ def iniciar_mundo(mecanicas=None):
                 jugador2,
                 jugador1,
                 suelo,
-                pantalla_rect,
+                mundo_rect,
                 caja if usar_caja else None,
                 jugador2["en_agua"]
             )
@@ -326,44 +340,102 @@ def iniciar_mundo(mecanicas=None):
         # IMPORTANTE: los personajes vivos sí se limitan a la pantalla.
         # Los muertos NO, para que puedan caer y desaparecer por abajo.
         if not jugador1["muerto"]:
-            jugador1["hitbox"].clamp_ip(pantalla_rect)
+            jugador1["hitbox"].clamp_ip(mundo_rect)
         if not jugador2["muerto"]:
-            jugador2["hitbox"].clamp_ip(pantalla_rect)
+            jugador2["hitbox"].clamp_ip(mundo_rect)
 
         # ====================================================
-        # DIBUJADO
+        # CÁMARA + DIBUJADO
         # ====================================================
 
-        pantalla.fill((30, 30, 30))
-        pygame.draw.rect(pantalla, (100, 100, 100), suelo)
+        # El mundo es largo (3000 px), pero la ventana sigue siendo 800x600.
+        mundo = pygame.Surface((ANCHO_MUNDO, ALTO))
+        mundo.fill((30, 30, 30))
+        pygame.draw.rect(mundo, (100, 100, 100), suelo)
 
         if usar_agua:
-            dibujar_agua(pantalla)
+            dibujar_agua(mundo)
 
         if usar_soga:
-            dibujar_soga(pantalla, jugador1, jugador2)
+            dibujar_soga(mundo, jugador1, jugador2)
 
         if usar_caja:
-            pantalla.blit(caja["sprite"], caja["rect"])
+            mundo.blit(caja["sprite"], caja["rect"])
 
         if usar_pinchos:
-            dibujar_pinchos(pantalla, pinchos)
+            dibujar_pinchos(mundo, pinchos)
 
         if usar_llave:
-            dibujar_puerta(pantalla, puerta)
-            dibujar_llave(pantalla, llave, puerta)
+            dibujar_puerta(mundo, puerta)
+            dibujar_llave(mundo, llave, puerta)
 
         dibujar_personaje(
-            pantalla,
+            mundo,
             jugador1,
             ZONA_AGUA if usar_agua else None
         )
         dibujar_personaje(
-            pantalla,
+            mundo,
             jugador2,
             ZONA_AGUA if usar_agua else None
         )
 
+        distancia_jugadores = abs(
+            jugador1["hitbox"].centerx - jugador2["hitbox"].centerx
+        )
+
+        # ----------------------------------------------------
+        # UNA SOLA PANTALLA
+        # ----------------------------------------------------
+        if distancia_jugadores <= DISTANCIA_SPLIT:
+            centro_jugadores = (
+                jugador1["hitbox"].centerx + jugador2["hitbox"].centerx
+            ) // 2
+
+            camera_x = centro_jugadores - ANCHO // 2
+            camera_x = max(0, min(camera_x, ANCHO_MUNDO - ANCHO))
+
+            pantalla.blit(
+                mundo,
+                (0, 0),
+                pygame.Rect(camera_x, 0, ANCHO, ALTO)
+            )
+
+        # ----------------------------------------------------
+        # PANTALLA DIVIDIDA
+        # ----------------------------------------------------
+        else:
+            # Cada jugador tiene su propia cámara de 400x600.
+            ANCHO_MITAD = ANCHO // 2
+
+            camera1_x = jugador1["hitbox"].centerx - ANCHO_MITAD // 2
+            camera2_x = jugador2["hitbox"].centerx - ANCHO_MITAD // 2
+
+            camera1_x = max(0, min(camera1_x, ANCHO_MUNDO - ANCHO_MITAD))
+            camera2_x = max(0, min(camera2_x, ANCHO_MUNDO - ANCHO_MITAD))
+
+            pantalla.blit(
+                mundo,
+                (0, 0),
+                pygame.Rect(camera1_x, 0, ANCHO_MITAD, ALTO)
+            )
+
+            pantalla.blit(
+                mundo,
+                (ANCHO_MITAD, 0),
+                pygame.Rect(camera2_x, 0, ANCHO_MITAD, ALTO)
+            )
+
+            # Línea divisoria.
+            pygame.draw.line(
+                pantalla,
+                (255, 255, 255),
+                (ANCHO_MITAD, 0),
+                (ANCHO_MITAD, ALTO),
+                3
+            )
+
+        # El botón SALIR queda fijo arriba a la derecha.
         dibujar_boton_salir(pantalla, fuente, btn_salir)
         pygame.display.flip()
 

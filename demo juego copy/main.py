@@ -11,14 +11,26 @@ def main():
     pygame.display.set_caption("Pico Park - Mundos")
 
     reloj = pygame.time.Clock()
-    fuente = pygame.font.Font(None, 34)
+    fuente = pygame.font.Font(None, 38)
+
+    # ========================================================
+    # BOTONES DE EJEMPLO
+    # ========================================================
+    #
+    # Acá solamente elegís qué mecánicas tiene cada mundo.
+    #
+    # Ejemplo:
+    # ["caja", "soga", "agua"]
+    #
+    # La estructura común (movimiento, salto, gravedad,
+    # colisiones, personajes, etc.) ya viene incluida.
+    # ========================================================
 
     botones = [
-        pygame.Rect(250, 70, 300, 70),
-        pygame.Rect(250, 160, 300, 70),
-        pygame.Rect(250, 250, 300, 70),
-        pygame.Rect(250, 340, 300, 70),
-        pygame.Rect(250, 430, 300, 70),
+        pygame.Rect(250, 100, 300, 70),
+        pygame.Rect(250, 200, 300, 70),
+        pygame.Rect(250, 300, 300, 70),
+        pygame.Rect(250, 400, 300, 70),
     ]
 
     textos = [
@@ -26,15 +38,16 @@ def main():
         "Mundo 2 - Soga",
         "Mundo 3 - Agua",
         "Mundo 4 - Pinchos",
-        "Mundo 5 - Llave y Puerta",
     ]
 
+    # Cada nivel tiene automáticamente: pantalla larga,
+    # cámara/split-screen cuando los jugadores se separan,
+    # llave y puerta. Acá solamente elegimos la mecánica especial.
     mecanicas_mundos = [
         ["caja"],
         ["soga"],
         ["agua"],
         ["pinchos"],
-        ["llave"],
     ]
 
     ejecutando = True
@@ -49,16 +62,26 @@ def main():
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 for i, boton in enumerate(botones):
                     if boton.collidepoint(evento.pos):
-                        iniciar_mundo(mecanicas_mundos[i])
-                        break
+                        resultado = iniciar_mundo(mecanicas_mundos[i])
+
+                        if resultado == "salir":
+                            break
 
         pantalla.fill((30, 30, 30))
 
         titulo = fuente.render("ELEGÍ UN MUNDO", True, (255, 255, 255))
-        pantalla.blit(titulo, titulo.get_rect(center=(ANCHO // 2, 35)))
+        pantalla.blit(
+            titulo,
+            titulo.get_rect(center=(ANCHO // 2, 45))
+        )
 
         for i, boton in enumerate(botones):
-            pygame.draw.rect(pantalla, (70, 70, 70), boton, border_radius=8)
+            pygame.draw.rect(
+                pantalla,
+                (70, 70, 70),
+                boton,
+                border_radius=8
+            )
             pygame.draw.rect(
                 pantalla,
                 (255, 255, 255),
@@ -66,8 +89,12 @@ def main():
                 2,
                 border_radius=8
             )
+
             texto = fuente.render(textos[i], True, (255, 255, 255))
-            pantalla.blit(texto, texto.get_rect(center=boton.center))
+            pantalla.blit(
+                texto,
+                texto.get_rect(center=boton.center)
+            )
 
         pygame.display.flip()
 
