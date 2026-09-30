@@ -59,7 +59,7 @@ def crear_personaje(x, y, color_carpeta):
     }
 
 
-def reiniciar_juego(p1, p2, caja=None):
+def reiniciar_juego(p1, p2, caja=None, llave=None, puerta=None):
     for p in (p1, p2):
         p["hitbox"].x = p["x_inicial"]
         p["hitbox"].y = p["y_inicial"]
@@ -82,8 +82,25 @@ def reiniciar_juego(p1, p2, caja=None):
         caja["vel_y"] = 0
         caja["en_suelo"] = False
 
+    if llave is not None:
+        llave["x_float"] = float(llave["x_inicial"])
+        llave["y_float"] = float(llave["y_inicial"])
+        llave["rect"].x = llave["x_inicial"]
+        llave["rect"].y = llave["y_inicial"]
+        llave["recolectada"] = False
+        llave["portador"] = None
 
-def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None):
+    if puerta is not None:
+        puerta["abierta"] = False
+
+
+# ============================================================
+# MOVIMIENTO Y COLISIONES
+# ============================================================
+
+def resolver_colisiones(
+    p1, p2, suelo, pantalla_rect, caja=None, en_agua=False
+):
     hb1 = p1["hitbox"]
     hb2 = p2["hitbox"]
 
@@ -96,7 +113,9 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None):
     x_anterior = hb1.x
     y_anterior = hb1.y
 
+    # --------------------------------------------------------
     # Movimiento horizontal
+    # --------------------------------------------------------
     hb1.x += p1["vel_x"]
 
     if p2_encima:
@@ -105,20 +124,15 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None):
     p1["empujando"] = False
     p1["direccion_empuje"] = 0
 
-    # Caja: solo puede empujarse desde un lateral externo.
+    # --------------------------------------------------------
+    # Caja: contacto físico lateral, sin atravesarla
+    # --------------------------------------------------------
     if caja is not None:
-        empujada = empujar_caja(p1, p2, caja, x_anterior, pantalla_rect)
+        empujar_caja(p1, caja, p2)
 
-        # Si el personaje intentó atravesar la caja sin estar en un lateral
-        # externo válido, la caja se comporta como un cuerpo sólido y lo frena.
-        if not empujada and hb1.colliderect(caja["rect"]):
-            if hb1.centerx < caja["rect"].centerx:
-                hb1.right = caja["rect"].left
-            else:
-                hb1.left = caja["rect"].right
-            p1["vel_x"] = 0
-
+    # --------------------------------------------------------
     # Colisión horizontal entre jugadores
+    # --------------------------------------------------------
     if not p2_encima and hb1.colliderect(hb2):
         margen_cabeza = 12
 
@@ -136,8 +150,11 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None):
                 p1["empujando"] = True
                 p1["direccion_empuje"] = -1
 
-    # Física vertical. En agua, el movimiento vertical ya lo controla agua.py.
-    if not p1["en_agua"]:
+    # --------------------------------------------------------
+    # Movimiento vertical
+    # En agua la física vertical ya fue calculada por agua.py.
+    # --------------------------------------------------------
+    if not en_agua:
         p1["vel_y"] += GRAVEDAD
 
     hb1.y += int(p1["vel_y"])
@@ -145,7 +162,9 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None):
     if p2_encima:
         hb2.y += hb1.y - y_anterior
 
-    # Colisión vertical con caja.
+    # --------------------------------------------------------
+    # Colisión vertical con caja
+    # --------------------------------------------------------
     if caja is not None and hb1.colliderect(caja["rect"]):
         if p1["vel_y"] >= 0 and hb1.bottom - p1["vel_y"] <= caja["rect"].top + 12:
             hb1.bottom = caja["rect"].top
@@ -155,7 +174,9 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None):
             hb1.top = caja["rect"].bottom
             p1["vel_y"] = 0
 
+    # --------------------------------------------------------
     # Colisión vertical entre jugadores
+    # --------------------------------------------------------
     if not p2_encima and hb1.colliderect(hb2):
         superposicion = (
             hb1.right > hb2.left + 10
@@ -170,16 +191,14 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None):
             hb1.top = hb2.bottom
             p1["vel_y"] = 0
 
+    # --------------------------------------------------------
     # Suelo
+    # --------------------------------------------------------
     if hb1.colliderect(suelo) and p1["vel_y"] >= 0:
         hb1.bottom = suelo.top
         p1["vel_y"] = 0
         p1["en_suelo"] = True
 
-
-# ============================================================
-# TRANSPORTAR PERSONAJE ENCIMA
-# ============================================================
 
 def transportar_personaje_encima(p_arriba, p_abajo):
     if p_arriba["muerto"] or p_abajo["muerto"]:
@@ -231,59 +250,77 @@ def actualizar_caja(caja, suelo, pantalla_rect):
     caja["rect"].clamp_ip(pantalla_rect)
 
 
-def empujar_caja(p, otro, caja, x_anterior, pantalla_rect):
+def empujar_caja(p, caja, otro=None):
     jugador = p["hitbox"]
     caja_rect = caja["rect"]
-    otro_rect = otro["hitbox"]
-    velocidad = p["vel_x"]
 
-    # Solo contacto EXTERNO con un lateral, nunca desde arriba o desde dentro.
-    if velocidad == 0 or jugador.bottom <= caja_rect.top + 10 or jugador.top >= caja_rect.bottom:
+    # Tiene que existir contacto vertical con el lateral.
+    if jugador.bottom <= caja_rect.top or jugador.top >= caja_rect.bottom:
         return False
 
-    desde_izquierda = (
-        velocidad > 0
-        and x_anterior + jugador.width <= caja_rect.left
-        and jugador.right >= caja_rect.left
-    )
-    desde_derecha = (
-        velocidad < 0
-        and x_anterior >= caja_rect.right
-        and jugador.left <= caja_rect.right
-    )
-    if not (desde_izquierda or desde_derecha):
-        return False
+    # --------------------------------------------------------
+    # Empujar hacia la derecha.
+    # El personaje tiene que estar AFUERA, a la izquierda.
+    # --------------------------------------------------------
+    if p["vel_x"] > 0:
+        contacto_externo = (
+            jugador.right >= caja_rect.left - 5
+            and jugador.right <= caja_rect.left + 5
+            and jugador.left < caja_rect.left
+        )
 
-    destino = caja_rect.move(velocidad, 0)
-    destino.clamp_ip(pantalla_rect)
+        if not contacto_externo:
+            return False
 
-    # IMPORTANTE: probar la CAJA EN SU FUTURA POSICIÓN contra el otro
-    # personaje, no la hitbox del personaje que está empujando.
-    # Si hay contacto lateral, la caja se queda quieta; no mueve al otro.
-    otro_en_lateral = (
-        not otro["muerto"]
-        and otro_rect.bottom > caja_rect.top + 10
-        and otro_rect.top < caja_rect.bottom
-    )
-    if otro_en_lateral:
-        if desde_izquierda and destino.right > otro_rect.left and caja_rect.left < otro_rect.left:
-            destino.x = min(destino.x, otro_rect.left - caja_rect.width)
-        elif desde_derecha and destino.left < otro_rect.right and caja_rect.right > otro_rect.right:
-            destino.x = max(destino.x, otro_rect.right)
+        # Si hay otro personaje delante de la caja, la caja NO lo empuja.
+        if otro is not None:
+            otro_rect = otro["hitbox"]
+            caja_futura = caja_rect.move(p["vel_x"], 0)
+            if caja_futura.colliderect(otro_rect):
+                # La caja queda EXACTAMENTE en su posición.
+                # El personaje que la empuja queda detrás.
+                jugador.right = caja_rect.left
+                p["empujando"] = True
+                p["direccion_empuje"] = 1
+                return True
 
-    # No permitir que el empuje cree superposición con el otro jugador.
-    if otro_en_lateral and destino.colliderect(otro_rect):
-        destino.x = caja_rect.x
-
-    caja_rect.x = destino.x
-    if desde_izquierda:
+        caja_rect.x += p["vel_x"]
         jugador.right = caja_rect.left
+        p["empujando"] = True
         p["direccion_empuje"] = 1
-    else:
+        return True
+
+    # --------------------------------------------------------
+    # Empujar hacia la izquierda.
+    # El personaje tiene que estar AFUERA, a la derecha.
+    # --------------------------------------------------------
+    if p["vel_x"] < 0:
+        contacto_externo = (
+            jugador.left <= caja_rect.right + 5
+            and jugador.left >= caja_rect.right - 5
+            and jugador.right > caja_rect.right
+        )
+
+        if not contacto_externo:
+            return False
+
+        if otro is not None:
+            otro_rect = otro["hitbox"]
+            caja_futura = caja_rect.move(p["vel_x"], 0)
+            if caja_futura.colliderect(otro_rect):
+                # La caja queda EXACTAMENTE en su posición.
+                jugador.left = caja_rect.right
+                p["empujando"] = True
+                p["direccion_empuje"] = -1
+                return True
+
+        caja_rect.x += p["vel_x"]
         jugador.left = caja_rect.right
+        p["empujando"] = True
         p["direccion_empuje"] = -1
-    p["empujando"] = True
-    return True
+        return True
+
+    return False
 
 
 # ============================================================
@@ -301,27 +338,101 @@ def aplicar_restriccion_soga(p1, p2, distancia_maxima=DISTANCIA_SOGA):
     if distancia <= distancia_maxima or distancia == 0:
         return
 
+    # Bloqueamos solamente el movimiento que aumenta la distancia.
     direccion_x = dx / distancia
-
-    # Si están separados horizontalmente, bloqueamos solo el movimiento
-    # que aumenta la distancia. NO movemos ni arrastramos al otro.
     movimiento_aleja_p1 = p1["vel_x"] * (-direccion_x)
     movimiento_aleja_p2 = p2["vel_x"] * direccion_x
 
     if movimiento_aleja_p1 > 0:
-        # Deshacemos solamente el movimiento de p1 que habría aumentado
-        # la distancia. No tocamos la posición ni la velocidad de p2.
-        p1["hitbox"].x -= int(p1["vel_x"])
         p1["vel_x"] = 0
+        p1["moviendo"] = True
 
     if movimiento_aleja_p2 > 0:
-        # Lo mismo para p2: no arrastra ni mueve a p1.
-        p2["hitbox"].x -= int(p2["vel_x"])
         p2["vel_x"] = 0
+        p2["moviendo"] = True
 
 
 # ============================================================
-# PINCHOS - FÍSICA / MUERTE
+# LLAVE Y PUERTA
+# ============================================================
+
+def crear_llave(x, y):
+    from sprites import cargar_sprite_llave
+
+    return {
+        "x_inicial": x,
+        "y_inicial": y,
+        "x_float": float(x),
+        "y_float": float(y),
+        "rect": pygame.Rect(x, y, 25, 46),
+        "sprite": cargar_sprite_llave(),
+        "recolectada": False,
+        "portador": None,
+        "velocidad": 6.0,
+    }
+
+
+def crear_puerta(x, y):
+    from sprites import cargar_sprites_puerta
+
+    return {
+        "rect": pygame.Rect(x, y, 60, 90),
+        "sprites": cargar_sprites_puerta(),
+        "abierta": False,
+    }
+
+
+def actualizar_llave(llave, personajes, puerta):
+    if llave is None or puerta is None:
+        return
+
+    if not llave["recolectada"]:
+        for p in personajes:
+            if not p["muerto"] and llave["rect"].colliderect(p["hitbox"]):
+                llave["recolectada"] = True
+                llave["portador"] = p
+                break
+    else:
+        if llave["portador"] is not None and not puerta["abierta"]:
+            p = llave["portador"]
+            distancia_separacion = 25
+
+            if p["mirando_derecha"]:
+                objetivo_x = p["hitbox"].left - llave["rect"].width - distancia_separacion
+            else:
+                objetivo_x = p["hitbox"].right + distancia_separacion
+
+            objetivo_y = p["hitbox"].centery - (llave["rect"].height // 2)
+
+            dx = objetivo_x - llave["x_float"]
+            dy = objetivo_y - llave["y_float"]
+            distancia = (dx ** 2 + dy ** 2) ** 0.5
+
+            if distancia > 0:
+                vel = llave["velocidad"]
+                if distancia <= vel:
+                    llave["x_float"] = float(objetivo_x)
+                    llave["y_float"] = float(objetivo_y)
+                else:
+                    llave["x_float"] += (dx / distancia) * vel
+                    llave["y_float"] += (dy / distancia) * vel
+
+            llave["rect"].x = int(llave["x_float"])
+            llave["rect"].y = int(llave["y_float"])
+
+    if llave["recolectada"] and not puerta["abierta"]:
+        portador = llave["portador"]
+        if portador is not None and portador["hitbox"].colliderect(puerta["rect"]):
+            puerta["abierta"] = True
+            llave["portador"] = None
+
+
+def dibujar_llave_activa(llave, puerta):
+    return llave is not None and puerta is not None and not puerta["abierta"]
+
+
+# ============================================================
+# PINCHOS / MUERTE
 # ============================================================
 
 def crear_pinchos():
@@ -350,7 +461,7 @@ def actualizar_muerte(p):
     p["vel_y"] += GRAVEDAD
     p["hitbox"].y += int(p["vel_y"])
 
-    # No hay clamp durante la muerte. El personaje puede caer infinitamente
-    # hasta salir completamente de la pantalla.
+    # No se limita el personaje al borde inferior.
+    # Sigue cayendo hasta salir completamente de la pantalla.
     if p["hitbox"].top > 600:
         p["muerte_terminada"] = True

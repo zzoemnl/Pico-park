@@ -5,9 +5,9 @@ import pygame
 # ============================================================
 
 ZONA_AGUA = pygame.Rect(0, 220, 800, 380)
-GRAVEDAD_AGUA = 0.15
-VELOCIDAD_NADO_VERTICAL = 0.6
-FRICCION_AGUA = 0.90
+GRAVEDAD_AGUA = 0.10
+VELOCIDAD_NADO_VERTICAL = 0.85
+FRICCION_AGUA = 0.86
 COLOR_AGUA = (0, 140, 240, 130)
 
 
@@ -26,6 +26,7 @@ def aplicar_fisica_agua(p, tecla_arriba=False, tecla_abajo=False):
         p["vel_y"] += VELOCIDAD_NADO_VERTICAL
 
     p["vel_y"] *= FRICCION_AGUA
+    p["vel_y"] = max(-6, min(6, p["vel_y"]))
 
 
 def puede_saltar(p):

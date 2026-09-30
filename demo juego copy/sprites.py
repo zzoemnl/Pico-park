@@ -12,6 +12,7 @@ DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 RUTA_BASE = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Personajes")
 RUTA_BOTONES = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Botones")
 RUTA_CAJA = os.path.join(DIRECTORIO_ACTUAL, "caja.png")
+RUTA_OBJETOS = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Objetos")
 
 ESTADOS_PERSONAJE = [
     "quieto", "muerto",
@@ -64,6 +65,59 @@ def cargar_sprite_caja(tamano):
     sprite = pygame.Surface((tamano, tamano), pygame.SRCALPHA)
     sprite.fill((139, 69, 19))
     return sprite
+
+
+def cargar_sprite_llave():
+    ruta_llave = os.path.join(RUTA_OBJETOS, "llave.png")
+
+    if os.path.isfile(ruta_llave):
+        try:
+            img = pygame.image.load(ruta_llave).convert_alpha()
+            return pygame.transform.scale(img, (25, 46))
+        except pygame.error:
+            pass
+
+    surface = pygame.Surface((25, 46), pygame.SRCALPHA)
+    pygame.draw.circle(surface, (255, 215, 0), (12, 12), 10)
+    pygame.draw.rect(surface, (255, 215, 0), (10, 12, 5, 30))
+    pygame.draw.rect(surface, (255, 215, 0), (15, 32, 6, 4))
+    pygame.draw.rect(surface, (255, 215, 0), (15, 38, 6, 4))
+    return surface
+
+
+def cargar_sprites_puerta():
+    ruta_cerrada = os.path.join(RUTA_OBJETOS, "Puerta", "puerta_cerrada.png")
+    ruta_abierta = os.path.join(RUTA_OBJETOS, "Puerta", "puerta_abierta.png")
+
+    if not os.path.isfile(ruta_cerrada):
+        ruta_cerrada = os.path.join(RUTA_OBJETOS, "puerta.png")
+
+    sprites = {"cerrada": None, "abierta": None}
+
+    if os.path.isfile(ruta_cerrada):
+        try:
+            img = pygame.image.load(ruta_cerrada).convert_alpha()
+            sprites["cerrada"] = pygame.transform.scale(img, (60, 90))
+        except pygame.error:
+            pass
+
+    if os.path.isfile(ruta_abierta):
+        try:
+            img = pygame.image.load(ruta_abierta).convert_alpha()
+            sprites["abierta"] = pygame.transform.scale(img, (60, 90))
+        except pygame.error:
+            pass
+
+    if sprites["cerrada"] is None:
+        sprites["cerrada"] = pygame.Surface((60, 90), pygame.SRCALPHA)
+        sprites["cerrada"].fill((139, 69, 19))
+        pygame.draw.circle(sprites["cerrada"], (255, 215, 0), (50, 45), 5)
+
+    if sprites["abierta"] is None:
+        sprites["abierta"] = pygame.Surface((60, 90), pygame.SRCALPHA)
+        pygame.draw.rect(sprites["abierta"], (139, 69, 19), (0, 0, 15, 90))
+
+    return sprites
 
 
 def actualizar_temporizadores(p):

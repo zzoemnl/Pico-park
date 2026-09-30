@@ -13,6 +13,9 @@ from movimientos import (
     crear_personaje,
     crear_caja,
     crear_pinchos,
+    crear_llave,
+    crear_puerta,
+    actualizar_llave,
     reiniciar_juego,
     resolver_colisiones,
     actualizar_caja,
@@ -30,7 +33,12 @@ from agua import (
 )
 
 COLOR_SOGA = (200, 160, 100)
+COLOR_BOTON_SALIR = (150, 45, 45)
 
+
+# ============================================================
+# DIBUJADO DE MECÁNICAS
+# ============================================================
 
 def dibujar_soga(pantalla, p1, p2):
     pygame.draw.line(
@@ -38,7 +46,7 @@ def dibujar_soga(pantalla, p1, p2):
         COLOR_SOGA,
         p1["hitbox"].center,
         p2["hitbox"].center,
-        4,
+        4
     )
 
 
@@ -52,6 +60,27 @@ def dibujar_pinchos(pantalla, pinchos):
         pygame.draw.polygon(pantalla, (220, 220, 220), puntos)
         pygame.draw.polygon(pantalla, (80, 80, 80), puntos, 2)
 
+
+def dibujar_puerta(pantalla, puerta):
+    estado = "abierta" if puerta["abierta"] else "cerrada"
+    pantalla.blit(puerta["sprites"][estado], puerta["rect"])
+
+
+def dibujar_llave(pantalla, llave, puerta):
+    if llave is not None and puerta is not None and not puerta["abierta"]:
+        pantalla.blit(llave["sprite"], llave["rect"])
+
+
+def dibujar_boton_salir(pantalla, fuente, rect):
+    pygame.draw.rect(pantalla, COLOR_BOTON_SALIR, rect, border_radius=6)
+    pygame.draw.rect(pantalla, (255, 255, 255), rect, 2, border_radius=6)
+    texto = fuente.render("SALIR", True, (255, 255, 255))
+    pantalla.blit(texto, texto.get_rect(center=rect.center))
+
+
+# ============================================================
+# PANTALLA DE MUERTE
+# ============================================================
 
 def cargar_boton(nombre):
     ruta = os.path.join(RUTA_BOTONES, nombre)
@@ -71,10 +100,8 @@ def pantalla_muerte(pantalla, reloj):
     boton_reiniciar_apretado = cargar_boton("boton-reiniciar-apretado.png")
 
     if any(x is None for x in (
-        boton_salir_normal,
-        boton_salir_apretado,
-        boton_reiniciar_normal,
-        boton_reiniciar_apretado,
+        boton_salir_normal, boton_salir_apretado,
+        boton_reiniciar_normal, boton_reiniciar_apretado
     )):
         return "salir"
 
@@ -116,29 +143,11 @@ def pantalla_muerte(pantalla, reloj):
         reloj.tick(FPS)
 
 
-def dibujar_boton_salir_mundo(pantalla, boton, imagen_normal):
-    if imagen_normal is not None:
-        pantalla.blit(imagen_normal, boton)
-    else:
-        pygame.draw.rect(pantalla, (70, 70, 70), boton, border_radius=8)
-        pygame.draw.rect(pantalla, (255, 255, 255), boton, 2, border_radius=8)
-        fuente = pygame.font.Font(None, 28)
-        texto = fuente.render("SALIR", True, (255, 255, 255))
-        pantalla.blit(texto, texto.get_rect(center=boton.center))
-
+# ============================================================
+# MUNDO
+# ============================================================
 
 def iniciar_mundo(mecanicas=None):
-    """
-    Inicia un mundo con la estructura común del juego.
-
-    Ejemplos:
-        iniciar_mundo(["caja"])
-        iniciar_mundo(["soga"])
-        iniciar_mundo(["agua"])
-        iniciar_mundo(["pinchos"])
-        iniciar_mundo(["caja", "soga", "agua"])
-    """
-
     if mecanicas is None:
         mecanicas = []
 
@@ -146,6 +155,7 @@ def iniciar_mundo(mecanicas=None):
     usar_soga = "soga" in mecanicas
     usar_agua = "agua" in mecanicas
     usar_pinchos = "pinchos" in mecanicas
+    usar_llave = "llave" in mecanicas
 
     pantalla = pygame.display.get_surface()
     if pantalla is None:
@@ -153,6 +163,8 @@ def iniciar_mundo(mecanicas=None):
 
     pantalla_rect = pantalla.get_rect()
     reloj = pygame.time.Clock()
+    fuente = pygame.font.SysFont("Arial", 14, bold=True)
+    btn_salir = pygame.Rect(ANCHO - 120, 15, 105, 32)
 
     jugador1 = crear_personaje(100, 0, COLOR_JUGADOR1)
     jugador2 = crear_personaje(300, 0, COLOR_JUGADOR2)
@@ -160,16 +172,8 @@ def iniciar_mundo(mecanicas=None):
     suelo = pygame.Rect(0, 520, ANCHO, 80)
     caja = crear_caja(450, 0) if usar_caja else None
     pinchos = crear_pinchos() if usar_pinchos else []
-
-    # Botón de salida disponible durante TODO el mundo.
-    boton_salir_normal = cargar_boton("boton-salir.png")
-    boton_salir_apretado = cargar_boton("boton-salir-apretado.png")
-    if boton_salir_normal is not None:
-        boton_salir_normal = pygame.transform.scale(boton_salir_normal, (150, 50))
-    if boton_salir_apretado is not None:
-        boton_salir_apretado = pygame.transform.scale(boton_salir_apretado, (150, 50))
-
-    boton_salir = pygame.Rect(ANCHO - 170, 15, 150, 50)
+    llave = crear_llave(500, suelo.top - 46) if usar_llave else None
+    puerta = crear_puerta(710, suelo.top - 90) if usar_llave else None
 
     ejecutando = True
 
@@ -181,14 +185,10 @@ def iniciar_mundo(mecanicas=None):
                 return "salir"
 
             if evento.type == pygame.KEYDOWN and evento.key == pygame.K_r:
-                reiniciar_juego(jugador1, jugador2, caja)
+                reiniciar_juego(jugador1, jugador2, caja, llave, puerta)
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-                if boton_salir.collidepoint(evento.pos):
-                    if boton_salir_apretado is not None:
-                        pantalla.blit(boton_salir_apretado, boton_salir)
-                        pygame.display.flip()
-                        pygame.time.delay(250)
+                if btn_salir.collidepoint(evento.pos):
                     return "salir"
 
         teclas = pygame.key.get_pressed()
@@ -251,14 +251,14 @@ def iniciar_mundo(mecanicas=None):
                 aplicar_fisica_agua(
                     jugador1,
                     teclas[pygame.K_UP],
-                    teclas[pygame.K_DOWN],
+                    teclas[pygame.K_DOWN]
                 )
 
             if jugador2["en_agua"]:
                 aplicar_fisica_agua(
                     jugador2,
                     teclas[pygame.K_w],
-                    teclas[pygame.K_s],
+                    teclas[pygame.K_s]
                 )
         else:
             jugador1["en_agua"] = False
@@ -282,6 +282,7 @@ def iniciar_mundo(mecanicas=None):
                 suelo,
                 pantalla_rect,
                 caja if usar_caja else None,
+                jugador1["en_agua"]
             )
 
         if not jugador2["muerto"]:
@@ -291,6 +292,7 @@ def iniciar_mundo(mecanicas=None):
                 suelo,
                 pantalla_rect,
                 caja if usar_caja else None,
+                jugador2["en_agua"]
             )
 
         transportar_personaje_encima(jugador1, jugador2)
@@ -304,6 +306,13 @@ def iniciar_mundo(mecanicas=None):
             aplicar_restriccion_soga(jugador1, jugador2, DISTANCIA_SOGA)
 
         # ====================================================
+        # LLAVE Y PUERTA
+        # ====================================================
+
+        if usar_llave:
+            actualizar_llave(llave, [jugador1, jugador2], puerta)
+
+        # ====================================================
         # PINCHOS
         # ====================================================
 
@@ -314,8 +323,8 @@ def iniciar_mundo(mecanicas=None):
         actualizar_muerte(jugador1)
         actualizar_muerte(jugador2)
 
-        # Los personajes vivos sí respetan los bordes.
-        # Los muertos NO se limitan: tienen que poder caer fuera de pantalla.
+        # IMPORTANTE: los personajes vivos sí se limitan a la pantalla.
+        # Los muertos NO, para que puedan caer y desaparecer por abajo.
         if not jugador1["muerto"]:
             jugador1["hitbox"].clamp_ip(pantalla_rect)
         if not jugador2["muerto"]:
@@ -330,26 +339,32 @@ def iniciar_mundo(mecanicas=None):
 
         if usar_agua:
             dibujar_agua(pantalla)
+
         if usar_soga:
             dibujar_soga(pantalla, jugador1, jugador2)
+
         if usar_caja:
             pantalla.blit(caja["sprite"], caja["rect"])
+
         if usar_pinchos:
             dibujar_pinchos(pantalla, pinchos)
+
+        if usar_llave:
+            dibujar_puerta(pantalla, puerta)
+            dibujar_llave(pantalla, llave, puerta)
 
         dibujar_personaje(
             pantalla,
             jugador1,
-            ZONA_AGUA if usar_agua else None,
+            ZONA_AGUA if usar_agua else None
         )
         dibujar_personaje(
             pantalla,
             jugador2,
-            ZONA_AGUA if usar_agua else None,
+            ZONA_AGUA if usar_agua else None
         )
 
-        dibujar_boton_salir_mundo(pantalla, boton_salir, boton_salir_normal)
-
+        dibujar_boton_salir(pantalla, fuente, btn_salir)
         pygame.display.flip()
 
         if jugador1["muerte_terminada"] or jugador2["muerte_terminada"]:
@@ -359,6 +374,6 @@ def iniciar_mundo(mecanicas=None):
                 return "salir"
 
             if resultado == "reiniciar":
-                reiniciar_juego(jugador1, jugador2, caja)
+                reiniciar_juego(jugador1, jugador2, caja, llave, puerta)
 
     return "salir"
