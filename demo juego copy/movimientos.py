@@ -128,7 +128,7 @@ def resolver_colisiones(
     # Caja: contacto físico lateral, sin atravesarla
     # --------------------------------------------------------
     if caja is not None:
-        empujar_caja(p1, caja, p2)
+        empujar_caja(p1, caja, p2, pantalla_rect)
 
     # --------------------------------------------------------
     # Colisión horizontal entre jugadores
@@ -250,7 +250,7 @@ def actualizar_caja(caja, suelo, pantalla_rect):
     caja["rect"].clamp_ip(pantalla_rect)
 
 
-def empujar_caja(p, caja, otro=None):
+def empujar_caja(p, caja, otro=None, pantalla_rect=None):
     jugador = p["hitbox"]
     caja_rect = caja["rect"]
 
@@ -259,8 +259,7 @@ def empujar_caja(p, caja, otro=None):
         return False
 
     # --------------------------------------------------------
-    # Empujar hacia la derecha.
-    # El personaje tiene que estar AFUERA, a la izquierda.
+    # Empujar hacia la derecha
     # --------------------------------------------------------
     if p["vel_x"] > 0:
         contacto_externo = (
@@ -272,23 +271,76 @@ def empujar_caja(p, caja, otro=None):
         if not contacto_externo:
             return False
 
-        # Si hay otro personaje delante de la caja, la caja NO lo empuja.
+        # Si hay otro personaje delante, la caja no avanza.
         if otro is not None:
             otro_rect = otro["hitbox"]
             caja_futura = caja_rect.move(p["vel_x"], 0)
+
             if caja_futura.colliderect(otro_rect):
-                # La caja queda EXACTAMENTE en su posición.
-                # El personaje que la empuja queda detrás.
                 jugador.right = caja_rect.left
                 p["empujando"] = True
                 p["direccion_empuje"] = 1
                 return True
 
-        caja_rect.x += p["vel_x"]
+        # ----------------------------------------------------
+        # LÍMITE DERECHO DEL MUNDO
+        # ----------------------------------------------------
+        nueva_x = caja_rect.x + p["vel_x"]
+
+        if pantalla_rect is not None:
+            nueva_x = min(
+                nueva_x,
+                pantalla_rect.right - caja_rect.width
+            )
+
+        # Mover la caja solamente hasta donde puede llegar.
+        caja_rect.x = nueva_x
+
+        # El jugador siempre queda detrás de la caja.
         jugador.right = caja_rect.left
+
         p["empujando"] = True
         p["direccion_empuje"] = 1
         return True
+
+    # --------------------------------------------------------
+    # Empujar hacia la izquierda
+    # --------------------------------------------------------
+    if p["vel_x"] < 0:
+        contacto_externo = (jugador.left <= caja_rect.right + 5 
+                            and jugador.left >= caja_rect.right - 5 
+                            and jugador.right > caja_rect.right)
+
+        if not contacto_externo:
+            return False
+
+        # Si hay otro personaje delante, la caja no avanza.
+        if otro is not None:
+            otro_rect = otro["hitbox"]
+            caja_futura = caja_rect.move(p["vel_x"], 0)
+
+            if caja_futura.colliderect(otro_rect):
+                jugador.left = caja_rect.right
+                p["empujando"] = True
+                p["direccion_empuje"] = -1
+                return True
+        # ----------------------------------------------------
+        # LÍMITE IZQUIERDO DEL MUNDO
+        # ----------------------------------------------------
+        nueva_x = caja_rect.x + p["vel_x"]
+
+        if pantalla_rect is not None:
+            nueva_x = max(nueva_x,pantalla_rect.left)
+
+        # Mover la caja solamente hasta donde puede llegar.
+        caja_rect.x = nueva_x
+
+        # El jugador siempre queda detrás de la caja.
+        jugador.left = caja_rect.right
+        p["empujando"] = True
+        p["direccion_empuje"] = -1
+        return True
+    return False
 
     # --------------------------------------------------------
     # Empujar hacia la izquierda.

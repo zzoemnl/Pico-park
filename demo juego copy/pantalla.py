@@ -39,7 +39,7 @@ COLOR_BOTON_SALIR = (150, 45, 45)
 ANCHO_MUNDO = 3000
 
 # Cuando los personajes se separan más que esto, la pantalla se divide en dos.
-DISTANCIA_SPLIT = 1375
+DISTANCIA_SPLIT = 1355
 
 
 # ============================================================
@@ -166,13 +166,13 @@ def iniciar_mundo(mecanicas=None):
 
     pantalla = pygame.display.get_surface()
     if pantalla is None:
-        pantalla = pygame.display.set_mode((ANCHO, ALTO))
+        pantalla = pygame.display.set_mode((ANCHO, ALTO), pygame.FULLSCREEN | pygame.SCALED)
 
     # Rectángulo físico del mundo. La pantalla visible sigue siendo 800x600.
     mundo_rect = pygame.Rect(0, 0, ANCHO_MUNDO, ALTO)
     reloj = pygame.time.Clock()
     fuente = pygame.font.SysFont("Arial", 14, bold=True)
-    btn_salir = pygame.Rect(ANCHO - 120, 15, 105, 32)
+    btn_salir = pygame.Rect(pantalla.get_width() - 120, 15, 105, 32)
 
     jugador1 = crear_personaje(100, 0, COLOR_JUGADOR1)
     jugador2 = crear_personaje(300, 0, COLOR_JUGADOR2)
