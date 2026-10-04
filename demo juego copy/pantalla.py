@@ -84,16 +84,34 @@ def dibujar_boton_salir(pantalla, fuente, rect):
     pantalla.blit(texto, texto.get_rect(center=rect.center))
 
 
-# ============================================================
-# PANTALLA DE MUERTE
-# ============================================================
-
 def cargar_boton(nombre):
     ruta = os.path.join(RUTA_BOTONES, nombre)
     try:
         return pygame.image.load(ruta).convert_alpha()
     except (FileNotFoundError, pygame.error):
         return None
+
+
+def animar_pulsacion_boton(pantalla, rect, spr_semi, spr_apretado):
+    """
+    Anima la pulsación de un botón pasando por el estado semi-apretado y apretado.
+    Restaura el fondo detrás del botón para que no queden restos visuales del sprite normal.
+    """
+    fondo = pantalla.subsurface(rect).copy()
+
+    # Paso 1: Semi-apretado
+    pantalla.blit(fondo, rect)
+    pantalla.blit(spr_semi, rect)
+    pygame.display.flip()
+    pygame.event.pump()
+    pygame.time.delay(100)
+
+    # Paso 2: Totalmente apretado
+    pantalla.blit(fondo, rect)
+    pantalla.blit(spr_apretado, rect)
+    pygame.display.flip()
+    pygame.event.pump()
+    pygame.time.delay(140)
 
 
 def pantalla_muerte(pantalla, reloj):
@@ -171,23 +189,77 @@ def iniciar_mundo(mecanicas=None):
     # Rectángulo físico del mundo. La pantalla visible sigue siendo 800x600.
     mundo_rect = pygame.Rect(0, 0, ANCHO_MUNDO, ALTO)
     reloj = pygame.time.Clock()
-    fuente = pygame.font.SysFont("Arial", 14, bold=True)
-    btn_salir = pygame.Rect(pantalla.get_width() - 120, 15, 105, 32)
+    # Configuración de botones HUD arriba a la derecha (Casa, Reiniciar y X)
+    TAM_BOTON_HUD = 80
+    MARGEN_DER = 25
+    MARGEN_SUP = 20
+    ESPACIO_BOTONES = 16
+
+    rect_btn_x = pygame.Rect(
+        pantalla.get_width() - MARGEN_DER - TAM_BOTON_HUD,
+        MARGEN_SUP,
+        TAM_BOTON_HUD,
+        TAM_BOTON_HUD
+    )
+    rect_btn_reiniciar = pygame.Rect(
+        rect_btn_x.left - ESPACIO_BOTONES - TAM_BOTON_HUD,
+        MARGEN_SUP,
+        TAM_BOTON_HUD,
+        TAM_BOTON_HUD
+    )
+    rect_btn_casa = pygame.Rect(
+        rect_btn_reiniciar.left - ESPACIO_BOTONES - TAM_BOTON_HUD,
+        MARGEN_SUP,
+        TAM_BOTON_HUD,
+        TAM_BOTON_HUD
+    )
+
+    def _cargar_hud(nombre):
+        img = cargar_boton(nombre)
+        if img is not None:
+            return pygame.transform.scale(img, (TAM_BOTON_HUD, TAM_BOTON_HUD))
+        return None
+
+    spr_x_normal = _cargar_hud("boton-x.png")
+    spr_x_semi = _cargar_hud("boton-x-semiapretado.png")
+    spr_x_apretado = _cargar_hud("boton-x-apretado.png")
+
+    spr_reiniciar_normal = _cargar_hud("boton-reiniciar-icono.png")
+    spr_reiniciar_semi = _cargar_hud("boton-reiniciar-icono-semiapretado.png")
+    spr_reiniciar_apretado = _cargar_hud("boton-reiniciar-icono-apretado.png")
+
+    spr_casa_normal = _cargar_hud("boton-casa.png")
+    spr_casa_semi = _cargar_hud("boton-casa-semiapretado.png")
+    spr_casa_apretado = _cargar_hud("boton-casa-apretado.png")
 
     jugador1 = crear_personaje(100, 0, COLOR_JUGADOR1)
     jugador2 = crear_personaje(300, 0, COLOR_JUGADOR2)
 
     # El piso ocupa todo el mundo, no solamente la parte visible.
-    suelo = pygame.Rect(0, 520, ANCHO_MUNDO, 80)
+    suelo = pygame.Rect(0, ALTO - 80, ANCHO_MUNDO, 80)
     caja = crear_caja(450, 0) if usar_caja else None
-    pinchos = crear_pinchos() if usar_pinchos else []
+    pinchos = crear_pinchos(suelo.top) if usar_pinchos else []
     # Están lejos del inicio: aparecen cuando los jugadores avanzan hasta esa zona.
     llave = crear_llave(1400, suelo.top - 46) if usar_llave else None
     puerta = crear_puerta(1900, suelo.top - 90) if usar_llave else None
 
-    # El agua ocupa todo el ancho del mundo cuando este mundo usa agua.
+    # Plataformas para el nivel de la soga (plataforma alta para probar flotación a 200px)
+    plataformas = []
+    if usar_soga:
+        # Suelo en y=640. Plataforma alta en y=350 (290px de desnivel hacia el suelo).
+        # Como la soga mide máx 200px, un personaje en la plataforma deja al otro flotando a 90px del suelo.
+        plataformas = [
+            pygame.Rect(420, 530, 90, 30),   # Escalón 1 (accesible de 1 salto)
+            pygame.Rect(530, 440, 90, 30),   # Escalón 2
+            pygame.Rect(640, 350, 340, 35),  # Plataforma alta
+        ]
+
+    # La zona de agua cubre todo el ancho del nivel/mundo (3000px)
     if usar_agua:
+        ZONA_AGUA.x = 0
+        ZONA_AGUA.y = 220
         ZONA_AGUA.width = ANCHO_MUNDO
+        ZONA_AGUA.height = suelo.top - 220
 
     ejecutando = True
 
@@ -196,14 +268,31 @@ def iniciar_mundo(mecanicas=None):
 
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
-                return "salir"
+                pygame.quit()
+                sys.exit()
 
             if evento.type == pygame.KEYDOWN and evento.key == pygame.K_r:
+                if spr_reiniciar_semi and spr_reiniciar_apretado:
+                    animar_pulsacion_boton(pantalla, rect_btn_reiniciar, spr_reiniciar_semi, spr_reiniciar_apretado)
                 reiniciar_juego(jugador1, jugador2, caja, llave, puerta)
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-                if btn_salir.collidepoint(evento.pos):
-                    return "salir"
+                if rect_btn_x.collidepoint(evento.pos):
+                    if spr_x_semi and spr_x_apretado:
+                        animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado)
+                    pygame.quit()
+                    sys.exit()
+
+                if rect_btn_reiniciar.collidepoint(evento.pos):
+                    if spr_reiniciar_semi and spr_reiniciar_apretado:
+                        animar_pulsacion_boton(pantalla, rect_btn_reiniciar, spr_reiniciar_semi, spr_reiniciar_apretado)
+                    reiniciar_juego(jugador1, jugador2, caja, llave, puerta)
+                    pygame.event.clear(pygame.MOUSEBUTTONDOWN)
+
+                if rect_btn_casa.collidepoint(evento.pos):
+                    if spr_casa_semi and spr_casa_apretado:
+                        animar_pulsacion_boton(pantalla, rect_btn_casa, spr_casa_semi, spr_casa_apretado)
+                    return "menu"
 
         teclas = pygame.key.get_pressed()
 
@@ -296,7 +385,8 @@ def iniciar_mundo(mecanicas=None):
                 suelo,
                 mundo_rect,
                 caja if usar_caja else None,
-                jugador1["en_agua"]
+                jugador1["en_agua"],
+                plataformas
             )
 
         if not jugador2["muerto"]:
@@ -306,7 +396,8 @@ def iniciar_mundo(mecanicas=None):
                 suelo,
                 mundo_rect,
                 caja if usar_caja else None,
-                jugador2["en_agua"]
+                jugador2["en_agua"],
+                plataformas
             )
 
         transportar_personaje_encima(jugador1, jugador2)
@@ -317,7 +408,7 @@ def iniciar_mundo(mecanicas=None):
         # ====================================================
 
         if usar_soga:
-            aplicar_restriccion_soga(jugador1, jugador2, DISTANCIA_SOGA)
+            aplicar_restriccion_soga(jugador1, jugador2, DISTANCIA_SOGA, plataformas, suelo)
 
         # ====================================================
         # LLAVE Y PUERTA
@@ -352,6 +443,12 @@ def iniciar_mundo(mecanicas=None):
         mundo = pygame.Surface((ANCHO_MUNDO, ALTO))
         mundo.fill((30, 30, 30))
         pygame.draw.rect(mundo, (100, 100, 100), suelo)
+
+        # Dibujar plataformas del nivel
+        if plataformas:
+            for plat in plataformas:
+                pygame.draw.rect(mundo, (110, 110, 115), plat, border_radius=4)
+                pygame.draw.rect(mundo, (160, 160, 170), plat, 2, border_radius=4)
 
         if usar_agua:
             dibujar_agua(mundo)
@@ -435,8 +532,14 @@ def iniciar_mundo(mecanicas=None):
                 3
             )
 
-        # El botón SALIR queda fijo arriba a la derecha.
-        dibujar_boton_salir(pantalla, fuente, btn_salir)
+        # Botones HUD fijos a la derecha (Casa, Reiniciar y X/Cerrar)
+        if spr_casa_normal:
+            pantalla.blit(spr_casa_normal, rect_btn_casa)
+        if spr_reiniciar_normal:
+            pantalla.blit(spr_reiniciar_normal, rect_btn_reiniciar)
+        if spr_x_normal:
+            pantalla.blit(spr_x_normal, rect_btn_x)
+
         pygame.display.flip()
 
         if jugador1["muerte_terminada"] or jugador2["muerte_terminada"]:

@@ -99,7 +99,7 @@ def reiniciar_juego(p1, p2, caja=None, llave=None, puerta=None):
 # ============================================================
 
 def resolver_colisiones(
-    p1, p2, suelo, pantalla_rect, caja=None, en_agua=False
+    p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, plataformas=None
 ):
     hb1 = p1["hitbox"]
     hb2 = p2["hitbox"]
@@ -123,6 +123,18 @@ def resolver_colisiones(
 
     p1["empujando"] = False
     p1["direccion_empuje"] = 0
+
+    # Contacto horizontal con plataformas
+    if plataformas:
+        for plat in plataformas:
+            if hb1.colliderect(plat):
+                # Solo colisión lateral si estaba en el rango vertical y venía desde AFUERA del lateral
+                estaba_a_la_altura = (y_anterior + hb1.height > plat.top + 4 and y_anterior < plat.bottom - 4)
+                if estaba_a_la_altura:
+                    if p1["vel_x"] > 0 and x_anterior + hb1.width <= plat.left + max(0, p1["vel_x"]) + 2:
+                        hb1.right = plat.left
+                    elif p1["vel_x"] < 0 and x_anterior >= plat.right - max(0, -p1["vel_x"]) - 2:
+                        hb1.left = plat.right
 
     # --------------------------------------------------------
     # Caja: contacto físico lateral, sin atravesarla
@@ -163,6 +175,26 @@ def resolver_colisiones(
         hb2.y += hb1.y - y_anterior
 
     # --------------------------------------------------------
+    # Colisión vertical con plataformas
+    # --------------------------------------------------------
+    toco_superficie = False
+
+    if plataformas:
+        for plat in plataformas:
+            if hb1.colliderect(plat):
+                # Aterrizaje sobre la plataforma (viniendo desde arriba)
+                if p1["vel_y"] >= 0 and y_anterior + hb1.height <= plat.top + max(0, int(p1["vel_y"])) + 8:
+                    hb1.bottom = plat.top
+                    p1["vel_y"] = 0
+                    p1["en_suelo"] = True
+                    toco_superficie = True
+                # Golpe de cabeza o estar debajo de la plataforma
+                elif hb1.top < plat.bottom and hb1.bottom > plat.bottom:
+                    hb1.top = plat.bottom
+                    if p1["vel_y"] < 0:
+                        p1["vel_y"] = 0
+
+    # --------------------------------------------------------
     # Colisión vertical con caja
     # --------------------------------------------------------
     if caja is not None and hb1.colliderect(caja["rect"]):
@@ -170,6 +202,7 @@ def resolver_colisiones(
             hb1.bottom = caja["rect"].top
             p1["vel_y"] = 0
             p1["en_suelo"] = True
+            toco_superficie = True
         elif p1["vel_y"] < 0 and hb1.top < caja["rect"].bottom:
             hb1.top = caja["rect"].bottom
             p1["vel_y"] = 0
@@ -187,6 +220,7 @@ def resolver_colisiones(
             hb1.bottom = hb2.top
             p1["vel_y"] = 0
             p1["en_suelo"] = True
+            toco_superficie = True
         elif p1["vel_y"] < 0 and hb1.bottom > hb2.bottom:
             hb1.top = hb2.bottom
             p1["vel_y"] = 0
@@ -194,10 +228,29 @@ def resolver_colisiones(
     # --------------------------------------------------------
     # Suelo
     # --------------------------------------------------------
-    if hb1.colliderect(suelo) and p1["vel_y"] >= 0:
+    if hb1.bottom >= suelo.top and p1["vel_y"] >= 0:
         hb1.bottom = suelo.top
         p1["vel_y"] = 0
         p1["en_suelo"] = True
+        toco_superficie = True
+
+    # Si no tocó ninguna superficie firme ni está sobre otro personaje
+    if not toco_superficie and not p2_encima:
+        # Comprobar si todavía está apoyado en plataforma o caja
+        esta_apoyado = False
+        if hb1.bottom == suelo.top:
+            esta_apoyado = True
+        elif plataformas:
+            for plat in plataformas:
+                if hb1.bottom == plat.top and (hb1.right > plat.left and hb1.left < plat.right):
+                    esta_apoyado = True
+                    break
+        if not esta_apoyado and caja is not None:
+            if hb1.bottom == caja["rect"].top and (hb1.right > caja["rect"].left and hb1.left < caja["rect"].right):
+                esta_apoyado = True
+
+        if not esta_apoyado:
+            p1["en_suelo"] = False
 
 
 def transportar_personaje_encima(p_arriba, p_abajo):
@@ -379,29 +432,100 @@ def empujar_caja(p, caja, otro=None, pantalla_rect=None):
 # SOGA - FÍSICA
 # ============================================================
 
-def aplicar_restriccion_soga(p1, p2, distancia_maxima=DISTANCIA_SOGA):
-    centro1 = p1["hitbox"].center
-    centro2 = p2["hitbox"].center
+def aplicar_restriccion_soga(p1, p2, distancia_maxima=DISTANCIA_SOGA, plataformas=None, suelo=None):
+    c1 = pygame.Vector2(p1["hitbox"].center)
+    c2 = pygame.Vector2(p2["hitbox"].center)
 
-    dx = centro2[0] - centro1[0]
-    dy = centro2[1] - centro1[1]
-    distancia = (dx ** 2 + dy ** 2) ** 0.5
+    v = c2 - c1
+    distancia = v.length()
 
     if distancia <= distancia_maxima or distancia == 0:
         return
 
-    # Bloqueamos solamente el movimiento que aumenta la distancia.
-    direccion_x = dx / distancia
-    movimiento_aleja_p1 = p1["vel_x"] * (-direccion_x)
-    movimiento_aleja_p2 = p2["vel_x"] * direccion_x
+    direccion = v / distancia
+    exceso = distancia - distancia_maxima
 
-    if movimiento_aleja_p1 > 0:
-        p1["vel_x"] = 0
-        p1["moviendo"] = True
+    # Caso 1: Ambos están en suelo o plataforma -> Tope rígido, NUNCA se arrastran/tiran entre sí
+    if p1["en_suelo"] and p2["en_suelo"]:
+        p1_se_aleja = (direccion.x > 0 and p1["vel_x"] < 0) or (direccion.x < 0 and p1["vel_x"] > 0)
+        p2_se_aleja = (direccion.x > 0 and p2["vel_x"] > 0) or (direccion.x < 0 and p2["vel_x"] < 0)
 
-    if movimiento_aleja_p2 > 0:
-        p2["vel_x"] = 0
-        p2["moviendo"] = True
+        if p1_se_aleja and not p2_se_aleja:
+            # Solo p1 intenta alejarse: se frena a p1 y p2 no se mueve
+            p1["vel_x"] = 0
+            p1["hitbox"].centerx = round(c2.x - direccion.x * distancia_maxima)
+        elif p2_se_aleja and not p1_se_aleja:
+            # Solo p2 intenta alejarse: se frena a p2 y p1 no se mueve
+            p2["vel_x"] = 0
+            p2["hitbox"].centerx = round(c1.x + direccion.x * distancia_maxima)
+        else:
+            # Ambos intentan alejarse o exceso residual: se frena a ambos y se reparte el exceso sin arrastre
+            if p1_se_aleja:
+                p1["vel_x"] = 0
+            if p2_se_aleja:
+                p2["vel_x"] = 0
+            p1["hitbox"].centerx = round(c1.x + direccion.x * (exceso / 2))
+            p2["hitbox"].centerx = round(c2.x - direccion.x * (exceso / 2))
+
+    # Caso 2: p1 en suelo/plataforma y p2 en el aire -> p1 hace de ancla firme, p2 queda sostenido sin tirar a p1
+    elif p1["en_suelo"] and not p2["en_suelo"]:
+        p1_se_aleja = (direccion.x > 0 and p1["vel_x"] < 0) or (direccion.x < 0 and p1["vel_x"] > 0)
+        if p1_se_aleja:
+            p1["vel_x"] = 0
+            p1["hitbox"].centerx = round(c2.x - direccion.x * distancia_maxima)
+
+        # p2 queda limitado a la distancia máxima de p1
+        c1 = pygame.Vector2(p1["hitbox"].center)
+        v_actual = pygame.Vector2(p2["hitbox"].center) - c1
+        d_actual = v_actual.length()
+        if d_actual > distancia_maxima and d_actual > 0:
+            dir_2 = v_actual / d_actual
+            nuevo_centro_p2 = c1 + dir_2 * distancia_maxima
+            p2["hitbox"].center = (round(nuevo_centro_p2.x), round(nuevo_centro_p2.y))
+            if dir_2.y > 0 and p2["vel_y"] > 0:
+                p2["vel_y"] = 0
+
+    # Caso 3: p2 en suelo/plataforma y p1 en el aire -> p2 hace de ancla firme, p1 queda sostenido sin tirar a p2
+    elif p2["en_suelo"] and not p1["en_suelo"]:
+        p2_se_aleja = (direccion.x > 0 and p2["vel_x"] > 0) or (direccion.x < 0 and p2["vel_x"] < 0)
+        if p2_se_aleja:
+            p2["vel_x"] = 0
+            p2["hitbox"].centerx = round(c1.x + direccion.x * distancia_maxima)
+
+        # p1 queda limitado a la distancia máxima de p2
+        c2 = pygame.Vector2(p2["hitbox"].center)
+        v_actual = pygame.Vector2(p1["hitbox"].center) - c2
+        d_actual = v_actual.length()
+        if d_actual > distancia_maxima and d_actual > 0:
+            dir_1 = v_actual / d_actual
+            nuevo_centro_p1 = c2 + dir_1 * distancia_maxima
+            p1["hitbox"].center = (round(nuevo_centro_p1.x), round(nuevo_centro_p1.y))
+            if dir_1.y > 0 and p1["vel_y"] > 0:
+                p1["vel_y"] = 0
+
+    # Caso 4: Ambos en el aire -> la soga los mantiene a distancia máxima sin que uno arrastre al otro
+    else:
+        p1["hitbox"].centerx = round(c1.x + direccion.x * (exceso / 2))
+        p1["hitbox"].centery = round(c1.y + direccion.y * (exceso / 2))
+        p2["hitbox"].centerx = round(c2.x - direccion.x * (exceso / 2))
+        p2["hitbox"].centery = round(c2.y - direccion.y * (exceso / 2))
+
+    # Ajuste de plataformas y suelo para evitar penetración al balancearse
+    if plataformas:
+        for p in (p1, p2):
+            if not p["muerto"]:
+                for plat in plataformas:
+                    if p["hitbox"].colliderect(plat):
+                        if p["hitbox"].top < plat.bottom and p["hitbox"].bottom > plat.bottom:
+                            p["hitbox"].top = plat.bottom
+                            if p["vel_y"] < 0:
+                                p["vel_y"] = 0
+    if suelo is not None:
+        for p in (p1, p2):
+            if not p["muerto"] and p["hitbox"].bottom > suelo.top:
+                p["hitbox"].bottom = suelo.top
+                p["vel_y"] = 0
+                p["en_suelo"] = True
 
 
 # ============================================================
@@ -487,8 +611,14 @@ def dibujar_llave_activa(llave, puerta):
 # PINCHOS / MUERTE
 # ============================================================
 
-def crear_pinchos():
-    return [pygame.Rect(x, 500, 50, 20) for x in (220, 400, 580)]
+def crear_pinchos(y_suelo=640):
+    alto = 28
+    ancho = 45
+    # Máximo 2 pinchos seguidos por grupo
+    return [
+        pygame.Rect(x, y_suelo - alto, ancho, alto)
+        for x in (350, 400, 700, 950, 1000, 1250, 1550, 1600, 1800)
+    ]
 
 
 def comprobar_pinchos(p, pinchos):

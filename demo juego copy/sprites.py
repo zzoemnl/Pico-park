@@ -1,7 +1,8 @@
 import os
 import pygame
 
-ANCHO, ALTO = 1375, 700
+ANCHO, ALTO = 1280, 720
+
 FPS = 60
 ANCHO_PERSONAJE = 70
 ALTO_PERSONAJE = 85
@@ -195,6 +196,6 @@ def dibujar_personaje(pantalla, p, zona_agua=None):
         sprite_agua.blit(sprite, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
         clip_anterior = pantalla.get_clip()
-        pantalla.set_clip(pygame.Rect(0, zona_agua.top, ANCHO, ALTO - zona_agua.top))
+        pantalla.set_clip(pygame.Rect(zona_agua.left, zona_agua.top, zona_agua.width, pantalla.get_height() - zona_agua.top))
         pantalla.blit(sprite_agua, rect_sprite)
         pantalla.set_clip(clip_anterior)

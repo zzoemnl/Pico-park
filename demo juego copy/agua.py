@@ -1,10 +1,13 @@
 import pygame
+from sprites import ANCHO, ALTO
 
 # ============================================================
 # AGUA
 # ============================================================
 
-ZONA_AGUA = pygame.Rect(0, 220, 800, 380)
+# La zona de agua coincide con el ancho de la pantalla (ANCHO = 1280)
+# y llega verticalmente hasta el nivel del suelo (ALTO - 80).
+ZONA_AGUA = pygame.Rect(0, 220, ANCHO, ALTO - 80 - 220)
 GRAVEDAD_AGUA = 0.10
 VELOCIDAD_NADO_VERTICAL = 0.85
 FRICCION_AGUA = 0.86
