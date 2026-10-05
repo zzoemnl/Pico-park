@@ -100,7 +100,7 @@ def main():
                         if resultado == "salir":
                             break
 
-        pantalla.fill((30, 30, 30))
+        pantalla.fill((30, 30, 30)) #color menu
 
         titulo = fuente.render("ELEGÍ UN MUNDO", True, (255, 255, 255))
         pantalla.blit(titulo, titulo.get_rect(center=(ANCHO_MENU // 2, 45)))

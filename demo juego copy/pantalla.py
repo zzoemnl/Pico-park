@@ -441,8 +441,8 @@ def iniciar_mundo(mecanicas=None):
 
         # El mundo es largo (3000 px), pero la ventana sigue siendo 800x600.
         mundo = pygame.Surface((ANCHO_MUNDO, ALTO))
-        mundo.fill((30, 30, 30))
-        pygame.draw.rect(mundo, (100, 100, 100), suelo)
+        mundo.fill((255, 240, 195)) #color fondo
+        pygame.draw.rect(mundo, (225, 110, 80), suelo) # color suelo
 
         # Dibujar plataformas del nivel
         if plataformas:
