@@ -24,7 +24,7 @@ def main():
     ALTO_MENU = pantalla.get_height()
 
     # Botón X de cerrar en el menú (arriba a la derecha)
-    TAM_BOTON_HUD = 80
+    TAM_BOTON_HUD = 110
     MARGEN_DER = 25
     MARGEN_SUP = 20
 
