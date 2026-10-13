@@ -85,11 +85,29 @@ def dibujar_boton_salir(pantalla, fuente, rect):
 
 
 def cargar_boton(nombre):
+    def _cargar(ruta_archivo):
+        try:
+            img = pygame.image.load(ruta_archivo)
+            try:
+                return img.convert_alpha()
+            except pygame.error:
+                return img
+        except (FileNotFoundError, pygame.error):
+            return None
+
     ruta = os.path.join(RUTA_BOTONES, nombre)
-    try:
-        return pygame.image.load(ruta).convert_alpha()
-    except (FileNotFoundError, pygame.error):
-        return None
+    if os.path.isfile(ruta):
+        res = _cargar(ruta)
+        if res:
+            return res
+
+    for raiz, _, archivos in os.walk(RUTA_BOTONES):
+        if nombre in archivos:
+            res = _cargar(os.path.join(raiz, nombre))
+            if res:
+                return res
+
+    return None
 
 
 def animar_pulsacion_boton(pantalla, rect, spr_semi, spr_apretado):
@@ -118,8 +136,9 @@ def pantalla_muerte(pantalla, reloj):
     fuente_titulo = pygame.font.Font(None, 60)
     fuente_texto = pygame.font.Font(None, 36)
 
-    boton_salir_normal = cargar_boton("boton-salir.png")
-    boton_salir_apretado = cargar_boton("boton-salir-apretado.png")
+    boton_salir_normal = cargar_boton("salir.png") or cargar_boton("boton-salir.png")
+    boton_salir_semi = cargar_boton("salir-preapretado.png")
+    boton_salir_apretado = cargar_boton("salir-apretado.png") or cargar_boton("boton-salir-apretado.png")
     boton_reiniciar_normal = cargar_boton("boton-reiniciar.png")
     boton_reiniciar_apretado = cargar_boton("boton-reiniciar-apretado.png")
 
@@ -132,6 +151,8 @@ def pantalla_muerte(pantalla, reloj):
     boton_reiniciar_normal = pygame.transform.scale(boton_reiniciar_normal, (260, 80))
     boton_reiniciar_apretado = pygame.transform.scale(boton_reiniciar_apretado, (260, 80))
     boton_salir_normal = pygame.transform.scale(boton_salir_normal, (260, 80))
+    if boton_salir_semi:
+        boton_salir_semi = pygame.transform.scale(boton_salir_semi, (260, 80))
     boton_salir_apretado = pygame.transform.scale(boton_salir_apretado, (260, 80))
 
     boton_reiniciar = boton_reiniciar_normal.get_rect(center=(ANCHO // 2 - 150, 400))
@@ -151,9 +172,12 @@ def pantalla_muerte(pantalla, reloj):
                     return "reiniciar"
 
                 if boton_salir.collidepoint(evento.pos):
-                    pantalla.blit(boton_salir_apretado, boton_salir)
-                    pygame.display.flip()
-                    pygame.time.delay(300)
+                    if boton_salir_semi and boton_salir_apretado:
+                        animar_pulsacion_boton(pantalla, boton_salir, boton_salir_semi, boton_salir_apretado)
+                    else:
+                        pantalla.blit(boton_salir_apretado, boton_salir)
+                        pygame.display.flip()
+                        pygame.time.delay(300)
                     return "salir"
 
         pantalla.fill((25, 25, 25))
