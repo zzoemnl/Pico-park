@@ -1,5 +1,6 @@
 import os
 import sys
+import math
 import pygame
 
 from sprites import (
@@ -32,6 +33,10 @@ from agua import (
     aplicar_fisica_agua,
     puede_saltar,
     dibujar_agua,
+)
+from guardado import (
+    crear_desbloqueados_inicial,
+    mostrar_dialogo_guardar_salir,
 )
 
 COLOR_SOGA = (200, 160, 100)
@@ -151,6 +156,279 @@ def pantalla_muerte(pantalla, reloj):
         reloj.tick(FPS)
 
 
+def obtener_fuente_elegante(tamanio, negrita=True):
+    for nombre in ["Segoe UI", "Arial Rounded MT Bold", "Arial", "Trebuchet MS"]:
+        try:
+            return pygame.font.SysFont(nombre, tamanio, bold=negrita)
+        except Exception:
+            pass
+    return pygame.font.Font(None, int(tamanio * 1.1))
+
+
+def dibujar_estrella_decorativa(superficie, centro, r_exterior=14, r_interior=6, col_relleno=(255, 222, 90), col_borde=(185, 145, 75)):
+    """Dibuja una estrella decorativa de 5 puntas estilo pixel/cartoon."""
+    puntos = []
+    cx, cy = centro
+    for i in range(10):
+        r = r_exterior if i % 2 == 0 else r_interior
+        ang = i * (math.pi / 5) - math.pi / 2
+        puntos.append((cx + r * math.cos(ang), cy + r * math.sin(ang)))
+    pygame.draw.polygon(superficie, col_relleno, puntos)
+    pygame.draw.polygon(superficie, col_borde, puntos, 2)
+
+
+def renderizar_texto_con_sombra(texto, fuente, col_texto, col_sombra=(20, 20, 20), offset=(3, 3)):
+    """Crea una superficie SRCALPHA con el texto nítido y su sombra suave."""
+    t_sombra = fuente.render(texto, True, col_sombra)
+    t_texto = fuente.render(texto, True, col_texto)
+    w = max(t_sombra.get_width() + abs(offset[0]), t_texto.get_width() + abs(offset[0])) + 8
+    h = max(t_sombra.get_height() + abs(offset[1]), t_texto.get_height() + abs(offset[1])) + 8
+    surf = pygame.Surface((w, h), pygame.SRCALPHA)
+    surf.blit(t_sombra, (max(0, offset[0]) + 4, max(0, offset[1]) + 4))
+    surf.blit(t_texto, (4, 4))
+    return surf
+
+
+def animar_transicion_nivel_completado(pantalla, reloj, hay_siguiente=True):
+    """
+    Transición de finalización estilo videojuego cinematográfico (Iris Close / Circle Wipe):
+    1. La pantalla sigue mostrando el juego normalmente tras completar el nivel.
+    2. Aparece un círculo negro que se achica progresivamente desde los bordes hacia el centro
+       hasta cubrir toda la pantalla y dejarla completamente negra.
+    3. Cuando la pantalla está totalmente negra:
+       - Aparece suavemente «¡Nivel completado!» en el centro con estrellas decorativas.
+       - Transición suave hacia «Siguiente nivel» (o «¡Juego completado!» si es el último).
+    4. Carga fluida del siguiente nivel.
+    """
+    ancho = pantalla.get_width()
+    alto = pantalla.get_height()
+    cx = ancho // 2
+    cy = alto // 2
+    r_max = int(math.hypot(cx, cy)) + 15
+
+    # Captura del fotograma del juego para continuidad visual perfecta
+    captura_juego = pantalla.copy()
+
+    # Superficie reutilizable con colorkey para la máscara del círculo (iris)
+    mask_surf = pygame.Surface((ancho, alto))
+    mask_surf.set_colorkey((255, 0, 255))
+
+    # Fuentes estilizadas
+    fuente_titulo = obtener_fuente_elegante(68, negrita=True)
+    fuente_sub = obtener_fuente_elegante(52, negrita=True)
+
+    texto_completado = "¡Nivel completado!"
+    texto_siguiente = "Siguiente nivel" if hay_siguiente else "¡Juego completado!"
+
+    surf_t1 = renderizar_texto_con_sombra(texto_completado, fuente_titulo, (255, 225, 90), col_sombra=(25, 20, 10))
+    surf_t2 = renderizar_texto_con_sombra(texto_siguiente, fuente_sub, (135, 235, 255) if hay_siguiente else (255, 220, 100), col_sombra=(15, 25, 35))
+
+    # --- FASE 1: Pausa en el juego normal (22 fotogramas ~ 0.36s) ---
+    for _ in range(22):
+        reloj.tick(FPS)
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+        pantalla.blit(captura_juego, (0, 0))
+        pygame.display.flip()
+
+    # --- FASE 2: Círculo negro achicándose progresivamente hacia el centro (70 fotogramas ~ 1.15s) ---
+    frames_iris = 70
+    for f in range(frames_iris):
+        reloj.tick(FPS)
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        t = f / (frames_iris - 1)
+        factor = t * t * (3.0 - 2.0 * t)  # Easing smoothstep
+        radio = max(0.0, r_max * (1.0 - factor))
+
+        pantalla.blit(captura_juego, (0, 0))
+        if radio > 0:
+            mask_surf.fill((0, 0, 0))
+            pygame.draw.circle(mask_surf, (255, 0, 255), (cx, cy), int(radio))
+            pantalla.blit(mask_surf, (0, 0))
+        else:
+            pantalla.fill((0, 0, 0))
+
+        pygame.display.flip()
+
+    # Asegurar pantalla totalmente negra
+    pantalla.fill((0, 0, 0))
+    pygame.display.flip()
+
+    # Pausa en negro antes del texto (14 fotogramas ~ 0.23s)
+    for _ in range(14):
+        reloj.tick(FPS)
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+    def _dibujar_estrellas_decorativas(rect_c, tiempo, alpha):
+        if alpha <= 0:
+            return
+        offset_y = math.sin(tiempo * 5.0) * 4.0
+        surf_estrellas = pygame.Surface((ancho, alto), pygame.SRCALPHA)
+        pos_izq = (rect_c.left - 48, rect_c.centery + int(offset_y))
+        pos_der = (rect_c.right + 48, rect_c.centery - int(offset_y))
+        dibujar_estrella_decorativa(surf_estrellas, pos_izq, r_exterior=16, r_interior=7, col_relleno=(255, 222, 90), col_borde=(185, 145, 75))
+        dibujar_estrella_decorativa(surf_estrellas, pos_der, r_exterior=16, r_interior=7, col_relleno=(255, 222, 90), col_borde=(185, 145, 75))
+        if alpha < 255:
+            surf_estrellas.set_alpha(alpha)
+        pantalla.blit(surf_estrellas, (0, 0))
+
+    # --- FASE 3A: Fade-in suave de «¡Nivel completado!» (30 fotogramas ~ 0.5s) ---
+    frames_in_1 = 30
+    for f in range(frames_in_1):
+        reloj.tick(FPS)
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        t = f / (frames_in_1 - 1)
+        factor = math.sin(t * math.pi / 2)  # Ease-out
+        alpha = int(255 * factor)
+        y_pos = cy + int(12 * (1.0 - factor))
+
+        pantalla.fill((0, 0, 0))
+        surf_t1.set_alpha(alpha)
+        r_t1 = surf_t1.get_rect(center=(cx, y_pos))
+        pantalla.blit(surf_t1, r_t1)
+        _dibujar_estrellas_decorativas(r_t1, f * 0.1, alpha)
+        pygame.display.flip()
+
+    # --- FASE 3B: Mostrar «¡Nivel completado!» en el centro (55 fotogramas ~ 0.9s) ---
+    r_t1 = surf_t1.get_rect(center=(cx, cy))
+    surf_t1.set_alpha(255)
+    for f in range(55):
+        reloj.tick(FPS)
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        pantalla.fill((0, 0, 0))
+        pantalla.blit(surf_t1, r_t1)
+        _dibujar_estrellas_decorativas(r_t1, (30 + f) * 0.1, 255)
+        pygame.display.flip()
+
+    # --- FASE 3C: Transición suave entre «¡Nivel completado!» y «Siguiente nivel» (34 fotogramas ~ 0.56s) ---
+    frames_cross = 34
+    for f in range(frames_cross):
+        reloj.tick(FPS)
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        t = f / (frames_cross - 1)
+        factor = t * t * (3.0 - 2.0 * t)  # Smoothstep cross-fade
+        alpha_1 = max(0, min(255, int(255 * (1.0 - factor))))
+        alpha_2 = max(0, min(255, int(255 * factor)))
+
+        y1 = cy - int(16 * factor)
+        y2 = cy + int(16 * (1.0 - factor))
+
+        pantalla.fill((0, 0, 0))
+
+        if alpha_1 > 0:
+            surf_t1.set_alpha(alpha_1)
+            r1 = surf_t1.get_rect(center=(cx, y1))
+            pantalla.blit(surf_t1, r1)
+            _dibujar_estrellas_decorativas(r1, (85 + f) * 0.1, alpha_1)
+
+        if alpha_2 > 0:
+            surf_t2.set_alpha(alpha_2)
+            r2 = surf_t2.get_rect(center=(cx, y2))
+            pantalla.blit(surf_t2, r2)
+
+        pygame.display.flip()
+
+    # --- FASE 3D: Mostrar «Siguiente nivel» en el centro (55 fotogramas ~ 0.9s) ---
+    r_t2 = surf_t2.get_rect(center=(cx, cy))
+    surf_t2.set_alpha(255)
+    for f in range(55):
+        reloj.tick(FPS)
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        pulso = int(240 + 15 * math.sin(f * 0.15))
+        surf_t2.set_alpha(min(255, pulso))
+
+        pantalla.fill((0, 0, 0))
+        pantalla.blit(surf_t2, r_t2)
+        pygame.display.flip()
+
+    # --- FASE 3E: Fade-out suave hacia negro (24 fotogramas ~ 0.4s) ---
+    frames_out = 24
+    for f in range(frames_out):
+        reloj.tick(FPS)
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        t = f / (frames_out - 1)
+        alpha = max(0, min(255, int(255 * (1.0 - t))))
+
+        pantalla.fill((0, 0, 0))
+        surf_t2.set_alpha(alpha)
+        pantalla.blit(surf_t2, r_t2)
+        pygame.display.flip()
+
+    # Pantalla completamente negra antes de cargar el siguiente nivel
+    pantalla.fill((0, 0, 0))
+    pygame.display.flip()
+
+    for _ in range(8):
+        reloj.tick(FPS)
+
+    return "siguiente"
+
+
+def animar_apertura_nivel(pantalla, reloj, captura_inicio):
+    """
+    Apertura fluida al iniciar un nivel (Iris In):
+    El círculo negro se agranda desde el centro hacia los bordes revelando el nuevo nivel.
+    Garantiza fluidez total sin cortes bruscos.
+    """
+    ancho = pantalla.get_width()
+    alto = pantalla.get_height()
+    cx = ancho // 2
+    cy = alto // 2
+    r_max = int(math.hypot(cx, cy)) + 15
+
+    mask_surf = pygame.Surface((ancho, alto))
+    mask_surf.set_colorkey((255, 0, 255))
+
+    frames = 28
+    for f in range(frames):
+        reloj.tick(FPS)
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        t = f / (frames - 1)
+        factor = t * t * (3.0 - 2.0 * t)
+        radio = max(0.0, r_max * factor)
+
+        pantalla.blit(captura_inicio, (0, 0))
+        if radio < r_max:
+            mask_surf.fill((0, 0, 0))
+            pygame.draw.circle(mask_surf, (255, 0, 255), (cx, cy), int(radio))
+            pantalla.blit(mask_surf, (0, 0))
+
+        pygame.display.flip()
+
+
 def mostrar_menu_victoria(pantalla):
     fuente_t = pygame.font.Font(None, 55)
     fuente_b = pygame.font.Font(None, 32)
@@ -254,9 +532,14 @@ def mostrar_menu_victoria(pantalla):
                         return b["accion"]
 
 
-def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None):
+def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, mundo=1, niveles_desbloqueados=None, partida_id=None, partida_nombre=None):
     if mecanicas is None:
         mecanicas = []
+
+    if niveles_desbloqueados is None:
+        niveles_desbloqueados = crear_desbloqueados_inicial()
+
+    hay_siguiente_nivel = not (mundo >= 3 and numero_nivel >= 5)
 
     usar_caja = "caja" in mecanicas
     usar_soga = "soga" in mecanicas
@@ -527,14 +810,24 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None):
     alpha_tut_p1 = 255.0
     alpha_tut_p2 = 255.0
 
+    p1_sobre_p2 = False
+    p2_sobre_p1 = False
+
     ejecutando = True
     while ejecutando:
         reloj.tick(FPS)
 
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+                resp = mostrar_dialogo_guardar_salir(
+                    pantalla, reloj,
+                    niveles_desbloqueados=niveles_desbloqueados,
+                    id_partida=partida_id,
+                    nombre_partida=partida_nombre,
+                )
+                if resp != "cancelar":
+                    pygame.quit()
+                    sys.exit()
 
             if evento.type == pygame.KEYDOWN:
                 if evento.key == pygame.K_r:
@@ -553,8 +846,15 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None):
                 if rect_btn_x.collidepoint(evento.pos):
                     if spr_x_semi and spr_x_apretado:
                         animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, fondo_btn_x)
-                    pygame.quit()
-                    sys.exit()
+                    resp = mostrar_dialogo_guardar_salir(
+                        pantalla, reloj,
+                        niveles_desbloqueados=niveles_desbloqueados,
+                        id_partida=partida_id,
+                        nombre_partida=partida_nombre,
+                    )
+                    if resp != "cancelar":
+                        pygame.quit()
+                        sys.exit()
 
                 if rect_btn_reiniciar.collidepoint(evento.pos):
                     if spr_reiniciar_semi and spr_reiniciar_apretado:
@@ -731,6 +1031,10 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None):
             # Jugador 2 ya pasó por la puerta: cámara completa siguiendo al Jugador 1
             cam_x = max(0, min(jugador1["hitbox"].centerx - ANCHO // 2, ancho_mundo_nivel - ANCHO))
             pantalla.blit(mundo, (0, 0), pygame.Rect(cam_x, 0, ANCHO, ALTO))
+        elif p1_completado and p2_completado:
+            # Ambos personajes completaron el nivel: cámara fija centrada en la puerta de salida
+            cam_x = max(0, min(puerta["rect"].centerx - ANCHO // 2, ancho_mundo_nivel - ANCHO))
+            pantalla.blit(mundo, (0, 0), pygame.Rect(cam_x, 0, ANCHO, ALTO))
         else:
             # Ambos personajes están en juego
             distancia = abs(jugador1["hitbox"].centerx - jugador2["hitbox"].centerx)
@@ -752,17 +1056,18 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None):
                 pantalla.blit(mundo, (ancho_m, 0), pygame.Rect(cam_der_x, 0, ancho_m, ALTO))
                 pygame.draw.line(pantalla, (0, 0, 0), (ancho_m, 0), (ancho_m, ALTO), 4)
 
-        # Botones HUD en la esquina superior derecha
-        try:
-            fondo_btn_casa = pantalla.subsurface(rect_btn_casa).copy()
-            fondo_btn_reiniciar = pantalla.subsurface(rect_btn_reiniciar).copy()
-            fondo_btn_x = pantalla.subsurface(rect_btn_x).copy()
-        except Exception:
-            pass
+        # Botones HUD en la esquina superior derecha solo si el nivel continúa activo
+        if not (p1_completado and p2_completado):
+            try:
+                fondo_btn_casa = pantalla.subsurface(rect_btn_casa).copy()
+                fondo_btn_reiniciar = pantalla.subsurface(rect_btn_reiniciar).copy()
+                fondo_btn_x = pantalla.subsurface(rect_btn_x).copy()
+            except Exception:
+                pass
 
-        if spr_casa_normal: pantalla.blit(spr_casa_normal, rect_btn_casa)
-        if spr_reiniciar_normal: pantalla.blit(spr_reiniciar_normal, rect_btn_reiniciar)
-        if spr_x_normal: pantalla.blit(spr_x_normal, rect_btn_x)
+            if spr_casa_normal: pantalla.blit(spr_casa_normal, rect_btn_casa)
+            if spr_reiniciar_normal: pantalla.blit(spr_reiniciar_normal, rect_btn_reiniciar)
+            if spr_x_normal: pantalla.blit(spr_x_normal, rect_btn_x)
 
         pygame.display.flip()
 
@@ -780,6 +1085,10 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None):
                 alpha_tut_p2 = 255.0
 
         if p1_completado and p2_completado:
-            return mostrar_menu_victoria(pantalla)
+            return animar_transicion_nivel_completado(
+                pantalla=pantalla,
+                reloj=reloj,
+                hay_siguiente=hay_siguiente_nivel,
+            )
 
     return "salir"
