@@ -8,12 +8,18 @@ from menu_niveles import (
     dibujar_menu_niveles,
     obtener_geometria_menu,
     obtener_mecanicas_nivel,
+    COLORES_TABS,
+    COL_PANEL,
+    COL_BORDE_PANEL,
 )
 from guardado import (
     crear_desbloqueados_inicial,
     cargar_partidas,
     guardar_partida,
+    eliminar_partida,
     mostrar_dialogo_guardar_salir,
+    mostrar_dialogo_confirmar_borrado,
+    cargar_fuente_pixel,
 )
 
 ESTADO_MENU_PRINCIPAL = "principal"
@@ -52,6 +58,175 @@ PERSONAJES_DISPONIBLES = [
 ]
 
 
+def truncar_texto(texto, fuente, ancho_max):
+    """Acorta el texto con puntos suspensivos si supera el ancho máximo disponible."""
+    if fuente.size(texto)[0] <= ancho_max:
+        return texto
+    ellipsis = "..."
+    ancho_ell = fuente.size(ellipsis)[0]
+    if ancho_ell >= ancho_max:
+        return ""
+    recortado = texto
+    while recortado and fuente.size(recortado + ellipsis)[0] > ancho_max:
+        recortado = recortado[:-1]
+    return recortado + ellipsis
+
+
+def obtener_geometria_panel_partidas(ancho_menu, alto_menu):
+    """
+    Calcula dinámicamente las dimensiones y posiciones del panel y botones
+    de la pantalla de partidas guardadas adaptadas a la resolución actual.
+    Garantiza que el botón «VOLVER» quede siempre perfectamente centrado.
+    """
+    ancho_panel = min(960, max(680, ancho_menu - 80))
+    alto_panel = min(490, max(360, alto_menu - 190))
+    x_panel = (ancho_menu - ancho_panel) // 2
+    y_panel = 110
+    rect_panel = pygame.Rect(x_panel, y_panel, ancho_panel, alto_panel)
+
+    y_btns_inf = alto_menu - 65
+    # Botón «VOLVER» perfectamente centrado en la pantalla
+    btn_volver = pygame.Rect((ancho_menu - 220) // 2, y_btns_inf, 220, 48)
+    # Botón «+ NUEVA PARTIDA» en la cabecera superior derecha del panel
+    btn_nueva = pygame.Rect(rect_panel.right - 195, 60, 195, 38)
+    btn_iniciar_primera = pygame.Rect(rect_panel.centerx - 170, rect_panel.centery + 35, 340, 52)
+
+    return rect_panel, btn_volver, btn_nueva, btn_iniciar_primera
+
+
+def obtener_geometria_tarjeta_partida(rect_panel, idx_slot, alto_card=84, gap_cards=10):
+    """
+    Calcula los rectángulos de cada elemento dentro de la tarjeta de partida:
+    - r_card: rectángulo general de la tarjeta
+    - r_badge: rectángulo del badge de mundo a la izquierda
+    - r_btn_cargar: botón principal «CARGAR»
+    - r_btn_borrar: botón secundario «BORRAR»
+    - (x_texto, ancho_max_texto): zona exclusiva para los textos a la izquierda de los botones
+    """
+    r_card = pygame.Rect(
+        rect_panel.left + 18,
+        rect_panel.top + 16 + idx_slot * (alto_card + gap_cards),
+        rect_panel.width - 36,
+        alto_card,
+    )
+
+    # Badge a la izquierda
+    w_badge, h_badge = 110, 48
+    r_badge = pygame.Rect(r_card.left + 16, r_card.centery - (h_badge // 2), w_badge, h_badge)
+
+    # Botones a la derecha con ancho y separación reservados para no superponerse
+    w_borrar = 100
+    w_cargar = 116
+    h_btn = 40
+    gap_btns = 12
+    margin_der = 16
+
+    r_btn_borrar = pygame.Rect(r_card.right - margin_der - w_borrar, r_card.centery - (h_btn // 2), w_borrar, h_btn)
+    r_btn_cargar = pygame.Rect(r_btn_borrar.left - gap_btns - w_cargar, r_card.centery - (h_btn // 2), w_cargar, h_btn)
+
+    # Zona disponible para información a la izquierda de los botones
+    x_texto = r_badge.right + 18
+    x_limite_texto = r_btn_cargar.left - 18
+    ancho_max_texto = max(80, x_limite_texto - x_texto)
+
+    return r_card, r_badge, r_btn_cargar, r_btn_borrar, (x_texto, ancho_max_texto)
+
+
+def dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel, pos_mouse, fuentes):
+    """Dibuja una tarjeta de partida organizada con información a la izquierda y botones a la derecha."""
+    fuente_titulo_card = fuentes.get("titulo_card", fuentes["btn"])
+    fuente_sub_card = fuentes.get("sub_card", fuentes["sub_btn"])
+    fuente_btn_card = fuentes.get("btn_card", fuentes["texto"])
+
+    r_card, r_badge, r_btn_cargar, r_btn_borrar, (x_texto, ancho_max_texto) = obtener_geometria_tarjeta_partida(rect_panel, idx_slot)
+
+    hov_card = r_card.collidepoint(pos_mouse)
+    hov_cargar = r_btn_cargar.collidepoint(pos_mouse)
+    hov_borrar = r_btn_borrar.collidepoint(pos_mouse)
+
+    # Fondo y borde de la tarjeta en tono pastel crema cálido
+    col_card = (255, 252, 244) if hov_card else (255, 255, 255)
+    borde_card = (225, 145, 75) if hov_card else (220, 202, 178)
+    pygame.draw.rect(pantalla, col_card, r_card, border_radius=14)
+    pygame.draw.rect(pantalla, borde_card, r_card, width=3 if hov_card else 2, border_radius=14)
+
+    # 1. Badge de Mundo a la izquierda con colores pastel acordes a cada mundo
+    m_val = p.get("mundo_max", 1)
+    info_b = COLORES_TABS.get(m_val, COLORES_TABS[1])
+    pygame.draw.rect(pantalla, info_b["fondo"], r_badge, border_radius=10)
+    pygame.draw.rect(pantalla, info_b["borde"], r_badge, width=2, border_radius=10)
+    fuente_badge = fuentes.get("badge", fuentes.get("btn"))
+    t_badge = fuente_badge.render(f"MUNDO {m_val}", True, info_b["texto"])
+    pantalla.blit(t_badge, t_badge.get_rect(center=r_badge.center))
+
+    # 2. Información textual adaptativa (Nombre, nivel, guardado y desbloqueados) en tonos café y terracota
+    nombre = p.get("nombre", f"Partida {p.get('id', 1)}")
+    mundo_max = p.get("mundo_max", 1)
+    nivel_max = p.get("nivel_max", 1)
+    fecha = p.get("fecha", "")
+    niveles_desc = p.get("niveles_desbloqueados", {})
+    total_desbloq = sum(sum(1 for x in bits if x) for bits in niveles_desc.values()) if isinstance(niveles_desc, dict) else 1
+
+    tit_unido = f"{nombre}  —  Nivel Máximo: {mundo_max}-{nivel_max}"
+    det_unido = f"Último guardado: {fecha}   |   Niveles desbloqueados: {total_desbloq}/15"
+
+    w_tit = fuente_titulo_card.size(tit_unido)[0]
+    w_det = fuente_sub_card.size(det_unido)[0]
+
+    color_tit = (55, 45, 35)
+    color_det = (115, 100, 85)
+    color_nivel_destacado = (195, 100, 45)
+
+    if w_tit <= ancho_max_texto and w_det <= ancho_max_texto:
+        # Modo 2 líneas: todo cabe cómodamente
+        t1 = fuente_titulo_card.render(tit_unido, True, color_tit)
+        pantalla.blit(t1, (x_texto, r_card.top + 16))
+
+        t2 = fuente_sub_card.render(det_unido, True, color_det)
+        pantalla.blit(t2, (x_texto, r_card.top + 48))
+    elif w_tit <= ancho_max_texto:
+        # El título cabe en una línea, pero los detalles se dividen en 2 líneas
+        t1 = fuente_titulo_card.render(tit_unido, True, color_tit)
+        pantalla.blit(t1, (x_texto, r_card.top + 12))
+
+        t2 = fuente_sub_card.render(truncar_texto(f"Último guardado: {fecha}", fuente_sub_card, ancho_max_texto), True, color_det)
+        pantalla.blit(t2, (x_texto, r_card.top + 37))
+
+        t3 = fuente_sub_card.render(truncar_texto(f"Niveles desbloqueados: {total_desbloq}/15", fuente_sub_card, ancho_max_texto), True, color_det)
+        pantalla.blit(t3, (x_texto, r_card.top + 58))
+    else:
+        # El título no cabe completo en una línea: se divide ordenadamente nombre y nivel
+        t1_nom = truncar_texto(nombre, fuente_titulo_card, ancho_max_texto)
+        t1 = fuente_titulo_card.render(t1_nom, True, color_tit)
+        pantalla.blit(t1, (x_texto, r_card.top + 12))
+
+        txt_nivel = f"Nivel Máximo: Mundo {mundo_max} - Nivel {nivel_max}"
+        t2 = fuente_sub_card.render(truncar_texto(txt_nivel, fuente_sub_card, ancho_max_texto), True, color_nivel_destacado)
+        pantalla.blit(t2, (x_texto, r_card.top + 37))
+
+        txt_info = f"Guardado: {fecha}  •  Desbloqueados: {total_desbloq}/15"
+        t3 = fuente_sub_card.render(truncar_texto(txt_info, fuente_sub_card, ancho_max_texto), True, color_det)
+        pantalla.blit(t3, (x_texto, r_card.top + 58))
+
+    # 3. Botón «CARGAR» (Verde pastel vibrante Pico Park con fuente pixel art)
+    col_bc = (82, 194, 114) if hov_cargar else (68, 172, 98)
+    borde_bc = (255, 255, 255) if hov_cargar else (45, 130, 70)
+    pygame.draw.rect(pantalla, col_bc, r_btn_cargar, border_radius=10)
+    pygame.draw.rect(pantalla, borde_bc, r_btn_cargar, width=2, border_radius=10)
+    t_bc = fuente_btn_card.render("CARGAR", True, (255, 255, 255))
+    pantalla.blit(t_bc, t_bc.get_rect(center=r_btn_cargar.center))
+
+    # 4. Botón «BORRAR» (Rojo terracota / coral pastel con fuente pixel art)
+    col_bb = (240, 105, 100) if hov_borrar else (220, 85, 80)
+    borde_bb = (255, 255, 255) if hov_borrar else (170, 55, 50)
+    pygame.draw.rect(pantalla, col_bb, r_btn_borrar, border_radius=10)
+    pygame.draw.rect(pantalla, borde_bb, r_btn_borrar, width=2, border_radius=10)
+    t_bb = fuente_btn_card.render("BORRAR", True, (255, 255, 255))
+    pantalla.blit(t_bb, t_bb.get_rect(center=r_btn_borrar.center))
+
+    return r_card, r_btn_cargar, r_btn_borrar
+
+
 def main():
     pygame.init()
 
@@ -65,16 +240,25 @@ def main():
 
     pygame.display.set_caption("Pico Park")
     reloj = pygame.time.Clock()
+    fuente_pixel_titulo = cargar_fuente_pixel(30, fallback_tamano=55)
+    fuente_pixel_btn_grande = cargar_fuente_pixel(20, fallback_tamano=32)
+    fuente_pixel_btn = cargar_fuente_pixel(15, fallback_tamano=32)
+    fuente_pixel_sub_btn = cargar_fuente_pixel(14, fallback_tamano=24)
+    fuente_pixel_card_btn = cargar_fuente_pixel(14, fallback_tamano=25)
+    fuente_pixel_badge = cargar_fuente_pixel(15, fallback_tamano=28)
+
     fuente_titulo = pygame.font.Font(None, 55)
     fuente_subtitulo = pygame.font.Font(None, 36)
     fuente_btn = pygame.font.Font(None, 32)
     fuente_texto = pygame.font.Font(None, 26)
     fuente_sub_btn = pygame.font.Font(None, 22)
     fuentes_menu = {
-        "titulo": fuente_titulo,
-        "tab": pygame.font.Font(None, 34),
-        "card": pygame.font.Font(None, 28),
+        "titulo": fuente_pixel_titulo,
+        "tab": cargar_fuente_pixel(18, fallback_tamano=34),
+        "card": cargar_fuente_pixel(13, fallback_tamano=28),
     }
+    fuente_card_titulo = pygame.font.Font(None, 29)
+    fuente_card_sub = pygame.font.Font(None, 22)
 
     ANCHO_MENU = pantalla.get_width()
     ALTO_MENU = pantalla.get_height()
@@ -150,13 +334,12 @@ def main():
     btn_nueva_partida = pygame.Rect(x_modo, (ALTO_MENU // 2) + 35, W_MODO, H_MODO)
     btn_volver_modo = pygame.Rect((ANCHO_MENU - 220) // 2, ALTO_MENU - 75, 220, 50)
 
-    # Geometría y botones para la Lista de Partidas Guardadas
-    ancho_panel_p = min(740, ANCHO_MENU - 80)
-    alto_panel_p = min(420, ALTO_MENU - 190)
-    rect_panel_partidas = pygame.Rect((ANCHO_MENU - ancho_panel_p) // 2, 115, ancho_panel_p, alto_panel_p)
-    btn_iniciar_primera = pygame.Rect(rect_panel_partidas.centerx - 170, rect_panel_partidas.centery + 35, 340, 52)
-    btn_volver_partidas = pygame.Rect((ANCHO_MENU - 460) // 2, ALTO_MENU - 65, 210, 48)
-    btn_nueva_desde_lista = pygame.Rect((ANCHO_MENU - 460) // 2 + 250, ALTO_MENU - 65, 210, 48)
+    # Geometría y variables para la Lista de Partidas Guardadas
+    pagina_partidas = 0
+    MAX_PARTIDAS_POR_PAGINA = 5
+    rect_panel_partidas, btn_volver_partidas, btn_nueva_desde_lista, btn_iniciar_primera = (
+        obtener_geometria_panel_partidas(ANCHO_MENU, ALTO_MENU)
+    )
 
     estado_actual = ESTADO_MENU_PRINCIPAL
     mundo_seleccionado = 1
@@ -222,6 +405,7 @@ def main():
 
                 elif estado_actual == ESTADO_MODO_JUEGO:
                     if btn_continuar.collidepoint(evento.pos):
+                        pagina_partidas = 0
                         estado_actual = ESTADO_LISTA_PARTIDAS
                     elif btn_nueva_partida.collidepoint(evento.pos):
                         niveles_desbloqueados = crear_desbloqueados_inicial()
@@ -235,7 +419,15 @@ def main():
                         estado_actual = ESTADO_MENU_PRINCIPAL
 
                 elif estado_actual == ESTADO_LISTA_PARTIDAS:
+                    rect_panel_partidas, btn_volver_partidas, btn_nueva_desde_lista, btn_iniciar_primera = (
+                        obtener_geometria_panel_partidas(ANCHO_MENU, ALTO_MENU)
+                    )
                     partidas_guardadas = cargar_partidas()
+                    total_p = len(partidas_guardadas)
+                    total_paginas = max(1, (total_p + MAX_PARTIDAS_POR_PAGINA - 1) // MAX_PARTIDAS_POR_PAGINA)
+                    if pagina_partidas >= total_paginas:
+                        pagina_partidas = max(0, total_paginas - 1)
+
                     if not partidas_guardadas:
                         if btn_iniciar_primera.collidepoint(evento.pos):
                             niveles_desbloqueados = crear_desbloqueados_inicial()
@@ -244,22 +436,58 @@ def main():
                             partida_actual_nombre = "Partida 1"
                             estado_actual = ESTADO_SELECCION_NIVEL
                     else:
-                        for idx_p, p in enumerate(partidas_guardadas[:5]):
-                            r_card = pygame.Rect(rect_panel_partidas.left + 20, rect_panel_partidas.top + 20 + idx_p * (72 + 12), rect_panel_partidas.width - 40, 72)
-                            if r_card.collidepoint(evento.pos):
+                        inicio_idx = pagina_partidas * MAX_PARTIDAS_POR_PAGINA
+                        fin_idx = inicio_idx + MAX_PARTIDAS_POR_PAGINA
+                        partidas_pagina = partidas_guardadas[inicio_idx:fin_idx]
+
+                        accion_ejecutada = False
+                        for idx_slot, p in enumerate(partidas_pagina):
+                            r_card, _, r_btn_cargar, r_btn_borrar, _ = obtener_geometria_tarjeta_partida(
+                                rect_panel_partidas, idx_slot
+                            )
+                            # Clic en botón BORRAR (dispara confirmación previa)
+                            if r_btn_borrar.collidepoint(evento.pos):
+                                if mostrar_dialogo_confirmar_borrado(pantalla, reloj, p):
+                                    eliminar_partida(p["id"])
+                                    if partida_actual_id == p["id"]:
+                                        partida_actual_id = None
+                                        partida_actual_nombre = None
+                                        niveles_desbloqueados = crear_desbloqueados_inicial()
+                                    # Recalcular páginas inmediatamente para reorganizar la vista
+                                    nuevas_p = cargar_partidas()
+                                    nuevas_total_pag = max(1, (len(nuevas_p) + MAX_PARTIDAS_POR_PAGINA - 1) // MAX_PARTIDAS_POR_PAGINA)
+                                    if pagina_partidas >= nuevas_total_pag:
+                                        pagina_partidas = max(0, nuevas_total_pag - 1)
+                                accion_ejecutada = True
+                                break
+                            # Clic en botón CARGAR o sobre la tarjeta
+                            elif r_btn_cargar.collidepoint(evento.pos) or r_card.collidepoint(evento.pos):
                                 niveles_desbloqueados = copy.deepcopy(p["niveles_desbloqueados"])
                                 partida_actual_id = p["id"]
                                 partida_actual_nombre = p["nombre"]
                                 mundo_seleccionado = p["mundo_max"]
                                 estado_actual = ESTADO_SELECCION_NIVEL
+                                accion_ejecutada = True
                                 break
-                        if btn_nueva_desde_lista.collidepoint(evento.pos):
-                            niveles_desbloqueados = crear_desbloqueados_inicial()
-                            mundo_seleccionado = 1
-                            nuevo_id = max([p["id"] for p in partidas_guardadas], default=0) + 1
-                            partida_actual_id = nuevo_id
-                            partida_actual_nombre = f"Partida {nuevo_id}"
-                            estado_actual = ESTADO_SELECCION_NIVEL
+
+                        if not accion_ejecutada:
+                            if total_paginas > 1:
+                                btn_pag_ant = pygame.Rect(rect_panel_partidas.centerx - 130, rect_panel_partidas.bottom + 8, 36, 32)
+                                btn_pag_sig = pygame.Rect(rect_panel_partidas.centerx + 94, rect_panel_partidas.bottom + 8, 36, 32)
+                                if btn_pag_ant.collidepoint(evento.pos) and pagina_partidas > 0:
+                                    pagina_partidas -= 1
+                                elif btn_pag_sig.collidepoint(evento.pos) and pagina_partidas < total_paginas - 1:
+                                    pagina_partidas += 1
+
+                            if btn_nueva_desde_lista.collidepoint(evento.pos):
+                                niveles_desbloqueados = crear_desbloqueados_inicial()
+                                mundo_seleccionado = 1
+                                partidas_actuales = cargar_partidas()
+                                nuevo_id = max([p["id"] for p in partidas_actuales], default=0) + 1
+                                partida_actual_id = nuevo_id
+                                partida_actual_nombre = f"Partida {nuevo_id}"
+                                estado_actual = ESTADO_SELECCION_NIVEL
+
                     if btn_volver_partidas.collidepoint(evento.pos):
                         estado_actual = ESTADO_MODO_JUEGO
 
@@ -335,10 +563,19 @@ def main():
                                         ejecutando = False
                                 break
 
+            elif evento.type == pygame.MOUSEWHEEL:
+                if estado_actual == ESTADO_LISTA_PARTIDAS:
+                    total_pag = max(1, (len(cargar_partidas()) + MAX_PARTIDAS_POR_PAGINA - 1) // MAX_PARTIDAS_POR_PAGINA)
+                    if total_pag > 1:
+                        if evento.y > 0 and pagina_partidas > 0:
+                            pagina_partidas -= 1
+                        elif evento.y < 0 and pagina_partidas < total_pag - 1:
+                            pagina_partidas += 1
+
         pantalla.fill((30, 30, 30))
 
         if estado_actual == ESTADO_MENU_PRINCIPAL:
-            titulo = fuente_titulo.render("PICO PARK", True, (255, 255, 255))
+            titulo = fuente_pixel_titulo.render("PICO PARK", True, (255, 255, 255))
             pantalla.blit(titulo, titulo.get_rect(center=(ANCHO_MENU // 2, 70)))
 
             botones_menu_datos = [
@@ -354,7 +591,7 @@ def main():
         elif estado_actual == ESTADO_MODO_JUEGO:
             pos_mouse = pygame.mouse.get_pos()
 
-            titulo = fuente_titulo.render("MODO DE JUEGO", True, (255, 230, 100))
+            titulo = fuente_pixel_titulo.render("MODO DE JUEGO", True, (255, 230, 100))
             pantalla.blit(titulo, titulo.get_rect(center=(ANCHO_MENU // 2, 85)))
 
             subt = fuente_subtitulo.render("Selecciona cómo deseas comenzar tu aventura", True, (215, 215, 225))
@@ -365,7 +602,7 @@ def main():
             col_c = (55, 165, 88) if hov_c else (42, 138, 72)
             pygame.draw.rect(pantalla, col_c, btn_continuar, border_radius=16)
             pygame.draw.rect(pantalla, (255, 255, 255) if hov_c else (160, 230, 180), btn_continuar, width=3 if hov_c else 2, border_radius=16)
-            t_cont_tit = fuente_btn.render("▶  CONTINUAR", True, (255, 255, 255))
+            t_cont_tit = fuente_pixel_btn_grande.render("CONTINUAR", True, (255, 255, 255))
             pantalla.blit(t_cont_tit, t_cont_tit.get_rect(center=(btn_continuar.centerx, btn_continuar.centery - 16)))
             t_cont_desc = fuente_sub_btn.render("Cargar partida guardada y ver tus niveles alcanzados", True, (220, 245, 225))
             pantalla.blit(t_cont_desc, t_cont_desc.get_rect(center=(btn_continuar.centerx, btn_continuar.centery + 18)))
@@ -375,7 +612,7 @@ def main():
             col_n = (215, 120, 48) if hov_n else (185, 100, 38)
             pygame.draw.rect(pantalla, col_n, btn_nueva_partida, border_radius=16)
             pygame.draw.rect(pantalla, (255, 255, 255) if hov_n else (245, 205, 150), btn_nueva_partida, width=3 if hov_n else 2, border_radius=16)
-            t_nueva_tit = fuente_btn.render("★  NUEVA PARTIDA", True, (255, 255, 255))
+            t_nueva_tit = fuente_pixel_btn_grande.render("NUEVA PARTIDA", True, (255, 255, 255))
             pantalla.blit(t_nueva_tit, t_nueva_tit.get_rect(center=(btn_nueva_partida.centerx, btn_nueva_partida.centery - 16)))
             t_nueva_desc = fuente_sub_btn.render("Reiniciar todo y comenzar desde el Mundo 1 - Nivel 1", True, (255, 235, 215))
             pantalla.blit(t_nueva_desc, t_nueva_desc.get_rect(center=(btn_nueva_partida.centerx, btn_nueva_partida.centery + 18)))
@@ -385,94 +622,116 @@ def main():
             col_v = (85, 85, 98) if hov_v else (60, 60, 70)
             pygame.draw.rect(pantalla, col_v, btn_volver_modo, border_radius=10)
             pygame.draw.rect(pantalla, (255, 255, 255) if hov_v else (140, 140, 155), btn_volver_modo, width=2, border_radius=10)
-            t_v = fuente_texto.render("VOLVER AL MENÚ", True, (255, 255, 255))
+            t_v = fuente_pixel_btn.render("VOLVER AL MENU", True, (255, 255, 255))
             pantalla.blit(t_v, t_v.get_rect(center=btn_volver_modo.center))
 
         elif estado_actual == ESTADO_LISTA_PARTIDAS:
+            ANCHO_MENU = pantalla.get_width()
+            ALTO_MENU = pantalla.get_height()
             pos_mouse = pygame.mouse.get_pos()
             partidas = cargar_partidas()
 
-            titulo = fuente_titulo.render("PARTIDAS JUGADAS", True, (255, 230, 100))
-            pantalla.blit(titulo, titulo.get_rect(center=(ANCHO_MENU // 2, 50)))
+            # Fondo crema uniforme limpio sin franja de suelo
+            pantalla.fill((255, 240, 195))
 
-            subt = fuente_subtitulo.render("Selecciona tu partida guardada para continuar", True, (215, 215, 225))
-            pantalla.blit(subt, subt.get_rect(center=(ANCHO_MENU // 2, 90)))
+            rect_panel_partidas, btn_volver_partidas, btn_nueva_desde_lista, btn_iniciar_primera = (
+                obtener_geometria_panel_partidas(ANCHO_MENU, ALTO_MENU)
+            )
 
-            # Panel contenedor
-            pygame.draw.rect(pantalla, (36, 36, 44), rect_panel_partidas, border_radius=16)
-            pygame.draw.rect(pantalla, (85, 85, 105), rect_panel_partidas, width=2, border_radius=16)
+            # Título con tipografía retro 04B_30 y subtítulo descriptivo
+            titulo = fuente_pixel_titulo.render("PARTIDAS JUGADAS", True, (60, 45, 35))
+            pantalla.blit(titulo, titulo.get_rect(center=(ANCHO_MENU // 2, 48)))
+
+            subt = fuente_subtitulo.render("Selecciona tu partida guardada para continuar", True, (115, 95, 80))
+            pantalla.blit(subt, subt.get_rect(center=(ANCHO_MENU // 2, 84)))
+
+            # Panel contenedor en crema suave con borde cálido
+            pygame.draw.rect(pantalla, COL_PANEL, rect_panel_partidas, border_radius=18)
+            pygame.draw.rect(pantalla, COL_BORDE_PANEL, rect_panel_partidas, width=3, border_radius=18)
 
             if not partidas:
-                t_sin = fuente_subtitulo.render("No hay partidas guardadas todavía", True, (230, 230, 240))
+                t_sin = fuente_subtitulo.render("No hay partidas guardadas todavía", True, (60, 45, 35))
                 pantalla.blit(t_sin, t_sin.get_rect(center=(rect_panel_partidas.centerx, rect_panel_partidas.centery - 45)))
 
-                t_sin2 = fuente_texto.render("Al jugar y guardar el nivel antes de salir, tus partidas aparecerán aquí.", True, (170, 170, 185))
+                t_sin2 = fuente_texto.render("Al jugar y guardar el nivel antes de salir, tus partidas aparecerán aquí.", True, (120, 105, 90))
                 pantalla.blit(t_sin2, t_sin2.get_rect(center=(rect_panel_partidas.centerx, rect_panel_partidas.centery - 10)))
 
                 hov_prim = btn_iniciar_primera.collidepoint(pos_mouse)
-                col_prim = (55, 165, 88) if hov_prim else (42, 138, 72)
+                col_prim = (82, 194, 114) if hov_prim else (68, 172, 98)
                 pygame.draw.rect(pantalla, col_prim, btn_iniciar_primera, border_radius=12)
-                pygame.draw.rect(pantalla, (255, 255, 255) if hov_prim else (160, 230, 180), btn_iniciar_primera, width=2, border_radius=12)
-                t_btn_prim = fuente_btn.render("COMENZAR NUEVA PARTIDA", True, (255, 255, 255))
+                pygame.draw.rect(pantalla, (45, 130, 70), btn_iniciar_primera, width=2, border_radius=12)
+                t_btn_prim = fuente_pixel_btn.render("COMENZAR NUEVA PARTIDA", True, (255, 255, 255))
                 pantalla.blit(t_btn_prim, t_btn_prim.get_rect(center=btn_iniciar_primera.center))
             else:
-                for idx_p, p in enumerate(partidas[:5]):
-                    r_card = pygame.Rect(rect_panel_partidas.left + 20, rect_panel_partidas.top + 20 + idx_p * (72 + 12), rect_panel_partidas.width - 40, 72)
-                    hov_card = r_card.collidepoint(pos_mouse)
+                total_paginas = max(1, (len(partidas) + MAX_PARTIDAS_POR_PAGINA - 1) // MAX_PARTIDAS_POR_PAGINA)
+                if pagina_partidas >= total_paginas:
+                    pagina_partidas = max(0, total_paginas - 1)
 
-                    col_card = (56, 56, 70) if hov_card else (45, 45, 54)
-                    borde_card = (255, 230, 120) if hov_card else (75, 75, 90)
-                    pygame.draw.rect(pantalla, col_card, r_card, border_radius=12)
-                    pygame.draw.rect(pantalla, borde_card, r_card, width=2 if hov_card else 1, border_radius=12)
+                inicio_idx = pagina_partidas * MAX_PARTIDAS_POR_PAGINA
+                fin_idx = inicio_idx + MAX_PARTIDAS_POR_PAGINA
+                partidas_pagina = partidas[inicio_idx:fin_idx]
 
-                    # Badge de mundo
-                    m_val = p.get("mundo_max", 1)
-                    colores_badge = {
-                        1: ((246, 215, 153), (50, 40, 30)),
-                        2: ((203, 195, 227), (45, 35, 45)),
-                        3: ((185, 222, 253), (30, 45, 55)),
-                    }
-                    bg_badge, fg_badge = colores_badge.get(m_val, ((246, 215, 153), (50, 40, 30)))
-                    r_badge = pygame.Rect(r_card.left + 14, r_card.top + 14, 115, 44)
-                    pygame.draw.rect(pantalla, bg_badge, r_badge, border_radius=8)
-                    t_badge = fuente_btn.render(f"MUNDO {m_val}", True, fg_badge)
-                    pantalla.blit(t_badge, t_badge.get_rect(center=r_badge.center))
+                fuentes_tarjetas = {
+                    "titulo_card": fuente_card_titulo,
+                    "sub_card": fuente_card_sub,
+                    "btn_card": fuente_pixel_card_btn,
+                    "badge": fuente_pixel_badge,
+                    "btn": fuente_pixel_badge,
+                    "texto": fuente_texto,
+                    "sub_btn": fuente_sub_btn,
+                }
 
-                    # Título de la partida y nivel alcanzado
-                    t_nom = fuente_btn.render(f"{p['nombre']}  —  Nivel Máximo: {p['mundo_max']}-{p['nivel_max']}", True, (255, 255, 255))
-                    pantalla.blit(t_nom, (r_card.left + 145, r_card.top + 15))
+                for idx_slot, p in enumerate(partidas_pagina):
+                    dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel_partidas, pos_mouse, fuentes_tarjetas)
 
-                    # Cantidad de niveles desbloqueados
-                    total_desbloq = sum(sum(1 for x in bits if x) for bits in p["niveles_desbloqueados"].values())
-                    t_detalle = fuente_sub_btn.render(f"Último guardado: {p['fecha']}   |   Niveles desbloqueados: {total_desbloq}/15", True, (185, 190, 205))
-                    pantalla.blit(t_detalle, (r_card.left + 145, r_card.top + 43))
+                # Indicador de paginación si hay más de 1 página
+                if total_paginas > 1:
+                    btn_pag_ant = pygame.Rect(rect_panel_partidas.centerx - 130, rect_panel_partidas.bottom + 8, 36, 32)
+                    btn_pag_sig = pygame.Rect(rect_panel_partidas.centerx + 94, rect_panel_partidas.bottom + 8, 36, 32)
 
-                    # Botón Cargar a la derecha
-                    r_btn_cargar = pygame.Rect(r_card.right - 130, r_card.top + 15, 116, 42)
-                    col_bc = (55, 165, 88) if hov_card else (42, 138, 72)
-                    pygame.draw.rect(pantalla, col_bc, r_btn_cargar, border_radius=8)
-                    pygame.draw.rect(pantalla, (255, 255, 255), r_btn_cargar, width=1, border_radius=8)
-                    t_bc = fuente_texto.render("CARGAR ▶", True, (255, 255, 255))
-                    pantalla.blit(t_bc, t_bc.get_rect(center=r_btn_cargar.center))
+                    # Botón anterior
+                    hov_ant = btn_pag_ant.collidepoint(pos_mouse) and pagina_partidas > 0
+                    col_ant = (255, 255, 255) if hov_ant else ((253, 246, 233) if pagina_partidas > 0 else (240, 230, 215))
+                    borde_ant = (180, 145, 110) if hov_ant else (205, 180, 150)
+                    pygame.draw.rect(pantalla, col_ant, btn_pag_ant, border_radius=8)
+                    pygame.draw.rect(pantalla, borde_ant, btn_pag_ant, width=2 if hov_ant else 1, border_radius=8)
+                    t_ant = fuente_texto.render("◀", True, (60, 45, 35) if pagina_partidas > 0 else (175, 160, 145))
+                    pantalla.blit(t_ant, t_ant.get_rect(center=btn_pag_ant.center))
 
-            # Botones inferiores de navegación
+                    # Texto de página
+                    t_pag = fuente_texto.render(f"Página {pagina_partidas + 1} de {total_paginas}", True, (60, 45, 35))
+                    pantalla.blit(t_pag, t_pag.get_rect(center=(rect_panel_partidas.centerx - 18, rect_panel_partidas.bottom + 24)))
+
+                    # Botón siguiente
+                    hov_sig = btn_pag_sig.collidepoint(pos_mouse) and pagina_partidas < total_paginas - 1
+                    col_sig = (255, 255, 255) if hov_sig else ((253, 246, 233) if pagina_partidas < total_paginas - 1 else (240, 230, 215))
+                    borde_sig = (180, 145, 110) if hov_sig else (205, 180, 150)
+                    pygame.draw.rect(pantalla, col_sig, btn_pag_sig, border_radius=8)
+                    pygame.draw.rect(pantalla, borde_sig, btn_pag_sig, width=2 if hov_sig else 1, border_radius=8)
+                    t_sig = fuente_texto.render("▶", True, (60, 45, 35) if pagina_partidas < total_paginas - 1 else (175, 160, 145))
+                    pantalla.blit(t_sig, t_sig.get_rect(center=btn_pag_sig.center))
+
+            # Botón «VOLVER» centrado al pie de la pantalla en crema pastel
             hov_vp = btn_volver_partidas.collidepoint(pos_mouse)
-            col_vp = (85, 85, 98) if hov_vp else (60, 60, 70)
-            pygame.draw.rect(pantalla, col_vp, btn_volver_partidas, border_radius=10)
-            pygame.draw.rect(pantalla, (255, 255, 255) if hov_vp else (140, 140, 155), btn_volver_partidas, width=2, border_radius=10)
-            t_vp = fuente_texto.render("VOLVER", True, (255, 255, 255))
+            col_vp = (255, 255, 255) if hov_vp else (253, 246, 233)
+            borde_vp = (165, 135, 105) if hov_vp else (195, 168, 138)
+            pygame.draw.rect(pantalla, col_vp, btn_volver_partidas, border_radius=12)
+            pygame.draw.rect(pantalla, borde_vp, btn_volver_partidas, width=2, border_radius=12)
+            t_vp = fuente_pixel_btn.render("VOLVER", True, (60, 45, 35))
             pantalla.blit(t_vp, t_vp.get_rect(center=btn_volver_partidas.center))
 
             if partidas:
+                # Botón «+ NUEVA PARTIDA» ubicado en la cabecera superior derecha del panel
                 hov_nd = btn_nueva_desde_lista.collidepoint(pos_mouse)
-                col_nd = (215, 120, 48) if hov_nd else (185, 100, 38)
+                col_nd = (245, 140, 55) if hov_nd else (225, 120, 38)
+                borde_nd = (255, 255, 255) if hov_nd else (180, 90, 25)
                 pygame.draw.rect(pantalla, col_nd, btn_nueva_desde_lista, border_radius=10)
-                pygame.draw.rect(pantalla, (255, 255, 255) if hov_nd else (245, 205, 150), btn_nueva_desde_lista, width=2, border_radius=10)
-                t_nd = fuente_texto.render("+ NUEVA PARTIDA", True, (255, 255, 255))
+                pygame.draw.rect(pantalla, borde_nd, btn_nueva_desde_lista, width=2, border_radius=10)
+                t_nd = fuente_pixel_sub_btn.render("+ NUEVA PARTIDA", True, (255, 255, 255))
                 pantalla.blit(t_nd, t_nd.get_rect(center=btn_nueva_desde_lista.center))
 
         elif estado_actual == ESTADO_PERSONAJES:
-            titulo = fuente_titulo.render("PERSONALIZACIÓN DE PERSONAJES", True, (255, 255, 255))
+            titulo = fuente_pixel_titulo.render("PERSONALIZACION DE PERSONAJES", True, (255, 255, 255))
             pantalla.blit(titulo, titulo.get_rect(center=(ANCHO_MENU // 2, 45)))
 
             t_p1 = fuente_subtitulo.render(f"Personaje 1 ({color_p1})", True, (255, 255, 255))
@@ -505,11 +764,11 @@ def main():
 
             pygame.draw.rect(pantalla, (50, 150, 50), btn_guardar, border_radius=8)
             pygame.draw.rect(pantalla, (255, 255, 255), btn_guardar, 2, border_radius=8)
-            t_guardar = fuente_btn.render("GUARDAR", True, (255, 255, 255))
+            t_guardar = fuente_pixel_btn.render("GUARDAR", True, (255, 255, 255))
             pantalla.blit(t_guardar, t_guardar.get_rect(center=btn_guardar.center))
 
         elif estado_actual == ESTADO_CONFIGURACION:
-            titulo = fuente_titulo.render("CONFIGURACIÓN", True, (255, 255, 255))
+            titulo = fuente_pixel_titulo.render("CONFIGURACION", True, (255, 255, 255))
             pantalla.blit(titulo, titulo.get_rect(center=(ANCHO_MENU // 2, 100)))
 
             i1 = fuente_texto.render("Jugador 1: Flechas Izq / Der (Mover) | Flecha Arriba (Saltar)", True, (220, 220, 220))
@@ -518,7 +777,7 @@ def main():
             pantalla.blit(i2, i2.get_rect(center=(ANCHO_MENU // 2, ALTO_MENU // 2 + 20)))
 
         elif estado_actual == ESTADO_CREDITOS:
-            titulo = fuente_titulo.render("CRÉDITOS", True, (255, 255, 255))
+            titulo = fuente_pixel_titulo.render("CREDITOS", True, (255, 255, 255))
             pantalla.blit(titulo, titulo.get_rect(center=(ANCHO_MENU // 2, 100)))
 
             cred = fuente_texto.render("Desarrollado para Pico Park Fan Project", True, (200, 200, 200))

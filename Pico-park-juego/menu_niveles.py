@@ -150,7 +150,7 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
 
     # Título principal
     if fuente_titulo:
-        txt_tit = fuente_titulo.render("SELECCIÓN DE NIVEL", True, (60, 45, 35))
+        txt_tit = fuente_titulo.render("SELECCION DE NIVEL", True, (60, 45, 35))
         pantalla.blit(txt_tit, txt_tit.get_rect(center=(ancho // 2, 70)))
 
     # 2. PESTAÑAS (MUNDO 1, MUNDO 2, MUNDO 3)
