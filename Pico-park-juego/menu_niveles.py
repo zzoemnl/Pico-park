@@ -144,22 +144,9 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
     fuente_tab = fuentes.get("tab")
     fuente_card = fuentes.get("card")
 
-    # 1. FONDO DE PAISAJE PASTEL
-    pantalla.fill(COL_CIELO)
-
-    # Nubes decorativas
-    for cx, cy, cw in [(100, 60, 95), (ancho // 2 - 40, 48, 115), (ancho - 160, 75, 90)]:
-        pygame.draw.ellipse(pantalla, (255, 255, 255), (cx, cy, cw, 28))
-        pygame.draw.ellipse(pantalla, (255, 255, 255), (cx + 16, cy - 8, cw - 32, 28))
-
-    # Suelo con pasto y cactus
-    y_pasto = alto - 55
-    pygame.draw.rect(pantalla, COL_TIERRA, (0, y_pasto + 10, ancho, 45))
-    pygame.draw.rect(pantalla, COL_PASTO, (0, y_pasto, ancho, 12))
-    for kx in [35, 65, ancho - 75, ancho - 45]:
-        pygame.draw.rect(pantalla, (85, 150, 70), (kx, y_pasto - 22, 10, 24), border_radius=3)
-        pygame.draw.rect(pantalla, (85, 150, 70), (kx - 4, y_pasto - 16, 6, 8), border_radius=2)
-        pygame.draw.rect(pantalla, (85, 150, 70), (kx + 8, y_pasto - 12, 6, 8), border_radius=2)
+    # 1. FONDO Y SUELO ORIGINALES DEL JUEGO (idénticos al escenario de los niveles)
+    pantalla.fill((255, 240, 195))
+    pygame.draw.rect(pantalla, (225, 110, 80), pygame.Rect(0, alto - 80, ancho, 80))
 
     # Título principal
     if fuente_titulo:

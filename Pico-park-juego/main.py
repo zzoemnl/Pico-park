@@ -320,6 +320,11 @@ def main():
                                         else:
                                             mantenimiento = False
                                             estado_actual = ESTADO_SELECCION_NIVEL
+                                        guardar_partida(
+                                            niveles_desbloqueados,
+                                            id_partida=partida_actual_id,
+                                            nombre_partida=partida_actual_nombre,
+                                        )
                                     elif res == "reiniciar":
                                         continue
                                     elif res == "menu":
