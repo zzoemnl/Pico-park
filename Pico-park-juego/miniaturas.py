@@ -10,8 +10,8 @@ RUTA_MINIATURAS = os.path.join(RUTA_SPRITES, "Miniaturas")
 # Constantes de colores originales del juego
 COL_FONDO_M1 = (255, 240, 195)
 COL_SUELO_M1 = (225, 110, 80)
-COL_PLATAFORMA_M1 = (110, 110, 115)
-COL_BORDE_PLAT = (80, 80, 85)
+COL_PLATAFORMA_M1 = (225, 110, 80)
+COL_BORDE_PLAT = (185, 80, 55)
 COLOR_SOGA = (200, 160, 100)
 
 ANCHO_MINI = 176
@@ -121,11 +121,20 @@ def _dibujar_soga(surf, p1, p2):
 # ==============================================================================
 
 def _crear_m1_n1():
-    """1-1: Tutorial (Suelo continuo, 2 personajes, llave, puerta)."""
+    """1-1: Tutorial (Suelo continuo con torres/columnas, 2 personajes, llave y puerta)."""
     s = pygame.Surface((ANCHO_MINI, ALTO_MINI))
     s.fill(COL_FONDO_M1)
 
     y_suelo = 88
+
+    # Torres del tutorial integradas al suelo
+    torre1 = pygame.Rect(70, y_suelo - 7, 14, 10)
+    torre2 = pygame.Rect(92, y_suelo - 14, 20, 17)
+    for t in (torre1, torre2):
+        pygame.draw.rect(s, COL_PLATAFORMA_M1, t, border_top_left_radius=2, border_top_right_radius=2)
+        pygame.draw.rect(s, COL_BORDE_PLAT, t, width=1, border_top_left_radius=2, border_top_right_radius=2)
+
+    # Suelo continuo
     pygame.draw.rect(s, COL_SUELO_M1, (0, y_suelo, ANCHO_MINI, ALTO_MINI - y_suelo))
 
     pj1 = _cargar_personaje("Celeste")
@@ -133,132 +142,146 @@ def _crear_m1_n1():
     llave = _cargar_llave()
     puerta = _crear_puerta_original()
 
-    s.blit(pj1, (24, y_suelo - 20))
-    s.blit(pj2, (48, y_suelo - 20))
-    s.blit(llave, (98, y_suelo - 22))
+    s.blit(pj1, (20, y_suelo - 20))
+    s.blit(pj2, (42, y_suelo - 20))
+    # Llave sobre la torre del tutorial
+    s.blit(llave, (97, y_suelo - 14 - 18))
     s.blit(puerta, (142, y_suelo - 26))
     return s
 
 
 def _crear_m1_n2():
-    """1-2: La torre humana (Bloque elevado, personajes uno encima del otro, llave arriba)."""
+    """1-2: La torre humana (Plataforma flotante central, torre humana, llave arriba y puerta al suelo)."""
     s = pygame.Surface((ANCHO_MINI, ALTO_MINI))
     s.fill(COL_FONDO_M1)
 
     y_suelo = 88
-    # Suelo izquierdo
-    pygame.draw.rect(s, COL_SUELO_M1, (0, y_suelo, 100, ALTO_MINI - y_suelo))
+    # Suelo continuo inferior
+    pygame.draw.rect(s, COL_SUELO_M1, (0, y_suelo, ANCHO_MINI, ALTO_MINI - y_suelo))
 
-    # Bloque/Pared elevada a la derecha
-    rect_bloque = pygame.Rect(102, 50, 74, ALTO_MINI - 50)
-    pygame.draw.rect(s, COL_PLATAFORMA_M1, rect_bloque)
-    pygame.draw.rect(s, COL_BORDE_PLAT, rect_bloque, 2)
+    # Plataforma flotante central (separada del suelo, espacio libre por debajo)
+    rect_plat = pygame.Rect(70, 52, 46, 8)
+    pygame.draw.rect(s, COL_PLATAFORMA_M1, rect_plat, border_radius=2)
+    pygame.draw.rect(s, COL_BORDE_PLAT, rect_plat, width=1, border_radius=2)
 
     pj1 = _cargar_personaje("Celeste")
     pj2 = _cargar_personaje("Violeta")
     llave = _cargar_llave()
     puerta = _crear_puerta_original()
 
-    # Torre humana: Celeste abajo, Violeta arriba
-    s.blit(pj1, (70, y_suelo - 20))
-    s.blit(pj2, (70, y_suelo - 39))
+    # Torre humana antes de la plataforma: Celeste abajo, Violeta arriba
+    s.blit(pj1, (36, y_suelo - 20))
+    s.blit(pj2, (36, y_suelo - 38))
 
-    # Llave en la cima del bloque elevado
-    s.blit(llave, (126, 50 - 18))
-    s.blit(puerta, (150, 50 - 26))
+    # Llave sobre la plataforma flotante
+    s.blit(llave, (88, 52 - 18))
+
+    # Puerta de salida en el suelo al final del recorrido
+    s.blit(puerta, (142, y_suelo - 26))
     return s
 
 
 def _crear_m1_n3():
-    """1-3: La caja y el botón (Caja sobre botón en el suelo, pared fina, llave al otro lado)."""
+    """1-3: La caja y el botón (Personajes a la izquierda, caja sobre botón, pared levantada, llave y puerta a la derecha)."""
     s = pygame.Surface((ANCHO_MINI, ALTO_MINI))
     s.fill(COL_FONDO_M1)
 
     y_suelo = 88
+    # Suelo continuo
     pygame.draw.rect(s, COL_SUELO_M1, (0, y_suelo, ANCHO_MINI, ALTO_MINI - y_suelo))
 
-    # Botón en el suelo
-    pygame.draw.rect(s, (190, 40, 40), (52, y_suelo - 3, 24, 4), border_radius=1)
-
-    # Caja colocada sobre el botón
-    caja = _cargar_caja()
-    s.blit(caja, (55, y_suelo - 20))
-
-    # Pared fina que bloquea el camino
-    rect_pared = pygame.Rect(96, 26, 6, y_suelo - 26)
-    pygame.draw.rect(s, COL_PLATAFORMA_M1, rect_pared)
-    pygame.draw.rect(s, COL_BORDE_PLAT, rect_pared, 1)
-
+    # Personajes en la zona izquierda
     pj1 = _cargar_personaje("Celeste")
     pj2 = _cargar_personaje("Violeta")
-    llave = _cargar_llave()
-    puerta = _crear_puerta_original()
+    s.blit(pj1, (20, y_suelo - 20))
+    s.blit(pj2, (38, y_suelo - 20))
 
-    s.blit(pj1, (16, y_suelo - 20))
-    s.blit(pj2, (34, y_suelo - 20))
-    # Llave y puerta detrás de la pared
-    s.blit(llave, (120, y_suelo - 22))
-    s.blit(puerta, (146, y_suelo - 26))
+    # Botón en el suelo presionado
+    pygame.draw.rect(s, (80, 200, 100), (66, y_suelo - 2, 20, 3), border_radius=1)
+
+    # Caja sobre el botón
+    caja = _cargar_caja()
+    s.blit(caja, (67, y_suelo - 20))
+
+    # Pared vertical levantada
+    rect_pared = pygame.Rect(102, 12, 7, y_suelo - 46)
+    pygame.draw.rect(s, COL_PLATAFORMA_M1, rect_pared, border_radius=2)
+    pygame.draw.rect(s, COL_BORDE_PLAT, rect_pared, 1, border_radius=2)
+
+    # Llave al otro lado de la pared
+    llave = _cargar_llave()
+    s.blit(llave, (126, y_suelo - 20))
+
+    # Puerta de salida en el extremo derecho
+    puerta = _crear_puerta_original()
+    s.blit(puerta, (148, y_suelo - 26))
     return s
 
 
 def _crear_m1_n4():
-    """1-4: El láser y la caja (Pozo profundo entre dos plataformas, láser horizontal izquierda a derecha bloqueado por la caja, llave detrás)."""
+    """1-4: El láser y la caja (Puerta a la izquierda, caja bloqueando láser en el borde, plataformas sobre pozo, llave a la derecha)."""
     s = pygame.Surface((ANCHO_MINI, ALTO_MINI))
     s.fill(COL_FONDO_M1)
 
     y_plat = 68
 
-    # Plataforma izquierda elevada
-    pygame.draw.rect(s, COL_SUELO_M1, (0, y_plat, 42, ALTO_MINI - y_plat))
-    pygame.draw.line(s, (245, 140, 110), (0, y_plat), (42, y_plat), 1)
-    pygame.draw.line(s, (180, 80, 50), (42, y_plat), (42, ALTO_MINI), 1)
+    # Plataforma izquierda con puerta
+    pygame.draw.rect(s, COL_SUELO_M1, (0, y_plat, 48, ALTO_MINI - y_plat))
+    pygame.draw.line(s, (245, 140, 110), (0, y_plat), (48, y_plat), 1)
+    pygame.draw.line(s, (180, 80, 50), (48, y_plat), (48, ALTO_MINI), 1)
 
-    # Plataforma derecha elevada
-    pygame.draw.rect(s, COL_SUELO_M1, (88, y_plat, ANCHO_MINI - 88, ALTO_MINI - y_plat))
-    pygame.draw.line(s, (245, 140, 110), (88, y_plat), (ANCHO_MINI, y_plat), 1)
-    pygame.draw.line(s, (180, 80, 50), (88, y_plat), (88, ALTO_MINI), 1)
+    # Puerta de salida al inicio en la plataforma izquierda
+    puerta = _crear_puerta_original((15, 25))
+    s.blit(puerta, (6, y_plat - 25))
 
-    # Pozo profundo entre las dos plataformas
-    y_fondo = 96
-    pygame.draw.rect(s, (45, 32, 28), (42, y_fondo, 46, ALTO_MINI - y_fondo))
-    _dibujar_pinchos(s, 44, 88, y_fondo, hacia_arriba=True, w_p=7, h_p=6)
+    # Pozo de profundidad moderada con pinchos en el fondo
+    h_pozo = 14
+    y_fondo = y_plat + h_pozo
+    pygame.draw.rect(s, (230, 215, 185), (48, y_plat, 62, h_pozo))
+    pygame.draw.rect(s, COL_SUELO_M1, (48, y_fondo, 62, ALTO_MINI - y_fondo))
+    pygame.draw.line(s, (180, 80, 50), (48, y_fondo), (110, y_fondo), 1)
 
-    # Emisor de láser colocado horizontalmente a la izquierda
-    pygame.draw.rect(s, (80, 80, 90), (10, y_plat - 14, 14, 14), border_radius=2)
-    pygame.draw.rect(s, (50, 50, 60), (10, y_plat - 14, 14, 14), 1, border_radius=2)
-    pygame.draw.rect(s, (110, 110, 125), (24, y_plat - 12, 6, 8))
-    pygame.draw.rect(s, (60, 60, 70), (24, y_plat - 12, 6, 8), 1)
-    pygame.draw.rect(s, (255, 60, 60), (28, y_plat - 10, 2, 4))
+    # Pinchos horizontales en el fondo del pozo
+    _dibujar_pinchos(s, 64, 108, y_fondo, hacia_arriba=True, w_p=6, h_p=5)
 
-    # Rayo láser horizontal apuntando de izquierda a derecha a la altura de la llave
-    y_laser = 59
-    x_caja = 94
-    pygame.draw.line(s, (255, 45, 45), (30, y_laser), (x_caja, y_laser), 3)
-    pygame.draw.line(s, (255, 230, 230), (30, y_laser), (x_caja, y_laser), 1)
+    # Plataforma de paso intermedia en el pozo (bajadas a la altura del láser)
+    rect_paso = pygame.Rect(72, y_plat + 5, 14, 4)
+    pygame.draw.rect(s, COL_PLATAFORMA_M1, rect_paso, border_radius=1)
+    pygame.draw.rect(s, COL_BORDE_PLAT, rect_paso, 1, border_radius=1)
 
-    # Destellos de impacto: la caja intercepta el láser
-    pygame.draw.rect(s, (255, 220, 100), (x_caja - 1, y_laser - 2, 2, 5))
-    pygame.draw.rect(s, (255, 140, 40), (x_caja - 2, y_laser - 1, 1, 3))
+    # Plataforma derecha
+    pygame.draw.rect(s, COL_SUELO_M1, (110, y_plat, ANCHO_MINI - 110, ALTO_MINI - y_plat))
+    pygame.draw.line(s, (245, 140, 110), (110, y_plat), (ANCHO_MINI, y_plat), 1)
+    pygame.draw.line(s, (180, 80, 50), (110, y_plat), (110, ALTO_MINI), 1)
 
-    # Caja bloqueando el rayo en la plataforma derecha
-    caja = _cargar_caja((18, 18))
-    s.blit(caja, (x_caja, y_plat - 18))
+    # Plataforma elevada para la llave en la zona derecha
+    rect_llave_plat = pygame.Rect(140, 48, 22, 5)
+    pygame.draw.rect(s, COL_PLATAFORMA_M1, rect_llave_plat, border_radius=1)
+    pygame.draw.rect(s, COL_BORDE_PLAT, rect_llave_plat, 1, border_radius=1)
+    llave = _cargar_llave((9, 16))
+    s.blit(llave, (146, 48 - 16))
 
-    # Personajes y llave detrás de la caja
+    # Emisor de láser en la pared interna izquierda
+    pygame.draw.rect(s, (65, 60, 70), (44, y_plat + 4, 4, 6), border_radius=1)
+    pygame.draw.circle(s, (255, 60, 60), (48, y_plat + 7), 2)
+
+    # Caja en el pozo bloqueando el láser
+    caja = _cargar_caja((14, 14))
+    s.blit(caja, (50, y_fondo - 14))
+
+    # Rayo láser interceptado por la caja
+    pygame.draw.line(s, (255, 45, 45), (48, y_plat + 7), (50, y_plat + 7), 2)
+    pygame.draw.circle(s, (255, 220, 80), (50, y_plat + 7), 2)
+
+    # Personajes
     pj1 = _cargar_personaje("Celeste")
     pj2 = _cargar_personaje("Violeta")
-    llave = _cargar_llave((10, 18))
-    puerta = _crear_puerta_original((16, 26))
+    s.blit(pj1, (20, y_plat - 20))
+    s.blit(pj2, (50, y_fondo - 14 - 20))
 
-    # Celeste empuja la caja para bloquear el rayo
-    s.blit(pj1, (113, y_plat - 20))
-    # Llave detrás de la caja, a la misma altura que el láser
-    s.blit(llave, (131, y_plat - 18))
-    # Violeta avanzando hacia la llave y la puerta
-    s.blit(pj2, (143, y_plat - 20))
-    # Puerta al final
-    s.blit(puerta, (158, y_plat - 26))
+    # Puerta de salida en el extremo derecho
+    puerta = _crear_puerta_original()
+    s.blit(puerta, (156, y_plat - 26))
 
     return s
 
@@ -276,9 +299,15 @@ def _crear_m1_n5():
     pygame.draw.rect(s, COL_PLATAFORMA_M1, (0, 0, ANCHO_MINI, y_techo))
     pygame.draw.rect(s, COL_BORDE_PLAT, (0, 0, ANCHO_MINI, y_techo), 1)
 
-    # Plataforma divisoria central entre ambos recorridos
-    pygame.draw.rect(s, COL_PLATAFORMA_M1, (0, y_div, ANCHO_MINI, 6))
-    pygame.draw.rect(s, COL_BORDE_PLAT, (0, y_div, ANCHO_MINI, 6), 1)
+    # Plataforma divisoria central entre ambos recorridos (con caída al final)
+    pygame.draw.rect(s, COL_PLATAFORMA_M1, (0, y_div, 138, 6))
+    pygame.draw.rect(s, COL_BORDE_PLAT, (0, y_div, 138, 6), 1)
+
+    # Barrera en L invertida sobre la puerta y bajando al suelo
+    pygame.draw.rect(s, COL_PLATAFORMA_M1, (144, y_div, 30, 6))
+    pygame.draw.rect(s, COL_PLATAFORMA_M1, (170, y_div, 4, y_suelo - y_div))
+    pygame.draw.rect(s, COL_BORDE_PLAT, (144, y_div, 30, 6), 1)
+    pygame.draw.rect(s, COL_BORDE_PLAT, (170, y_div, 4, y_suelo - y_div), 1)
 
     # Suelo del recorrido inferior
     pygame.draw.rect(s, COL_SUELO_M1, (0, y_suelo, ANCHO_MINI, ALTO_MINI - y_suelo))
@@ -292,26 +321,25 @@ def _crear_m1_n5():
         (225, 45, 45),   # 3. Roja
         (45, 110, 225),  # 4. Azul
     ]
-    xs_pared = [48, 76, 104, 132]
+    xs_pared = [46, 72, 98, 122]
     for col, xp in zip(colores_pared, xs_pared):
         r_p = pygame.Rect(xp, y_techo, 6, y_div - y_techo)
         pygame.draw.rect(s, col, r_p)
         pygame.draw.rect(s, (30, 30, 30), r_p, 1)
 
-    # RECORRIDO INFERIOR: Botones en el suelo (Rojo, Azul, Rojo, Azul)
+    # RECORRIDO INFERIOR: Exactamente 2 botones en el suelo (uno Rojo y uno Azul)
     colores_boton = [
         (225, 45, 45),   # 1. Rojo
         (45, 110, 225),  # 2. Azul
-        (225, 45, 45),   # 3. Rojo
-        (45, 110, 225),  # 4. Azul
     ]
-    xs_boton = [32, 66, 100, 132]
+    xs_boton = [54, 88]
     for i, (col, xb) in enumerate(zip(colores_boton, xs_boton)):
         pygame.draw.rect(s, (70, 60, 55), (xb - 2, y_suelo - 1, 16, 2))
         if i == 0:
-            # Botón 1 presionado por el personaje
+            # Botón Rojo presionado por Violeta
             pygame.draw.rect(s, col, (xb, y_suelo - 2, 12, 2), border_radius=1)
         else:
+            # Botón Azul sin presionar
             pygame.draw.rect(s, col, (xb, y_suelo - 4, 12, 4), border_radius=1)
 
     pj1 = _cargar_personaje("Celeste")
@@ -321,54 +349,62 @@ def _crear_m1_n5():
 
     # Celeste arriba en el recorrido superior frente a las paredes
     s.blit(pj1, (20, y_div - 20))
-    # Violeta abajo en el recorrido inferior colaborando al presionar el primer botón
-    s.blit(pj2, (30, y_suelo - 20))
+    # Violeta abajo en el recorrido inferior colaborando al presionar el botón rojo
+    s.blit(pj2, (52, y_suelo - 20))
 
-    # Llave y puerta al final del recorrido superior
-    s.blit(llave, (144, y_div - 18))
-    s.blit(puerta, (156, y_div - 26))
+    # Llave al final del recorrido superior y puerta de salida al final en el suelo bajo la L
+    s.blit(llave, (130, y_div - 18))
+    s.blit(puerta, (148, y_suelo - 26))
 
     return s
 
 
 def _crear_m2_n1():
-    """2-1: El arrastre básico (Plataformas separadas a distintas alturas con vacíos entre sí, pozo con pinchos debajo, personajes unidos por soga, llave y puerta)."""
+    """2-1: El arrastre básico (Introducción a la soga: personajes unidos, escalones, plataformas de salto, llave y puerta)."""
     s = pygame.Surface((ANCHO_MINI, ALTO_MINI))
     s.fill(COL_FONDO_M1)
 
-    # Debajo de todo el recorrido: pozo profundo con pinchos
-    pygame.draw.rect(s, (45, 35, 35), (0, 96, ANCHO_MINI, ALTO_MINI - 96))
-    _dibujar_pinchos(s, 0, ANCHO_MINI, 96, hacia_arriba=True, w_p=8, h_p=8)
+    y_suelo = 94
 
-    # Plataformas separadas entre sí, con espacios vacíos a distintas alturas (no escalera continua)
-    plats = [
-        pygame.Rect(8, 74, 30, 8),    # 1. Plataforma inicial
-        pygame.Rect(48, 60, 44, 8),   # 2. Plataforma con personajes
-        pygame.Rect(102, 50, 28, 8),  # 3. Plataforma intermedia con llave
-        pygame.Rect(142, 62, 26, 8),  # 4. Plataforma final con puerta
-    ]
-    for p in plats:
-        pygame.draw.rect(s, COL_PLATAFORMA_M1, p, border_radius=2)
-        pygame.draw.rect(s, COL_BORDE_PLAT, p, 1, border_radius=2)
+    # Suelo seguro continuo
+    pygame.draw.rect(s, COL_SUELO_M1, (0, y_suelo, ANCHO_MINI, ALTO_MINI - y_suelo))
+    pygame.draw.line(s, (245, 140, 110), (0, y_suelo), (ANCHO_MINI, y_suelo), 1)
+    pygame.draw.rect(s, COL_BORDE_PLAT, (0, y_suelo, ANCHO_MINI, ALTO_MINI - y_suelo), 1)
+
+    # 1. Escalones para subir juntos
+    pygame.draw.rect(s, COL_PLATAFORMA_M1, (36, 84, 18, 10), border_radius=2)
+    pygame.draw.rect(s, COL_BORDE_PLAT, (36, 84, 18, 10), 1, border_radius=2)
+    pygame.draw.rect(s, COL_PLATAFORMA_M1, (54, 74, 22, 20), border_radius=2)
+    pygame.draw.rect(s, COL_BORDE_PLAT, (54, 74, 22, 20), 1, border_radius=2)
+
+    # 2. Plataformas de salto coordinado
+    pygame.draw.rect(s, COL_PLATAFORMA_M1, (82, 62, 22, 5), border_radius=2)
+    pygame.draw.rect(s, COL_BORDE_PLAT, (82, 62, 22, 5), 1, border_radius=2)
+    pygame.draw.rect(s, COL_PLATAFORMA_M1, (110, 52, 22, 5), border_radius=2)
+    pygame.draw.rect(s, COL_BORDE_PLAT, (110, 52, 22, 5), 1, border_radius=2)
+
+    # 3. Plataforma de destino con llave y puerta
+    pygame.draw.rect(s, COL_PLATAFORMA_M1, (138, 58, 38, 5), border_radius=2)
+    pygame.draw.rect(s, COL_BORDE_PLAT, (138, 58, 38, 5), 1, border_radius=2)
 
     pj1 = _cargar_personaje("Celeste")
     pj2 = _cargar_personaje("Violeta")
     llave = _cargar_llave()
     puerta = _crear_puerta_original()
 
-    # Personajes en la plataforma 2 unidos por la soga
-    pos_v = (52, 60 - 20)
-    pos_c = (74, 60 - 20)
-    _dibujar_soga(s, (pos_v[0] + 12, pos_v[1] + 12), (pos_c[0] + 4, pos_c[1] + 12))
+    # Personajes en las plataformas de salto unidos por la soga
+    pos_v = (84, 62 - 20)
+    pos_c = (112, 52 - 20)
+    _dibujar_soga(s, (pos_v[0] + 12, pos_v[1] + 14), (pos_c[0] + 6, pos_c[1] + 14))
 
     s.blit(pj2, pos_v)
     s.blit(pj1, pos_c)
 
-    # Llave en la plataforma intermedia
-    s.blit(llave, (111, 50 - 18))
+    # Llave en la plataforma de destino
+    s.blit(llave, (144, 58 - 18))
 
-    # Puerta de salida al final del recorrido después de las plataformas
-    s.blit(puerta, (147, 62 - 26))
+    # Puerta de salida al final
+    s.blit(puerta, (156, 58 - 26))
 
     return s
 
