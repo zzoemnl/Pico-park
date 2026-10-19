@@ -7,36 +7,33 @@ import pygame
 from sprites import (
     ANCHO, ALTO, FPS,
     COLOR_JUGADOR1, COLOR_JUGADOR2,
-    RUTA_BOTONES, DIRECTORIO_ACTUAL,
+    RUTA_BOTONES,
     dibujar_personaje,
+    dibujar_agua,
 )
 from movimientos import (
-    ALTO_HITBOX,
-    DISTANCIA_SOGA_REPOSO,
-    DISTANCIA_SOGA_MAXIMA,
-    crear_estado_soga,
-    actualizar_fisica_soga,
-    aplicar_restriccion_soga,
-    TAMANO_CAJA,
-    VELOCIDAD_MUERTE,
     crear_personaje,
     crear_caja,
     crear_pinchos,
     crear_llave,
     crear_puerta,
-    actualizar_llave,
     reiniciar_juego,
+    matar_personaje,
     resolver_colisiones,
     actualizar_caja,
+    actualizar_llave,
     comprobar_pinchos,
     actualizar_muerte,
-)
-from agua import (
+    puede_saltar,
+    TAMANO_CAJA,
+    DISTANCIA_SOGA_REPOSO,
+    DISTANCIA_SOGA_MAXIMA,
+    crear_estado_soga,
+    actualizar_fisica_soga,
+    aplicar_restriccion_soga,
     ZONA_AGUA,
     actualizar_estado_agua,
     aplicar_fisica_agua,
-    puede_saltar,
-    dibujar_agua,
 )
 from guardado import (
     crear_desbloqueados_inicial,
@@ -1565,9 +1562,9 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, 
         mundo_rect = pygame.Rect(0, 0, ancho_mundo_nivel, ALTO)
 
         # Primera zona: suelo libre para aprender a caminar
-        # Ambos personajes inician sobre el suelo principal
-        jugador1 = crear_personaje(120, suelo.top - ALTO_HITBOX, p1_color)
-        jugador2 = crear_personaje(240, suelo.top - ALTO_HITBOX, p2_color)
+        # Ambos personajes aparecen en la parte superior y caen por gravedad
+        jugador1 = crear_personaje(120, 0, p1_color)
+        jugador2 = crear_personaje(240, 0, p2_color)
 
         caja = None
         pinchos = []
@@ -1612,9 +1609,9 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, 
         suelo = pygame.Rect(0, ALTO - 80, ancho_mundo_nivel, 80)
         mundo_rect = pygame.Rect(0, 0, ancho_mundo_nivel, ALTO)
 
-        # 1. Zona inicial: ambos personajes inician juntos sobre suelo firme a la izquierda
-        jugador1 = crear_personaje(140, suelo.top - ALTO_HITBOX, p1_color)
-        jugador2 = crear_personaje(260, suelo.top - ALTO_HITBOX, p2_color)
+        # 1. Zona inicial: ambos personajes inician arriba a la izquierda y caen por gravedad
+        jugador1 = crear_personaje(140, 0, p1_color)
+        jugador2 = crear_personaje(260, 0, p2_color)
 
         caja = None
         pinchos = []
@@ -1653,9 +1650,9 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, 
         suelo = pygame.Rect(0, ALTO - 80, ancho_mundo_nivel, 80)
         mundo_rect = pygame.Rect(0, 0, ancho_mundo_nivel, ALTO)
 
-        # 1. Zona inicial segura a la izquierda
-        jugador1 = crear_personaje(140, suelo.top - ALTO_HITBOX, p1_color)
-        jugador2 = crear_personaje(240, suelo.top - ALTO_HITBOX, p2_color)
+        # 1. Zona inicial segura a la izquierda (caen desde la parte superior)
+        jugador1 = crear_personaje(140, 0, p1_color)
+        jugador2 = crear_personaje(240, 0, p2_color)
 
         # 2. Caja empujable física sobre el suelo
         caja = crear_caja(520, suelo.top - TAMANO_CAJA)
@@ -1743,9 +1740,9 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, 
         # Puerta de salida en el extremo derecho del escenario
         puerta = crear_puerta(1900, plat_der.top - 90)
 
-        # Personajes en la plataforma izquierda
-        jugador1 = crear_personaje(140, plat_izq.top - ALTO_HITBOX, p1_color)
-        jugador2 = crear_personaje(220, plat_izq.top - ALTO_HITBOX, p2_color)
+        # Personajes caen desde la parte superior sobre la plataforma izquierda
+        jugador1 = crear_personaje(140, 0, p1_color)
+        jugador2 = crear_personaje(220, 0, p2_color)
 
         # Caja empujable en la plataforma izquierda
         caja = crear_caja(340, plat_izq.top - TAMANO_CAJA)
@@ -1788,9 +1785,9 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, 
         suelo = pygame.Rect(0, ALTO - 80, ancho_mundo_nivel, 80)
         mundo_rect = pygame.Rect(0, 0, ancho_mundo_nivel, ALTO)
 
-        # Personajes inician juntos en el suelo a la izquierda
-        jugador1 = crear_personaje(120, suelo.top - ALTO_HITBOX, p1_color)
-        jugador2 = crear_personaje(220, suelo.top - ALTO_HITBOX, p2_color)
+        # Personajes inician arriba a la izquierda y caen por gravedad
+        jugador1 = crear_personaje(120, 0, p1_color)
+        jugador2 = crear_personaje(220, 0, p2_color)
 
         caja = None
         pinchos = []
@@ -1911,9 +1908,9 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, 
         usar_pinchos = False
         usar_llave = True
 
-        # Zona inicial segura sobre el suelo
-        jugador1 = crear_personaje(120, suelo.top - 50, p1_color)
-        jugador2 = crear_personaje(210, suelo.top - 50, p2_color)
+        # Zona inicial: ambos personajes caen desde la parte superior unidos por la soga
+        jugador1 = crear_personaje(120, 0, p1_color)
+        jugador2 = crear_personaje(210, 0, p2_color)
 
         caja = None
         pinchos = []
@@ -2400,9 +2397,7 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, 
             for p, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]:
                 if not comp and not p["muerto"]:
                     if laser_nivel["rect_dano"].width > 0 and p["hitbox"].colliderect(laser_nivel["rect_dano"]):
-                        p["muerto"] = True
-                        p["vel_y"] = VELOCIDAD_MUERTE
-                        p["en_suelo"] = False
+                        matar_personaje(p)
 
         actualizar_muerte(jugador1)
         actualizar_muerte(jugador2)

@@ -231,3 +231,23 @@ def dibujar_personaje(pantalla, p, zona_agua=None):
         pantalla.set_clip(pygame.Rect(zona_agua.left, zona_agua.top, zona_agua.width, pantalla.get_height() - zona_agua.top))
         pantalla.blit(sprite_agua, rect_sprite)
         pantalla.set_clip(clip_anterior)
+
+
+COLOR_AGUA = (0, 140, 240, 130)
+
+
+def dibujar_agua(pantalla, zona_agua=None):
+    """
+    Dibuja la masa de agua translúcida sobre el escenario.
+    Usa una superficie con canal alfa (SRCALPHA) para que los personajes
+    y plataformas se vean sumergidos debajo.
+    """
+    if zona_agua is None:
+        zona_agua = pygame.Rect(0, 220, ANCHO, ALTO - 80 - 220)
+
+    superficie = pygame.Surface(
+        (zona_agua.width, zona_agua.height),
+        pygame.SRCALPHA
+    )
+    superficie.fill(COLOR_AGUA)
+    pantalla.blit(superficie, (zona_agua.x, zona_agua.y))

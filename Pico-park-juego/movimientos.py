@@ -1,5 +1,12 @@
 import pygame
-from sprites import cargar_sprites, cargar_sprite_caja
+from sprites import (
+    ANCHO,
+    ALTO,
+    cargar_sprites,
+    cargar_sprite_caja,
+    cargar_sprite_llave,
+    cargar_sprites_puerta,
+)
 
 GRAVEDAD = 0.8
 ANCHO_HITBOX = 50
@@ -583,7 +590,6 @@ def aplicar_restriccion_soga(p1, p2, distancia_maxima=DISTANCIA_SOGA_MAXIMA, pla
 
 
 def crear_llave(x, y):
-    from sprites import cargar_sprite_llave
     return {
         "x_inicial": x,
         "y_inicial": y,
@@ -598,7 +604,6 @@ def crear_llave(x, y):
 
 
 def crear_puerta(x, y):
-    from sprites import cargar_sprites_puerta
     return {
         "rect": pygame.Rect(x, y, 60, 90),
         "sprites": cargar_sprites_puerta(),
@@ -651,14 +656,21 @@ def crear_pinchos(y_suelo=640):
     return [pygame.Rect(x, y_suelo - alto, ancho, alto) for x in (350, 400, 700, 950, 1000, 1250, 1550, 1600, 1800)]
 
 
+def matar_personaje(p):
+    """
+    Aplica el estado de muerte al personaje con el impulso vertical característico.
+    """
+    p["muerto"] = True
+    p["vel_y"] = VELOCIDAD_MUERTE
+    p["en_suelo"] = False
+
+
 def comprobar_pinchos(p, pinchos):
     if p["muerto"]:
         return
     for pincho in pinchos:
         if p["hitbox"].colliderect(pincho):
-            p["muerto"] = True
-            p["vel_y"] = VELOCIDAD_MUERTE
-            p["en_suelo"] = False
+            matar_personaje(p)
             break
 
 
@@ -670,3 +682,50 @@ def actualizar_muerte(p):
     p["hitbox"].y += int(p["vel_y"])
     if p["hitbox"].top > 720:
         p["muerte_terminada"] = True
+
+
+# ============================================================
+# FÍSICA Y MECÁNICAS ACUÁTICAS (MUNDO 3)
+# ============================================================
+
+ZONA_AGUA = pygame.Rect(0, 220, ANCHO, ALTO - 80 - 220)
+GRAVEDAD_AGUA = 0.10
+VELOCIDAD_NADO_VERTICAL = 0.85
+FRICCION_AGUA = 0.86
+
+
+def actualizar_estado_agua(p, zona_agua=ZONA_AGUA):
+    """
+    Detecta si el personaje está dentro del agua.
+    - Recibe: diccionario del personaje 'p' y el rectángulo de agua 'zona_agua'.
+    - Modifica: p["en_agua"] = True/False según colisión con la hitbox.
+    - Devuelve: booleano indicando si está sumergido.
+    """
+    p["en_agua"] = zona_agua.colliderect(p["hitbox"])
+    return p["en_agua"]
+
+
+def aplicar_fisica_agua(p, tecla_arriba=False, tecla_abajo=False):
+    """
+    Aplica la flotabilidad, nado y fricción viscosa del agua (Mundo 3).
+    - Recibe: personaje 'p', y estados de las teclas arriba/abajo para nadar.
+    - Efecto: reduce la gravedad drásticamente, aplica impulso vertical y fricción suave.
+    """
+    p["vel_y"] += GRAVEDAD_AGUA
+
+    if tecla_arriba:
+        p["vel_y"] -= VELOCIDAD_NADO_VERTICAL
+
+    if tecla_abajo:
+        p["vel_y"] += VELOCIDAD_NADO_VERTICAL
+
+    p["vel_y"] *= FRICCION_AGUA
+    p["vel_y"] = max(-6, min(6, p["vel_y"]))
+
+
+def puede_saltar(p):
+    """
+    Verifica si el personaje tiene permitido saltar.
+    - Regla: debe estar en el suelo firme, no sumergido en agua y no estar muerto.
+    """
+    return p["en_suelo"] and not p["en_agua"] and not p["muerto"]
