@@ -12,8 +12,6 @@ from sprites import (
 )
 from movimientos import (
     ALTO_HITBOX,
-    ANCHO_HITBOX,
-    DISTANCIA_SOGA,
     DISTANCIA_SOGA_REPOSO,
     DISTANCIA_SOGA_MAXIMA,
     crear_estado_soga,
@@ -30,7 +28,6 @@ from movimientos import (
     reiniciar_juego,
     resolver_colisiones,
     actualizar_caja,
-    transportar_personaje_encima,
     comprobar_pinchos,
     actualizar_muerte,
 )

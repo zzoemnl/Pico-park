@@ -2,7 +2,7 @@ import sys
 import copy
 import pygame
 
-from sprites import ANCHO, ALTO, FPS, aplicar_tinta, cargar_sprites
+from sprites import ANCHO, ALTO, FPS, cargar_sprites
 from pantalla import iniciar_mundo, cargar_boton, animar_pulsacion_boton
 from menu_niveles import (
     dibujar_menu_niveles,
@@ -22,6 +22,7 @@ from guardado import (
     cargar_fuente_pixel,
 )
 
+# Estados de la máquina de navegación de menús
 ESTADO_MENU_PRINCIPAL = "principal"
 ESTADO_MODO_JUEGO = "modo_juego"
 ESTADO_LISTA_PARTIDAS = "lista_partidas"
@@ -30,12 +31,6 @@ ESTADO_CREDITOS = "creditos"
 ESTADO_PERSONAJES = "personajes"
 ESTADO_SELECCION_MUNDO = "seleccion_mundo"
 ESTADO_SELECCION_NIVEL = "seleccion_nivel"
-
-MECANICAS_MUNDOS = {
-    1: ["caja"],
-    2: ["soga"],
-    3: ["agua"],
-}
 
 PERSONAJES_DISPONIBLES = [
     # Tonos Neutros y Tierra

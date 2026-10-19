@@ -14,11 +14,22 @@ COLOR_AGUA = (0, 140, 240, 130)
 
 
 def actualizar_estado_agua(p, zona_agua=ZONA_AGUA):
+    """
+    Detecta si el personaje está dentro del agua.
+    - Recibe: diccionario del personaje 'p' y el rectángulo de agua 'zona_agua'.
+    - Modifica: p["en_agua"] = True/False según colisión con la hitbox.
+    - Devuelve: booleano indicando si está sumergido.
+    """
     p["en_agua"] = zona_agua.colliderect(p["hitbox"])
     return p["en_agua"]
 
 
 def aplicar_fisica_agua(p, tecla_arriba=False, tecla_abajo=False):
+    """
+    Aplica la flotabilidad, nado y fricción viscosa del agua (Mundo 3).
+    - Recibe: personaje 'p', y estados de las teclas arriba/abajo para nadar.
+    - Efecto: reduce la gravedad drásticamente, aplica impulso vertical y fricción suave.
+    """
     p["vel_y"] += GRAVEDAD_AGUA
 
     if tecla_arriba:
@@ -32,10 +43,19 @@ def aplicar_fisica_agua(p, tecla_arriba=False, tecla_abajo=False):
 
 
 def puede_saltar(p):
+    """
+    Verifica si el personaje tiene permitido saltar.
+    - Regla: debe estar en el suelo firme, no sumergido en agua y no estar muerto.
+    """
     return p["en_suelo"] and not p["en_agua"] and not p["muerto"]
 
 
 def dibujar_agua(pantalla, zona_agua=ZONA_AGUA):
+    """
+    Dibuja la masa de agua translúcida sobre el escenario.
+    - Usa una superficie con canal alfa (SRCALPHA) para que los personajes
+      y plataformas se vean sumergidos debajo.
+    """
     superficie = pygame.Surface(
         (zona_agua.width, zona_agua.height),
         pygame.SRCALPHA
