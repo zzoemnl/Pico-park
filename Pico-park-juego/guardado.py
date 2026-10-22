@@ -3,6 +3,8 @@ import copy
 import datetime
 import pygame
 
+from sprites import cargar_boton, animar_pulsacion_boton, aclarar_boton
+
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 RUTA_PARTIDAS = os.path.join(DIRECTORIO_ACTUAL, "partidas.txt")
 
@@ -213,17 +215,40 @@ def mostrar_dialogo_guardar_salir(pantalla, reloj, niveles_desbloqueados, id_par
     fuente_texto = pygame.font.Font(None, 26)
     fuente_btn = cargar_fuente_pixel(13, fallback_tamano=28)
 
-    ancho_card, alto_card = 520, 340
+    ancho_card, alto_card = 520, 430
     rect_card = pygame.Rect((ancho - ancho_card) // 2, (alto - alto_card) // 2, ancho_card, alto_card)
 
-    w_btn, h_btn = 340, 50
+    w_btn, h_btn = 272, 80
     x_btn = rect_card.centerx - (w_btn // 2)
-    y_base_btns = rect_card.top + 145
-    espacio_btns = 14
+    y_base_btns = rect_card.top + 150
+    espacio_btns = 12
 
     btn_guardar = pygame.Rect(x_btn, y_base_btns, w_btn, h_btn)
-    btn_no_guardar = pygame.Rect(x_btn, y_base_btns + (h_btn + espacio_btns), w_btn, h_btn)
+    btn_no_guardar = pygame.Rect(x_btn, y_base_btns + h_btn + espacio_btns, w_btn, h_btn)
     btn_cancelar = pygame.Rect(x_btn, y_base_btns + (h_btn + espacio_btns) * 2, w_btn, h_btn)
+
+    def _scale(img, w, h):
+        return pygame.transform.smoothscale(img, (w, h)) if img else None
+
+    # Botón «GUARDAR Y SALIR» (Ventanas)
+    spr_g_norm = _scale(cargar_boton("Ventanas/boton-guardar-y-salir.png") or cargar_boton("boton-guardar-y-salir.png"), w_btn, h_btn)
+    spr_g_semi = _scale(cargar_boton("Ventanas/boton-guardar-y-salir-semiapretado.png") or cargar_boton("boton-guardar-y-salir-semiapretado.png"), w_btn, h_btn)
+    spr_g_apret = _scale(cargar_boton("Ventanas/boton-guardar-y-salir-apretado.png") or cargar_boton("boton-guardar-y-salir-apretado.png"), w_btn, h_btn)
+
+    # Botón «SALIR SIN GUARDAR» (Ventanas / Menu)
+    spr_s_norm = _scale(cargar_boton("Ventanas/boton-salir-sin-guardar.png") or cargar_boton("Menu/boton-salir-sin-guardar.png") or cargar_boton("boton-salir-sin-guardar.png"), w_btn, h_btn)
+    spr_s_semi = _scale(cargar_boton("Menu/boton-salir-sin-guardar-semiapretado.png") or cargar_boton("boton-salir-sin-guardar-semiapretado.png"), w_btn, h_btn)
+    spr_s_apret = _scale(cargar_boton("Ventanas/boton-salir-sin-guardar-apretado.png") or cargar_boton("Menu/boton-salir-sin-guardar-apretado.png") or cargar_boton("boton-salir-sin-guardar-apretado.png"), w_btn, h_btn)
+
+    # Botón «CANCELAR» (Menu)
+    spr_c_norm = _scale(cargar_boton("Menu/boton-cancelar.png") or cargar_boton("boton-cancelar.png"), w_btn, h_btn)
+    spr_c_semi = _scale(cargar_boton("Menu/boton-cancelar-semiapretado.png") or cargar_boton("boton-cancelar-semiapretado.png"), w_btn, h_btn)
+    spr_c_apret = _scale(cargar_boton("Menu/boton-cancelar-apretado.png") or cargar_boton("boton-cancelar-apretado.png"), w_btn, h_btn)
+
+    spr_g_hover = aclarar_boton(spr_g_norm) if spr_g_norm else None
+    spr_s_hover = aclarar_boton(spr_s_norm) if spr_s_norm else None
+    spr_c_hover = aclarar_boton(spr_c_norm) if spr_c_norm else None
+    fondo_tarjeta = (253, 246, 233)
 
     overlay = pygame.Surface((ancho, alto), pygame.SRCALPHA)
     overlay.fill((0, 0, 0, 195))
@@ -233,6 +258,9 @@ def mostrar_dialogo_guardar_salir(pantalla, reloj, niveles_desbloqueados, id_par
     while True:
         reloj.tick(60)
         pos_mouse = pygame.mouse.get_pos()
+        hov_g = btn_guardar.collidepoint(pos_mouse)
+        hov_s = btn_no_guardar.collidepoint(pos_mouse)
+        hov_c = btn_cancelar.collidepoint(pos_mouse)
 
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
@@ -243,11 +271,17 @@ def mostrar_dialogo_guardar_salir(pantalla, reloj, niveles_desbloqueados, id_par
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 if btn_guardar.collidepoint(evento.pos):
+                    if spr_g_semi and spr_g_apret:
+                        animar_pulsacion_boton(pantalla, btn_guardar, spr_g_semi, spr_g_apret, fondo_tarjeta)
                     guardar_partida(niveles_desbloqueados, id_partida=id_partida, nombre_partida=nombre_partida)
                     return "guardar_salir"
                 elif btn_no_guardar.collidepoint(evento.pos):
+                    if spr_s_semi and spr_s_apret:
+                        animar_pulsacion_boton(pantalla, btn_no_guardar, spr_s_semi, spr_s_apret, fondo_tarjeta)
                     return "salir_sin_guardar"
                 elif btn_cancelar.collidepoint(evento.pos):
+                    if spr_c_semi and spr_c_apret:
+                        animar_pulsacion_boton(pantalla, btn_cancelar, spr_c_semi, spr_c_apret, fondo_tarjeta)
                     return "cancelar"
 
         # Dibujar fondo capturado + overlay cálido
@@ -269,20 +303,27 @@ def mostrar_dialogo_guardar_salir(pantalla, reloj, niveles_desbloqueados, id_par
         t_sub = fuente_texto.render("Podrás continuar desde este nivel más adelante.", True, (120, 105, 90))
         pantalla.blit(t_sub, t_sub.get_rect(center=(rect_card.centerx, rect_card.top + 112)))
 
-        # Botones interactivos con fuente pixel
-        botones_datos = [
-            (btn_guardar, "GUARDAR Y SALIR", (68, 172, 98), (82, 194, 114), (255, 255, 255), (45, 130, 70)),
-            (btn_no_guardar, "SALIR SIN GUARDAR", (215, 80, 75), (235, 95, 90), (255, 255, 255), (170, 50, 45)),
-            (btn_cancelar, "CANCELAR", (242, 234, 222), (255, 255, 255), (60, 45, 35), (195, 168, 138)),
-        ]
+        # Dibujar botones con sus estados normal / hover
+        if spr_g_norm:
+            pantalla.blit(spr_g_hover if (hov_g and spr_g_hover) else spr_g_norm, btn_guardar)
+        else:
+            pygame.draw.rect(pantalla, (82, 194, 114) if hov_g else (68, 172, 98), btn_guardar, border_radius=12)
+            t_g = fuente_btn.render("GUARDAR Y SALIR", True, (255, 255, 255))
+            pantalla.blit(t_g, t_g.get_rect(center=btn_guardar.center))
 
-        for btn, texto, col_norm, col_hov, col_txt, col_borde in botones_datos:
-            hover = btn.collidepoint(pos_mouse)
-            color_fondo = col_hov if hover else col_norm
-            pygame.draw.rect(pantalla, color_fondo, btn, border_radius=12)
-            pygame.draw.rect(pantalla, (255, 255, 255) if hover else col_borde, btn, width=2 if hover else 1, border_radius=12)
-            t_btn = fuente_btn.render(texto, True, col_txt)
-            pantalla.blit(t_btn, t_btn.get_rect(center=btn.center))
+        if spr_s_norm:
+            pantalla.blit(spr_s_hover if (hov_s and spr_s_hover) else spr_s_norm, btn_no_guardar)
+        else:
+            pygame.draw.rect(pantalla, (235, 95, 90) if hov_s else (215, 80, 75), btn_no_guardar, border_radius=12)
+            t_s = fuente_btn.render("SALIR SIN GUARDAR", True, (255, 255, 255))
+            pantalla.blit(t_s, t_s.get_rect(center=btn_no_guardar.center))
+
+        if spr_c_norm:
+            pantalla.blit(spr_c_hover if (hov_c and spr_c_hover) else spr_c_norm, btn_cancelar)
+        else:
+            pygame.draw.rect(pantalla, (255, 255, 255) if hov_c else (242, 234, 222), btn_cancelar, border_radius=12)
+            t_c = fuente_btn.render("CANCELAR", True, (60, 45, 35))
+            pantalla.blit(t_c, t_c.get_rect(center=btn_cancelar.center))
 
         pygame.display.flip()
 
@@ -303,15 +344,25 @@ def mostrar_dialogo_confirmar_borrado(pantalla, reloj, partida):
     ancho_card, alto_card = 560, 310
     rect_card = pygame.Rect((ancho - ancho_card) // 2, (alto - alto_card) // 2, ancho_card, alto_card)
 
-    w_btn, h_btn = 205, 48
+    w_btn, h_btn = 205, 56
     gap_btn = 22
     total_w_btns = (w_btn * 2) + gap_btn
     x_cancelar = rect_card.centerx - (total_w_btns // 2)
     x_borrar = x_cancelar + w_btn + gap_btn
-    y_btns = rect_card.bottom - 72
+    y_btns = rect_card.bottom - 78
 
     btn_cancelar = pygame.Rect(x_cancelar, y_btns, w_btn, h_btn)
     btn_borrar = pygame.Rect(x_borrar, y_btns, w_btn, h_btn)
+
+    def _scale(img, w, h):
+        return pygame.transform.smoothscale(img, (w, h)) if img else None
+
+    # Sprites del botón Cancelar
+    spr_can_norm = _scale(cargar_boton("Menu/boton-cancelar.png") or cargar_boton("boton-cancelar.png"), w_btn, h_btn)
+    spr_can_semi = _scale(cargar_boton("Menu/boton-cancelar-semiapretado.png") or cargar_boton("boton-cancelar-semiapretado.png"), w_btn, h_btn)
+    spr_can_apret = _scale(cargar_boton("Menu/boton-cancelar-apretado.png") or cargar_boton("boton-cancelar-apretado.png"), w_btn, h_btn)
+    spr_can_hover = aclarar_boton(spr_can_norm) if spr_can_norm else None
+    fondo_tarjeta = (253, 246, 233)
 
     overlay = pygame.Surface((ancho, alto), pygame.SRCALPHA)
     overlay.fill((45, 35, 25, 140))
@@ -325,6 +376,8 @@ def mostrar_dialogo_confirmar_borrado(pantalla, reloj, partida):
     while True:
         reloj.tick(60)
         pos_mouse = pygame.mouse.get_pos()
+        hov_can = btn_cancelar.collidepoint(pos_mouse)
+        hov_bor = btn_borrar.collidepoint(pos_mouse)
 
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
@@ -335,6 +388,8 @@ def mostrar_dialogo_confirmar_borrado(pantalla, reloj, partida):
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 if btn_cancelar.collidepoint(evento.pos):
+                    if spr_can_semi and spr_can_apret:
+                        animar_pulsacion_boton(pantalla, btn_cancelar, spr_can_semi, spr_can_apret, fondo_tarjeta)
                     return False
                 elif btn_borrar.collidepoint(evento.pos):
                     return True
@@ -362,17 +417,18 @@ def mostrar_dialogo_confirmar_borrado(pantalla, reloj, partida):
         t_aviso = fuente_texto.render("Esta acción no se puede deshacer.", True, (195, 75, 65))
         pantalla.blit(t_aviso, t_aviso.get_rect(center=(rect_card.centerx, rect_card.top + 160)))
 
-        # Botón Cancelar (crema / arena pastel)
-        hov_can = btn_cancelar.collidepoint(pos_mouse)
-        col_can = (255, 255, 255) if hov_can else (242, 234, 222)
-        borde_can = (165, 135, 105) if hov_can else (195, 168, 138)
-        pygame.draw.rect(pantalla, col_can, btn_cancelar, border_radius=12)
-        pygame.draw.rect(pantalla, borde_can, btn_cancelar, width=2, border_radius=12)
-        t_btn_can = fuente_btn.render("CANCELAR", True, (60, 45, 35))
-        pantalla.blit(t_btn_can, t_btn_can.get_rect(center=btn_cancelar.center))
+        # Botón Cancelar con sprite o fallback
+        if spr_can_norm:
+            pantalla.blit(spr_can_hover if (hov_can and spr_can_hover) else spr_can_norm, btn_cancelar)
+        else:
+            col_can = (255, 255, 255) if hov_can else (242, 234, 222)
+            borde_can = (165, 135, 105) if hov_can else (195, 168, 138)
+            pygame.draw.rect(pantalla, col_can, btn_cancelar, border_radius=12)
+            pygame.draw.rect(pantalla, borde_can, btn_cancelar, width=2, border_radius=12)
+            t_btn_can = fuente_btn.render("CANCELAR", True, (60, 45, 35))
+            pantalla.blit(t_btn_can, t_btn_can.get_rect(center=btn_cancelar.center))
 
         # Botón Borrar Partida (terracota / coral pastel)
-        hov_bor = btn_borrar.collidepoint(pos_mouse)
         col_bor = (235, 95, 90) if hov_bor else (215, 80, 75)
         borde_bor = (255, 255, 255) if hov_bor else (170, 50, 45)
         pygame.draw.rect(pantalla, col_bor, btn_borrar, border_radius=12)

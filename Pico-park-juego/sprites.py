@@ -26,6 +26,91 @@ ESTADOS_PERSONAJE = [
 ]
 
 
+def cargar_boton(nombre):
+    """
+    Carga un sprite de botón desde la carpeta Sprites/Botones o cualquiera de sus subcarpetas.
+    Permite especificar nombres con o sin subcarpeta (ej. 'boton-volver.png' o 'mundos/boton-volver.png').
+    """
+    def _cargar(ruta_archivo):
+        try:
+            img = pygame.image.load(ruta_archivo)
+            try:
+                return img.convert_alpha()
+            except pygame.error:
+                return img
+        except (FileNotFoundError, pygame.error):
+            return None
+
+    # Normalizar separadores de ruta
+    nombre_norm = nombre.replace("/", os.sep).replace("\\", os.sep)
+    ruta = os.path.join(RUTA_BOTONES, nombre_norm)
+    if os.path.isfile(ruta):
+        res = _cargar(ruta)
+        if res:
+            return res
+
+    solo_nombre = os.path.basename(nombre_norm)
+    for raiz, _, archivos in os.walk(RUTA_BOTONES):
+        if solo_nombre in archivos:
+            res = _cargar(os.path.join(raiz, solo_nombre))
+            if res:
+                return res
+
+    return None
+
+
+def aclarar_boton(surf, factor=45):
+    """
+    Genera una versión iluminada / más clara del sprite del botón para el estado hover.
+    Mantiene intactos los bordes y la transparencia.
+    """
+    if surf is None:
+        return None
+    brillante = surf.copy()
+    capa = pygame.Surface(surf.get_size(), pygame.SRCALPHA)
+    capa.fill((factor, factor, factor, 0))
+    brillante.blit(capa, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
+    return brillante
+
+
+def animar_pulsacion_boton(pantalla, rect, spr_semi, spr_apretado, fondo_limpio=None):
+    """
+    Reproduce la animación de pulsación en dos etapas (semiapretado y apretado)
+    al hacer clic sobre un botón.
+    Limpia completamente el fondo para evitar que el botón sin apretar quede visible debajo.
+    """
+    def _limpiar():
+        if fondo_limpio is not None:
+            if isinstance(fondo_limpio, (tuple, list)):
+                pygame.draw.rect(pantalla, fondo_limpio[:3], rect)
+            elif isinstance(fondo_limpio, pygame.Surface):
+                if fondo_limpio.get_size() == (rect.width, rect.height):
+                    pantalla.blit(fondo_limpio, rect)
+                else:
+                    pantalla.blit(fondo_limpio, rect, rect)
+        else:
+            ancho_p, alto_p = pantalla.get_size()
+            x_muestra = max(0, rect.left - 4)
+            y_muestra = max(0, min(alto_p - 1, rect.centery))
+            col_bg = pantalla.get_at((x_muestra, y_muestra))[:3]
+            pygame.draw.rect(pantalla, col_bg, rect)
+
+    if spr_semi:
+        _limpiar()
+        pantalla.blit(spr_semi, rect)
+        pygame.display.flip()
+        pygame.event.pump()
+        pygame.time.delay(50)
+
+    if spr_apretado:
+        _limpiar()
+        pantalla.blit(spr_apretado, rect)
+        pygame.display.flip()
+        pygame.event.pump()
+        pygame.time.delay(80)
+
+
+
 def aplicar_tinta(imagen_base, color_rgb):
     """
     Pinta el personaje base con el color seleccionado manteniendo ojos, bordes y transparencia.

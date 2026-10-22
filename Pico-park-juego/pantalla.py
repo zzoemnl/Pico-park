@@ -10,6 +10,9 @@ from sprites import (
     RUTA_BOTONES,
     dibujar_personaje,
     dibujar_agua,
+    cargar_boton,
+    animar_pulsacion_boton,
+    aclarar_boton,
 )
 from movimientos import (
     crear_personaje,
@@ -48,83 +51,47 @@ ANCHO_MUNDO = 3000
 DISTANCIA_SPLIT = 850
 
 
-def cargar_boton(nombre):
-    def _cargar(ruta_archivo):
-        try:
-            img = pygame.image.load(ruta_archivo)
-            try:
-                return img.convert_alpha()
-            except pygame.error:
-                return img
-        except (FileNotFoundError, pygame.error):
-            return None
-
-    ruta = os.path.join(RUTA_BOTONES, nombre)
-    if os.path.isfile(ruta):
-        res = _cargar(ruta)
-        if res:
-            return res
-
-    for raiz, _, archivos in os.walk(RUTA_BOTONES):
-        if nombre in archivos:
-            res = _cargar(os.path.join(raiz, nombre))
-            if res:
-                return res
-
-    return None
-
-
-def animar_pulsacion_boton(pantalla, rect, spr_semi, spr_apretado, fondo_limpio=None):
-    if fondo_limpio is None:
-        try:
-            fondo_limpio = pantalla.subsurface(rect).copy()
-        except Exception:
-            fondo_limpio = None
-
-    if fondo_limpio:
-        pantalla.blit(fondo_limpio, rect)
-    if spr_semi:
-        pantalla.blit(spr_semi, rect)
-    pygame.display.flip()
-    pygame.event.pump()
-    pygame.time.delay(80)
-
-    if fondo_limpio:
-        pantalla.blit(fondo_limpio, rect)
-    if spr_apretado:
-        pantalla.blit(spr_apretado, rect)
-    pygame.display.flip()
-    pygame.event.pump()
-    pygame.time.delay(120)
-
-
 def pantalla_muerte(pantalla, reloj):
     fuente_titulo = pygame.font.Font(None, 60)
     fuente_texto = pygame.font.Font(None, 36)
 
-    boton_salir_normal = cargar_boton("salir.png") or cargar_boton("boton-salir.png")
-    boton_salir_semi = cargar_boton("salir-preapretado.png")
-    boton_salir_apretado = cargar_boton("salir-apretado.png") or cargar_boton("boton-salir-apretado.png")
-    boton_reiniciar_normal = cargar_boton("boton-reiniciar.png")
-    boton_reiniciar_apretado = cargar_boton("boton-reiniciar-apretado.png")
+    w_btn, h_btn = 260, 76
+
+    boton_menu_normal = cargar_boton("Ventanas/boton-menu.png") or cargar_boton("boton-menu.png") or cargar_boton("salir.png")
+    boton_menu_semi = cargar_boton("Ventanas/boton-menu-semiapretado.png") or cargar_boton("boton-menu-semiapretado.png") or cargar_boton("salir-preapretado.png")
+    boton_menu_apretado = cargar_boton("Ventanas/boton-menu-apretado.png") or cargar_boton("boton-menu-apretado.png") or cargar_boton("salir-apretado.png")
+
+    boton_reiniciar_normal = cargar_boton("Ventanas/boton-reiniciar.png") or cargar_boton("boton-reiniciar.png")
+    boton_reiniciar_semi = cargar_boton("Ventanas/boton-reiniciar-semiapretado.png") or cargar_boton("boton-reiniciar-semiapretado.png")
+    boton_reiniciar_apretado = cargar_boton("Ventanas/boton-reiniciar-apretado.png") or cargar_boton("boton-reiniciar-apretado.png")
 
     if any(x is None for x in (
-        boton_salir_normal, boton_salir_apretado,
+        boton_menu_normal, boton_menu_apretado,
         boton_reiniciar_normal, boton_reiniciar_apretado
     )):
         return "salir"
 
-    boton_reiniciar_normal = pygame.transform.scale(boton_reiniciar_normal, (260, 80))
-    boton_reiniciar_apretado = pygame.transform.scale(boton_reiniciar_apretado, (260, 80))
-    boton_salir_normal = pygame.transform.scale(boton_salir_normal, (260, 80))
-    if boton_salir_semi:
-        boton_salir_semi = pygame.transform.scale(boton_salir_semi, (260, 80))
-    boton_salir_apretado = pygame.transform.scale(boton_salir_apretado, (260, 80))
+    boton_reiniciar_normal = pygame.transform.smoothscale(boton_reiniciar_normal, (w_btn, h_btn))
+    if boton_reiniciar_semi:
+        boton_reiniciar_semi = pygame.transform.smoothscale(boton_reiniciar_semi, (w_btn, h_btn))
+    boton_reiniciar_apretado = pygame.transform.smoothscale(boton_reiniciar_apretado, (w_btn, h_btn))
+
+    boton_menu_normal = pygame.transform.smoothscale(boton_menu_normal, (w_btn, h_btn))
+    if boton_menu_semi:
+        boton_menu_semi = pygame.transform.smoothscale(boton_menu_semi, (w_btn, h_btn))
+    boton_menu_apretado = pygame.transform.smoothscale(boton_menu_apretado, (w_btn, h_btn))
 
     boton_reiniciar = boton_reiniciar_normal.get_rect(center=(ANCHO // 2 - 150, 400))
-    boton_salir = boton_salir_normal.get_rect(center=(ANCHO // 2 + 150, 400))
+    boton_menu = boton_menu_normal.get_rect(center=(ANCHO // 2 + 150, 400))
+
+    boton_reiniciar_hover = aclarar_boton(boton_reiniciar_normal)
+    boton_menu_hover = aclarar_boton(boton_menu_normal)
 
     while True:
+        pos_mouse = pygame.mouse.get_pos()
+        hov_reinicio = boton_reiniciar.collidepoint(pos_mouse)
+        hov_menu = boton_menu.collidepoint(pos_mouse)
+
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 pygame.quit()
@@ -132,20 +99,11 @@ def pantalla_muerte(pantalla, reloj):
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 if boton_reiniciar.collidepoint(evento.pos):
-                    pantalla.blit(boton_reiniciar_apretado, boton_reiniciar)
-                    pygame.display.flip()
-                    pygame.time.delay(300)
+                    animar_pulsacion_boton(pantalla, boton_reiniciar, boton_reiniciar_semi, boton_reiniciar_apretado, (25, 25, 25))
                     return "reiniciar"
 
-                if boton_salir.collidepoint(evento.pos):
-                    if boton_salir_semi and boton_salir_apretado:
-                        fondo_m = pygame.Surface(boton_salir.size)
-                        fondo_m.fill((25, 25, 25))
-                        animar_pulsacion_boton(pantalla, boton_salir, boton_salir_semi, boton_salir_apretado, fondo_m)
-                    else:
-                        pantalla.blit(boton_salir_apretado, boton_salir)
-                        pygame.display.flip()
-                        pygame.time.delay(300)
+                if boton_menu.collidepoint(evento.pos):
+                    animar_pulsacion_boton(pantalla, boton_menu, boton_menu_semi, boton_menu_apretado, (25, 25, 25))
                     return "salir"
 
         pantalla.fill((25, 25, 25))
@@ -153,8 +111,12 @@ def pantalla_muerte(pantalla, reloj):
         texto = fuente_texto.render("¿Querés reiniciar o salir?", True, (255, 255, 255))
         pantalla.blit(titulo, titulo.get_rect(center=(ANCHO // 2, 180)))
         pantalla.blit(texto, texto.get_rect(center=(ANCHO // 2, 250)))
-        pantalla.blit(boton_reiniciar_normal, boton_reiniciar)
-        pantalla.blit(boton_salir_normal, boton_salir)
+
+        spr_r = boton_reiniciar_hover if (hov_reinicio and boton_reiniciar_hover) else boton_reiniciar_normal
+        spr_m = boton_menu_hover if (hov_menu and boton_menu_hover) else boton_menu_normal
+
+        pantalla.blit(spr_r, boton_reiniciar)
+        pantalla.blit(spr_m, boton_menu)
         pygame.display.flip()
         reloj.tick(FPS)
 
@@ -670,15 +632,34 @@ def mostrar_pantalla_victoria(pantalla, reloj, mundo=1, numero_nivel=1, hay_sigu
     fuente_badge = obtener_fuente_elegante(21, negrita=True)
     fuente_btn = obtener_fuente_elegante(27, negrita=True)
 
-    w_btn = min(360, w_panel - 80)
-    h_btn = 56
+    w_btn = 272
+    h_btn = 80
     btn1_x = cx - w_btn // 2
-    btn1_target_y = rect_panel.top + 225
+    btn1_target_y = rect_panel.top + 215
     btn2_x = cx - w_btn // 2
-    btn2_target_y = rect_panel.top + 295
+    btn2_target_y = rect_panel.top + 305
 
     rect_btn1 = pygame.Rect(btn1_x, btn1_target_y, w_btn, h_btn)
     rect_btn2 = pygame.Rect(btn2_x, btn2_target_y, w_btn, h_btn)
+
+    spr_sig_normal = cargar_boton("Ventanas/boton-siguiente.png") or cargar_boton("boton-siguiente.png")
+    spr_sig_semi = cargar_boton("Ventanas/boton-siguiente-semiapretado.png") or cargar_boton("boton-siguiente-semiapretado.png")
+    spr_sig_apretado = cargar_boton("Ventanas/boton-siguiente-apretado.png") or cargar_boton("boton-siguiente-apretado.png")
+
+    spr_menu_normal = cargar_boton("Ventanas/boton-menu.png") or cargar_boton("boton-menu.png")
+    spr_menu_semi = cargar_boton("Ventanas/boton-menu-semiapretado.png") or cargar_boton("boton-menu-semiapretado.png")
+    spr_menu_apretado = cargar_boton("Ventanas/boton-menu-apretado.png") or cargar_boton("boton-menu-apretado.png")
+
+    if spr_sig_normal: spr_sig_normal = pygame.transform.smoothscale(spr_sig_normal, (w_btn, h_btn))
+    if spr_sig_semi: spr_sig_semi = pygame.transform.smoothscale(spr_sig_semi, (w_btn, h_btn))
+    if spr_sig_apretado: spr_sig_apretado = pygame.transform.smoothscale(spr_sig_apretado, (w_btn, h_btn))
+
+    if spr_menu_normal: spr_menu_normal = pygame.transform.smoothscale(spr_menu_normal, (w_btn, h_btn))
+    if spr_menu_semi: spr_menu_semi = pygame.transform.smoothscale(spr_menu_semi, (w_btn, h_btn))
+    if spr_menu_apretado: spr_menu_apretado = pygame.transform.smoothscale(spr_menu_apretado, (w_btn, h_btn))
+
+    spr_sig_hover = aclarar_boton(spr_sig_normal) if spr_sig_normal else None
+    spr_menu_hover = aclarar_boton(spr_menu_normal) if spr_menu_normal else None
 
     txt_btn1 = "SIGUIENTE NIVEL →" if hay_siguiente else "¡JUEGO COMPLETADO!"
     txt_btn2 = "VOLVER AL MENÚ"
@@ -722,11 +703,16 @@ def mostrar_pantalla_victoria(pantalla, reloj, mundo=1, numero_nivel=1, hay_sigu
             cur_y1 = btn1_target_y + int(35 * (1.0 - t_b1) + 12 * bounce_b1)
             r1_anim = pygame.Rect(btn1_x, cur_y1, w_btn, h_btn)
 
-            pygame.draw.rect(pantalla, (160, 50, 35), (r1_anim.x, r1_anim.y + 4, r1_anim.w, r1_anim.h), border_radius=8)
-            pygame.draw.rect(pantalla, (225, 110, 80), r1_anim, border_radius=8)
-            pygame.draw.rect(pantalla, (150, 45, 30), r1_anim, width=3, border_radius=8)
-            tb1 = fuente_btn.render(txt_btn1, True, (255, 255, 255))
-            pantalla.blit(tb1, tb1.get_rect(center=r1_anim.center))
+            if spr_sig_normal and hay_siguiente:
+                pantalla.blit(spr_sig_normal, r1_anim)
+            elif spr_menu_normal and not hay_siguiente:
+                pantalla.blit(spr_menu_normal, r1_anim)
+            else:
+                pygame.draw.rect(pantalla, (160, 50, 35), (r1_anim.x, r1_anim.y + 4, r1_anim.w, r1_anim.h), border_radius=8)
+                pygame.draw.rect(pantalla, (225, 110, 80), r1_anim, border_radius=8)
+                pygame.draw.rect(pantalla, (150, 45, 30), r1_anim, width=3, border_radius=8)
+                tb1 = fuente_btn.render(txt_btn1, True, (255, 255, 255))
+                pantalla.blit(tb1, tb1.get_rect(center=r1_anim.center))
 
         # 3. Botón 2 con desplazamiento y rebote (empieza en f=20)
         if f >= 20:
@@ -735,17 +721,22 @@ def mostrar_pantalla_victoria(pantalla, reloj, mundo=1, numero_nivel=1, hay_sigu
             cur_y2 = btn2_target_y + int(35 * (1.0 - t_b2) + 12 * bounce_b2)
             r2_anim = pygame.Rect(btn2_x, cur_y2, w_btn, h_btn)
 
-            pygame.draw.rect(pantalla, (195, 185, 165), (r2_anim.x, r2_anim.y + 4, r2_anim.w, r2_anim.h), border_radius=8)
-            pygame.draw.rect(pantalla, (245, 235, 215), r2_anim, border_radius=8)
-            pygame.draw.rect(pantalla, (70, 70, 75), r2_anim, width=3, border_radius=8)
-            tb2 = fuente_btn.render(txt_btn2, True, (50, 50, 55))
-            pantalla.blit(tb2, tb2.get_rect(center=r2_anim.center))
+            if spr_menu_normal:
+                pantalla.blit(spr_menu_normal, r2_anim)
+            else:
+                pygame.draw.rect(pantalla, (195, 185, 165), (r2_anim.x, r2_anim.y + 4, r2_anim.w, r2_anim.h), border_radius=8)
+                pygame.draw.rect(pantalla, (245, 235, 215), r2_anim, border_radius=8)
+                pygame.draw.rect(pantalla, (70, 70, 75), r2_anim, width=3, border_radius=8)
+                tb2 = fuente_btn.render(txt_btn2, True, (50, 50, 55))
+                pantalla.blit(tb2, tb2.get_rect(center=r2_anim.center))
 
         pygame.display.flip()
 
     # --- FASE 3: Interacción del usuario (hover y selección) ---
     accion_seleccionada = None
     boton_presionado = None
+    fondo_limpio_btn1 = None
+    fondo_limpio_btn2 = None
 
     while accion_seleccionada is None:
         reloj.tick(FPS)
@@ -776,54 +767,18 @@ def mostrar_pantalla_victoria(pantalla, reloj, mundo=1, numero_nivel=1, hay_sigu
 
             if evento.type == pygame.MOUSEBUTTONUP and evento.button == 1:
                 if boton_presionado == 1 and rect_btn1.collidepoint(evento.pos):
+                    if spr_sig_semi and spr_sig_apretado and hay_siguiente:
+                        animar_pulsacion_boton(pantalla, rect_btn1, spr_sig_semi, spr_sig_apretado, fondo_limpio_btn1)
+                    elif spr_menu_semi and spr_menu_apretado and not hay_siguiente:
+                        animar_pulsacion_boton(pantalla, rect_btn1, spr_menu_semi, spr_menu_apretado, fondo_limpio_btn1)
                     accion_seleccionada = "siguiente" if hay_siguiente else "menu"
                 elif boton_presionado == 2 and rect_btn2.collidepoint(evento.pos):
+                    if spr_menu_semi and spr_menu_apretado:
+                        animar_pulsacion_boton(pantalla, rect_btn2, spr_menu_semi, spr_menu_apretado, fondo_limpio_btn2)
                     accion_seleccionada = "menu"
                 boton_presionado = None
 
         if accion_seleccionada is not None:
-            # Animación breve de pulsación/selección confirmada
-            for _ in range(8):
-                reloj.tick(FPS)
-                pygame.event.pump()
-                pantalla.fill((0, 0, 0))
-                dibujar_panel_victoria_solido(pantalla, rect_panel, color_p1, color_p2)
-                t_tit_surf = fuente_titulo.render("¡NIVEL COMPLETADO!", True, (255, 255, 255))
-                pantalla.blit(t_tit_surf, t_tit_surf.get_rect(center=(cx, rect_panel.top + 35)))
-                t_sub = fuente_sub.render("¡Buen trabajo!", True, (75, 70, 70))
-                pantalla.blit(t_sub, t_sub.get_rect(center=(cx, rect_panel.top + 98)))
-                r_badge = pygame.Rect(cx - 150, rect_panel.top + 132, 300, 36)
-                pygame.draw.rect(pantalla, (255, 255, 255), r_badge, border_radius=8)
-                pygame.draw.rect(pantalla, (210, 195, 160), r_badge, width=2, border_radius=8)
-                t_nb = fuente_badge.render(nom_nivel, True, (50, 45, 40))
-                pantalla.blit(t_nb, t_nb.get_rect(center=r_badge.center))
-
-                # Dibujar botón seleccionado presionado
-                if accion_seleccionada == "siguiente" or (not hay_siguiente and accion_seleccionada == "menu"):
-                    r1_draw = pygame.Rect(rect_btn1.x, rect_btn1.y + 3, rect_btn1.w, rect_btn1.h)
-                    pygame.draw.rect(pantalla, (190, 80, 55), r1_draw, border_radius=8)
-                    pygame.draw.rect(pantalla, (130, 40, 25), r1_draw, width=3, border_radius=8)
-                    tb1 = fuente_btn.render(txt_btn1, True, (240, 240, 240))
-                    pantalla.blit(tb1, tb1.get_rect(center=r1_draw.center))
-
-                    pygame.draw.rect(pantalla, (195, 185, 165), (rect_btn2.x, rect_btn2.y + 4, rect_btn2.w, rect_btn2.h), border_radius=8)
-                    pygame.draw.rect(pantalla, (245, 235, 215), rect_btn2, border_radius=8)
-                    pygame.draw.rect(pantalla, (70, 70, 75), rect_btn2, width=3, border_radius=8)
-                    tb2 = fuente_btn.render(txt_btn2, True, (50, 50, 55))
-                    pantalla.blit(tb2, tb2.get_rect(center=rect_btn2.center))
-                else:
-                    pygame.draw.rect(pantalla, (160, 50, 35), (rect_btn1.x, rect_btn1.y + 4, rect_btn1.w, rect_btn1.h), border_radius=8)
-                    pygame.draw.rect(pantalla, (225, 110, 80), rect_btn1, border_radius=8)
-                    pygame.draw.rect(pantalla, (150, 45, 30), rect_btn1, width=3, border_radius=8)
-                    tb1 = fuente_btn.render(txt_btn1, True, (255, 255, 255))
-                    pantalla.blit(tb1, tb1.get_rect(center=rect_btn1.center))
-
-                    r2_draw = pygame.Rect(rect_btn2.x, rect_btn2.y + 3, rect_btn2.w, rect_btn2.h)
-                    pygame.draw.rect(pantalla, (220, 210, 190), r2_draw, border_radius=8)
-                    pygame.draw.rect(pantalla, (35, 35, 40), r2_draw, width=3, border_radius=8)
-                    tb2 = fuente_btn.render(txt_btn2, True, (35, 35, 40))
-                    pantalla.blit(tb2, tb2.get_rect(center=r2_draw.center))
-                pygame.display.flip()
             break
 
         pantalla.fill((0, 0, 0))
@@ -843,49 +798,64 @@ def mostrar_pantalla_victoria(pantalla, reloj, mundo=1, numero_nivel=1, hay_sigu
         t_nb = fuente_badge.render(nom_nivel, True, (50, 45, 40))
         pantalla.blit(t_nb, t_nb.get_rect(center=r_badge.center))
 
+        # Captura de fondos limpios antes de renderizar los botones
+        fondo_limpio_btn1 = pantalla.subsurface(rect_btn1).copy()
+        fondo_limpio_btn2 = pantalla.subsurface(rect_btn2).copy()
+
         # Renderizado interactivo Botón 1 («SIGUIENTE NIVEL →»)
         press1 = (boton_presionado == 1 and hover1)
-        if press1:
-            r1_draw = pygame.Rect(rect_btn1.x, rect_btn1.y + 3, rect_btn1.w, rect_btn1.h)
-            pygame.draw.rect(pantalla, (200, 85, 60), r1_draw, border_radius=8)
-            pygame.draw.rect(pantalla, (130, 40, 25), r1_draw, width=3, border_radius=8)
-            tb1 = fuente_btn.render(txt_btn1, True, (245, 245, 245))
-            pantalla.blit(tb1, tb1.get_rect(center=r1_draw.center))
-        elif hover1:
-            r1_draw = pygame.Rect(rect_btn1.x, rect_btn1.y - 2, rect_btn1.w, rect_btn1.h)
-            pygame.draw.rect(pantalla, (160, 50, 35), (r1_draw.x, r1_draw.y + 6, r1_draw.w, r1_draw.h), border_radius=8)
-            pygame.draw.rect(pantalla, (240, 125, 95), r1_draw, border_radius=8)
-            pygame.draw.rect(pantalla, (180, 60, 45), r1_draw, width=3, border_radius=8)
-            tb1 = fuente_btn.render(txt_btn1, True, (255, 255, 255))
-            pantalla.blit(tb1, tb1.get_rect(center=r1_draw.center))
+        if spr_sig_normal and hay_siguiente:
+            spr_b1 = spr_sig_apretado if press1 else (spr_sig_hover if (hover1 and spr_sig_hover) else spr_sig_normal)
+            pantalla.blit(spr_b1, rect_btn1)
+        elif spr_menu_normal and not hay_siguiente:
+            spr_b1 = spr_menu_apretado if press1 else (spr_menu_hover if (hover1 and spr_menu_hover) else spr_menu_normal)
+            pantalla.blit(spr_b1, rect_btn1)
         else:
-            pygame.draw.rect(pantalla, (160, 50, 35), (rect_btn1.x, rect_btn1.y + 4, rect_btn1.w, rect_btn1.h), border_radius=8)
-            pygame.draw.rect(pantalla, (225, 110, 80), rect_btn1, border_radius=8)
-            pygame.draw.rect(pantalla, (150, 45, 30), rect_btn1, width=3, border_radius=8)
-            tb1 = fuente_btn.render(txt_btn1, True, (255, 255, 255))
-            pantalla.blit(tb1, tb1.get_rect(center=rect_btn1.center))
+            if press1:
+                r1_draw = pygame.Rect(rect_btn1.x, rect_btn1.y + 3, rect_btn1.w, rect_btn1.h)
+                pygame.draw.rect(pantalla, (200, 85, 60), r1_draw, border_radius=8)
+                pygame.draw.rect(pantalla, (130, 40, 25), r1_draw, width=3, border_radius=8)
+                tb1 = fuente_btn.render(txt_btn1, True, (245, 245, 245))
+                pantalla.blit(tb1, tb1.get_rect(center=r1_draw.center))
+            elif hover1:
+                r1_draw = pygame.Rect(rect_btn1.x, rect_btn1.y - 2, rect_btn1.w, rect_btn1.h)
+                pygame.draw.rect(pantalla, (160, 50, 35), (r1_draw.x, r1_draw.y + 6, r1_draw.w, r1_draw.h), border_radius=8)
+                pygame.draw.rect(pantalla, (240, 125, 95), r1_draw, border_radius=8)
+                pygame.draw.rect(pantalla, (180, 60, 45), r1_draw, width=3, border_radius=8)
+                tb1 = fuente_btn.render(txt_btn1, True, (255, 255, 255))
+                pantalla.blit(tb1, tb1.get_rect(center=r1_draw.center))
+            else:
+                pygame.draw.rect(pantalla, (160, 50, 35), (rect_btn1.x, rect_btn1.y + 4, rect_btn1.w, rect_btn1.h), border_radius=8)
+                pygame.draw.rect(pantalla, (225, 110, 80), rect_btn1, border_radius=8)
+                pygame.draw.rect(pantalla, (150, 45, 30), rect_btn1, width=3, border_radius=8)
+                tb1 = fuente_btn.render(txt_btn1, True, (255, 255, 255))
+                pantalla.blit(tb1, tb1.get_rect(center=rect_btn1.center))
 
         # Renderizado interactivo Botón 2 («VOLVER AL MENÚ»)
         press2 = (boton_presionado == 2 and hover2)
-        if press2:
-            r2_draw = pygame.Rect(rect_btn2.x, rect_btn2.y + 3, rect_btn2.w, rect_btn2.h)
-            pygame.draw.rect(pantalla, (225, 215, 195), r2_draw, border_radius=8)
-            pygame.draw.rect(pantalla, (35, 35, 40), r2_draw, width=3, border_radius=8)
-            tb2 = fuente_btn.render(txt_btn2, True, (35, 35, 40))
-            pantalla.blit(tb2, tb2.get_rect(center=r2_draw.center))
-        elif hover2:
-            r2_draw = pygame.Rect(rect_btn2.x, rect_btn2.y - 2, rect_btn2.w, rect_btn2.h)
-            pygame.draw.rect(pantalla, (195, 185, 165), (r2_draw.x, r2_draw.y + 6, r2_draw.w, r2_draw.h), border_radius=8)
-            pygame.draw.rect(pantalla, (255, 248, 232), r2_draw, border_radius=8)
-            pygame.draw.rect(pantalla, (40, 40, 45), r2_draw, width=3, border_radius=8)
-            tb2 = fuente_btn.render(txt_btn2, True, (40, 40, 45))
-            pantalla.blit(tb2, tb2.get_rect(center=r2_draw.center))
+        if spr_menu_normal:
+            spr_b2 = spr_menu_apretado if press2 else (spr_menu_hover if (hover2 and spr_menu_hover) else spr_menu_normal)
+            pantalla.blit(spr_b2, rect_btn2)
         else:
-            pygame.draw.rect(pantalla, (195, 185, 165), (rect_btn2.x, rect_btn2.y + 4, rect_btn2.w, rect_btn2.h), border_radius=8)
-            pygame.draw.rect(pantalla, (245, 235, 215), rect_btn2, border_radius=8)
-            pygame.draw.rect(pantalla, (70, 70, 75), rect_btn2, width=3, border_radius=8)
-            tb2 = fuente_btn.render(txt_btn2, True, (50, 50, 55))
-            pantalla.blit(tb2, tb2.get_rect(center=rect_btn2.center))
+            if press2:
+                r2_draw = pygame.Rect(rect_btn2.x, rect_btn2.y + 3, rect_btn2.w, rect_btn2.h)
+                pygame.draw.rect(pantalla, (225, 215, 195), r2_draw, border_radius=8)
+                pygame.draw.rect(pantalla, (35, 35, 40), r2_draw, width=3, border_radius=8)
+                tb2 = fuente_btn.render(txt_btn2, True, (35, 35, 40))
+                pantalla.blit(tb2, tb2.get_rect(center=r2_draw.center))
+            elif hover2:
+                r2_draw = pygame.Rect(rect_btn2.x, rect_btn2.y - 2, rect_btn2.w, rect_btn2.h)
+                pygame.draw.rect(pantalla, (195, 185, 165), (r2_draw.x, r2_draw.y + 6, r2_draw.w, r2_draw.h), border_radius=8)
+                pygame.draw.rect(pantalla, (255, 248, 232), r2_draw, border_radius=8)
+                pygame.draw.rect(pantalla, (40, 40, 45), r2_draw, width=3, border_radius=8)
+                tb2 = fuente_btn.render(txt_btn2, True, (40, 40, 45))
+                pantalla.blit(tb2, tb2.get_rect(center=r2_draw.center))
+            else:
+                pygame.draw.rect(pantalla, (195, 185, 165), (rect_btn2.x, rect_btn2.y + 4, rect_btn2.w, rect_btn2.h), border_radius=8)
+                pygame.draw.rect(pantalla, (245, 235, 215), rect_btn2, border_radius=8)
+                pygame.draw.rect(pantalla, (70, 70, 75), rect_btn2, width=3, border_radius=8)
+                tb2 = fuente_btn.render(txt_btn2, True, (50, 50, 55))
+                pantalla.blit(tb2, tb2.get_rect(center=rect_btn2.center))
 
         pygame.display.flip()
 
@@ -1214,12 +1184,17 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, 
     spr_x_normal = _cargar_hud("boton-x.png")
     spr_x_semi = _cargar_hud("boton-x-semiapretado.png")
     spr_x_apretado = _cargar_hud("boton-x-apretado.png")
+    spr_x_hover = aclarar_boton(spr_x_normal)
+
     spr_reiniciar_normal = _cargar_hud("boton-reiniciar-icono.png")
     spr_reiniciar_semi = _cargar_hud("boton-reiniciar-icono-semiapretado.png")
     spr_reiniciar_apretado = _cargar_hud("boton-reiniciar-icono-apretado.png")
+    spr_reiniciar_hover = aclarar_boton(spr_reiniciar_normal)
+
     spr_casa_normal = _cargar_hud("boton-casa.png")
     spr_casa_semi = _cargar_hud("boton-casa-semiapretado.png")
     spr_casa_apretado = _cargar_hud("boton-casa-apretado.png")
+    spr_casa_hover = aclarar_boton(spr_casa_normal)
 
     fondo_btn_casa = None
     fondo_btn_reiniciar = None
@@ -2565,9 +2540,14 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, 
             except Exception:
                 pass
 
-            if spr_casa_normal: pantalla.blit(spr_casa_normal, rect_btn_casa)
-            if spr_reiniciar_normal: pantalla.blit(spr_reiniciar_normal, rect_btn_reiniciar)
-            if spr_x_normal: pantalla.blit(spr_x_normal, rect_btn_x)
+            pos_m_hud = pygame.mouse.get_pos()
+            spr_c_hud = spr_casa_hover if (rect_btn_casa.collidepoint(pos_m_hud) and spr_casa_hover) else spr_casa_normal
+            spr_r_hud = spr_reiniciar_hover if (rect_btn_reiniciar.collidepoint(pos_m_hud) and spr_reiniciar_hover) else spr_reiniciar_normal
+            spr_x_hud = spr_x_hover if (rect_btn_x.collidepoint(pos_m_hud) and spr_x_hover) else spr_x_normal
+
+            if spr_c_hud: pantalla.blit(spr_c_hud, rect_btn_casa)
+            if spr_r_hud: pantalla.blit(spr_r_hud, rect_btn_reiniciar)
+            if spr_x_hud: pantalla.blit(spr_x_hud, rect_btn_x)
 
         pygame.display.flip()
 
