@@ -20,6 +20,7 @@ from guardado import (
     mostrar_dialogo_guardar_salir,
     mostrar_dialogo_confirmar_borrado,
     cargar_fuente_pixel,
+    hay_progreso_sin_guardar,
 )
 
 # Estados de la máquina de navegación de menús
@@ -276,6 +277,7 @@ def main():
     niveles_desbloqueados = crear_desbloqueados_inicial()
     partida_actual_id = None
     partida_actual_nombre = None
+    snapshot_guardado = None
 
     TAM_BOTON_HUD = 92
     MARGEN_DER, MARGEN_SUP = 25, 20
@@ -345,7 +347,12 @@ def main():
     btn_guardar = btn_volver_personajes
     btn_volver_config = pygame.Rect((ANCHO_MENU - W_VOLVER) // 2, ALTO_MENU - 85, W_VOLVER, H_VOLVER)
     btn_volver_creditos = pygame.Rect((ANCHO_MENU - W_VOLVER) // 2, ALTO_MENU - 85, W_VOLVER, H_VOLVER)
-    btn_volver_niveles = pygame.Rect((ANCHO_MENU - W_VOLVER) // 2, ALTO_MENU - 75, W_VOLVER, H_VOLVER)
+    # Botones en Selección de Niveles: «MENÚ» a la izquierda y «VOLVER» a la derecha
+    gap_btns_niveles = 30
+    total_w_niveles = (W_VOLVER * 2) + gap_btns_niveles
+    x_base_niveles = (ANCHO_MENU - total_w_niveles) // 2
+    btn_menu_niveles = pygame.Rect(x_base_niveles, ALTO_MENU - 75, W_VOLVER, H_VOLVER)
+    btn_volver_niveles = pygame.Rect(x_base_niveles + W_VOLVER + gap_btns_niveles, ALTO_MENU - 75, W_VOLVER, H_VOLVER)
 
     def _cargar_scaled(nombre, w, h):
         img = cargar_boton(nombre)
@@ -356,6 +363,12 @@ def main():
     spr_volver_hover = aclarar_boton(spr_volver_normal)
     spr_volver_semi = _cargar_scaled("mundos/boton-volver-semiapretado.png", W_VOLVER, H_VOLVER)
     spr_volver_apretado = _cargar_scaled("mundos/boton-volver-apretado.png", W_VOLVER, H_VOLVER)
+
+    # Sprites botón «MENÚ» (Ventanas)
+    spr_menu_nav_normal = _cargar_scaled("Ventanas/boton-menu.png", W_VOLVER, H_VOLVER)
+    spr_menu_nav_hover = aclarar_boton(spr_menu_nav_normal)
+    spr_menu_nav_semi = _cargar_scaled("Ventanas/boton-menu-semiapretado.png", W_VOLVER, H_VOLVER)
+    spr_menu_nav_apretado = _cargar_scaled("Ventanas/boton-menu-apretado.png", W_VOLVER, H_VOLVER)
 
     # Botones interactivos para Modo de Juego (Continuar vs Nueva Partida)
     W_MODO, H_MODO = 425, 100
@@ -424,20 +437,23 @@ def main():
 
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
-                resp = mostrar_dialogo_guardar_salir(
-                    pantalla, reloj,
-                    niveles_desbloqueados=niveles_desbloqueados,
-                    id_partida=partida_actual_id,
-                    nombre_partida=partida_actual_nombre,
-                )
-                if resp != "cancelar":
+                if hay_progreso_sin_guardar(niveles_desbloqueados, snapshot_guardado):
+                    resp = mostrar_dialogo_guardar_salir(
+                        pantalla, reloj,
+                        niveles_desbloqueados=niveles_desbloqueados,
+                        id_partida=partida_actual_id,
+                        nombre_partida=partida_actual_nombre,
+                    )
+                    if resp != "cancelar":
+                        ejecutando = False
+                else:
                     ejecutando = False
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 if rect_btn_x.collidepoint(evento.pos):
                     if spr_x_semi and spr_x_apretado:
                         animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, fondo_btn_x)
-                    if estado_actual == ESTADO_MENU_PRINCIPAL:
+                    if hay_progreso_sin_guardar(niveles_desbloqueados, snapshot_guardado):
                         resp = mostrar_dialogo_guardar_salir(
                             pantalla, reloj,
                             niveles_desbloqueados=niveles_desbloqueados,
@@ -446,14 +462,8 @@ def main():
                         )
                         if resp != "cancelar":
                             ejecutando = False
-                    elif estado_actual == ESTADO_MODO_JUEGO:
-                        estado_actual = ESTADO_MENU_PRINCIPAL
-                    elif estado_actual == ESTADO_LISTA_PARTIDAS:
-                        estado_actual = ESTADO_MODO_JUEGO
-                    elif estado_actual in (ESTADO_SELECCION_NIVEL, ESTADO_SELECCION_MUNDO):
-                        estado_actual = ESTADO_MODO_JUEGO
-                    elif estado_actual in (ESTADO_CONFIGURACION, ESTADO_CREDITOS, ESTADO_PERSONAJES):
-                        estado_actual = ESTADO_MENU_PRINCIPAL
+                    else:
+                        ejecutando = False
                     break
 
                 if estado_actual == ESTADO_MENU_PRINCIPAL:
@@ -468,13 +478,16 @@ def main():
                         estado_actual = ESTADO_CONFIGURACION
                     elif btn_salir.collidepoint(evento.pos):
                         animar_pulsacion_boton(pantalla, btn_salir, spr_salir_semi, spr_salir_apretado, fondo_limpio_btn)
-                        resp = mostrar_dialogo_guardar_salir(
-                            pantalla, reloj,
-                            niveles_desbloqueados=niveles_desbloqueados,
-                            id_partida=partida_actual_id,
-                            nombre_partida=partida_actual_nombre,
-                        )
-                        if resp != "cancelar":
+                        if hay_progreso_sin_guardar(niveles_desbloqueados, snapshot_guardado):
+                            resp = mostrar_dialogo_guardar_salir(
+                                pantalla, reloj,
+                                niveles_desbloqueados=niveles_desbloqueados,
+                                id_partida=partida_actual_id,
+                                nombre_partida=partida_actual_nombre,
+                            )
+                            if resp != "cancelar":
+                                ejecutando = False
+                        else:
                             ejecutando = False
 
                 elif estado_actual == ESTADO_MODO_JUEGO:
@@ -492,6 +505,7 @@ def main():
                         nuevo_id = max([p["id"] for p in partidas_guardadas], default=0) + 1
                         partida_actual_id = nuevo_id
                         partida_actual_nombre = f"Partida {nuevo_id}"
+                        snapshot_guardado = None
                         estado_actual = ESTADO_SELECCION_NIVEL
                     elif btn_volver_modo.collidepoint(evento.pos):
                         if spr_volver_semi and spr_volver_apretado:
@@ -516,6 +530,7 @@ def main():
                             mundo_seleccionado = 1
                             partida_actual_id = 1
                             partida_actual_nombre = "Partida 1"
+                            snapshot_guardado = None
                             estado_actual = ESTADO_SELECCION_NIVEL
                     else:
                         inicio_idx = pagina_partidas * MAX_PARTIDAS_POR_PAGINA
@@ -535,6 +550,7 @@ def main():
                                         partida_actual_id = None
                                         partida_actual_nombre = None
                                         niveles_desbloqueados = crear_desbloqueados_inicial()
+                                        snapshot_guardado = None
                                     # Recalcular páginas inmediatamente para reorganizar la vista
                                     nuevas_p = cargar_partidas()
                                     nuevas_total_pag = max(1, (len(nuevas_p) + MAX_PARTIDAS_POR_PAGINA - 1) // MAX_PARTIDAS_POR_PAGINA)
@@ -547,6 +563,7 @@ def main():
                                 if spr_cargar_semi and spr_cargar_apretado:
                                     animar_pulsacion_boton(pantalla, r_btn_cargar, spr_cargar_semi, spr_cargar_apretado, (253, 246, 233))
                                 niveles_desbloqueados = copy.deepcopy(p["niveles_desbloqueados"])
+                                snapshot_guardado = copy.deepcopy(p["niveles_desbloqueados"])
                                 partida_actual_id = p["id"]
                                 partida_actual_nombre = p["nombre"]
                                 mundo_seleccionado = p["mundo_max"]
@@ -572,6 +589,7 @@ def main():
                                 nuevo_id = max([p["id"] for p in partidas_actuales], default=0) + 1
                                 partida_actual_id = nuevo_id
                                 partida_actual_nombre = f"Partida {nuevo_id}"
+                                snapshot_guardado = None
                                 estado_actual = ESTADO_SELECCION_NIVEL
 
                     if btn_volver_partidas.collidepoint(evento.pos):
@@ -610,6 +628,11 @@ def main():
                         estado_actual = ESTADO_MENU_PRINCIPAL
 
                 elif estado_actual in (ESTADO_SELECCION_NIVEL, ESTADO_SELECCION_MUNDO):
+                    if btn_menu_niveles.collidepoint(evento.pos):
+                        if spr_menu_nav_semi and spr_menu_nav_apretado:
+                            animar_pulsacion_boton(pantalla, btn_menu_niveles, spr_menu_nav_semi, spr_menu_nav_apretado, (30, 30, 30))
+                        estado_actual = ESTADO_MENU_PRINCIPAL
+                        break
                     if btn_volver_niveles.collidepoint(evento.pos):
                         if spr_volver_semi and spr_volver_apretado:
                             animar_pulsacion_boton(pantalla, btn_volver_niveles, spr_volver_semi, spr_volver_apretado, (30, 30, 30))
@@ -641,6 +664,7 @@ def main():
                                         niveles_desbloqueados=niveles_desbloqueados,
                                         partida_id=partida_actual_id,
                                         partida_nombre=partida_actual_nombre,
+                                        snapshot_guardado=snapshot_guardado,
                                     )
                                     if res == "siguiente":
                                         if n_idx + 1 < 5:
@@ -654,11 +678,6 @@ def main():
                                         else:
                                             mantenimiento = False
                                             estado_actual = ESTADO_SELECCION_NIVEL
-                                        guardar_partida(
-                                            niveles_desbloqueados,
-                                            id_partida=partida_actual_id,
-                                            nombre_partida=partida_actual_nombre,
-                                        )
                                     elif res == "reiniciar":
                                         continue
                                     elif res == "menu":
@@ -1009,6 +1028,17 @@ def main():
                 pos_mouse,
                 fuentes_menu,
             )
+
+            # Botón Menú (volver al Menú Principal)
+            hov_mn = btn_menu_niveles.collidepoint(pos_mouse)
+            spr_mn = spr_menu_nav_hover if (hov_mn and spr_menu_nav_hover) else spr_menu_nav_normal
+            if spr_mn:
+                pantalla.blit(spr_mn, btn_menu_niveles)
+            else:
+                pygame.draw.rect(pantalla, (235, 115, 85) if hov_mn else (215, 95, 65), btn_menu_niveles, border_radius=6)
+                pygame.draw.rect(pantalla, (45, 45, 50), btn_menu_niveles, width=3, border_radius=6)
+                txt_m = fuentes_menu["card"].render("MENÚ", True, (255, 255, 255))
+                pantalla.blit(txt_m, txt_m.get_rect(center=btn_menu_niveles.center))
 
             # Botón Volver al Modo de Juego (mundos/boton-volver)
             hov_vn = btn_volver_niveles.collidepoint(pos_mouse)

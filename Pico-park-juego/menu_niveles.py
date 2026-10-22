@@ -36,7 +36,7 @@ def obtener_mecanicas_nivel(mundo, nivel):
         elif nivel == 5:
             return []
     elif mundo == 2:
-        return ["soga"]
+        return ["soga", "pinchos"]
     elif mundo == 3:
         return ["agua"]
     return []

@@ -41,6 +41,7 @@ from movimientos import (
 from guardado import (
     crear_desbloqueados_inicial,
     mostrar_dialogo_guardar_salir,
+    hay_progreso_sin_guardar,
 )
 
 COLOR_SOGA = (200, 160, 100)
@@ -564,7 +565,19 @@ def dibujar_panel_victoria_solido(superficie, rect_panel, color_p1=None, color_p
     pygame.draw.rect(superficie, (45, 45, 50), r_sq2, width=2, border_radius=4)
 
 
-def mostrar_pantalla_victoria(pantalla, reloj, mundo=1, numero_nivel=1, hay_siguiente=True, color_p1=None, color_p2=None):
+def mostrar_pantalla_victoria(
+    pantalla,
+    reloj,
+    mundo=1,
+    numero_nivel=1,
+    hay_siguiente=True,
+    color_p1=None,
+    color_p2=None,
+    niveles_desbloqueados=None,
+    partida_id=None,
+    partida_nombre=None,
+    snapshot_guardado=None,
+):
     """
     Pantalla de victoria completa con:
     - Ensamblaje en bloques de crema y rojo (~0.9s).
@@ -757,7 +770,19 @@ def mostrar_pantalla_victoria(pantalla, reloj, mundo=1, numero_nivel=1, hay_sigu
             if evento.type == pygame.QUIT:
                 try: pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
                 except Exception: pass
-                return "salir"
+                if hay_progreso_sin_guardar(niveles_desbloqueados, snapshot_guardado):
+                    resp = mostrar_dialogo_guardar_salir(
+                        pantalla, reloj,
+                        niveles_desbloqueados=niveles_desbloqueados,
+                        id_partida=partida_id,
+                        nombre_partida=partida_nombre,
+                    )
+                    if resp != "cancelar":
+                        pygame.quit()
+                        sys.exit()
+                else:
+                    pygame.quit()
+                    sys.exit()
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 if rect_btn1.collidepoint(evento.pos):
@@ -903,6 +928,10 @@ def animar_transicion_nivel_completado(
     ancho_mundo_nivel=None,
     color_p1=None,
     color_p2=None,
+    niveles_desbloqueados=None,
+    partida_id=None,
+    partida_nombre=None,
+    snapshot_guardado=None,
 ):
     """
     Secuencia maestra completa de fin de nivel:
@@ -934,6 +963,10 @@ def animar_transicion_nivel_completado(
         hay_siguiente=hay_siguiente,
         color_p1=color_p1,
         color_p2=color_p2,
+        niveles_desbloqueados=niveles_desbloqueados,
+        partida_id=partida_id,
+        partida_nombre=partida_nombre,
+        snapshot_guardado=snapshot_guardado,
     )
 
 
@@ -1146,7 +1179,17 @@ def dibujar_soga_escenario(superficie, p1, p2, estado_soga=None, d_reposo=DISTAN
     pygame.draw.circle(superficie, col_soga_int, p_fin, 2)
 
 
-def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, mundo=1, niveles_desbloqueados=None, partida_id=None, partida_nombre=None):
+def iniciar_mundo(
+    mecanicas=None,
+    numero_nivel=1,
+    color_p1=None,
+    color_p2=None,
+    mundo=1,
+    niveles_desbloqueados=None,
+    partida_id=None,
+    partida_nombre=None,
+    snapshot_guardado=None,
+):
     numero_mundo = mundo
     if mecanicas is None:
         mecanicas = []
@@ -1747,9 +1790,9 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, 
         #   1. ROJO (x=550) -> 2. AZUL (x=850) -> 3. ROJO (x=1150) -> 4. AZUL (x=1450).
         # - Al activar un botón rojo, se desactivan todas las paredes rojas y las azules permanecen activas.
         # - Al activar un botón azul, se desactivan todas las paredes azules y las rojas permanecen activas.
-        # - Llave ubicada al final del recorrido superior (x=1680, y=plat_superior.top - 46).
-        # - La plataforma superior finaliza en x=1760, permitiendo que el personaje superior baje al suelo derecho.
-        # - Puerta de salida al final del nivel en el suelo derecho (x=1920, y=suelo.top - 90).
+        # - Llave ubicada al final del recorrido superior (x=1630, y=plat_superior.top - 46).
+        # - La plataforma superior finaliza en x=1700, permitiendo que el personaje superior baje al suelo derecho mediante un hueco amplio de 140px.
+        # - Puerta de salida al final del nivel en el suelo derecho (x=1880, y=suelo.top - 90).
         ancho_mundo_nivel = 2100
         usar_caja = False
         usar_soga = False
@@ -1768,17 +1811,17 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, 
         pinchos = []
 
         # Plataforma superior (superficie en y=480, espesor 24px)
-        # Termina en x=1730 para dejar un espacio de descenso hasta el inicio de la barrera en x=1790.
-        plat_superior = pygame.Rect(340, 480, 1390, 24)
+        # Termina en x=1700 para dejar una abertura amplia y fluida de descenso (140px) hasta el inicio de la barrera en x=1840.
+        plat_superior = pygame.Rect(340, 480, 1360, 24)
         # Techo/riel superior decorativo (y=170, altura 26px)
         techo_superior = pygame.Rect(320, 170, 1440, 26)
 
-        # Barrera sólida en forma de L invertida para impedir que los personajes hagan trampas:
-        # - Tramo horizontal ubicado por encima de la puerta y del área inferior (top=480, espesor 24px, x=1790 a 2030)
-        # - Tramo vertical conectado en su extremo derecho que baja hasta el suelo (x=2006 a 2030, y=480 a suelo.top=640)
-        # - Colisión sólida real y continua; sin huecos con el suelo ni entre ambos tramos.
-        barrera_l_horiz = pygame.Rect(1790, 480, 240, 24)
-        barrera_l_vert = pygame.Rect(2006, 480, 24, suelo.top - 480)
+        # Barrera sólida en forma de L invertida para cubrir la zona de la puerta y delimitar el final del nivel:
+        # - Tramo horizontal ubicado por encima de la puerta (top=480, espesor 24px, x=1840 a 2100)
+        # - Tramo vertical conectado en su extremo derecho que baja hasta el suelo (x=2076 a 2100, y=480 a suelo.top=640)
+        # - Sellada contra el límite derecho del mundo para evitar trampas o caídas a zonas muertas sin salida.
+        barrera_l_horiz = pygame.Rect(1840, 480, 260, 24)
+        barrera_l_vert = pygame.Rect(2076, 480, 24, suelo.top - 480)
 
         plataformas_base = [plat_superior, techo_superior, barrera_l_horiz, barrera_l_vert]
         plataformas = list(plataformas_base)
@@ -1865,8 +1908,8 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, 
             },
         ]
 
-        # Llave sobre la plataforma superior en la zona final antes del descenso
-        llave = crear_llave(1650, plat_superior.top - 46)
+        # Llave sobre la plataforma superior en la zona final tras la 4ta pared y antes del descenso
+        llave = crear_llave(1630, plat_superior.top - 46)
 
         # Puerta de salida en el suelo bajo el tramo horizontal de la barrera en L
         puerta = crear_puerta(1880, suelo.top - 90)
@@ -1880,7 +1923,7 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, 
         usar_caja = False
         usar_soga = True
         usar_agua = False
-        usar_pinchos = False
+        usar_pinchos = True
         usar_llave = True
 
         # Zona inicial: ambos personajes caen desde la parte superior unidos por la soga
@@ -1888,7 +1931,6 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, 
         jugador2 = crear_personaje(210, 0, p2_color)
 
         caja = None
-        pinchos = []
 
         # 1. Primer obstáculo: escalones amplios para subir y caminar juntos
         escalon_1 = pygame.Rect(440, 580, 230, 60)
@@ -1898,14 +1940,21 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, 
         plat_salto_1 = pygame.Rect(990, 460, 220, 26)
         plat_salto_2 = pygame.Rect(1280, 400, 220, 26)
 
-        # Plataforma de retorno en la zona baja por si un jugador cae
-        plat_retorno = pygame.Rect(990, 580, 510, 60)
-
         # 3. Brecha de separación que exige coordinar el avance y uso de la soga
         # 4. Plataforma de destino amplia con llave y puerta
         plat_destino = pygame.Rect(1620, 430, 520, 26)
 
-        plataformas = [escalon_1, escalon_2, plat_salto_1, plat_salto_2, plat_retorno, plat_destino]
+        # Las plataformas transitables son las elevadas (sin plataforma de retorno segura)
+        plataformas = [escalon_1, escalon_2, plat_salto_1, plat_salto_2, plat_destino]
+
+        # Pozo y pinchos mortales debajo de la zona aérea (x=920..1620)
+        pozo_nivel = {
+            "x": 920,
+            "y": 570,
+            "ancho": 700,
+            "alto": 70,
+        }
+        pinchos = [pygame.Rect(x, suelo.top - 24, 32, 24) for x in range(926, 1610, 35)]
 
         # Llave cerca del final del recorrido sobre la plataforma de destino
         llave = crear_llave(1820, plat_destino.top - 46)
@@ -2054,13 +2103,17 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, 
 
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
-                resp = mostrar_dialogo_guardar_salir(
-                    pantalla, reloj,
-                    niveles_desbloqueados=niveles_desbloqueados,
-                    id_partida=partida_id,
-                    nombre_partida=partida_nombre,
-                )
-                if resp != "cancelar":
+                if hay_progreso_sin_guardar(niveles_desbloqueados, snapshot_guardado):
+                    resp = mostrar_dialogo_guardar_salir(
+                        pantalla, reloj,
+                        niveles_desbloqueados=niveles_desbloqueados,
+                        id_partida=partida_id,
+                        nombre_partida=partida_nombre,
+                    )
+                    if resp != "cancelar":
+                        pygame.quit()
+                        sys.exit()
+                else:
                     pygame.quit()
                     sys.exit()
 
@@ -2104,13 +2157,17 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, 
                 if rect_btn_x.collidepoint(evento.pos):
                     if spr_x_semi and spr_x_apretado:
                         animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, fondo_btn_x)
-                    resp = mostrar_dialogo_guardar_salir(
-                        pantalla, reloj,
-                        niveles_desbloqueados=niveles_desbloqueados,
-                        id_partida=partida_id,
-                        nombre_partida=partida_nombre,
-                    )
-                    if resp != "cancelar":
+                    if hay_progreso_sin_guardar(niveles_desbloqueados, snapshot_guardado):
+                        resp = mostrar_dialogo_guardar_salir(
+                            pantalla, reloj,
+                            niveles_desbloqueados=niveles_desbloqueados,
+                            id_partida=partida_id,
+                            nombre_partida=partida_nombre,
+                        )
+                        if resp != "cancelar":
+                            pygame.quit()
+                            sys.exit()
+                    else:
                         pygame.quit()
                         sys.exit()
 
@@ -2210,14 +2267,46 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, 
 
         # Movimiento horizontal Jugador 1 (P1: WASD)
         if not jugador1["muerto"] and not p1_completado:
-            jugador1["vel_x"] = 0
-            jugador1["moviendo"] = False
-            if teclas[pygame.K_a]:
-                jugador1["vel_x"] = -jugador1["velocidad_mov"]
-                jugador1["moviendo"] = True
-            if teclas[pygame.K_d]:
-                jugador1["vel_x"] = jugador1["velocidad_mov"]
-                jugador1["moviendo"] = True
+            mover_izq_p1 = teclas[pygame.K_a]
+            mover_der_p1 = teclas[pygame.K_d]
+
+            if jugador1["en_suelo"]:
+                # En suelo: control directo e inmediato
+                if mover_izq_p1 and not mover_der_p1:
+                    jugador1["vel_x"] = -jugador1["velocidad_mov"]
+                    jugador1["moviendo"] = True
+                elif mover_der_p1 and not mover_izq_p1:
+                    jugador1["vel_x"] = jugador1["velocidad_mov"]
+                    jugador1["moviendo"] = True
+                else:
+                    jugador1["vel_x"] = 0
+                    jugador1["moviendo"] = False
+            else:
+                # En el aire: inercia aérea y control fluido sin frenazos bruscos
+                if mover_izq_p1 and not mover_der_p1:
+                    target_vx = -jugador1["velocidad_mov"]
+                    jugador1["moviendo"] = True
+                    if jugador1["vel_x"] > 0:
+                        jugador1["vel_x"] += (target_vx - jugador1["vel_x"]) * 0.35
+                    elif jugador1["vel_x"] > target_vx:
+                        jugador1["vel_x"] += (target_vx - jugador1["vel_x"]) * 0.40
+                    else:
+                        jugador1["vel_x"] += (target_vx - jugador1["vel_x"]) * 0.05
+                elif mover_der_p1 and not mover_izq_p1:
+                    target_vx = jugador1["velocidad_mov"]
+                    jugador1["moviendo"] = True
+                    if jugador1["vel_x"] < 0:
+                        jugador1["vel_x"] += (target_vx - jugador1["vel_x"]) * 0.35
+                    elif jugador1["vel_x"] < target_vx:
+                        jugador1["vel_x"] += (target_vx - jugador1["vel_x"]) * 0.40
+                    else:
+                        jugador1["vel_x"] += (target_vx - jugador1["vel_x"]) * 0.05
+                else:
+                    jugador1["moviendo"] = False
+                    jugador1["vel_x"] *= 0.92
+                    if abs(jugador1["vel_x"]) < 0.15:
+                        jugador1["vel_x"] = 0
+
             if salto_p1_pedido:
                 impulso = 0
                 if not usar_agua and p1_sobre_p2 and (salto_p2_pedido or jugador2["vel_y"] < 0):
@@ -2227,14 +2316,46 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, 
 
         # Movimiento horizontal Jugador 2 (P2: Flechas)
         if not jugador2["muerto"] and not p2_completado:
-            jugador2["vel_x"] = 0
-            jugador2["moviendo"] = False
-            if teclas[pygame.K_LEFT]:
-                jugador2["vel_x"] = -jugador2["velocidad_mov"]
-                jugador2["moviendo"] = True
-            if teclas[pygame.K_RIGHT]:
-                jugador2["vel_x"] = jugador2["velocidad_mov"]
-                jugador2["moviendo"] = True
+            mover_izq_p2 = teclas[pygame.K_LEFT]
+            mover_der_p2 = teclas[pygame.K_RIGHT]
+
+            if jugador2["en_suelo"]:
+                # En suelo: control directo e inmediato
+                if mover_izq_p2 and not mover_der_p2:
+                    jugador2["vel_x"] = -jugador2["velocidad_mov"]
+                    jugador2["moviendo"] = True
+                elif mover_der_p2 and not mover_izq_p2:
+                    jugador2["vel_x"] = jugador2["velocidad_mov"]
+                    jugador2["moviendo"] = True
+                else:
+                    jugador2["vel_x"] = 0
+                    jugador2["moviendo"] = False
+            else:
+                # En el aire: inercia aérea y control fluido sin frenazos bruscos
+                if mover_izq_p2 and not mover_der_p2:
+                    target_vx = -jugador2["velocidad_mov"]
+                    jugador2["moviendo"] = True
+                    if jugador2["vel_x"] > 0:
+                        jugador2["vel_x"] += (target_vx - jugador2["vel_x"]) * 0.35
+                    elif jugador2["vel_x"] > target_vx:
+                        jugador2["vel_x"] += (target_vx - jugador2["vel_x"]) * 0.40
+                    else:
+                        jugador2["vel_x"] += (target_vx - jugador2["vel_x"]) * 0.05
+                elif mover_der_p2 and not mover_izq_p2:
+                    target_vx = jugador2["velocidad_mov"]
+                    jugador2["moviendo"] = True
+                    if jugador2["vel_x"] < 0:
+                        jugador2["vel_x"] += (target_vx - jugador2["vel_x"]) * 0.35
+                    elif jugador2["vel_x"] < target_vx:
+                        jugador2["vel_x"] += (target_vx - jugador2["vel_x"]) * 0.40
+                    else:
+                        jugador2["vel_x"] += (target_vx - jugador2["vel_x"]) * 0.05
+                else:
+                    jugador2["moviendo"] = False
+                    jugador2["vel_x"] *= 0.92
+                    if abs(jugador2["vel_x"]) < 0.15:
+                        jugador2["vel_x"] = 0
+
             if salto_p2_pedido:
                 impulso = 0
                 if not usar_agua and p2_sobre_p1 and (salto_p1_pedido or jugador1["vel_y"] < 0):
@@ -2601,6 +2722,10 @@ def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, 
                 ancho_mundo_nivel=ancho_mundo_nivel,
                 color_p1=p1_color,
                 color_p2=p2_color,
+                niveles_desbloqueados=niveles_desbloqueados,
+                partida_id=partida_id,
+                partida_nombre=partida_nombre,
+                snapshot_guardado=snapshot_guardado,
             )
 
     return "salir"

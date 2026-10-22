@@ -13,7 +13,7 @@ ANCHO_HITBOX = 50
 ALTO_HITBOX = 85
 TAMANO_CAJA = 60
 DISTANCIA_SOGA_REPOSO = 140
-DISTANCIA_SOGA_MAXIMA = 210
+DISTANCIA_SOGA_MAXIMA = 160
 DISTANCIA_SOGA = DISTANCIA_SOGA_MAXIMA
 VELOCIDAD_MUERTE = -17
 
@@ -99,7 +99,7 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, 
     y_inicio = hb1.y
 
     # Movimiento horizontal de p1
-    hb1.x += p1["vel_x"]
+    hb1.x += int(round(p1["vel_x"]))
 
     p1["empujando"] = False
     p1["direccion_empuje"] = 0
@@ -111,10 +111,12 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, 
                 if hb1.bottom > plat.top + 10 and hb1.top < plat.bottom - 10:
                     if p1["vel_x"] > 0:
                         hb1.right = plat.left
+                        p1["vel_x"] = 0
                         p1["empujando"] = True
                         p1["direccion_empuje"] = 1
                     elif p1["vel_x"] < 0:
                         hb1.left = plat.right
+                        p1["vel_x"] = 0
                         p1["empujando"] = True
                         p1["direccion_empuje"] = -1
 
@@ -122,11 +124,13 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, 
         if hb1.left <= pantalla_rect.left:
             hb1.left = pantalla_rect.left
             if p1["vel_x"] < 0:
+                p1["vel_x"] = 0
                 p1["empujando"] = True
                 p1["direccion_empuje"] = -1
         elif hb1.right >= pantalla_rect.right:
             hb1.right = pantalla_rect.right
             if p1["vel_x"] > 0:
+                p1["vel_x"] = 0
                 p1["empujando"] = True
                 p1["direccion_empuje"] = 1
 
@@ -138,10 +142,12 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, 
         if hb1.bottom > hb2.top + 10 and hb1.top < hb2.bottom - 10:
             if p1["vel_x"] > 0:
                 hb1.right = hb2.left
+                p1["vel_x"] = 0
                 p1["empujando"] = True
                 p1["direccion_empuje"] = 1
             elif p1["vel_x"] < 0:
                 hb1.left = hb2.right
+                p1["vel_x"] = 0
                 p1["empujando"] = True
                 p1["direccion_empuje"] = -1
 
@@ -360,12 +366,15 @@ def crear_estado_soga():
 
 def actualizar_fisica_soga(p1, p2, estado_soga=None, d_reposo=DISTANCIA_SOGA_REPOSO, d_max=DISTANCIA_SOGA_MAXIMA):
     """
-    Aplica una física de soga suave, progresiva y con retraso natural:
-    - Cuando los personajes están cerca (distancia <= d_reposo), la soga está floja y no genera tensión.
-    - Al superar d_reposo, la tensión aparece y crece progresivamente hacia d_max.
-    - Incorpora un retraso natural (amortiguamiento suave) para que la soga no reaccione de golpe a cambios instantáneos.
-    - Limita progresivamente la velocidad que aleja a los personajes, evitando que se lancen o arrastren violentamente entre sí.
-    - Si un personaje camina hacia el otro o ambos caminan juntos, pueden moverse con total normalidad sin tirones.
+    Aplica una física de soga suave, continua y natural:
+    - Cuando los personajes están dentro de la distancia de reposo (distancia <= d_reposo),
+      la soga está floja y no genera tensión ni fuerzas (libertad total de movimiento).
+    - Al superar d_reposo, la tensión elástica aparece progresivamente hasta d_max (~20 px de estiramiento).
+    - Distingue adecuadamente entre personajes en el suelo y en el aire:
+      * En suelo: actúan como ancla firme, sin arrastres molestos si ambos caminan.
+      * En el aire: conservan su inercia y movimiento transversal (péndulo), sin frenazos bruscos.
+      * Trata por separado la componente longitudinal (a lo largo de la soga) de la transversal,
+        evitando que la gravedad o el desplazamiento horizontal interfieran de forma artificial.
     """
     if p1.get("muerto", False) or p2.get("muerto", False):
         if estado_soga is not None:
@@ -384,94 +393,123 @@ def actualizar_fisica_soga(p1, p2, estado_soga=None, d_reposo=DISTANCIA_SOGA_REP
 
     direccion = v / distancia
 
-    # 1. Cálculo de la tensión objetivo según el estiramiento progresivo
+    # 1. Cálculo del estiramiento elástico y tensión progresiva
     if distancia <= d_reposo:
-        tension_objetivo = 0.0
-    else:
-        tasa = min(1.0, (distancia - d_reposo) / max(1.0, (d_max - d_reposo)))
-        tension_objetivo = tasa * tasa  # Crecimiento cuadrático suave
+        if estado_soga is not None:
+            estado_soga["tension"] = 0.0
+        return
+
+    estiramiento = distancia - d_reposo
+    rango = max(1.0, d_max - d_reposo)
+    tasa = min(1.0, estiramiento / rango)
+    tension_objetivo = tasa * tasa  # Crecimiento suave cuadrático
 
     if distancia >= d_max:
-        tension_objetivo = max(tension_objetivo, min(1.0, 0.90 + (distancia - d_max) * 0.04))
+        tension_objetivo = 1.0
 
-    # 2. Retraso natural y filtrado de tensión
     if estado_soga is not None:
         tension_actual = estado_soga.get("tension", 0.0)
         if tension_objetivo > tension_actual:
-            # Retraso progresivo al tensarse (evita tirones abruptos instantáneos)
-            factor_retardo = 0.22 if distancia < d_max else 0.50
+            factor_retardo = 0.35 if distancia < d_max else 0.70
             tension_actual += (tension_objetivo - tension_actual) * factor_retardo
         else:
-            # Relajación rápida al acercarse
-            tension_actual += (tension_objetivo - tension_actual) * 0.45
+            tension_actual += (tension_objetivo - tension_actual) * 0.50
             if tension_actual < 0.001:
                 tension_actual = 0.0
         estado_soga["tension"] = max(0.0, min(1.0, tension_actual))
         t = estado_soga["tension"]
     else:
-        t = 0.0 if tension_objetivo < 0.001 else max(0.0, min(1.0, tension_objetivo))
+        t = tension_objetivo
 
     if t <= 0.01:
         return
 
-    # 3. Limitación progresiva de velocidades en la dirección de alejamiento
-    vel_1 = pygame.Vector2(p1.get("vel_x", 0.0), p1.get("vel_y", 0.0))
-    vel_2 = pygame.Vector2(p2.get("vel_x", 0.0), p2.get("vel_y", 0.0))
-
-    vel_alejamiento_1 = -vel_1.dot(direccion)  # Positivo si P1 se aleja de P2
-    vel_alejamiento_2 = vel_2.dot(direccion)   # Positivo si P2 se aleja de P1
-
     p1_suelo = p1.get("en_suelo", False)
     p2_suelo = p2.get("en_suelo", False)
 
-    # Si P1 se aleja, amortiguar su avance sin jalar a P2
-    if vel_alejamiento_1 > 0:
-        if p1_suelo and p2_suelo:
-            factor_freno_1 = 1.0 if distancia >= d_max - 0.5 else (t * 0.85)
-        elif p1_suelo and not p2_suelo:
-            # P1 en el suelo puede moverse y rescatar/llevar a P2 en el aire
-            factor_freno_1 = min(0.40, t * 0.40)
-        else:
-            factor_freno_1 = 1.0 if distancia >= d_max - 0.5 else (t * 0.70)
+    v1 = pygame.Vector2(p1.get("vel_x", 0.0), p1.get("vel_y", 0.0))
+    v2 = pygame.Vector2(p2.get("vel_x", 0.0), p2.get("vel_y", 0.0))
+    v_rel = v2 - v1
+    v_separacion = v_rel.dot(direccion)
 
-        p1["vel_x"] += direccion.x * (vel_alejamiento_1 * factor_freno_1)
+    # 2. Situación A: Ambos personajes en el suelo
+    # Si ambos caminan sobre una superficie sólida, no deben tirarse ni frenarse constantemente.
+    # Solo al límite máximo experimentan resistencia suave al alejamiento.
+    if p1_suelo and p2_suelo:
+        if v_separacion > 0:
+            factor_freno = t * 0.45
+            if distancia >= d_max - 1.0:
+                factor_freno = min(0.85, t * 0.80)
+            if v1.dot(direccion) < 0:
+                p1["vel_x"] += direccion.x * (v_separacion * factor_freno * 0.5)
+            if v2.dot(direccion) > 0:
+                p2["vel_x"] -= direccion.x * (v_separacion * factor_freno * 0.5)
+        return
 
-        # Amortiguación vertical para saltos y caídas
-        if vel_1.y < 0 and direccion.y > 0.2:
-            # Salto vertical alejándose de P2
-            p1["vel_y"] += direccion.y * (vel_alejamiento_1 * factor_freno_1 * 0.45)
-        elif vel_1.y > 0 and direccion.y < -0.2:
-            # Caída alejándose de P2 que está arriba
-            factor_caida = 1.0 if distancia >= d_max else (factor_freno_1 * 0.85)
-            p1["vel_y"] += direccion.y * (vel_alejamiento_1 * factor_caida)
+    # 3. Situación B: P1 en el suelo, P2 en el aire
+    # P1 es ancla firme y no es arrastrado por P2.
+    # P2 (en el aire) siente la tracción de la soga hacia P1 y soporte de peso si está suspendido.
+    if p1_suelo and not p2_suelo:
+        fuerza_tiron = t * 1.3
 
-    # Si P2 se aleja, amortiguar su avance sin jalar a P1
-    if vel_alejamiento_2 > 0:
-        if p1_suelo and p2_suelo:
-            factor_freno_2 = 1.0 if distancia >= d_max - 0.5 else (t * 0.85)
-        elif p2_suelo and not p1_suelo:
-            # P2 en el suelo puede moverse y rescatar/llevar a P1 en el aire
-            factor_freno_2 = min(0.40, t * 0.40)
-        else:
-            factor_freno_2 = 1.0 if distancia >= d_max - 0.5 else (t * 0.70)
+        # Si P2 cuelga o cae por debajo de P1 (direccion.y > 0.15), la cuerda ejerce soporte vertical (-direccion.y < 0)
+        if direccion.y > 0.15:
+            soporte = direccion.y * (1.2 + t * 0.8)
+            p2["vel_y"] -= soporte
+        elif direccion.y < -0.15:
+            p2["vel_y"] -= direccion.y * (t * 0.6)
 
-        p2["vel_x"] -= direccion.x * (vel_alejamiento_2 * factor_freno_2)
+        # Tracción horizontal suave hacia P1
+        p2["vel_x"] -= direccion.x * (fuerza_tiron * 0.6)
 
-        # Amortiguación vertical para saltos y caídas
-        if vel_2.y < 0 and direccion.y < -0.2:
-            # Salto vertical alejándose de P1
-            p2["vel_y"] -= direccion.y * (vel_alejamiento_2 * factor_freno_2 * 0.45)
-        elif vel_2.y > 0 and direccion.y > 0.2:
-            # Caída alejándose de P1 que está arriba
-            factor_caida = 1.0 if distancia >= d_max else (factor_freno_2 * 0.85)
-            p2["vel_y"] -= direccion.y * (vel_alejamiento_2 * factor_caida)
+        # Amortiguación suave únicamente en la dirección de separación
+        if v_separacion > 0:
+            damp = v_separacion * (0.25 + 0.45 * t)
+            p2["vel_x"] -= direccion.x * damp
+            p2["vel_y"] -= direccion.y * damp
+        return
+
+    # 4. Situación C: P2 en el suelo, P1 en el aire (simétrico a B)
+    if p2_suelo and not p1_suelo:
+        fuerza_tiron = t * 1.3
+
+        if direccion.y < -0.15:
+            soporte = (-direccion.y) * (1.2 + t * 0.8)
+            p1["vel_y"] -= soporte
+        elif direccion.y > 0.15:
+            p1["vel_y"] += direccion.y * (t * 0.6)
+
+        # Tracción horizontal suave hacia P2
+        p1["vel_x"] += direccion.x * (fuerza_tiron * 0.6)
+
+        # Amortiguación únicamente en la dirección de separación
+        if v_separacion > 0:
+            damp = v_separacion * (0.25 + 0.45 * t)
+            p1["vel_x"] += direccion.x * damp
+            p1["vel_y"] += direccion.y * damp
+        return
+
+    # 5. Situación D: Ambos personajes en el aire
+    # Tensión mutua y simétrica: ambos sienten la fuerza hacia el centro de masa sin frenar su avance
+    fuerza_tiron = t * 1.0
+    p1["vel_x"] += direccion.x * (fuerza_tiron * 0.5)
+    p1["vel_y"] += direccion.y * (fuerza_tiron * 0.5)
+    p2["vel_x"] -= direccion.x * (fuerza_tiron * 0.5)
+    p2["vel_y"] -= direccion.y * (fuerza_tiron * 0.5)
+
+    if v_separacion > 0:
+        damp = v_separacion * (0.20 + 0.35 * t)
+        p1["vel_x"] += direccion.x * (damp * 0.5)
+        p1["vel_y"] += direccion.y * (damp * 0.5)
+        p2["vel_x"] -= direccion.x * (damp * 0.5)
+        p2["vel_y"] -= direccion.y * (damp * 0.5)
 
 
 def aplicar_restriccion_soga(p1, p2, distancia_maxima=DISTANCIA_SOGA_MAXIMA, plataformas=None, suelo=None, estado_soga=None):
     """
     Garantiza el límite absoluto de distancia sin teletransportes ni tirones bruscos:
     - Aplica una estabilización suave únicamente si la distancia supera el límite máximo.
-    - Respeta colisiones sólidas con plataformas y suelo.
+    - Respeta colisiones sólidas con plataformas y suelo sin vibraciones ni bloqueos.
     - No arrastra al personaje que está quieto en el suelo.
     - Permite al personaje en el suelo moverse cuando el otro cuelga en el aire.
     """
@@ -492,18 +530,12 @@ def aplicar_restriccion_soga(p1, p2, distancia_maxima=DISTANCIA_SOGA_MAXIMA, pla
     p1_suelo = p1.get("en_suelo", False)
     p2_suelo = p2.get("en_suelo", False)
 
-    v1 = pygame.Vector2(p1.get("vel_x", 0.0), p1.get("vel_y", 0.0))
-    v2 = pygame.Vector2(p2.get("vel_x", 0.0), p2.get("vel_y", 0.0))
-    vel_alejamiento_1 = -v1.dot(direccion)
-    vel_alejamiento_2 = v2.dot(direccion)
-
     # El personaje en el suelo actúa como ancla firme y no es arrastrado
     if p1_suelo and not p2_suelo:
         w1, w2 = 0.0, 1.0
     elif p2_suelo and not p1_suelo:
         w1, w2 = 1.0, 0.0
     elif p1_suelo and p2_suelo:
-        # Ambos en el suelo: no mover a quien está quieto (vel_x == 0)
         p1_mov = abs(p1.get("vel_x", 0.0)) > 0.1
         p2_mov = abs(p2.get("vel_x", 0.0)) > 0.1
         if p1_mov and not p2_mov:
@@ -515,34 +547,12 @@ def aplicar_restriccion_soga(p1, p2, distancia_maxima=DISTANCIA_SOGA_MAXIMA, pla
     else:
         w1, w2 = 0.5, 0.5
 
-    def _redondear_hacia_afuera(val):
-        return int(val + 0.5) if val >= 0 else int(val - 0.5)
-
-    if w1 > 0 and w2 > 0:
-        if exceso >= 1.5:
-            desp1 = direccion * (exceso * 0.5)
-            desp2 = -direccion * (exceso * 0.5)
-        else:
-            # Exceso residual de 1 px: corregir en el que tenga mayor velocidad de alejamiento
-            if vel_alejamiento_1 >= vel_alejamiento_2:
-                desp1 = direccion * exceso
-                desp2 = pygame.Vector2(0, 0)
-            else:
-                desp1 = pygame.Vector2(0, 0)
-                desp2 = -direccion * exceso
-    elif w1 > 0:
-        desp1 = direccion * exceso
-        desp2 = pygame.Vector2(0, 0)
-    elif w2 > 0:
-        desp1 = pygame.Vector2(0, 0)
-        desp2 = -direccion * exceso
-    else:
-        desp1 = pygame.Vector2(0, 0)
-        desp2 = pygame.Vector2(0, 0)
+    desp1 = direccion * (exceso * w1)
+    desp2 = -direccion * (exceso * w2)
 
     def ajustar_posicion_con_solidez(p, desp):
         hb = p["hitbox"]
-        dx = _redondear_hacia_afuera(desp.x)
+        dx = int(round(desp.x))
         if dx != 0:
             hb.x += dx
             if plataformas:
@@ -550,43 +560,51 @@ def aplicar_restriccion_soga(p1, p2, distancia_maxima=DISTANCIA_SOGA_MAXIMA, pla
                     if hb.colliderect(plat) and hb.bottom > plat.top + 8 and hb.top < plat.bottom - 8:
                         if dx > 0:
                             hb.right = plat.left
+                            if p.get("vel_x", 0) > 0:
+                                p["vel_x"] = 0
                         elif dx < 0:
                             hb.left = plat.right
+                            if p.get("vel_x", 0) < 0:
+                                p["vel_x"] = 0
 
-        dy = _redondear_hacia_afuera(desp.y)
+        dy = int(round(desp.y))
         if dy != 0:
             hb.y += dy
             if suelo and hb.bottom > suelo.top:
                 hb.bottom = suelo.top
-                p["vel_y"] = 0
+                if p.get("vel_y", 0) > 0:
+                    p["vel_y"] = 0
                 p["en_suelo"] = True
+
             if plataformas:
                 for plat in plataformas:
                     if hb.colliderect(plat):
-                        if dy > 0 and hb.bottom >= plat.top and hb.top < plat.top:
+                        # Solo se apoya sobre una plataforma si sus pies estaban cayendo sobre su cara superior
+                        if dy > 0 and hb.bottom >= plat.top and (hb.bottom - dy) <= plat.top + 6:
                             hb.bottom = plat.top
-                            p["vel_y"] = 0
+                            if p.get("vel_y", 0) > 0:
+                                p["vel_y"] = 0
                             p["en_suelo"] = True
-                        elif dy < 0 and hb.top <= plat.bottom and hb.bottom > plat.bottom:
+                        elif dy < 0 and hb.top <= plat.bottom and (hb.top - dy) >= plat.bottom - 6:
                             hb.top = plat.bottom
-                            p["vel_y"] = 0
+                            if p.get("vel_y", 0) < 0:
+                                p["vel_y"] = 0
 
     if w1 > 0:
         ajustar_posicion_con_solidez(p1, desp1)
     if w2 > 0:
         ajustar_posicion_con_solidez(p2, desp2)
 
-    # Disipación residual de velocidad de alejamiento
+    # Cancelar únicamente la velocidad que tienda a seguir separando a los personajes a lo largo de la cuerda
     v1 = pygame.Vector2(p1.get("vel_x", 0.0), p1.get("vel_y", 0.0))
     v2 = pygame.Vector2(p2.get("vel_x", 0.0), p2.get("vel_y", 0.0))
     v_separacion = (v2 - v1).dot(direccion)
 
     if v_separacion > 0:
-        p1["vel_x"] += direccion.x * (v_separacion * w1 * 0.5)
-        p2["vel_x"] -= direccion.x * (v_separacion * w2 * 0.5)
-        if direccion.y != 0:
-            p1["vel_y"] += direccion.y * (v_separacion * w1 * 0.25)
-            p2["vel_y"] -= direccion.y * (v_separacion * w2 * 0.25)
+        p1["vel_x"] += direccion.x * (v_separacion * w1)
+        p1["vel_y"] += direccion.y * (v_separacion * w1)
+        p2["vel_x"] -= direccion.x * (v_separacion * w2)
+        p2["vel_y"] -= direccion.y * (v_separacion * w2)
 
 
 def crear_llave(x, y):
@@ -667,11 +685,26 @@ def matar_personaje(p):
 
 def comprobar_pinchos(p, pinchos):
     if p["muerto"]:
-        return
+        return False
+    hb = p.get("hitbox", p.get("rect"))
+    if hb is None:
+        return False
+    vy = p.get("vel_y", 0)
+
     for pincho in pinchos:
-        if p["hitbox"].colliderect(pincho):
+        # Colisión directa de bounding box
+        if hb.colliderect(pincho):
             matar_personaje(p)
-            break
+            return True
+
+        # Detección continua anti-túnel cuando el personaje cae a gran velocidad
+        if vy > 0:
+            if hb.right > pincho.left + 2 and hb.left < pincho.right - 2:
+                y_prev_bottom = hb.bottom - int(vy)
+                if y_prev_bottom <= pincho.top + 4 and hb.bottom >= pincho.top:
+                    matar_personaje(p)
+                    return True
+    return False
 
 
 def actualizar_muerte(p):

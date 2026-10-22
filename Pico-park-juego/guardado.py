@@ -84,6 +84,19 @@ def obtener_maximo_alcanzado(niveles_desbloqueados):
     return 1, 1
 
 
+def hay_progreso_sin_guardar(niveles_desbloqueados, snapshot_guardado=None):
+    """
+    Determina si existen cambios en los niveles desbloqueados de la sesión
+    que difieren de lo que realmente se encuentra guardado en el archivo de partidas.
+    """
+    if niveles_desbloqueados is None:
+        return False
+    if snapshot_guardado is None:
+        inicial = crear_desbloqueados_inicial()
+        return niveles_desbloqueados != inicial
+    return niveles_desbloqueados != snapshot_guardado
+
+
 def cargar_partidas():
     """Lee el archivo partidas.txt y retorna la lista de partidas guardadas."""
     if not os.path.isfile(RUTA_PARTIDAS):
@@ -254,6 +267,7 @@ def mostrar_dialogo_guardar_salir(pantalla, reloj, niveles_desbloqueados, id_par
     overlay.fill((0, 0, 0, 195))
 
     captura_previa = pantalla.copy()
+    mensaje_error = None
 
     while True:
         reloj.tick(60)
@@ -273,8 +287,11 @@ def mostrar_dialogo_guardar_salir(pantalla, reloj, niveles_desbloqueados, id_par
                 if btn_guardar.collidepoint(evento.pos):
                     if spr_g_semi and spr_g_apret:
                         animar_pulsacion_boton(pantalla, btn_guardar, spr_g_semi, spr_g_apret, fondo_tarjeta)
-                    guardar_partida(niveles_desbloqueados, id_partida=id_partida, nombre_partida=nombre_partida)
-                    return "guardar_salir"
+                    res_g = guardar_partida(niveles_desbloqueados, id_partida=id_partida, nombre_partida=nombre_partida)
+                    if res_g is not None:
+                        return "guardar_salir"
+                    else:
+                        mensaje_error = "Error al guardar el progreso en disco. Intenta de nuevo."
                 elif btn_no_guardar.collidepoint(evento.pos):
                     if spr_s_semi and spr_s_apret:
                         animar_pulsacion_boton(pantalla, btn_no_guardar, spr_s_semi, spr_s_apret, fondo_tarjeta)
@@ -324,6 +341,10 @@ def mostrar_dialogo_guardar_salir(pantalla, reloj, niveles_desbloqueados, id_par
             pygame.draw.rect(pantalla, (255, 255, 255) if hov_c else (242, 234, 222), btn_cancelar, border_radius=12)
             t_c = fuente_btn.render("CANCELAR", True, (60, 45, 35))
             pantalla.blit(t_c, t_c.get_rect(center=btn_cancelar.center))
+
+        if mensaje_error:
+            t_err = fuente_texto.render(mensaje_error, True, (215, 50, 50))
+            pantalla.blit(t_err, t_err.get_rect(center=(rect_card.centerx, rect_card.bottom - 22)))
 
         pygame.display.flip()
 
