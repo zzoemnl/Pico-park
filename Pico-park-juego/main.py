@@ -21,6 +21,11 @@ from guardado import (
     mostrar_dialogo_confirmar_borrado,
     cargar_fuente_pixel,
     hay_progreso_sin_guardar,
+    calcular_niveles_completados,
+    obtener_ultimo_nivel_completado,
+    pedir_password_modal,
+    modal_administrar_perfil,
+    flujo_crear_nueva_partida,
 )
 
 # Estados de la máquina de navegación de menús
@@ -121,21 +126,23 @@ def obtener_geometria_tarjeta_partida(rect_panel, idx_slot, alto_card=84, gap_ca
     r_badge = pygame.Rect(r_card.left + 16, r_card.centery - (h_badge // 2), w_badge, h_badge)
 
     # Botones a la derecha con ancho y separación reservados para no superponerse
-    w_borrar = 100
-    w_cargar = 126
-    h_btn = 37
-    gap_btns = 12
+    w_borrar = 90
+    w_gestionar = 115
+    w_cargar = 105
+    h_btn = 38
+    gap_btns = 10
     margin_der = 16
 
-    r_btn_borrar = pygame.Rect(r_card.right - margin_der - w_borrar, r_card.centery - (40 // 2), w_borrar, 40)
-    r_btn_cargar = pygame.Rect(r_btn_borrar.left - gap_btns - w_cargar, r_card.centery - (h_btn // 2), w_cargar, h_btn)
+    r_btn_borrar = pygame.Rect(r_card.right - margin_der - w_borrar, r_card.centery - (h_btn // 2), w_borrar, h_btn)
+    r_btn_gestionar = pygame.Rect(r_btn_borrar.left - gap_btns - w_gestionar, r_card.centery - (h_btn // 2), w_gestionar, h_btn)
+    r_btn_cargar = pygame.Rect(r_btn_gestionar.left - gap_btns - w_cargar, r_card.centery - (h_btn // 2), w_cargar, h_btn)
 
     # Zona disponible para información a la izquierda de los botones
     x_texto = r_badge.right + 18
-    x_limite_texto = r_btn_cargar.left - 18
+    x_limite_texto = r_btn_cargar.left - 16
     ancho_max_texto = max(80, x_limite_texto - x_texto)
 
-    return r_card, r_badge, r_btn_cargar, r_btn_borrar, (x_texto, ancho_max_texto)
+    return r_card, r_badge, r_btn_cargar, r_btn_gestionar, r_btn_borrar, (x_texto, ancho_max_texto)
 
 
 def dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel, pos_mouse, fuentes, sprites_botones=None):
@@ -144,13 +151,13 @@ def dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel, pos_mouse, fuente
     fuente_sub_card = fuentes.get("sub_card", fuentes["sub_btn"])
     fuente_btn_card = fuentes.get("btn_card", fuentes["texto"])
 
-    r_card, r_badge, r_btn_cargar, r_btn_borrar, (x_texto, ancho_max_texto) = obtener_geometria_tarjeta_partida(rect_panel, idx_slot)
+    r_card, r_badge, r_btn_cargar, r_btn_gestionar, r_btn_borrar, (x_texto, ancho_max_texto) = obtener_geometria_tarjeta_partida(rect_panel, idx_slot)
 
     hov_card = r_card.collidepoint(pos_mouse)
     hov_cargar = r_btn_cargar.collidepoint(pos_mouse)
+    hov_gestionar = r_btn_gestionar.collidepoint(pos_mouse)
     hov_borrar = r_btn_borrar.collidepoint(pos_mouse)
 
-    # Fondo y borde de la tarjeta en tono pastel crema cálido
     col_card = (255, 252, 244) if hov_card else (255, 255, 255)
     borde_card = (225, 145, 75) if hov_card else (220, 202, 178)
     pygame.draw.rect(pantalla, col_card, r_card, border_radius=14)
@@ -165,56 +172,27 @@ def dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel, pos_mouse, fuente
     t_badge = fuente_badge.render(f"MUNDO {m_val}", True, info_b["texto"])
     pantalla.blit(t_badge, t_badge.get_rect(center=r_badge.center))
 
-    # 2. Información textual adaptativa (Nombre, nivel, guardado y desbloqueados) en tonos café y terracota
+    # 2. Información textual adaptativa (Nombre, niveles, último completado, fecha y contraseña)
     nombre = p.get("nombre", f"Partida {p.get('id', 1)}")
     mundo_max = p.get("mundo_max", 1)
     nivel_max = p.get("nivel_max", 1)
     fecha = p.get("fecha", "")
-    niveles_desc = p.get("niveles_desbloqueados", {})
-    total_desbloq = sum(sum(1 for x in bits if x) for bits in niveles_desc.values()) if isinstance(niveles_desc, dict) else 1
+    cant_comp = calcular_niveles_completados(p.get("niveles_desbloqueados", {}))
+    ult_comp = obtener_ultimo_nivel_completado(p.get("niveles_desbloqueados", {}))
+    txt_ult_comp = f"Mundo {ult_comp[0]}-Nivel {ult_comp[1]}" if ult_comp else "Ninguno aún"
+    tiene_pwd = p.get("tiene_password", False)
+    txt_pwd = "🔒 Con contraseña" if tiene_pwd else "🔓 Sin contraseña"
 
-    tit_unido = f"{nombre}  —  Nivel Máximo: {mundo_max}-{nivel_max}"
-    det_unido = f"Último guardado: {fecha}   |   Niveles desbloqueados: {total_desbloq}/15"
+    tit_unido = f"{nombre}   —   Nivel actual: Mundo {mundo_max}-Nivel {nivel_max}   •   {txt_pwd}"
+    det_unido = f"Último completado: {txt_ult_comp}   |   Completados: {cant_comp}/15   |   Guardado: {fecha}"
 
-    w_tit = fuente_titulo_card.size(tit_unido)[0]
-    w_det = fuente_sub_card.size(det_unido)[0]
+    t1 = fuente_titulo_card.render(truncar_texto(tit_unido, fuente_titulo_card, ancho_max_texto), True, (55, 45, 35))
+    pantalla.blit(t1, (x_texto, r_card.top + 16))
 
-    color_tit = (55, 45, 35)
-    color_det = (115, 100, 85)
-    color_nivel_destacado = (195, 100, 45)
+    t2 = fuente_sub_card.render(truncar_texto(det_unido, fuente_sub_card, ancho_max_texto), True, (115, 100, 85))
+    pantalla.blit(t2, (x_texto, r_card.top + 46))
 
-    if w_tit <= ancho_max_texto and w_det <= ancho_max_texto:
-        # Modo 2 líneas: todo cabe cómodamente
-        t1 = fuente_titulo_card.render(tit_unido, True, color_tit)
-        pantalla.blit(t1, (x_texto, r_card.top + 16))
-
-        t2 = fuente_sub_card.render(det_unido, True, color_det)
-        pantalla.blit(t2, (x_texto, r_card.top + 48))
-    elif w_tit <= ancho_max_texto:
-        # El título cabe en una línea, pero los detalles se dividen en 2 líneas
-        t1 = fuente_titulo_card.render(tit_unido, True, color_tit)
-        pantalla.blit(t1, (x_texto, r_card.top + 12))
-
-        t2 = fuente_sub_card.render(truncar_texto(f"Último guardado: {fecha}", fuente_sub_card, ancho_max_texto), True, color_det)
-        pantalla.blit(t2, (x_texto, r_card.top + 37))
-
-        t3 = fuente_sub_card.render(truncar_texto(f"Niveles desbloqueados: {total_desbloq}/15", fuente_sub_card, ancho_max_texto), True, color_det)
-        pantalla.blit(t3, (x_texto, r_card.top + 58))
-    else:
-        # El título no cabe completo en una línea: se divide ordenadamente nombre y nivel
-        t1_nom = truncar_texto(nombre, fuente_titulo_card, ancho_max_texto)
-        t1 = fuente_titulo_card.render(t1_nom, True, color_tit)
-        pantalla.blit(t1, (x_texto, r_card.top + 12))
-
-        txt_nivel = f"Nivel Máximo: Mundo {mundo_max} - Nivel {nivel_max}"
-        t2 = fuente_sub_card.render(truncar_texto(txt_nivel, fuente_sub_card, ancho_max_texto), True, color_nivel_destacado)
-        pantalla.blit(t2, (x_texto, r_card.top + 37))
-
-        txt_info = f"Guardado: {fecha}  •  Desbloqueados: {total_desbloq}/15"
-        t3 = fuente_sub_card.render(truncar_texto(txt_info, fuente_sub_card, ancho_max_texto), True, color_det)
-        pantalla.blit(t3, (x_texto, r_card.top + 58))
-
-    # 3. Botón «CARGAR» (Sprite oficial mundos/boton-cargar o fallback)
+    # 3. Botón «CARGAR»
     if sprites_botones and sprites_botones.get("cargar_normal"):
         spr_cn = sprites_botones["cargar_normal"]
         spr_ch = sprites_botones.get("cargar_hover")
@@ -227,7 +205,15 @@ def dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel, pos_mouse, fuente
         t_bc = fuente_btn_card.render("CARGAR", True, (255, 255, 255))
         pantalla.blit(t_bc, t_bc.get_rect(center=r_btn_cargar.center))
 
-    # 4. Botón «BORRAR» (Rojo terracota / coral pastel con fuente pixel art)
+    # 4. Botón «GESTIONAR» (Administrar nombre, contraseña o eliminación)
+    col_bg = (255, 255, 255) if hov_gestionar else (245, 238, 226)
+    borde_bg = (165, 135, 105) if hov_gestionar else (195, 168, 138)
+    pygame.draw.rect(pantalla, col_bg, r_btn_gestionar, border_radius=10)
+    pygame.draw.rect(pantalla, borde_bg, r_btn_gestionar, width=2, border_radius=10)
+    t_bg = fuente_btn_card.render("GESTIONAR", True, (60, 45, 35))
+    pantalla.blit(t_bg, t_bg.get_rect(center=r_btn_gestionar.center))
+
+    # 5. Botón «BORRAR» (Rojo terracota / coral pastel con fuente pixel art)
     col_bb = (240, 105, 100) if hov_borrar else (220, 85, 80)
     borde_bb = (255, 255, 255) if hov_borrar else (170, 55, 50)
     pygame.draw.rect(pantalla, col_bb, r_btn_borrar, border_radius=10)
@@ -235,19 +221,63 @@ def dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel, pos_mouse, fuente
     t_bb = fuente_btn_card.render("BORRAR", True, (255, 255, 255))
     pantalla.blit(t_bb, t_bb.get_rect(center=r_btn_borrar.center))
 
-    return r_card, r_btn_cargar, r_btn_borrar
+    return r_card, r_btn_cargar, r_btn_gestionar, r_btn_borrar
+
+
+def jugar_niveles_desde(
+    m_inicial, n_inicial,
+    color_p1, color_p2,
+    niveles_desbloqueados,
+    partida_actual_id,
+    partida_actual_nombre,
+    snapshot_guardado,
+):
+    """
+    Ejecuta el ciclo de juego continuo de niveles a partir de un mundo y nivel dados.
+    Retorna (accion_final, mundo_seleccionado), donde accion_final es 'menu' o 'salir'.
+    """
+    m_idx, n_idx = m_inicial, n_inicial
+    mundo_sel = m_idx
+    mantenimiento = True
+    while mantenimiento:
+        mecanicas = obtener_mecanicas_nivel(m_idx, n_idx + 1)
+        res = iniciar_mundo(
+            mecanicas,
+            numero_nivel=n_idx + 1,
+            color_p1=color_p1,
+            color_p2=color_p2,
+            mundo=m_idx,
+            niveles_desbloqueados=niveles_desbloqueados,
+            partida_id=partida_actual_id,
+            partida_nombre=partida_actual_nombre,
+            snapshot_guardado=snapshot_guardado,
+        )
+        if res == "siguiente":
+            if n_idx + 1 < 5:
+                n_idx += 1
+                niveles_desbloqueados[m_idx][n_idx] = True
+            elif m_idx + 1 <= 3:
+                m_idx += 1
+                n_idx = 0
+                niveles_desbloqueados[m_idx][n_idx] = True
+                mundo_sel = m_idx
+            else:
+                return "menu", mundo_sel
+        elif res == "reiniciar":
+            continue
+        elif res == "menu":
+            return "menu", mundo_sel
+        else:
+            return "salir", mundo_sel
+    return "menu", mundo_sel
 
 
 def main():
+    import os
+    os.environ['SDL_VIDEO_CENTERED'] = '1'
     pygame.init()
 
-    pantalla = pygame.display.set_mode((ANCHO, ALTO), pygame.FULLSCREEN)
-    try:
-        from pygame._sdl2.video import Window
-        ventana = Window.from_display_module()
-        ventana.maximize()
-    except Exception:
-        pass
+    pantalla = pygame.display.set_mode((ANCHO, ALTO))
 
     pygame.display.set_caption("Pico Park")
     reloj = pygame.time.Clock()
@@ -294,10 +324,10 @@ def main():
 
     fondo_btn_x = None
 
-    ANCHO_BOTON, ALTO_BOTON, ESPACIO = 306, 90, 18
+    ANCHO_BOTON, ALTO_BOTON, ESPACIO = 306, 72, 12
     x_centro = (ANCHO_MENU - ANCHO_BOTON) // 2
     total_h_menu = (ALTO_BOTON * 4) + (ESPACIO * 3)
-    y_inicio_principal = (ALTO_MENU - total_h_menu) // 2 + 30
+    y_inicio_principal = (ALTO_MENU - total_h_menu) // 2 + 35
 
     def _cargar_menu_btn(nombre):
         img = cargar_boton(nombre)
@@ -325,7 +355,7 @@ def main():
     spr_salir_apretado = _cargar_menu_btn("salir-apretado.png")
 
     btn_jugar = pygame.Rect(x_centro, y_inicio_principal, ANCHO_BOTON, ALTO_BOTON)
-    btn_personajes = pygame.Rect(x_centro, y_inicio_principal + ALTO_BOTON + ESPACIO, ANCHO_BOTON, ALTO_BOTON)
+    btn_personajes = pygame.Rect(x_centro, y_inicio_principal + (ALTO_BOTON + ESPACIO), ANCHO_BOTON, ALTO_BOTON)
     btn_config = pygame.Rect(x_centro, y_inicio_principal + (ALTO_BOTON + ESPACIO) * 2, ANCHO_BOTON, ALTO_BOTON)
     btn_salir = pygame.Rect(x_centro, y_inicio_principal + (ALTO_BOTON + ESPACIO) * 3, ANCHO_BOTON, ALTO_BOTON)
 
@@ -347,16 +377,25 @@ def main():
     btn_guardar = btn_volver_personajes
     btn_volver_config = pygame.Rect((ANCHO_MENU - W_VOLVER) // 2, ALTO_MENU - 85, W_VOLVER, H_VOLVER)
     btn_volver_creditos = pygame.Rect((ANCHO_MENU - W_VOLVER) // 2, ALTO_MENU - 85, W_VOLVER, H_VOLVER)
-    # Botones en Selección de Niveles: «MENÚ» a la izquierda y «VOLVER» a la derecha
-    gap_btns_niveles = 30
-    total_w_niveles = (W_VOLVER * 2) + gap_btns_niveles
-    x_base_niveles = (ANCHO_MENU - total_w_niveles) // 2
-    btn_menu_niveles = pygame.Rect(x_base_niveles, ALTO_MENU - 75, W_VOLVER, H_VOLVER)
-    btn_volver_niveles = pygame.Rect(x_base_niveles + W_VOLVER + gap_btns_niveles, ALTO_MENU - 75, W_VOLVER, H_VOLVER)
 
     def _cargar_scaled(nombre, w, h):
         img = cargar_boton(nombre)
         return pygame.transform.smoothscale(img, (w, h)) if img else None
+
+    # Iconos superiores exclusivos de Selección de Niveles (Casita y X)
+    TAM_ICONO_NIVELES = 70
+    rect_btn_x_niveles = pygame.Rect(ANCHO_MENU - MARGEN_DER - TAM_ICONO_NIVELES, MARGEN_SUP, TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
+    rect_btn_casa_niveles = pygame.Rect(rect_btn_x_niveles.left - 18 - TAM_ICONO_NIVELES, MARGEN_SUP, TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
+
+    spr_casa_normal = _cargar_scaled("HUD/boton-casa.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-casa.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
+    spr_casa_hover = aclarar_boton(spr_casa_normal)
+    spr_casa_semi = _cargar_scaled("HUD/boton-casa-semiapretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-casa-semiapretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
+    spr_casa_apretado = _cargar_scaled("HUD/boton-casa-apretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-casa-apretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
+
+    spr_xn_normal = _cargar_scaled("HUD/boton-x.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-x.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
+    spr_xn_hover = aclarar_boton(spr_xn_normal)
+    spr_xn_semi = _cargar_scaled("HUD/boton-x-semiapretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-x-semiapretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
+    spr_xn_apretado = _cargar_scaled("HUD/boton-x-apretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-x-apretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
 
     # Sprites botón «VOLVER» (mundos)
     spr_volver_normal = _cargar_scaled("mundos/boton-volver.png", W_VOLVER, H_VOLVER)
@@ -437,32 +476,28 @@ def main():
 
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
-                if hay_progreso_sin_guardar(niveles_desbloqueados, snapshot_guardado):
+                resp = mostrar_dialogo_guardar_salir(
+                    pantalla, reloj,
+                    niveles_desbloqueados=niveles_desbloqueados,
+                    id_partida=partida_actual_id,
+                    nombre_partida=partida_actual_nombre,
+                )
+                if resp in ("guardar_salir", "salir_sin_guardar"):
+                    ejecutando = False
+
+            if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                # El botón X general no actúa en Selección de Niveles ya que esa pantalla tiene sus propios iconos
+                if estado_actual != ESTADO_SELECCION_NIVEL and rect_btn_x.collidepoint(evento.pos):
+                    if spr_x_semi and spr_x_apretado:
+                        fondo_limpio = pantalla.subsurface(rect_btn_x).copy()
+                        animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, fondo_limpio)
                     resp = mostrar_dialogo_guardar_salir(
                         pantalla, reloj,
                         niveles_desbloqueados=niveles_desbloqueados,
                         id_partida=partida_actual_id,
                         nombre_partida=partida_actual_nombre,
                     )
-                    if resp != "cancelar":
-                        ejecutando = False
-                else:
-                    ejecutando = False
-
-            if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-                if rect_btn_x.collidepoint(evento.pos):
-                    if spr_x_semi and spr_x_apretado:
-                        animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, fondo_btn_x)
-                    if hay_progreso_sin_guardar(niveles_desbloqueados, snapshot_guardado):
-                        resp = mostrar_dialogo_guardar_salir(
-                            pantalla, reloj,
-                            niveles_desbloqueados=niveles_desbloqueados,
-                            id_partida=partida_actual_id,
-                            nombre_partida=partida_actual_nombre,
-                        )
-                        if resp != "cancelar":
-                            ejecutando = False
-                    else:
+                    if resp in ("guardar_salir", "salir_sin_guardar"):
                         ejecutando = False
                     break
 
@@ -478,38 +513,46 @@ def main():
                         estado_actual = ESTADO_CONFIGURACION
                     elif btn_salir.collidepoint(evento.pos):
                         animar_pulsacion_boton(pantalla, btn_salir, spr_salir_semi, spr_salir_apretado, fondo_limpio_btn)
-                        if hay_progreso_sin_guardar(niveles_desbloqueados, snapshot_guardado):
-                            resp = mostrar_dialogo_guardar_salir(
-                                pantalla, reloj,
-                                niveles_desbloqueados=niveles_desbloqueados,
-                                id_partida=partida_actual_id,
-                                nombre_partida=partida_actual_nombre,
-                            )
-                            if resp != "cancelar":
-                                ejecutando = False
-                        else:
+                        resp = mostrar_dialogo_guardar_salir(
+                            pantalla, reloj,
+                            niveles_desbloqueados=niveles_desbloqueados,
+                            id_partida=partida_actual_id,
+                            nombre_partida=partida_actual_nombre,
+                        )
+                        if resp in ("guardar_salir", "salir_sin_guardar"):
                             ejecutando = False
 
                 elif estado_actual == ESTADO_MODO_JUEGO:
                     if btn_continuar.collidepoint(evento.pos):
                         if spr_continuar_semi and spr_continuar_apretado:
-                            animar_pulsacion_boton(pantalla, btn_continuar, spr_continuar_semi, spr_continuar_apretado, (30, 30, 30))
+                            animar_pulsacion_boton(pantalla, btn_continuar, spr_continuar_semi, spr_continuar_apretado, (255, 240, 195))
                         pagina_partidas = 0
                         estado_actual = ESTADO_LISTA_PARTIDAS
                     elif btn_nueva_partida.collidepoint(evento.pos):
                         if spr_nueva_modo_semi and spr_nueva_modo_apretado:
-                            animar_pulsacion_boton(pantalla, btn_nueva_partida, spr_nueva_modo_semi, spr_nueva_modo_apretado, (30, 30, 30))
-                        niveles_desbloqueados = crear_desbloqueados_inicial()
-                        mundo_seleccionado = 1
-                        partidas_guardadas = cargar_partidas()
-                        nuevo_id = max([p["id"] for p in partidas_guardadas], default=0) + 1
-                        partida_actual_id = nuevo_id
-                        partida_actual_nombre = f"Partida {nuevo_id}"
-                        snapshot_guardado = None
-                        estado_actual = ESTADO_SELECCION_NIVEL
+                            animar_pulsacion_boton(pantalla, btn_nueva_partida, spr_nueva_modo_semi, spr_nueva_modo_apretado, (255, 240, 195))
+                        nueva_p = flujo_crear_nueva_partida(pantalla, reloj)
+                        if nueva_p is not None:
+                            niveles_desbloqueados = copy.deepcopy(nueva_p["niveles_desbloqueados"])
+                            snapshot_guardado = copy.deepcopy(nueva_p["niveles_desbloqueados"])
+                            partida_actual_id = nueva_p["id"]
+                            partida_actual_nombre = nueva_p["nombre"]
+                            mundo_seleccionado = 1
+                            fin_acc, mundo_seleccionado = jugar_niveles_desde(
+                                1, 0,
+                                color_p1, color_p2,
+                                niveles_desbloqueados,
+                                partida_actual_id,
+                                partida_actual_nombre,
+                                snapshot_guardado,
+                            )
+                            if fin_acc == "menu":
+                                estado_actual = ESTADO_SELECCION_NIVEL
+                            else:
+                                ejecutando = False
                     elif btn_volver_modo.collidepoint(evento.pos):
                         if spr_volver_semi and spr_volver_apretado:
-                            animar_pulsacion_boton(pantalla, btn_volver_modo, spr_volver_semi, spr_volver_apretado, (30, 30, 30))
+                            animar_pulsacion_boton(pantalla, btn_volver_modo, spr_volver_semi, spr_volver_apretado, (255, 240, 195))
                         estado_actual = ESTADO_MENU_PRINCIPAL
 
                 elif estado_actual == ESTADO_LISTA_PARTIDAS:
@@ -526,12 +569,25 @@ def main():
                         if btn_iniciar_primera.collidepoint(evento.pos):
                             if spr_nueva_primera_semi and spr_nueva_primera_apretado:
                                 animar_pulsacion_boton(pantalla, btn_iniciar_primera, spr_nueva_primera_semi, spr_nueva_primera_apretado, (255, 240, 195))
-                            niveles_desbloqueados = crear_desbloqueados_inicial()
-                            mundo_seleccionado = 1
-                            partida_actual_id = 1
-                            partida_actual_nombre = "Partida 1"
-                            snapshot_guardado = None
-                            estado_actual = ESTADO_SELECCION_NIVEL
+                            nueva_p = flujo_crear_nueva_partida(pantalla, reloj)
+                            if nueva_p is not None:
+                                niveles_desbloqueados = copy.deepcopy(nueva_p["niveles_desbloqueados"])
+                                snapshot_guardado = copy.deepcopy(nueva_p["niveles_desbloqueados"])
+                                partida_actual_id = nueva_p["id"]
+                                partida_actual_nombre = nueva_p["nombre"]
+                                mundo_seleccionado = 1
+                                fin_acc, mundo_seleccionado = jugar_niveles_desde(
+                                    1, 0,
+                                    color_p1, color_p2,
+                                    niveles_desbloqueados,
+                                    partida_actual_id,
+                                    partida_actual_nombre,
+                                    snapshot_guardado,
+                                )
+                                if fin_acc == "menu":
+                                    estado_actual = ESTADO_SELECCION_NIVEL
+                                else:
+                                    ejecutando = False
                     else:
                         inicio_idx = pagina_partidas * MAX_PARTIDAS_POR_PAGINA
                         fin_idx = inicio_idx + MAX_PARTIDAS_POR_PAGINA
@@ -539,10 +595,10 @@ def main():
 
                         accion_ejecutada = False
                         for idx_slot, p in enumerate(partidas_pagina):
-                            r_card, _, r_btn_cargar, r_btn_borrar, _ = obtener_geometria_tarjeta_partida(
+                            r_card, _, r_btn_cargar, r_btn_gestionar, r_btn_borrar, _ = obtener_geometria_tarjeta_partida(
                                 rect_panel_partidas, idx_slot
                             )
-                            # Clic en botón BORRAR (dispara confirmación previa)
+                            # Clic en botón BORRAR (dispara confirmación previa con advertencia)
                             if r_btn_borrar.collidepoint(evento.pos):
                                 if mostrar_dialogo_confirmar_borrado(pantalla, reloj, p):
                                     eliminar_partida(p["id"])
@@ -551,15 +607,29 @@ def main():
                                         partida_actual_nombre = None
                                         niveles_desbloqueados = crear_desbloqueados_inicial()
                                         snapshot_guardado = None
-                                    # Recalcular páginas inmediatamente para reorganizar la vista
                                     nuevas_p = cargar_partidas()
                                     nuevas_total_pag = max(1, (len(nuevas_p) + MAX_PARTIDAS_POR_PAGINA - 1) // MAX_PARTIDAS_POR_PAGINA)
                                     if pagina_partidas >= nuevas_total_pag:
                                         pagina_partidas = max(0, nuevas_total_pag - 1)
                                 accion_ejecutada = True
                                 break
+
+                            # Clic en botón GESTIONAR (renombrar, cambiar/quitar clave, borrar)
+                            elif r_btn_gestionar.collidepoint(evento.pos):
+                                if modal_administrar_perfil(pantalla, reloj, p):
+                                    nuevas_p = cargar_partidas()
+                                    nuevas_total_pag = max(1, (len(nuevas_p) + MAX_PARTIDAS_POR_PAGINA - 1) // MAX_PARTIDAS_POR_PAGINA)
+                                    if pagina_partidas >= nuevas_total_pag:
+                                        pagina_partidas = max(0, nuevas_total_pag - 1)
+                                accion_ejecutada = True
+                                break
+
                             # Clic en botón CARGAR o sobre la tarjeta
                             elif r_btn_cargar.collidepoint(evento.pos) or r_card.collidepoint(evento.pos):
+                                if p.get("tiene_password", False):
+                                    if not pedir_password_modal(pantalla, reloj, p):
+                                        accion_ejecutada = True
+                                        break
                                 if spr_cargar_semi and spr_cargar_apretado:
                                     animar_pulsacion_boton(pantalla, r_btn_cargar, spr_cargar_semi, spr_cargar_apretado, (253, 246, 233))
                                 niveles_desbloqueados = copy.deepcopy(p["niveles_desbloqueados"])
@@ -583,14 +653,25 @@ def main():
                             if btn_nueva_desde_lista.collidepoint(evento.pos):
                                 if spr_nueva_lista_semi and spr_nueva_lista_apretado:
                                     animar_pulsacion_boton(pantalla, btn_nueva_desde_lista, spr_nueva_lista_semi, spr_nueva_lista_apretado, (255, 240, 195))
-                                niveles_desbloqueados = crear_desbloqueados_inicial()
-                                mundo_seleccionado = 1
-                                partidas_actuales = cargar_partidas()
-                                nuevo_id = max([p["id"] for p in partidas_actuales], default=0) + 1
-                                partida_actual_id = nuevo_id
-                                partida_actual_nombre = f"Partida {nuevo_id}"
-                                snapshot_guardado = None
-                                estado_actual = ESTADO_SELECCION_NIVEL
+                                nueva_p = flujo_crear_nueva_partida(pantalla, reloj)
+                                if nueva_p is not None:
+                                    niveles_desbloqueados = copy.deepcopy(nueva_p["niveles_desbloqueados"])
+                                    snapshot_guardado = copy.deepcopy(nueva_p["niveles_desbloqueados"])
+                                    partida_actual_id = nueva_p["id"]
+                                    partida_actual_nombre = nueva_p["nombre"]
+                                    mundo_seleccionado = 1
+                                    fin_acc, mundo_seleccionado = jugar_niveles_desde(
+                                        1, 0,
+                                        color_p1, color_p2,
+                                        niveles_desbloqueados,
+                                        partida_actual_id,
+                                        partida_actual_nombre,
+                                        snapshot_guardado,
+                                    )
+                                    if fin_acc == "menu":
+                                        estado_actual = ESTADO_SELECCION_NIVEL
+                                    else:
+                                        ejecutando = False
 
                     if btn_volver_partidas.collidepoint(evento.pos):
                         if spr_volver_semi and spr_volver_apretado:
@@ -628,16 +709,25 @@ def main():
                         estado_actual = ESTADO_MENU_PRINCIPAL
 
                 elif estado_actual in (ESTADO_SELECCION_NIVEL, ESTADO_SELECCION_MUNDO):
-                    if btn_menu_niveles.collidepoint(evento.pos):
-                        if spr_menu_nav_semi and spr_menu_nav_apretado:
-                            animar_pulsacion_boton(pantalla, btn_menu_niveles, spr_menu_nav_semi, spr_menu_nav_apretado, (30, 30, 30))
+                    # Iconos superiores de Selección de Niveles (Casita y X)
+                    if rect_btn_casa_niveles.collidepoint(evento.pos):
+                        if spr_casa_semi and spr_casa_apretado:
+                            animar_pulsacion_boton(pantalla, rect_btn_casa_niveles, spr_casa_semi, spr_casa_apretado, (244, 238, 226))
                         estado_actual = ESTADO_MENU_PRINCIPAL
                         break
-                    if btn_volver_niveles.collidepoint(evento.pos):
-                        if spr_volver_semi and spr_volver_apretado:
-                            animar_pulsacion_boton(pantalla, btn_volver_niveles, spr_volver_semi, spr_volver_apretado, (30, 30, 30))
-                        estado_actual = ESTADO_MODO_JUEGO
+                    if rect_btn_x_niveles.collidepoint(evento.pos):
+                        if spr_xn_semi and spr_xn_apretado:
+                            animar_pulsacion_boton(pantalla, rect_btn_x_niveles, spr_xn_semi, spr_xn_apretado, (244, 238, 226))
+                        resp = mostrar_dialogo_guardar_salir(
+                            pantalla, reloj,
+                            niveles_desbloqueados=niveles_desbloqueados,
+                            id_partida=partida_actual_id,
+                            nombre_partida=partida_actual_nombre,
+                        )
+                        if resp in ("guardar_salir", "salir_sin_guardar"):
+                            ejecutando = False
                         break
+
                     rect_panel, tabs_info, rects_cards = obtener_geometria_menu(ANCHO_MENU, ALTO_MENU)
                     tab_presionada = False
                     for m, t_data in tabs_info.items():
@@ -650,42 +740,20 @@ def main():
                         for idx_nivel, rect_c in enumerate(rects_cards):
                             desbloqueado = niveles_desbloqueados[mundo_seleccionado][idx_nivel]
                             if desbloqueado and rect_c.collidepoint(evento.pos):
-                                m_idx, n_idx = mundo_seleccionado, idx_nivel
-
-                                mantenimiento = True
-                                while mantenimiento:
-                                    mecanicas = obtener_mecanicas_nivel(m_idx, n_idx + 1)
-                                    res = iniciar_mundo(
-                                        mecanicas,
-                                        numero_nivel=n_idx + 1,
-                                        color_p1=color_p1,
-                                        color_p2=color_p2,
-                                        mundo=m_idx,
-                                        niveles_desbloqueados=niveles_desbloqueados,
-                                        partida_id=partida_actual_id,
-                                        partida_nombre=partida_actual_nombre,
-                                        snapshot_guardado=snapshot_guardado,
-                                    )
-                                    if res == "siguiente":
-                                        if n_idx + 1 < 5:
-                                            n_idx += 1
-                                            niveles_desbloqueados[m_idx][n_idx] = True
-                                        elif m_idx + 1 <= 3:
-                                            m_idx += 1
-                                            n_idx = 0
-                                            niveles_desbloqueados[m_idx][n_idx] = True
-                                            mundo_seleccionado = m_idx
-                                        else:
-                                            mantenimiento = False
-                                            estado_actual = ESTADO_SELECCION_NIVEL
-                                    elif res == "reiniciar":
-                                        continue
-                                    elif res == "menu":
-                                        mantenimiento = False
-                                        estado_actual = ESTADO_SELECCION_NIVEL
-                                    else:
-                                        mantenimiento = False
-                                        ejecutando = False
+                                fin_acc, mundo_seleccionado = jugar_niveles_desde(
+                                    mundo_seleccionado,
+                                    idx_nivel,
+                                    color_p1,
+                                    color_p2,
+                                    niveles_desbloqueados,
+                                    partida_actual_id,
+                                    partida_actual_nombre,
+                                    snapshot_guardado,
+                                )
+                                if fin_acc == "menu":
+                                    estado_actual = ESTADO_SELECCION_NIVEL
+                                else:
+                                    ejecutando = False
                                 break
 
             elif evento.type == pygame.MOUSEWHEEL:
@@ -716,12 +784,16 @@ def main():
                     pantalla.blit(spr_dib, btn)
 
         elif estado_actual == ESTADO_MODO_JUEGO:
+            # Fondo crema cálido similar a los niveles
+            pantalla.fill((255, 240, 195))
+
             pos_mouse = pygame.mouse.get_pos()
 
-            titulo = fuente_pixel_titulo.render("MODO DE JUEGO", True, (255, 230, 100))
+            # Título y subtítulo con alto contraste sobre fondo crema
+            titulo = fuente_pixel_titulo.render("MODO DE JUEGO", True, (60, 45, 35))
             pantalla.blit(titulo, titulo.get_rect(center=(ANCHO_MENU // 2, 85)))
 
-            subt = fuente_subtitulo.render("Selecciona cómo deseas comenzar tu aventura", True, (215, 215, 225))
+            subt = fuente_subtitulo.render("Selecciona cómo deseas comenzar tu aventura", True, (115, 95, 80))
             pantalla.blit(subt, subt.get_rect(center=(ANCHO_MENU // 2, 135)))
 
             # Botón Continuar (Menu/boton-continuar-cargar...)
@@ -754,10 +826,10 @@ def main():
             if spr_v:
                 pantalla.blit(spr_v, btn_volver_modo)
             else:
-                col_v = (85, 85, 98) if hov_v else (60, 60, 70)
+                col_v = (255, 255, 255) if hov_v else (242, 234, 222)
                 pygame.draw.rect(pantalla, col_v, btn_volver_modo, border_radius=10)
-                pygame.draw.rect(pantalla, (255, 255, 255) if hov_v else (140, 140, 155), btn_volver_modo, width=2, border_radius=10)
-                t_v = fuente_pixel_btn.render("VOLVER AL MENU", True, (255, 255, 255))
+                pygame.draw.rect(pantalla, (185, 155, 125) if hov_v else (195, 168, 138), btn_volver_modo, width=2, border_radius=10)
+                t_v = fuente_pixel_btn.render("VOLVER AL MENU", True, (60, 45, 35))
                 pantalla.blit(t_v, t_v.get_rect(center=btn_volver_modo.center))
 
         elif estado_actual == ESTADO_LISTA_PARTIDAS:
@@ -774,7 +846,7 @@ def main():
             )
 
             # Título con tipografía retro 04B_30 y subtítulo descriptivo
-            titulo = fuente_pixel_titulo.render("PARTIDAS JUGADAS", True, (60, 45, 35))
+            titulo = fuente_pixel_titulo.render("PARTIDAS GUARDADAS", True, (60, 45, 35))
             pantalla.blit(titulo, titulo.get_rect(center=(ANCHO_MENU // 2, 48)))
 
             subt = fuente_subtitulo.render("Selecciona tu partida guardada para continuar", True, (115, 95, 80))
@@ -785,10 +857,10 @@ def main():
             pygame.draw.rect(pantalla, COL_BORDE_PANEL, rect_panel_partidas, width=3, border_radius=18)
 
             if not partidas:
-                t_sin = fuente_subtitulo.render("No hay partidas guardadas todavía", True, (60, 45, 35))
+                t_sin = fuente_subtitulo.render("Todavía no tenés partidas guardadas", True, (60, 45, 35))
                 pantalla.blit(t_sin, t_sin.get_rect(center=(rect_panel_partidas.centerx, rect_panel_partidas.centery - 45)))
 
-                t_sin2 = fuente_texto.render("Al jugar y guardar el nivel antes de salir, tus partidas aparecerán aquí.", True, (120, 105, 90))
+                t_sin2 = fuente_texto.render("Comenzá una nueva partida para guardar tu progreso.", True, (120, 105, 90))
                 pantalla.blit(t_sin2, t_sin2.get_rect(center=(rect_panel_partidas.centerx, rect_panel_partidas.centery - 10)))
 
                 hov_prim = btn_iniciar_primera.collidepoint(pos_mouse)
@@ -1029,32 +1101,22 @@ def main():
                 fuentes_menu,
             )
 
-            # Botón Menú (volver al Menú Principal)
-            hov_mn = btn_menu_niveles.collidepoint(pos_mouse)
-            spr_mn = spr_menu_nav_hover if (hov_mn and spr_menu_nav_hover) else spr_menu_nav_normal
-            if spr_mn:
-                pantalla.blit(spr_mn, btn_menu_niveles)
-            else:
-                pygame.draw.rect(pantalla, (235, 115, 85) if hov_mn else (215, 95, 65), btn_menu_niveles, border_radius=6)
-                pygame.draw.rect(pantalla, (45, 45, 50), btn_menu_niveles, width=3, border_radius=6)
-                txt_m = fuentes_menu["card"].render("MENÚ", True, (255, 255, 255))
-                pantalla.blit(txt_m, txt_m.get_rect(center=btn_menu_niveles.center))
+            # Iconos superiores de Selección de Niveles: Casita (Menú Principal) y X (Salir)
+            hov_casa = rect_btn_casa_niveles.collidepoint(pos_mouse)
+            spr_c_dib = spr_casa_hover if (hov_casa and spr_casa_hover) else spr_casa_normal
+            if spr_c_dib:
+                pantalla.blit(spr_c_dib, rect_btn_casa_niveles)
 
-            # Botón Volver al Modo de Juego (mundos/boton-volver)
-            hov_vn = btn_volver_niveles.collidepoint(pos_mouse)
-            spr_vn = spr_volver_hover if (hov_vn and spr_volver_hover) else spr_volver_normal
-            if spr_vn:
-                pantalla.blit(spr_vn, btn_volver_niveles)
+            hov_xn = rect_btn_x_niveles.collidepoint(pos_mouse)
+            spr_xn_dib = spr_xn_hover if (hov_xn and spr_xn_hover) else spr_xn_normal
+            if spr_xn_dib:
+                pantalla.blit(spr_xn_dib, rect_btn_x_niveles)
 
-        try:
-            fondo_btn_x = pantalla.subsurface(rect_btn_x).copy()
-        except Exception:
-            pass
-
-        pos_mouse = pygame.mouse.get_pos()
-        hov_x = rect_btn_x.collidepoint(pos_mouse)
-        spr_x_dib = spr_x_hover if (hov_x and spr_x_hover) else spr_x_normal
-        if spr_x_dib: pantalla.blit(spr_x_dib, rect_btn_x)
+        if estado_actual != ESTADO_SELECCION_NIVEL:
+            pos_mouse = pygame.mouse.get_pos()
+            hov_x = rect_btn_x.collidepoint(pos_mouse)
+            spr_x_dib = spr_x_hover if (hov_x and spr_x_hover) else spr_x_normal
+            if spr_x_dib: pantalla.blit(spr_x_dib, rect_btn_x)
 
         pygame.display.flip()
 

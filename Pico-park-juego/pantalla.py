@@ -37,6 +37,9 @@ from movimientos import (
     ZONA_AGUA,
     actualizar_estado_agua,
     aplicar_fisica_agua,
+    actualizar_estado_soga_muerte,
+    ALTO_HITBOX,
+    ANCHO_HITBOX,
 )
 from guardado import (
     crear_desbloqueados_inicial,
@@ -445,8 +448,8 @@ def animar_apertura_franjas(pantalla, reloj, captura_nuevo_nivel):
     alto = pantalla.get_height()
     franjas = crear_franjas_geometricas(ancho, alto)
 
-    frames_totales = 68
-    duracion = 1.13
+    frames_totales = 24
+    duracion = 0.40
 
     for f in range(frames_totales + 1):
         reloj.tick(FPS)
@@ -607,8 +610,8 @@ def mostrar_pantalla_victoria(
     rect_panel = pygame.Rect(cx - w_panel // 2, cy - h_panel // 2, w_panel, h_panel)
     bloques = crear_bloques_panel(rect_panel, ancho, alto)
 
-    # --- FASE 1: Ensamblaje de bloques (54 fotogramas ~ 0.9s) ---
-    frames_ensamble = 54
+    # --- FASE 1: Ensamblaje de bloques (24 fotogramas ~ 0.4s) ---
+    frames_ensamble = 24
     for f in range(frames_ensamble + 1):
         reloj.tick(FPS)
         for evento in pygame.event.get():
@@ -679,8 +682,8 @@ def mostrar_pantalla_victoria(
 
     nom_nivel = f"MUNDO {mundo} — NIVEL {numero_nivel}"
 
-    # --- FASE 2: Entrada secuencial del título y botones con rebote (38 fotogramas ~ 0.63s) ---
-    frames_intro = 38
+    # --- FASE 2: Entrada secuencial del título y botones con rebote (18 fotogramas ~ 0.3s) ---
+    frames_intro = 18
     for f in range(frames_intro + 1):
         reloj.tick(FPS)
         for evento in pygame.event.get():
@@ -1124,7 +1127,8 @@ def dibujar_soga_escenario(superficie, p1, p2, estado_soga=None, d_reposo=DISTAN
     Dibuja la soga que une a ambos personajes con estiramiento progresivo y aspecto visual natural:
     - Cuando los personajes están cerca (<= d_reposo), la soga cuelga formando una curva catenaria/Bézier suave y floja.
     - A medida que se alejan hacia d_max, la comba se reduce progresivamente en consonancia con la tensión física.
-    - Cuando alcanza el límite máximo, la soga se tensa recta con acabado estilizado.
+    - Durante la secuencia de muerte, permite un margen exclusivo de +10px de estiramiento.
+    - Al superar ese límite, se muestra la soga rota en ambos extremos con hilachas y partículas de rotura.
     - Anclada en el torso/cintura para no tapar los rostros ni interferir con los sprites.
     """
     if p1 is None or p2 is None:
@@ -1141,6 +1145,47 @@ def dibujar_soga_escenario(superficie, p1, p2, estado_soga=None, d_reposo=DISTAN
     col_soga_ext = (175, 125, 65)
     col_soga_int = (215, 170, 105)
 
+    # 1. Caso soga rota por muerte en el Mundo 2
+    if estado_soga and estado_soga.get("rota", False):
+        if dist > 0.001:
+            dir_x = dx / dist
+            dir_y = dy / dist
+        else:
+            dir_x, dir_y = 1.0, 0.0
+
+        len_cabo = 35.0
+        # Cabo 1 (desde p1)
+        m1 = (p_inicio[0] + dir_x * (len_cabo * 0.5), p_inicio[1] + dir_y * (len_cabo * 0.5) + 6)
+        e1 = (p_inicio[0] + dir_x * len_cabo, p_inicio[1] + dir_y * len_cabo + 16)
+        pygame.draw.lines(superficie, col_soga_ext, False, [p_inicio, m1, e1], 4)
+        pygame.draw.lines(superficie, col_soga_int, False, [p_inicio, m1, e1], 2)
+        # Hilachas deshilachadas en la punta
+        pygame.draw.line(superficie, col_soga_ext, e1, (e1[0] - 2, e1[1] + 5), 1)
+        pygame.draw.line(superficie, col_soga_ext, e1, (e1[0] + 3, e1[1] + 4), 1)
+        pygame.draw.circle(superficie, col_soga_ext, p_inicio, 4)
+        pygame.draw.circle(superficie, col_soga_int, p_inicio, 2)
+
+        # Cabo 2 (desde p2)
+        m2 = (p_fin[0] - dir_x * (len_cabo * 0.5), p_fin[1] - dir_y * (len_cabo * 0.5) + 6)
+        e2 = (p_fin[0] - dir_x * len_cabo, p_fin[1] - dir_y * len_cabo + 16)
+        pygame.draw.lines(superficie, col_soga_ext, False, [p_fin, m2, e2], 4)
+        pygame.draw.lines(superficie, col_soga_int, False, [p_fin, m2, e2], 2)
+        # Hilachas deshilachadas en la punta
+        pygame.draw.line(superficie, col_soga_ext, e2, (e2[0] - 2, e2[1] + 5), 1)
+        pygame.draw.line(superficie, col_soga_ext, e2, (e2[0] + 3, e2[1] + 4), 1)
+        pygame.draw.circle(superficie, col_soga_ext, p_fin, 4)
+        pygame.draw.circle(superficie, col_soga_int, p_fin, 2)
+
+        # Partículas de rotura
+        for part in estado_soga.get("particulas_rotura", []):
+            pygame.draw.circle(superficie, col_soga_ext, (int(part["x"]), int(part["y"])), 3)
+            pygame.draw.circle(superficie, col_soga_int, (int(part["x"]), int(part["y"])), 2)
+        return
+
+    # Si está en secuencia de muerte pero aún no rompió, el límite máximo se estira 10px adicionales
+    en_muerte = estado_soga and estado_soga.get("en_muerte", False)
+    d_max_efectivo = (d_max + 10.0) if en_muerte else d_max
+
     if dist < 16:
         pygame.draw.line(superficie, col_soga_ext, p_inicio, p_fin, 4)
         pygame.draw.line(superficie, col_soga_int, p_inicio, p_fin, 2)
@@ -1150,10 +1195,10 @@ def dibujar_soga_escenario(superficie, p1, p2, estado_soga=None, d_reposo=DISTAN
     if dist <= d_reposo:
         tension_visual = 0.0
     else:
-        tension_visual = min(1.0, (dist - d_reposo) / max(1.0, d_max - d_reposo))
+        tension_visual = min(1.0, (dist - d_reposo) / max(1.0, d_max_efectivo - d_reposo))
 
-    if tension_visual < 0.96 and dist < d_max:
-        sag_max = min(52.0, max(10.0, (d_max - dist) * 0.42))
+    if tension_visual < 0.96 and dist < d_max_efectivo:
+        sag_max = min(52.0, max(10.0, (d_max_efectivo - dist) * 0.42))
         sag = sag_max * (1.0 - (tension_visual ** 1.4))
         ctrl_x = (p_inicio[0] + p_fin[0]) / 2.0
         ctrl_y = (p_inicio[1] + p_fin[1]) / 2.0 + sag
@@ -1207,7 +1252,7 @@ def iniciar_mundo(
 
     pantalla = pygame.display.get_surface()
     if pantalla is None:
-        pantalla = pygame.display.set_mode((ANCHO, ALTO), pygame.FULLSCREEN | pygame.SCALED)
+        pantalla = pygame.display.set_mode((ANCHO, ALTO))
 
     mundo_rect = pygame.Rect(0, 0, ANCHO_MUNDO, ALTO)
     reloj = pygame.time.Clock()
@@ -1565,6 +1610,10 @@ def iniciar_mundo(
     plataformas_base = None
     barrera_l_horiz = None
     barrera_l_vert = None
+    boton_compuerta = None
+    compuerta = None
+    plataforma_movil = None
+    bloque_central = None
     estado_soga = crear_estado_soga()
 
     if numero_mundo == 1 and numero_nivel == 1:
@@ -1913,6 +1962,21 @@ def iniciar_mundo(
 
         # Puerta de salida en el suelo bajo el tramo horizontal de la barrera en L
         puerta = crear_puerta(1880, suelo.top - 90)
+
+        # Botón inferior para la compuerta del hueco de descenso (junto al hueco, a la izquierda de x=1700)
+        boton_compuerta = {
+            "rect": pygame.Rect(1620, suelo.top - 12, 70, 12),
+            "presionado": False,
+        }
+
+        # Compuerta mecánica que cierra la abertura por la que el personaje superior podría descender directamente (x=1700..1840)
+        compuerta = {
+            "rect": pygame.Rect(1700, 480, 140, 24),
+            "progreso": 0.0,
+        }
+
+        # La compuerta inicia completamente cerrada y sólida
+        plataformas = list(plataformas_base) + [p["rect"] for p in paredes_colores] + [compuerta["rect"]]
     elif numero_mundo == 2 and numero_nivel == 1:
         # Mundo 2 - Nivel 1: Introducción a la Soga (El arrastre cooperativo)
         # Nivel introductorio centrado en aprender a moverse y coordinar saltos unidos por la soga
@@ -1947,20 +2011,93 @@ def iniciar_mundo(
         # Las plataformas transitables son las elevadas (sin plataforma de retorno segura)
         plataformas = [escalon_1, escalon_2, plat_salto_1, plat_salto_2, plat_destino]
 
-        # Pozo y pinchos mortales debajo de la zona aérea (x=920..1620)
+        # Pozo y pinchos mortales debajo de la zona aérea extendidos de forma continua hasta el final del nivel
         pozo_nivel = {
             "x": 920,
             "y": 570,
-            "ancho": 700,
+            "ancho": ancho_mundo_nivel - 920,
             "alto": 70,
         }
-        pinchos = [pygame.Rect(x, suelo.top - 24, 32, 24) for x in range(926, 1610, 35)]
+        pinchos = [pygame.Rect(x, suelo.top - 24, 32, 24) for x in range(926, ancho_mundo_nivel - 20, 35)]
 
         # Llave cerca del final del recorrido sobre la plataforma de destino
         llave = crear_llave(1820, plat_destino.top - 46)
 
         # Puerta de salida en la plataforma de destino
         puerta = crear_puerta(2040, plat_destino.top - 90)
+    elif numero_mundo == 2 and numero_nivel == 2:
+        # Mundo 2 - Nivel 2: «La plataforma móvil»
+        # El objetivo es conseguir la llave y llegar a la puerta de salida sin caer en el abismo lleno de pinchos.
+        ancho_mundo_nivel = 2200
+        suelo = pygame.Rect(0, ALTO - 80, ancho_mundo_nivel, 80)
+        mundo_rect = pygame.Rect(0, 0, ancho_mundo_nivel, ALTO)
+
+        usar_caja = False
+        usar_soga = True
+        usar_agua = False
+        usar_pinchos = True
+        usar_llave = True
+
+        # Plataforma inicial fija donde inician los personajes (superficie en y=460)
+        plat_inicio = pygame.Rect(0, 460, 360, 26)
+        plat_inicio_base = pygame.Rect(0, 486, 360, suelo.top - 486 + 80)
+
+        # Ambos personajes inician unidos por la soga sobre la plataforma inicial
+        jugador1 = crear_personaje(80, 460 - ALTO_HITBOX, p1_color)
+        jugador2 = crear_personaje(180, 460 - ALTO_HITBOX, p2_color)
+
+        caja = None
+
+        # Abismo continuo con pinchos mortales cubriendo todo el recorrido debajo de la plataforma móvil
+        pozo_nivel = {
+            "x": 360,
+            "y": 570,
+            "ancho": ancho_mundo_nivel - 360,
+            "alto": 70,
+        }
+        pinchos = [pygame.Rect(x, suelo.top - 24, 32, 24) for x in range(366, ancho_mundo_nivel - 20, 35)]
+
+        # Plataforma móvil para cruzar el abismo
+        plataforma_movil = {
+            "rect": pygame.Rect(370, 460, 220, 24),
+            "x": 370.0,
+            "y": 460.0,
+            "x_inicial": 370.0,
+            "y_inicial": 460.0,
+            "ancho": 220,
+            "alto": 24,
+            "x_fin": 1720.0,
+            "velocidad": 1.8,
+            "tiempo_con_peso": 0,
+            "tiempo_activacion": 120,  # ~2 segundos a 60 FPS
+            "tiempo_espera_retorno": 0,
+            "tiempo_max_espera_retorno": 300,  # ~5 segundos a 60 FPS
+            "estado": "esperando_inicio",  # "esperando_inicio", "avanzando", "esperando_retorno", "regresando"
+            "moviendo": False,
+            "llegada": False,
+        }
+
+        # Bloque central sólido en el recorrido de la plataforma que exige coordinar el salto con la soga
+        bloque_central = {
+            "rect": pygame.Rect(1060, 390, 54, 66),
+            "x": 1060,
+            "y": 390,
+            "ancho": 54,
+            "alto": 66,
+        }
+
+        # Plataforma de destino al final del abismo (superficie en y=460)
+        plat_llegada = pygame.Rect(1940, 460, 260, 26)
+        plat_llegada_base = pygame.Rect(1940, 486, 260, suelo.top - 486 + 80)
+
+        plataformas_base = [plat_inicio, plat_inicio_base, plat_llegada, plat_llegada_base, bloque_central["rect"]]
+        plataformas = list(plataformas_base) + [plataforma_movil["rect"]]
+
+        # Llave accesible tras superar el bloque central
+        llave = crear_llave(1420, 460 - 46)
+
+        # Puerta de salida en la plataforma de destino
+        puerta = crear_puerta(2050, 460 - 90)
     else:
         ancho_mundo_nivel = ANCHO_MUNDO
         suelo = pygame.Rect(0, ALTO - 80, ANCHO_MUNDO, 80)
@@ -2016,6 +2153,12 @@ def iniciar_mundo(
     for plat in plataformas:
         if barrera_l_horiz is not None and (plat is barrera_l_horiz or plat is barrera_l_vert):
             continue
+        if bloque_central is not None and plat is bloque_central["rect"]:
+            continue
+        if plataforma_movil is not None and plat is plataforma_movil["rect"]:
+            continue
+        if compuerta is not None and plat is compuerta["rect"]:
+            continue
         if plat.bottom >= suelo.top:
             rect_torre = pygame.Rect(plat.x, plat.y, plat.width, plat.height + 4)
             pygame.draw.rect(mundo_inicio, COLOR_PLATAFORMA, rect_torre, border_top_left_radius=4, border_top_right_radius=4)
@@ -2059,6 +2202,43 @@ def iniciar_mundo(
     if botones_colores is not None:
         dibujar_botones_colores_escenario(mundo_inicio, botones_colores, suelo)
 
+    if boton_compuerta is not None:
+        rect_bc = boton_compuerta["rect"]
+        h_bc = 4 if boton_compuerta["presionado"] else 12
+        y_bc = suelo.top - h_bc
+        pygame.draw.rect(mundo_inicio, (90, 70, 60), (rect_bc.left - 6, suelo.top - 4, rect_bc.width + 12, 10), border_radius=2)
+        col_bc = (220, 200, 60) if boton_compuerta["presionado"] else (245, 175, 40)
+        col_borde_bc = (160, 140, 30) if boton_compuerta["presionado"] else (180, 120, 20)
+        pygame.draw.rect(mundo_inicio, col_bc, (rect_bc.x, y_bc, rect_bc.width, h_bc), border_top_left_radius=3, border_top_right_radius=3)
+        pygame.draw.rect(mundo_inicio, col_borde_bc, (rect_bc.x, y_bc, rect_bc.width, h_bc), width=2, border_top_left_radius=3, border_top_right_radius=3)
+
+    if compuerta is not None and compuerta["rect"].width > 0:
+        cr = compuerta["rect"]
+        pygame.draw.rect(mundo_inicio, COLOR_PLATAFORMA, cr, border_radius=3)
+        pygame.draw.rect(mundo_inicio, COLOR_BORDE_PLATAFORMA, cr, width=2, border_radius=3)
+        for lx in range(cr.left + 12, cr.right - 8, 16):
+            pygame.draw.line(mundo_inicio, COLOR_BORDE_PLATAFORMA, (lx, cr.top + 3), (lx, cr.bottom - 4), 2)
+
+    if bloque_central is not None:
+        br = bloque_central["rect"]
+        pygame.draw.line(mundo_inicio, (110, 100, 95), (br.left + 12, 0), (br.left + 12, br.top), 3)
+        pygame.draw.line(mundo_inicio, (110, 100, 95), (br.right - 12, 0), (br.right - 12, br.top), 3)
+        pygame.draw.circle(mundo_inicio, (70, 65, 60), (br.left + 12, br.top), 4)
+        pygame.draw.circle(mundo_inicio, (70, 65, 60), (br.right - 12, br.top), 4)
+        pygame.draw.rect(mundo_inicio, (220, 50, 50), br, border_radius=4)
+        pygame.draw.rect(mundo_inicio, (140, 25, 25), br, width=2, border_radius=4)
+        for by in range(br.top + 16, br.bottom - 8, 16):
+            pygame.draw.line(mundo_inicio, (160, 30, 30), (br.left + 4, by), (br.right - 4, by), 2)
+
+    if plataforma_movil is not None:
+        pm = plataforma_movil["rect"]
+        pygame.draw.rect(mundo_inicio, COLOR_PLATAFORMA, pm, border_radius=4)
+        pygame.draw.rect(mundo_inicio, COLOR_BORDE_PLATAFORMA, pm, width=2, border_radius=4)
+        for rx in range(pm.left + 15, pm.right - 10, 22):
+            pygame.draw.circle(mundo_inicio, (140, 60, 40), (rx, pm.bottom - 5), 3)
+        col_ind = (80, 220, 100) if plataforma_movil["moviendo"] else ((240, 180, 40) if plataforma_movil["tiempo_con_peso"] > 0 else (180, 80, 55))
+        pygame.draw.circle(mundo_inicio, col_ind, (pm.centerx, pm.centery), 4)
+
     if usar_agua:
         dibujar_agua(mundo_inicio)
     if usar_soga and not p1_completado and not p2_completado:
@@ -2097,118 +2277,112 @@ def iniciar_mundo(
     captura_nuevo_nivel = pantalla.copy()
     animar_apertura_franjas(pantalla, reloj, captura_nuevo_nivel)
 
+    def _reiniciar_nivel_completo():
+        nonlocal p1_completado, p2_completado, mostrar_tutorial, contador_tutorial
+        nonlocal p1_movio, p2_movio, alpha_tut_p1, alpha_tut_p2, p1_soplado, p2_soplado, plataformas
+
+        reiniciar_juego(jugador1, jugador2, caja, llave, puerta, estado_soga=estado_soga)
+        if boton_nivel is not None and pared_nivel is not None:
+            boton_nivel["presionado"] = False
+            pared_nivel["progreso"] = 0.0
+            pared_nivel["y"] = pared_nivel["y_cerrada"]
+            pared_nivel["rect"].y = int(pared_nivel["y_cerrada"])
+        if laser_nivel is not None:
+            laser_nivel["bloqueado"] = False
+            pared_x = laser_nivel.get("pared_der_x", 1100)
+            laser_nivel["x_fin"] = pared_x
+            laser_nivel["rect_dano"].x = laser_nivel["emisor_rect"].right
+            laser_nivel["rect_dano"].width = max(0, pared_x - laser_nivel["emisor_rect"].right)
+        if botones_colores is not None and paredes_colores is not None:
+            for btn in botones_colores:
+                btn["presionado"] = False
+            for pared in paredes_colores:
+                pared["progreso"] = 0.0
+                pared["rect"].y = int(pared["y_cerrada"])
+        if boton_compuerta is not None and compuerta is not None:
+            boton_compuerta["presionado"] = False
+            compuerta["progreso"] = 0.0
+            compuerta["rect"].x = 1700
+            compuerta["rect"].width = 140
+        if plataforma_movil is not None:
+            plataforma_movil["x"] = plataforma_movil["x_inicial"]
+            plataforma_movil["rect"].x = int(plataforma_movil["x_inicial"])
+            plataforma_movil["tiempo_con_peso"] = 0
+            plataforma_movil["tiempo_espera_retorno"] = 0
+            plataforma_movil["estado"] = "esperando_inicio"
+            plataforma_movil["moviendo"] = False
+            plataforma_movil["llegada"] = False
+
+        if plataformas_base is not None:
+            plataformas = list(plataformas_base)
+            if paredes_colores is not None:
+                plataformas.extend([p["rect"] for p in paredes_colores])
+            if compuerta is not None and compuerta["rect"].width > 0:
+                plataformas.append(compuerta["rect"])
+            if plataforma_movil is not None:
+                plataformas.append(plataforma_movil["rect"])
+
+        p1_completado, p2_completado = False, False
+        mostrar_tutorial = (numero_mundo == 1 and numero_nivel == 1)
+        contador_tutorial = 0
+        p1_movio = False
+        p2_movio = False
+        alpha_tut_p1 = 255.0
+        alpha_tut_p2 = 255.0
+        p1_soplado = False
+        p2_soplado = False
+        teclas_sopladas.clear()
+        lineas_viento.clear()
+
+    mundo = pygame.Surface((ancho_mundo_nivel, ALTO)).convert()
     ejecutando = True
     while ejecutando:
         reloj.tick(FPS)
 
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
-                if hay_progreso_sin_guardar(niveles_desbloqueados, snapshot_guardado):
-                    resp = mostrar_dialogo_guardar_salir(
-                        pantalla, reloj,
-                        niveles_desbloqueados=niveles_desbloqueados,
-                        id_partida=partida_id,
-                        nombre_partida=partida_nombre,
-                    )
-                    if resp != "cancelar":
-                        pygame.quit()
-                        sys.exit()
-                else:
+                resp = mostrar_dialogo_guardar_salir(
+                    pantalla, reloj,
+                    niveles_desbloqueados=niveles_desbloqueados,
+                    id_partida=partida_id,
+                    nombre_partida=partida_nombre,
+                )
+                if resp in ("guardar_salir", "salir_sin_guardar"):
                     pygame.quit()
                     sys.exit()
 
             if evento.type == pygame.KEYDOWN:
                 if evento.key == pygame.K_r:
                     if spr_reiniciar_semi and spr_reiniciar_apretado:
-                        animar_pulsacion_boton(pantalla, rect_btn_reiniciar, spr_reiniciar_semi, spr_reiniciar_apretado, fondo_btn_reiniciar)
-                    reiniciar_juego(jugador1, jugador2, caja, llave, puerta, estado_soga=estado_soga)
-                    if boton_nivel is not None and pared_nivel is not None:
-                        boton_nivel["presionado"] = False
-                        pared_nivel["progreso"] = 0.0
-                        pared_nivel["y"] = pared_nivel["y_cerrada"]
-                        pared_nivel["rect"].y = int(pared_nivel["y_cerrada"])
-                    if laser_nivel is not None:
-                        laser_nivel["bloqueado"] = False
-                        pared_x = laser_nivel.get("pared_der_x", 1100)
-                        laser_nivel["x_fin"] = pared_x
-                        laser_nivel["rect_dano"].x = laser_nivel["emisor_rect"].right
-                        laser_nivel["rect_dano"].width = max(0, pared_x - laser_nivel["emisor_rect"].right)
-                    if botones_colores is not None and paredes_colores is not None:
-                        for btn in botones_colores:
-                            btn["presionado"] = False
-                        for pared in paredes_colores:
-                            pared["progreso"] = 0.0
-                            pared["rect"].y = int(pared["y_cerrada"])
-                        if plataformas_base is not None:
-                            plataformas = list(plataformas_base) + [p["rect"] for p in paredes_colores]
-                    p1_completado, p2_completado = False, False
-                    mostrar_tutorial = (numero_mundo == 1 and numero_nivel == 1)
-                    contador_tutorial = 0
-                    p1_movio = False
-                    p2_movio = False
-                    alpha_tut_p1 = 255.0
-                    alpha_tut_p2 = 255.0
-                    p1_soplado = False
-                    p2_soplado = False
-                    teclas_sopladas.clear()
-                    lineas_viento.clear()
+                        fondo_limpio = pantalla.subsurface(rect_btn_reiniciar).copy()
+                        animar_pulsacion_boton(pantalla, rect_btn_reiniciar, spr_reiniciar_semi, spr_reiniciar_apretado, fondo_limpio)
+                    _reiniciar_nivel_completo()
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 if rect_btn_x.collidepoint(evento.pos):
                     if spr_x_semi and spr_x_apretado:
-                        animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, fondo_btn_x)
-                    if hay_progreso_sin_guardar(niveles_desbloqueados, snapshot_guardado):
-                        resp = mostrar_dialogo_guardar_salir(
-                            pantalla, reloj,
-                            niveles_desbloqueados=niveles_desbloqueados,
-                            id_partida=partida_id,
-                            nombre_partida=partida_nombre,
-                        )
-                        if resp != "cancelar":
-                            pygame.quit()
-                            sys.exit()
-                    else:
+                        fondo_limpio = pantalla.subsurface(rect_btn_x).copy()
+                        animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, fondo_limpio)
+                    resp = mostrar_dialogo_guardar_salir(
+                        pantalla, reloj,
+                        niveles_desbloqueados=niveles_desbloqueados,
+                        id_partida=partida_id,
+                        nombre_partida=partida_nombre,
+                    )
+                    if resp in ("guardar_salir", "salir_sin_guardar"):
                         pygame.quit()
                         sys.exit()
 
                 if rect_btn_reiniciar.collidepoint(evento.pos):
                     if spr_reiniciar_semi and spr_reiniciar_apretado:
-                        animar_pulsacion_boton(pantalla, rect_btn_reiniciar, spr_reiniciar_semi, spr_reiniciar_apretado, fondo_btn_reiniciar)
-                    reiniciar_juego(jugador1, jugador2, caja, llave, puerta, estado_soga=estado_soga)
-                    if boton_nivel is not None and pared_nivel is not None:
-                        boton_nivel["presionado"] = False
-                        pared_nivel["progreso"] = 0.0
-                        pared_nivel["y"] = pared_nivel["y_cerrada"]
-                        pared_nivel["rect"].y = int(pared_nivel["y_cerrada"])
-                    if laser_nivel is not None:
-                        laser_nivel["bloqueado"] = False
-                        pared_x = laser_nivel.get("pared_der_x", 1100)
-                        laser_nivel["x_fin"] = pared_x
-                        laser_nivel["rect_dano"].x = laser_nivel["emisor_rect"].right
-                        laser_nivel["rect_dano"].width = max(0, pared_x - laser_nivel["emisor_rect"].right)
-                    if botones_colores is not None and paredes_colores is not None:
-                        for btn in botones_colores:
-                            btn["presionado"] = False
-                        for pared in paredes_colores:
-                            pared["progreso"] = 0.0
-                            pared["rect"].y = int(pared["y_cerrada"])
-                        if plataformas_base is not None:
-                            plataformas = list(plataformas_base) + [p["rect"] for p in paredes_colores]
-                    p1_completado, p2_completado = False, False
-                    mostrar_tutorial = (numero_mundo == 1 and numero_nivel == 1)
-                    contador_tutorial = 0
-                    p1_movio = False
-                    p2_movio = False
-                    alpha_tut_p1 = 255.0
-                    alpha_tut_p2 = 255.0
-                    p1_soplado = False
-                    p2_soplado = False
-                    teclas_sopladas.clear()
-                    lineas_viento.clear()
+                        fondo_limpio = pantalla.subsurface(rect_btn_reiniciar).copy()
+                        animar_pulsacion_boton(pantalla, rect_btn_reiniciar, spr_reiniciar_semi, spr_reiniciar_apretado, fondo_limpio)
+                    _reiniciar_nivel_completo()
 
                 if rect_btn_casa.collidepoint(evento.pos):
                     if spr_casa_semi and spr_casa_apretado:
-                        animar_pulsacion_boton(pantalla, rect_btn_casa, spr_casa_semi, spr_casa_apretado, fondo_btn_casa)
+                        fondo_limpio = pantalla.subsurface(rect_btn_casa).copy()
+                        animar_pulsacion_boton(pantalla, rect_btn_casa, spr_casa_semi, spr_casa_apretado, fondo_limpio)
                     return "menu"
 
         teclas = pygame.key.get_pressed()
@@ -2270,42 +2444,15 @@ def iniciar_mundo(
             mover_izq_p1 = teclas[pygame.K_a]
             mover_der_p1 = teclas[pygame.K_d]
 
-            if jugador1["en_suelo"]:
-                # En suelo: control directo e inmediato
-                if mover_izq_p1 and not mover_der_p1:
-                    jugador1["vel_x"] = -jugador1["velocidad_mov"]
-                    jugador1["moviendo"] = True
-                elif mover_der_p1 and not mover_izq_p1:
-                    jugador1["vel_x"] = jugador1["velocidad_mov"]
-                    jugador1["moviendo"] = True
-                else:
-                    jugador1["vel_x"] = 0
-                    jugador1["moviendo"] = False
+            if mover_izq_p1 and not mover_der_p1:
+                jugador1["vel_x"] = -jugador1["velocidad_mov"]
+                jugador1["moviendo"] = True
+            elif mover_der_p1 and not mover_izq_p1:
+                jugador1["vel_x"] = jugador1["velocidad_mov"]
+                jugador1["moviendo"] = True
             else:
-                # En el aire: inercia aérea y control fluido sin frenazos bruscos
-                if mover_izq_p1 and not mover_der_p1:
-                    target_vx = -jugador1["velocidad_mov"]
-                    jugador1["moviendo"] = True
-                    if jugador1["vel_x"] > 0:
-                        jugador1["vel_x"] += (target_vx - jugador1["vel_x"]) * 0.35
-                    elif jugador1["vel_x"] > target_vx:
-                        jugador1["vel_x"] += (target_vx - jugador1["vel_x"]) * 0.40
-                    else:
-                        jugador1["vel_x"] += (target_vx - jugador1["vel_x"]) * 0.05
-                elif mover_der_p1 and not mover_izq_p1:
-                    target_vx = jugador1["velocidad_mov"]
-                    jugador1["moviendo"] = True
-                    if jugador1["vel_x"] < 0:
-                        jugador1["vel_x"] += (target_vx - jugador1["vel_x"]) * 0.35
-                    elif jugador1["vel_x"] < target_vx:
-                        jugador1["vel_x"] += (target_vx - jugador1["vel_x"]) * 0.40
-                    else:
-                        jugador1["vel_x"] += (target_vx - jugador1["vel_x"]) * 0.05
-                else:
-                    jugador1["moviendo"] = False
-                    jugador1["vel_x"] *= 0.92
-                    if abs(jugador1["vel_x"]) < 0.15:
-                        jugador1["vel_x"] = 0
+                jugador1["vel_x"] = 0
+                jugador1["moviendo"] = False
 
             if salto_p1_pedido:
                 impulso = 0
@@ -2319,42 +2466,15 @@ def iniciar_mundo(
             mover_izq_p2 = teclas[pygame.K_LEFT]
             mover_der_p2 = teclas[pygame.K_RIGHT]
 
-            if jugador2["en_suelo"]:
-                # En suelo: control directo e inmediato
-                if mover_izq_p2 and not mover_der_p2:
-                    jugador2["vel_x"] = -jugador2["velocidad_mov"]
-                    jugador2["moviendo"] = True
-                elif mover_der_p2 and not mover_izq_p2:
-                    jugador2["vel_x"] = jugador2["velocidad_mov"]
-                    jugador2["moviendo"] = True
-                else:
-                    jugador2["vel_x"] = 0
-                    jugador2["moviendo"] = False
+            if mover_izq_p2 and not mover_der_p2:
+                jugador2["vel_x"] = -jugador2["velocidad_mov"]
+                jugador2["moviendo"] = True
+            elif mover_der_p2 and not mover_izq_p2:
+                jugador2["vel_x"] = jugador2["velocidad_mov"]
+                jugador2["moviendo"] = True
             else:
-                # En el aire: inercia aérea y control fluido sin frenazos bruscos
-                if mover_izq_p2 and not mover_der_p2:
-                    target_vx = -jugador2["velocidad_mov"]
-                    jugador2["moviendo"] = True
-                    if jugador2["vel_x"] > 0:
-                        jugador2["vel_x"] += (target_vx - jugador2["vel_x"]) * 0.35
-                    elif jugador2["vel_x"] > target_vx:
-                        jugador2["vel_x"] += (target_vx - jugador2["vel_x"]) * 0.40
-                    else:
-                        jugador2["vel_x"] += (target_vx - jugador2["vel_x"]) * 0.05
-                elif mover_der_p2 and not mover_izq_p2:
-                    target_vx = jugador2["velocidad_mov"]
-                    jugador2["moviendo"] = True
-                    if jugador2["vel_x"] < 0:
-                        jugador2["vel_x"] += (target_vx - jugador2["vel_x"]) * 0.35
-                    elif jugador2["vel_x"] < target_vx:
-                        jugador2["vel_x"] += (target_vx - jugador2["vel_x"]) * 0.40
-                    else:
-                        jugador2["vel_x"] += (target_vx - jugador2["vel_x"]) * 0.05
-                else:
-                    jugador2["moviendo"] = False
-                    jugador2["vel_x"] *= 0.92
-                    if abs(jugador2["vel_x"]) < 0.15:
-                        jugador2["vel_x"] = 0
+                jugador2["vel_x"] = 0
+                jugador2["moviendo"] = False
 
             if salto_p2_pedido:
                 impulso = 0
@@ -2453,6 +2573,115 @@ def iniciar_mundo(
                         paredes_solidas.append(p_col["rect"])
             plataformas = plataformas_base + paredes_solidas
 
+        if boton_compuerta is not None:
+            pj_sobre = False
+            rb = boton_compuerta["rect"]
+            for p, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]:
+                if not comp and not p["muerto"]:
+                    hb = p["hitbox"]
+                    if (
+                        hb.right > rb.left + 6
+                        and hb.left < rb.right - 6
+                        and abs(hb.bottom - suelo.top) <= 8
+                        and (p["en_suelo"] or abs(p["vel_y"]) <= 1.5)
+                    ):
+                        pj_sobre = True
+                        break
+            boton_compuerta["presionado"] = pj_sobre
+
+        if compuerta is not None:
+            vel_comp = 0.06
+            if boton_compuerta is not None and boton_compuerta["presionado"]:
+                if compuerta["progreso"] < 1.0:
+                    compuerta["progreso"] = min(1.0, compuerta["progreso"] + vel_comp)
+            else:
+                rect_espacio_hueco = pygame.Rect(1700, 460, 140, 60)
+                jugador_en_espacio = any(
+                    not pj["muerto"] and not comp and pj["hitbox"].colliderect(rect_espacio_hueco)
+                    for pj, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]
+                )
+                if not jugador_en_espacio:
+                    if compuerta["progreso"] > 0.0:
+                        compuerta["progreso"] = max(0.0, compuerta["progreso"] - vel_comp)
+
+            comp_x = 1700 + int(140 * compuerta["progreso"])
+            compuerta["rect"].x = comp_x
+            compuerta["rect"].width = max(0, 1840 - comp_x)
+
+            if compuerta["progreso"] < 0.75:
+                solapado_comp = any(
+                    not pj["muerto"] and not comp and pj["hitbox"].colliderect(compuerta["rect"])
+                    for pj, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]
+                )
+                if not solapado_comp and compuerta["rect"].width > 0:
+                    if compuerta["rect"] not in plataformas:
+                        plataformas.append(compuerta["rect"])
+
+        if plataforma_movil is not None:
+            pm_rect = plataforma_movil["rect"]
+            pjs_sobre = []
+            for pj, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]:
+                if not comp and not pj["muerto"]:
+                    hb = pj["hitbox"]
+                    if (
+                        hb.right > pm_rect.left + 4
+                        and hb.left < pm_rect.right - 4
+                        and abs(hb.bottom - pm_rect.top) <= 8
+                        and (pj["en_suelo"] or abs(pj["vel_y"]) <= 2.0)
+                    ):
+                        pjs_sobre.append(pj)
+
+            estado_pm = plataforma_movil.get("estado", "esperando_inicio")
+
+            if estado_pm == "esperando_inicio":
+                if len(pjs_sobre) > 0:
+                    plataforma_movil["tiempo_con_peso"] += 1
+                    if plataforma_movil["tiempo_con_peso"] >= plataforma_movil.get("tiempo_activacion", 120):
+                        plataforma_movil["estado"] = "avanzando"
+                        plataforma_movil["moviendo"] = True
+                else:
+                    plataforma_movil["tiempo_con_peso"] = 0
+
+            elif estado_pm == "avanzando":
+                vel = plataforma_movil["velocidad"]
+                x_fin = plataforma_movil.get("x_fin", 1720.0)
+                if plataforma_movil["x"] + vel >= x_fin:
+                    plataforma_movil["x"] = x_fin
+                    plataforma_movil["estado"] = "esperando_retorno"
+                    plataforma_movil["moviendo"] = False
+                    plataforma_movil["llegada"] = True
+                    plataforma_movil["tiempo_espera_retorno"] = 0
+                else:
+                    plataforma_movil["x"] += vel
+                plataforma_movil["rect"].x = int(plataforma_movil["x"])
+
+            elif estado_pm == "esperando_retorno":
+                plataforma_movil["moviendo"] = False
+                plataforma_movil["tiempo_espera_retorno"] += 1
+                if plataforma_movil["tiempo_espera_retorno"] >= plataforma_movil.get("tiempo_max_espera_retorno", 300):
+                    plataforma_movil["estado"] = "regresando"
+                    plataforma_movil["moviendo"] = True
+                    plataforma_movil["llegada"] = False
+
+            elif estado_pm == "regresando":
+                vel = plataforma_movil["velocidad"]
+                x_ini = plataforma_movil["x_inicial"]
+                if plataforma_movil["x"] - vel <= x_ini:
+                    plataforma_movil["x"] = x_ini
+                    plataforma_movil["estado"] = "esperando_inicio"
+                    plataforma_movil["moviendo"] = False
+                    plataforma_movil["tiempo_con_peso"] = 0
+                    plataforma_movil["tiempo_espera_retorno"] = 0
+                else:
+                    plataforma_movil["x"] -= vel
+                plataforma_movil["rect"].x = int(plataforma_movil["x"])
+
+            # Los personajes deben tener que moverse para mantenerse sobre la plataforma
+            # (No se traslada artificialmente pj["hitbox"].x += dx)
+
+            if plataformas_base is not None:
+                plataformas = list(plataformas_base) + [plataforma_movil["rect"]]
+
         if usar_caja:
             actualizar_caja(caja, suelo, mundo_rect, plataformas)
             if numero_mundo == 1 and numero_nivel == 4 and caja is not None:
@@ -2472,6 +2701,11 @@ def iniciar_mundo(
         if usar_pinchos:
             if not p1_completado: comprobar_pinchos(jugador1, pinchos)
             if not p2_completado: comprobar_pinchos(jugador2, pinchos)
+
+        if usar_soga:
+            for pj in (jugador1, jugador2):
+                if not pj["muerto"] and pj["hitbox"].top >= ALTO - 50:
+                    matar_personaje(pj)
 
         if laser_nivel is not None:
             em = laser_nivel["emisor_rect"]
@@ -2541,7 +2775,6 @@ def iniciar_mundo(
                 p2_completado = True
                 jugador2["hitbox"].x = -9999
 
-        mundo = pygame.Surface((ancho_mundo_nivel, ALTO))
         mundo.fill((255, 240, 195))
 
         if pozo_nivel is not None:
@@ -2553,6 +2786,12 @@ def iniciar_mundo(
         plats_dibujar = plataformas_base if (paredes_colores is not None and plataformas_base is not None) else plataformas
         for plat in plats_dibujar:
             if barrera_l_horiz is not None and (plat is barrera_l_horiz or plat is barrera_l_vert):
+                continue
+            if compuerta is not None and plat is compuerta["rect"]:
+                continue
+            if bloque_central is not None and plat is bloque_central["rect"]:
+                continue
+            if plataforma_movil is not None and plat is plataforma_movil["rect"]:
                 continue
             if plat.bottom >= suelo.top:
                 rect_torre = pygame.Rect(plat.x, plat.y, plat.width, plat.height + 4)
@@ -2571,6 +2810,54 @@ def iniciar_mundo(
 
         if pinchos:
             dibujar_pinchos_escenario(mundo, pinchos)
+
+        if compuerta is not None and compuerta["rect"].width > 0:
+            c_rect = compuerta["rect"]
+            pygame.draw.rect(mundo, (180, 85, 60), c_rect, border_radius=3)
+            pygame.draw.rect(mundo, (120, 45, 30), c_rect, width=2, border_radius=3)
+            for lx in range(c_rect.left + 14, c_rect.right - 6, 18):
+                pygame.draw.line(mundo, (130, 55, 35), (lx, c_rect.top + 3), (lx, c_rect.bottom - 4), 2)
+
+        if boton_compuerta is not None:
+            rect_bc = boton_compuerta["rect"]
+            h_bc = 4 if boton_compuerta["presionado"] else 12
+            y_bc = suelo.top - h_bc
+            pygame.draw.rect(mundo, (85, 70, 60), (rect_bc.left - 6, suelo.top - 4, rect_bc.width + 12, 10), border_radius=2)
+            col_bc = (70, 205, 120) if boton_compuerta["presionado"] else (210, 85, 45)
+            col_borde_bc = (40, 150, 80) if boton_compuerta["presionado"] else (150, 45, 25)
+            pygame.draw.rect(mundo, col_bc, (rect_bc.x, y_bc, rect_bc.width, h_bc), border_top_left_radius=3, border_top_right_radius=3)
+            pygame.draw.rect(mundo, col_borde_bc, (rect_bc.x, y_bc, rect_bc.width, h_bc), width=2, border_top_left_radius=3, border_top_right_radius=3)
+
+        if bloque_central is not None:
+            bc = bloque_central["rect"]
+            pygame.draw.rect(mundo, (220, 50, 50), bc, border_radius=4)
+            pygame.draw.rect(mundo, (140, 25, 25), bc, width=2, border_radius=4)
+            for by in range(bc.top + 16, bc.bottom - 8, 16):
+                pygame.draw.line(mundo, (160, 30, 30), (bc.left + 4, by), (bc.right - 4, by), 2)
+
+        if plataforma_movil is not None:
+            pm = plataforma_movil["rect"]
+            pygame.draw.rect(mundo, (215, 105, 75), pm, border_radius=5)
+            pygame.draw.rect(mundo, (150, 60, 40), pm, width=2, border_radius=5)
+            for rx in range(pm.left + 16, pm.right - 8, 24):
+                pygame.draw.circle(mundo, (140, 60, 40), (rx, pm.bottom - 5), 3)
+
+            estado_pm = plataforma_movil.get("estado", "esperando_inicio")
+            if estado_pm == "esperando_retorno":
+                t_esp = plataforma_movil.get("tiempo_espera_retorno", 0)
+                parpadeo = (t_esp // 15) % 2 == 0
+                col_luz = (255, 235, 40) if parpadeo else (100, 85, 20)
+                col_halo = (255, 245, 120) if parpadeo else (70, 60, 15)
+                if parpadeo:
+                    pygame.draw.circle(mundo, col_halo, (pm.centerx, pm.centery), 8)
+                pygame.draw.circle(mundo, col_luz, (pm.centerx, pm.centery), 5)
+                pygame.draw.circle(mundo, (255, 255, 200) if parpadeo else (60, 50, 10), (pm.centerx, pm.centery), 5, width=1)
+            elif estado_pm in ("avanzando", "regresando"):
+                pygame.draw.circle(mundo, (80, 220, 100), (pm.centerx, pm.centery), 5)
+                pygame.draw.circle(mundo, (180, 255, 190), (pm.centerx, pm.centery), 5, width=1)
+            else:
+                col_ind = (240, 180, 40) if plataforma_movil.get("tiempo_con_peso", 0) > 0 else (180, 80, 55)
+                pygame.draw.circle(mundo, col_ind, (pm.centerx, pm.centery), 4)
 
         if boton_nivel is not None:
             rect_b = boton_nivel["rect"]
@@ -2654,13 +2941,6 @@ def iniciar_mundo(
 
         # Botones HUD en la esquina superior derecha solo si el nivel continúa activo
         if not (p1_completado and p2_completado):
-            try:
-                fondo_btn_casa = pantalla.subsurface(rect_btn_casa).copy()
-                fondo_btn_reiniciar = pantalla.subsurface(rect_btn_reiniciar).copy()
-                fondo_btn_x = pantalla.subsurface(rect_btn_x).copy()
-            except Exception:
-                pass
-
             pos_m_hud = pygame.mouse.get_pos()
             spr_c_hud = spr_casa_hover if (rect_btn_casa.collidepoint(pos_m_hud) and spr_casa_hover) else spr_casa_normal
             spr_r_hud = spr_reiniciar_hover if (rect_btn_reiniciar.collidepoint(pos_m_hud) and spr_reiniciar_hover) else spr_reiniciar_normal
@@ -2676,37 +2956,7 @@ def iniciar_mundo(
             resultado = pantalla_muerte(pantalla, reloj)
             if resultado == "salir": return "salir"
             if resultado == "reiniciar":
-                reiniciar_juego(jugador1, jugador2, caja, llave, puerta, estado_soga=estado_soga)
-                if boton_nivel is not None and pared_nivel is not None:
-                    boton_nivel["presionado"] = False
-                    pared_nivel["progreso"] = 0.0
-                    pared_nivel["y"] = pared_nivel["y_cerrada"]
-                    pared_nivel["rect"].y = int(pared_nivel["y_cerrada"])
-                if laser_nivel is not None:
-                    laser_nivel["bloqueado"] = False
-                    pared_x = laser_nivel.get("pared_der_x", 1100)
-                    laser_nivel["x_fin"] = pared_x
-                    laser_nivel["rect_dano"].x = laser_nivel["emisor_rect"].right
-                    laser_nivel["rect_dano"].width = max(0, pared_x - laser_nivel["emisor_rect"].right)
-                if botones_colores is not None and paredes_colores is not None:
-                    for btn in botones_colores:
-                        btn["presionado"] = False
-                    for pared in paredes_colores:
-                        pared["progreso"] = 0.0
-                        pared["rect"].y = int(pared["y_cerrada"])
-                    if plataformas_base is not None:
-                        plataformas = list(plataformas_base) + [p["rect"] for p in paredes_colores]
-                p1_completado, p2_completado = False, False
-                mostrar_tutorial = (numero_mundo == 1 and numero_nivel == 1)
-                contador_tutorial = 0
-                p1_movio = False
-                p2_movio = False
-                alpha_tut_p1 = 255.0
-                alpha_tut_p2 = 255.0
-                p1_soplado = False
-                p2_soplado = False
-                teclas_sopladas.clear()
-                lineas_viento.clear()
+                _reiniciar_nivel_completo()
 
         if p1_completado and p2_completado:
             cam_puerta_x = max(0, min(puerta["rect"].centerx - ANCHO // 2, ancho_mundo_nivel - ANCHO)) if puerta else 0

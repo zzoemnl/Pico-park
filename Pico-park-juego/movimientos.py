@@ -1,3 +1,5 @@
+import math
+import random
 import pygame
 from sprites import (
     ANCHO,
@@ -8,7 +10,7 @@ from sprites import (
     cargar_sprites_puerta,
 )
 
-GRAVEDAD = 0.8
+GRAVEDAD = 0.85
 ANCHO_HITBOX = 50
 ALTO_HITBOX = 85
 TAMANO_CAJA = 60
@@ -25,8 +27,8 @@ def crear_personaje(x, y, color_carpeta="Blanco"):
         "hitbox": pygame.Rect(x, y, ANCHO_HITBOX, ALTO_HITBOX),
         "vel_x": 0,
         "vel_y": 0,
-        "velocidad_mov": 5,
-        "fuerza_salto": -15,
+        "velocidad_mov": 6,
+        "fuerza_salto": -15.5,
         "en_suelo": False,
         "en_agua": False,
         "sprites": cargar_sprites(color_carpeta),
@@ -48,6 +50,9 @@ def crear_personaje(x, y, color_carpeta="Blanco"):
 def reiniciar_juego(p1, p2, caja=None, llave=None, puerta=None, estado_soga=None):
     if estado_soga is not None:
         estado_soga["tension"] = 0.0
+        estado_soga["rota"] = False
+        estado_soga["en_muerte"] = False
+        estado_soga["particulas_rotura"] = []
 
     for p in (p1, p2):
         p["hitbox"].x = p["x_inicial"]
@@ -107,16 +112,18 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, 
     if plataformas:
         for plat in plataformas:
             if hb1.colliderect(plat):
-                # Solo colisiona de costado si está claramente a la altura lateral (no parado arriba)
-                if hb1.bottom > plat.top + 10 and hb1.top < plat.bottom - 10:
-                    if p1["vel_x"] > 0:
+                # Colisión lateral sólida con la plataforma u obstáculo
+                if hb1.bottom > plat.top + 4 and hb1.top < plat.bottom - 4:
+                    if x_inicio + hb1.width <= plat.left + max(8, abs(int(p1["vel_x"])) + 2) or hb1.centerx < plat.centerx:
                         hb1.right = plat.left
-                        p1["vel_x"] = 0
+                        if p1["vel_x"] > 0:
+                            p1["vel_x"] = 0
                         p1["empujando"] = True
                         p1["direccion_empuje"] = 1
-                    elif p1["vel_x"] < 0:
+                    else:
                         hb1.left = plat.right
-                        p1["vel_x"] = 0
+                        if p1["vel_x"] < 0:
+                            p1["vel_x"] = 0
                         p1["empujando"] = True
                         p1["direccion_empuje"] = -1
 
@@ -164,13 +171,13 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, 
     toco_superficie = False
     if plataformas:
         for plat in plataformas:
-            if hb1.right > plat.left and hb1.left < plat.right:
-                if p1["vel_y"] >= 0 and hb1.bottom >= plat.top and y_inicio + hb1.height <= plat.top + max(12, int(p1["vel_y"]) + 10):
+            if hb1.right > plat.left + 2 and hb1.left < plat.right - 2:
+                if p1["vel_y"] >= 0 and hb1.bottom >= plat.top and y_inicio + hb1.height <= plat.top + max(14, int(p1["vel_y"]) + 10):
                     hb1.bottom = plat.top
                     p1["vel_y"] = 0
                     p1["en_suelo"] = True
                     toco_superficie = True
-                elif p1["vel_y"] < 0 and hb1.top <= plat.bottom and y_inicio >= plat.bottom - 10:
+                elif p1["vel_y"] < 0 and hb1.top <= plat.bottom and y_inicio >= plat.bottom - max(12, abs(int(p1["vel_y"])) + 4):
                     hb1.top = plat.bottom
                     p1["vel_y"] = 0
 
@@ -361,7 +368,67 @@ def empujar_caja(p, caja, otro=None, pantalla_rect=None, plataformas=None):
 def crear_estado_soga():
     return {
         "tension": 0.0,
+        "rota": False,
+        "en_muerte": False,
+        "particulas_rotura": [],
     }
+
+
+def actualizar_estado_soga_muerte(p1, p2, estado_soga=None, d_max=DISTANCIA_SOGA_MAXIMA):
+    """
+    Gestiona el comportamiento de la soga cuando uno de los personajes muere en el Mundo 2:
+    - Permite un estiramiento adicional exclusivo de 10 px por encima de d_max (hasta d_max + 10).
+    - Al superar ese límite adicional, la soga se rompe de forma visible.
+    - Deja de ejercer fuerza física tras romperse.
+    - El personaje muerto continúa cayendo libremente sin interferencias ni tirones.
+    """
+    if estado_soga is None:
+        return
+
+    en_muerte = p1.get("muerto", False) or p2.get("muerto", False)
+    if not en_muerte:
+        return
+
+    if not estado_soga.get("en_muerte", False):
+        estado_soga["en_muerte"] = True
+
+    if not estado_soga.get("rota", False):
+        c1 = pygame.Vector2(p1["hitbox"].centerx, p1["hitbox"].centery + 4)
+        c2 = pygame.Vector2(p2["hitbox"].centerx, p2["hitbox"].centery + 4)
+        distancia = (c2 - c1).length()
+        limite_muerte = d_max + 10.0  # 160 + 10 = 170
+
+        if distancia >= limite_muerte:
+            estado_soga["rota"] = True
+            estado_soga["tension"] = 0.0
+
+            # Generar partículas de rotura en el punto de ruptura
+            mid = (c1 + c2) * 0.5
+            particulas = []
+            for i in range(8):
+                ang = i * (math.pi / 4.0) + random.uniform(-0.2, 0.2)
+                spd = random.uniform(1.5, 3.5)
+                particulas.append({
+                    "x": mid.x + random.uniform(-3, 3),
+                    "y": mid.y + random.uniform(-3, 3),
+                    "vx": math.cos(ang) * spd,
+                    "vy": math.sin(ang) * spd - 1.0,
+                    "vida": random.randint(20, 35),
+                })
+            estado_soga["particulas_rotura"] = particulas
+    else:
+        estado_soga["tension"] = 0.0
+
+    # Actualizar partículas existentes
+    particulas_activas = []
+    for part in estado_soga.get("particulas_rotura", []):
+        part["x"] += part["vx"]
+        part["y"] += part["vy"]
+        part["vy"] += 0.25
+        part["vida"] -= 1
+        if part["vida"] > 0:
+            particulas_activas.append(part)
+    estado_soga["particulas_rotura"] = particulas_activas
 
 
 def actualizar_fisica_soga(p1, p2, estado_soga=None, d_reposo=DISTANCIA_SOGA_REPOSO, d_max=DISTANCIA_SOGA_MAXIMA):
@@ -376,7 +443,8 @@ def actualizar_fisica_soga(p1, p2, estado_soga=None, d_reposo=DISTANCIA_SOGA_REP
       * Trata por separado la componente longitudinal (a lo largo de la soga) de la transversal,
         evitando que la gravedad o el desplazamiento horizontal interfieran de forma artificial.
     """
-    if p1.get("muerto", False) or p2.get("muerto", False):
+    if p1.get("muerto", False) or p2.get("muerto", False) or (estado_soga is not None and estado_soga.get("rota", False)):
+        actualizar_estado_soga_muerte(p1, p2, estado_soga, d_max)
         if estado_soga is not None:
             estado_soga["tension"] = 0.0
         return
@@ -513,7 +581,7 @@ def aplicar_restriccion_soga(p1, p2, distancia_maxima=DISTANCIA_SOGA_MAXIMA, pla
     - No arrastra al personaje que está quieto en el suelo.
     - Permite al personaje en el suelo moverse cuando el otro cuelga en el aire.
     """
-    if p1.get("muerto", False) or p2.get("muerto", False):
+    if p1.get("muerto", False) or p2.get("muerto", False) or (estado_soga is not None and estado_soga.get("rota", False)):
         return
 
     c1 = pygame.Vector2(p1["hitbox"].centerx, p1["hitbox"].centery + 4)

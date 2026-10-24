@@ -26,11 +26,18 @@ ESTADOS_PERSONAJE = [
 ]
 
 
+_CACHE_BOTONES = {}
+
+
 def cargar_boton(nombre):
     """
     Carga un sprite de botón desde la carpeta Sprites/Botones o cualquiera de sus subcarpetas.
     Permite especificar nombres con o sin subcarpeta (ej. 'boton-volver.png' o 'mundos/boton-volver.png').
+    Utiliza caché en memoria para evitar accesos repetitivos a disco y escaneos de carpetas.
     """
+    if nombre in _CACHE_BOTONES:
+        return _CACHE_BOTONES[nombre]
+
     def _cargar(ruta_archivo):
         try:
             img = pygame.image.load(ruta_archivo)
@@ -47,6 +54,7 @@ def cargar_boton(nombre):
     if os.path.isfile(ruta):
         res = _cargar(ruta)
         if res:
+            _CACHE_BOTONES[nombre] = res
             return res
 
     solo_nombre = os.path.basename(nombre_norm)
@@ -54,8 +62,10 @@ def cargar_boton(nombre):
         if solo_nombre in archivos:
             res = _cargar(os.path.join(raiz, solo_nombre))
             if res:
+                _CACHE_BOTONES[nombre] = res
                 return res
 
+    _CACHE_BOTONES[nombre] = None
     return None
 
 
@@ -115,12 +125,12 @@ def aplicar_tinta(imagen_base, color_rgb):
     """
     Pinta el personaje base con el color seleccionado manteniendo ojos, bordes y transparencia.
     """
-    if color_rgb is None or not isinstance(color_rgb, (tuple, list)):
+    if color_rgb is None or not isinstance(color_rgb, (tuple, list)) or color_rgb[:3] == (255, 255, 255):
         return imagen_base
 
     img_tintada = imagen_base.copy()
     superficie_color = pygame.Surface(img_tintada.get_size(), flags=pygame.SRCALPHA)
-    superficie_color.fill((*color_rgb, 255))
+    superficie_color.fill((*color_rgb[:3], 255))
     img_tintada.blit(superficie_color, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
     return img_tintada
 
@@ -291,8 +301,9 @@ def dibujar_personaje(pantalla, p, zona_agua=None):
     estado = obtener_estado(p)
     sprite_base = p["sprites"].get(estado, p["sprites"]["quieto"])
 
-    if p.get("color") is not None:
-        sprite = aplicar_tinta(sprite_base, p["color"])
+    col = p.get("color")
+    if col is not None and col[:3] != (255, 255, 255):
+        sprite = aplicar_tinta(sprite_base, col)
     else:
         sprite = sprite_base
 
@@ -319,6 +330,7 @@ def dibujar_personaje(pantalla, p, zona_agua=None):
 
 
 COLOR_AGUA = (0, 140, 240, 130)
+_CACHE_AGUA = {}
 
 
 def dibujar_agua(pantalla, zona_agua=None):
@@ -326,13 +338,16 @@ def dibujar_agua(pantalla, zona_agua=None):
     Dibuja la masa de agua translúcida sobre el escenario.
     Usa una superficie con canal alfa (SRCALPHA) para que los personajes
     y plataformas se vean sumergidos debajo.
+    Utiliza caché para no crear una superficie gigante de 3000x420 en cada frame.
     """
     if zona_agua is None:
         zona_agua = pygame.Rect(0, 220, ANCHO, ALTO - 80 - 220)
 
-    superficie = pygame.Surface(
-        (zona_agua.width, zona_agua.height),
-        pygame.SRCALPHA
-    )
-    superficie.fill(COLOR_AGUA)
+    clave = (zona_agua.width, zona_agua.height)
+    superficie = _CACHE_AGUA.get(clave)
+    if superficie is None:
+        superficie = pygame.Surface(clave, pygame.SRCALPHA)
+        superficie.fill(COLOR_AGUA)
+        _CACHE_AGUA[clave] = superficie
+
     pantalla.blit(superficie, (zona_agua.x, zona_agua.y))

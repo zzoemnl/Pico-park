@@ -602,6 +602,14 @@ def _crear_m1_n5():
             # Botón Azul sin presionar
             pygame.draw.rect(s, col, (xb, y_suelo - 4, 12, 4), border_radius=1)
 
+    # Compuerta mecánica en la abertura de descenso
+    pygame.draw.rect(s, (180, 85, 60), (138, y_div, 6, 6))
+    pygame.draw.rect(s, (120, 45, 30), (138, y_div, 6, 6), 1)
+
+    # Botón inferior para la compuerta junto al hueco
+    pygame.draw.rect(s, (70, 60, 55), (130, y_suelo - 1, 14, 2))
+    pygame.draw.rect(s, (210, 85, 45), (132, y_suelo - 4, 10, 4), border_radius=1)
+
     pj1 = _cargar_personaje("Celeste")
     pj2 = _cargar_personaje("Violeta")
     llave = _cargar_llave()
@@ -620,16 +628,19 @@ def _crear_m1_n5():
 
 
 def _crear_m2_n1():
-    """2-1: El arrastre básico (Introducción a la soga: personajes unidos, escalones, plataformas de salto, llave y puerta)."""
+    """2-1: El arrastre básico (Introducción a la soga: personajes unidos, escalones, plataformas de salto, abismo con pinchos extendidos hasta el final, llave y puerta)."""
     s = pygame.Surface((ANCHO_MINI, ALTO_MINI))
     s.fill(COL_FONDO_M1)
 
     y_suelo = 94
 
-    # Suelo seguro continuo
-    pygame.draw.rect(s, COL_SUELO_M1, (0, y_suelo, ANCHO_MINI, ALTO_MINI - y_suelo))
-    pygame.draw.line(s, (245, 140, 110), (0, y_suelo), (ANCHO_MINI, y_suelo), 1)
-    pygame.draw.rect(s, COL_BORDE_PLAT, (0, y_suelo, ANCHO_MINI, ALTO_MINI - y_suelo), 1)
+    # Suelo seguro inicial y abismo continuo con pinchos hasta el final
+    pygame.draw.rect(s, COL_SUELO_M1, (0, y_suelo, 76, ALTO_MINI - y_suelo))
+    pygame.draw.line(s, (245, 140, 110), (0, y_suelo), (76, y_suelo), 1)
+    pygame.draw.rect(s, COL_BORDE_PLAT, (0, y_suelo, 76, ALTO_MINI - y_suelo), 1)
+
+    pygame.draw.rect(s, (45, 35, 35), (76, 96, ANCHO_MINI - 76, ALTO_MINI - 96))
+    _dibujar_pinchos(s, 76, ANCHO_MINI, 96, hacia_arriba=True)
 
     # 1. Escalones para subir juntos
     pygame.draw.rect(s, COL_PLATAFORMA_M1, (36, 84, 18, 10), border_radius=2)
@@ -670,7 +681,7 @@ def _crear_m2_n1():
 
 
 def _crear_m2_n2():
-    """2-2: La plataforma móvil (Plataforma sobre abismo con pinchos, bloque obstáculo, llave)."""
+    """2-2: La plataforma móvil (Plataforma sobre abismo con pinchos, bloque obstáculo, llave y puerta)."""
     s = pygame.Surface((ANCHO_MINI, ALTO_MINI))
     s.fill(COL_FONDO_M1)
 
@@ -695,6 +706,7 @@ def _crear_m2_n2():
     pj1 = _cargar_personaje("Celeste")
     pj2 = _cargar_personaje("Violeta")
     llave = _cargar_llave()
+    puerta = _crear_puerta_original()
 
     pos1 = (46, 66 - 20)
     pos2 = (90, 66 - 20)
@@ -703,6 +715,7 @@ def _crear_m2_n2():
     s.blit(pj1, pos1)
     s.blit(pj2, pos2)
     s.blit(llave, (126, 52))
+    s.blit(puerta, (154, 78 - 26))
     return s
 
 
