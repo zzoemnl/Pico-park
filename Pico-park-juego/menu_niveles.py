@@ -2,6 +2,14 @@ import os
 import math
 import pygame
 
+from fuentes import (
+    obtener_fuente_titulo,
+    obtener_fuente_boton,
+    TAMANO_TITULO,
+    TAMANO_TITULO_MODAL,
+    TAMANO_CARD,
+)
+
 # Paletas de colores del menú
 COL_CIELO = (244, 238, 226)
 COL_PANEL = (253, 246, 233)
@@ -83,22 +91,38 @@ def obtener_thumbnails():
     return obtener_miniaturas()
 
 
+_CACHE_THUMBS_SCALED = {}
+
+
+def _obtener_thumb_escalada(mundo, nivel, thumb_orig, w_target=196, h_target=125):
+    """Retorna la miniatura escalada y cacheada para las tarjetas de nivel ampliadas."""
+    clave = (mundo, nivel, w_target, h_target)
+    if clave in _CACHE_THUMBS_SCALED:
+        return _CACHE_THUMBS_SCALED[clave]
+    try:
+        surf = pygame.transform.smoothscale(thumb_orig, (w_target, h_target))
+    except Exception:
+        surf = pygame.transform.scale(thumb_orig, (w_target, h_target))
+    _CACHE_THUMBS_SCALED[clave] = surf
+    return surf
+
+
 def obtener_geometria_menu(ancho_pantalla, alto_pantalla):
     """
     Calcula dinámicamente los rectángulos interactivos del menú
-    adaptados a la resolución actual del juego.
+    adaptados a la resolución actual del juego con botones grandes y cómodos.
     """
-    w_panel = min(1140, int(ancho_pantalla * 0.90))
-    h_panel = min(330, int(alto_pantalla * 0.49))
+    w_panel = min(1200, int(ancho_pantalla * 0.94))
+    h_panel = min(425, int(alto_pantalla * 0.60))
     x_panel = (ancho_pantalla - w_panel) // 2
-    y_panel = (alto_pantalla - h_panel) // 2 + 35
+    y_panel = 175
 
     # Pestañas
-    w_tab = min(230, int((w_panel - 80) / 3))
+    w_tab = min(240, int((w_panel - 80) / 3))
     h_tab_activa = 58
     h_tab_inactiva = 48
-    gap_tab = 10
-    x_tabs_start = x_panel + 35
+    gap_tab = 12
+    x_tabs_start = x_panel + 40
 
     rects_tabs = {}
     for m in (1, 2, 3):
@@ -112,12 +136,12 @@ def obtener_geometria_menu(ancho_pantalla, alto_pantalla):
             "h_inactiva": h_tab_inactiva,
         }
 
-    # Tarjetas de nivel (5 columnas en una sola fila)
+    # Tarjetas de nivel (5 columnas en una sola fila con proporciones amplias)
     pad_x = 20
-    pad_y = 20
-    gap_cards = 16
-    w_card = (w_panel - 2 * pad_x - 4 * gap_cards) // 5
-    h_card = h_panel - 2 * pad_y
+    pad_y = 18
+    gap_cards = 15
+    w_card = (w_panel - 2 * pad_x - 4 * gap_cards) // 5  # 220 px a 1200px de panel
+    h_card = h_panel - 2 * pad_y                         # 389 px
 
     rects_cards = []
     for i in range(5):
@@ -129,20 +153,23 @@ def obtener_geometria_menu(ancho_pantalla, alto_pantalla):
     return rect_panel, rects_tabs, rects_cards
 
 
-def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mouse, fuentes):
+def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mouse, fuentes=None):
     """
     Dibuja la pantalla completa de selección de niveles con estética pixel art Pico Park:
     - Fondo de paisaje pastel con nubes y cactus.
     - Pestañas superiores estilizadas para cada mundo con mascota de gato.
-    - Panel contenedor con 5 tarjetas horizontales, miniaturas, nombres y estrellas.
+    - Panel contenedor con 5 botones/tarjetas grandes, miniaturas ampliadas, nombres, estrellas y botón de acción.
     """
     ancho, alto = pantalla.get_size()
     rect_panel, tabs_info, rects_cards = obtener_geometria_menu(ancho, alto)
     thumbs = obtener_thumbnails()
 
-    fuente_titulo = fuentes.get("titulo")
-    fuente_tab = fuentes.get("tab")
-    fuente_card = fuentes.get("card")
+    if fuentes is None:
+        fuentes = {}
+    fuente_titulo = fuentes.get("titulo") or obtener_fuente_titulo(TAMANO_TITULO, tamano_fallback=55)
+    fuente_tab = fuentes.get("tab") or obtener_fuente_titulo(TAMANO_TITULO_MODAL, tamano_fallback=34)
+    fuente_card = fuentes.get("card") or obtener_fuente_boton(TAMANO_CARD, tamano_fallback=28)
+    fuente_btn_card = fuentes.get("btn", fuente_card) or obtener_fuente_boton(TAMANO_CARD, tamano_fallback=28)
 
     # 1. FONDO Y SUELO ORIGINALES DEL JUEGO (idénticos al escenario de los niveles)
     pantalla.fill((255, 240, 195))
@@ -151,10 +178,9 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
     # Título principal
     if fuente_titulo:
         txt_tit = fuente_titulo.render("SELECCION DE NIVEL", True, (60, 45, 35))
-        pantalla.blit(txt_tit, txt_tit.get_rect(center=(ancho // 2, 70)))
+        pantalla.blit(txt_tit, txt_tit.get_rect(center=(ancho // 2, 65)))
 
     # 2. PESTAÑAS (MUNDO 1, MUNDO 2, MUNDO 3)
-    # Dibujamos primero las inactivas y al final la activa para que la activa quede al frente
     mundos_orden = [m for m in (1, 2, 3) if m != mundo_actual] + [mundo_actual]
 
     for m in mundos_orden:
@@ -193,46 +219,58 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
     pygame.draw.rect(pantalla, COL_PANEL, rect_panel, border_radius=18)
     pygame.draw.rect(pantalla, COL_BORDE_PANEL, rect_panel, 3, border_radius=18)
 
-    # Líneas divisorias sutiles entre tarjetas
-    for i in range(1, 5):
-        c_left = rects_cards[i - 1].right
-        c_right = rects_cards[i].left
-        x_div = (c_left + c_right) // 2
-        pygame.draw.line(pantalla, COL_DIVISOR, (x_div, rect_panel.top + 20), (x_div, rect_panel.bottom - 20), 2)
-
-    # 4. TARJETAS DE NIVEL (5 EN FILA)
+    # 4. TARJETAS DE NIVEL (5 BOTONES EN FILA)
     for idx, r_card in enumerate(rects_cards):
         nivel_num = idx + 1
         desbloqueado = niveles_desbloqueados[mundo_actual][idx]
         mouse_encima = r_card.collidepoint(pos_mouse)
 
-        # Fondo individual de la tarjeta al hacer hover
-        if mouse_encima:
-            card_highlight = pygame.Surface((r_card.width, r_card.height), pygame.SRCALPHA)
-            card_highlight.fill((255, 255, 255, 140))
-            pantalla.blit(card_highlight, r_card)
-            pygame.draw.rect(pantalla, (235, 195, 140), r_card, 2, border_radius=12)
+        # Fondo individual de la tarjeta botón
+        if desbloqueado:
+            col_fondo_card = (255, 255, 255) if mouse_encima else (255, 252, 246)
+            col_borde_card = (235, 165, 60) if mouse_encima else (210, 185, 155)
+            ancho_borde = 3 if mouse_encima else 2
+        else:
+            col_fondo_card = (248, 244, 236) if mouse_encima else (244, 237, 226)
+            col_borde_card = (195, 180, 165)
+            ancho_borde = 2
 
-        # Miniatura del escenario
-        thumb_img = thumbs[mundo_actual][nivel_num]
-        w_th, h_th = thumb_img.get_size()
+        pygame.draw.rect(pantalla, col_fondo_card, r_card, border_radius=14)
+        pygame.draw.rect(pantalla, col_borde_card, r_card, ancho_borde, border_radius=14)
+
+        # Sombra sutil en la base de la tarjeta para efecto botón
+        if desbloqueado and not mouse_encima:
+            pygame.draw.rect(
+                pantalla,
+                (230, 210, 185),
+                (r_card.left + 6, r_card.bottom - 4, r_card.width - 12, 4),
+                border_bottom_left_radius=10,
+                border_bottom_right_radius=10,
+            )
+
+        # Miniatura ampliada del escenario (196x125 para encajar perfectamente con 12px de margen)
+        thumb_orig = thumbs[mundo_actual][nivel_num]
+        w_th, h_th = 196, 125
+        thumb_img = _obtener_thumb_escalada(mundo_actual, nivel_num, thumb_orig, w_th, h_th)
         x_th = r_card.centerx - w_th // 2
-        y_th = r_card.top + 14
+        y_th = r_card.top + 16
         r_th = pygame.Rect(x_th, y_th, w_th, h_th)
 
-        # Si el mouse está encima, elevar la miniatura 2 píxeles
-        y_draw_th = y_th - (2 if mouse_encima and desbloqueado else 0)
+        # Elevación al hacer hover si el nivel está desbloqueado
+        y_draw_th = y_th - (3 if mouse_encima and desbloqueado else 0)
         pantalla.blit(thumb_img, (x_th, y_draw_th))
+
+        # Borde decorativo de la miniatura
+        pygame.draw.rect(pantalla, (165, 140, 115), (x_th, y_draw_th, w_th, h_th), 2, border_radius=6)
 
         # Overlay de bloqueo si está bloqueado
         if not desbloqueado:
             lock_mask = pygame.Surface((w_th, h_th), pygame.SRCALPHA)
             lock_mask.fill((30, 20, 20, 160))
             pantalla.blit(lock_mask, (x_th, y_draw_th))
-            # Icono de candado
             cx, cy = x_th + w_th // 2, y_draw_th + h_th // 2
-            pygame.draw.rect(pantalla, (230, 210, 170), (cx - 10, cy - 4, 20, 16), border_radius=3)
-            pygame.draw.arc(pantalla, (230, 210, 170), (cx - 7, cy - 14, 14, 16), 0, 3.14, 3)
+            pygame.draw.rect(pantalla, (230, 210, 170), (cx - 12, cy - 4, 24, 18), border_radius=4)
+            pygame.draw.arc(pantalla, (230, 210, 170), (cx - 8, cy - 16, 16, 18), 0, 3.14, 3)
 
         # Texto "NIVEL X"
         if fuente_card:
@@ -242,19 +280,37 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
             pantalla.blit(txt_n, rect_txt_n)
 
         # Estrella decorativa debajo
-        y_star = r_th.bottom + 58
+        y_star = r_th.bottom + 66
         if desbloqueado:
-            dibujar_estrella(pantalla, (r_card.centerx, y_star), r_exterior=14, r_interior=6)
+            dibujar_estrella(pantalla, (r_card.centerx, y_star), r_exterior=16, r_interior=7)
         else:
-            # Estrella gris vacía si está bloqueado
             dibujar_estrella(
                 pantalla,
                 (r_card.centerx, y_star),
-                r_exterior=14,
-                r_interior=6,
+                r_exterior=16,
+                r_interior=7,
                 col_relleno=(235, 230, 222),
                 col_borde=(180, 170, 160),
             )
+
+        # Botón / Badge de estado inferior ("JUGAR" o "BLOQUEADO")
+        r_btn_status = pygame.Rect(r_card.centerx - 70, r_card.bottom - 44, 140, 32)
+        if desbloqueado:
+            col_pill = (96, 212, 130) if mouse_encima else (82, 194, 114)
+            borde_pill = (45, 130, 70)
+            txt_pill_col = (255, 255, 255)
+            texto_pill = "JUGAR ▶"
+        else:
+            col_pill = (220, 212, 204)
+            borde_pill = (180, 170, 160)
+            txt_pill_col = (140, 130, 120)
+            texto_pill = "BLOQUEADO"
+
+        pygame.draw.rect(pantalla, col_pill, r_btn_status, border_radius=8)
+        pygame.draw.rect(pantalla, borde_pill, r_btn_status, 2, border_radius=8)
+        if fuente_btn_card:
+            t_pill = fuente_btn_card.render(texto_pill, True, txt_pill_col)
+            pantalla.blit(t_pill, t_pill.get_rect(center=r_btn_status.center))
 
 
 # ==============================================================================
@@ -720,105 +776,148 @@ def _crear_m2_n2():
 
 
 def _crear_m2_n3():
-    """2-3: El péndulo (Plataforma elevada, un personaje encima, otro colgado de la soga sobre abismo con pinchos)."""
+    """2-3: El péndulo (Plataforma elevada sobre abismo de pinchos, personaje balanceándose con la soga como péndulo para agarrar la llave)."""
     s = pygame.Surface((ANCHO_MINI, ALTO_MINI))
     s.fill(COL_FONDO_M1)
 
-    # Abismo inferior con pinchos
-    pygame.draw.rect(s, (45, 35, 35), (0, 98, ANCHO_MINI, ALTO_MINI - 98))
-    _dibujar_pinchos(s, 0, ANCHO_MINI, 98, hacia_arriba=True)
+    # Plataforma de inicio izquierda (y=60)
+    plat_ini = pygame.Rect(0, 60, 26, 52)
+    pygame.draw.rect(s, COL_PLATAFORMA_M1, plat_ini)
+    pygame.draw.rect(s, COL_BORDE_PLAT, plat_ini, 1)
 
-    # Plataforma elevada
-    plat = pygame.Rect(25, 36, 60, 8)
-    pygame.draw.rect(s, COL_PLATAFORMA_M1, plat, border_radius=2)
-    pygame.draw.rect(s, COL_BORDE_PLAT, plat, 1, border_radius=2)
+    # Plataforma de llegada derecha (y=60)
+    plat_lleg = pygame.Rect(144, 60, 32, 52)
+    pygame.draw.rect(s, COL_PLATAFORMA_M1, plat_lleg)
+    pygame.draw.rect(s, COL_BORDE_PLAT, plat_lleg, 1)
+
+    # Abismo con pinchos mortales continuo
+    pygame.draw.rect(s, (45, 35, 35), (26, 94, 118, 18))
+    _dibujar_pinchos(s, 26, 144, 94, hacia_arriba=True, w_p=7, h_p=7)
+
+    # Plataforma elevada central (el puente de balanceo)
+    plat_el = pygame.Rect(32, 34, 108, 8)
+    pygame.draw.rect(s, COL_PLATAFORMA_M1, plat_el, border_radius=2)
+    pygame.draw.rect(s, COL_BORDE_PLAT, plat_el, 1, border_radius=2)
 
     pj1 = _cargar_personaje("Celeste")
     pj2 = _cargar_personaje("Violeta")
     llave = _cargar_llave()
+    puerta = _crear_puerta_original()
 
-    # Celeste encima de la plataforma
-    pos1 = (45, 36 - 20)
-    # Violeta colgando por debajo en diagonal péndulo
-    pos2 = (95, 68)
+    pos1 = (62, 34 - 18)
+    pos2 = (82, 56)
 
+    # Personajes unidos por la soga: uno en la plataforma y el otro colgando como péndulo
     _dibujar_soga(s, (pos1[0] + 8, pos1[1] + 12), (pos2[0] + 8, pos2[1] + 8))
-
     s.blit(pj1, pos1)
     s.blit(pj2, pos2)
 
-    # Llave en la zona inferior que intenta alcanzar
-    s.blit(llave, (120, 72))
+    # Bloque peligroso rojo central con pinchos en el abismo
+    bloque_rojo = pygame.Rect(86, 70, 10, 8)
+    pygame.draw.rect(s, (220, 50, 50), bloque_rojo, border_radius=1)
+    pygame.draw.rect(s, (140, 25, 25), bloque_rojo, 1, border_radius=1)
+    _dibujar_pinchos(s, 86, 96, 70, hacia_arriba=True, w_p=4, h_p=3)
+
+    # Llave en la parte inferior del recorrido debajo de la plataforma
+    s.blit(llave, (98, 60))
+    # Puerta en la plataforma segura de llegada
+    s.blit(puerta, (148, 60 - 26))
     return s
 
 
 def _crear_m2_n4():
-    """2-4: Las plataformas que se derrumban (Abismo con pinchos, plataformas pequeñas separadas con fisuras)."""
+    """2-4: Las plataformas que se derrumban (Abismo con pinchos, plataformas pequeñas que caen a los 1,5 segundos, llave central, puerta)."""
     s = pygame.Surface((ANCHO_MINI, ALTO_MINI))
     s.fill(COL_FONDO_M1)
 
-    # Abismo de pinchos en el fondo
-    pygame.draw.rect(s, (45, 35, 35), (0, 98, ANCHO_MINI, ALTO_MINI - 98))
-    _dibujar_pinchos(s, 0, ANCHO_MINI, 98, hacia_arriba=True)
+    # Plataforma de inicio izquierda (y=66)
+    plat_ini = pygame.Rect(0, 66, 22, 46)
+    pygame.draw.rect(s, COL_PLATAFORMA_M1, plat_ini)
+    pygame.draw.rect(s, COL_BORDE_PLAT, plat_ini, 1)
 
-    # Plataformas pequeñas agrietadas
+    # Plataforma de llegada derecha (y=66)
+    plat_lleg = pygame.Rect(150, 66, 26, 46)
+    pygame.draw.rect(s, COL_PLATAFORMA_M1, plat_lleg)
+    pygame.draw.rect(s, COL_BORDE_PLAT, plat_lleg, 1)
+
+    # Abismo de pinchos en el fondo
+    pygame.draw.rect(s, (45, 35, 35), (22, 94, 128, 18))
+    _dibujar_pinchos(s, 22, 150, 94, hacia_arriba=True, w_p=7, h_p=7)
+
+    # Serie de plataformas pequeñas agrietadas
     plats = [
-        pygame.Rect(12, 78, 26, 8),
-        pygame.Rect(52, 68, 26, 8),
-        pygame.Rect(96, 62, 26, 8),
-        pygame.Rect(138, 72, 26, 8),
+        pygame.Rect(28, 66, 24, 7),
+        pygame.Rect(58, 60, 24, 7),
+        pygame.Rect(88, 56, 24, 7),
+        pygame.Rect(118, 62, 24, 7),
     ]
-    for p in plats:
-        pygame.draw.rect(s, (155, 125, 100), p, border_radius=1)
-        pygame.draw.rect(s, (90, 70, 50), p, 1, border_radius=1)
-        # Grieta en la plataforma que se derrumba
-        pygame.draw.line(s, (50, 35, 25), (p.x + 8, p.y + 1), (p.x + 12, p.y + 7), 1)
+    for idx, p in enumerate(plats):
+        pygame.draw.rect(s, (185, 120, 85), p, border_radius=1)
+        pygame.draw.rect(s, (140, 75, 45), p, 1, border_radius=1)
+        # Fisuras de derrumbe
+        pygame.draw.line(s, (65, 35, 25), (p.x + 6, p.y + 1), (p.x + 11, p.y + 6), 1)
+        pygame.draw.line(s, (65, 35, 25), (p.x + 16, p.y + 1), (p.x + 13, p.y + 6), 1)
+        # Partículas de desmoronamiento cayendo de la plataforma activa
+        if idx == 1:
+            pygame.draw.rect(s, (140, 75, 45), (p.x + 8, p.bottom + 2, 2, 2))
+            pygame.draw.rect(s, (185, 120, 85), (p.x + 14, p.bottom + 4, 2, 2))
 
     pj1 = _cargar_personaje("Celeste")
     pj2 = _cargar_personaje("Violeta")
     llave = _cargar_llave()
+    puerta = _crear_puerta_original()
 
-    pos1 = (56, 68 - 20)
-    pos2 = (100, 62 - 20)
+    pos1 = (58, 60 - 20)
+    pos2 = (88, 56 - 20)
     _dibujar_soga(s, (pos1[0] + 8, pos1[1] + 10), (pos2[0] + 8, pos2[1] + 10))
 
     s.blit(pj1, pos1)
     s.blit(pj2, pos2)
-    s.blit(llave, (78, 42))
+    s.blit(llave, (96, 40))
+    s.blit(puerta, (152, 66 - 26))
     return s
 
 
 def _crear_m2_n5():
-    """2-5: Las plataformas alternadas (Escalera intercalada de plataformas, soga, puerta en la cima)."""
+    """2-5: Las plataformas alternadas (Escalera ascendente continua de plataformas, soga, cables, llave y puerta en la cima)."""
     s = pygame.Surface((ANCHO_MINI, ALTO_MINI))
     s.fill(COL_FONDO_M1)
 
-    # Abismo inferior
-    pygame.draw.rect(s, (50, 40, 35), (0, 102, ANCHO_MINI, ALTO_MINI - 102))
+    # Abismo inferior con pinchos mortales
+    pygame.draw.rect(s, (45, 35, 35), (0, 104, ANCHO_MINI, ALTO_MINI - 104))
+    _dibujar_pinchos(s, 0, ANCHO_MINI, 104, hacia_arriba=True, w_p=7, h_p=7)
 
-    # Plataformas alternadas hacia arriba
+    # Plataformas formando una escalera claramente ascendente de abajo-izquierda a arriba-derecha
     plats = [
-        pygame.Rect(10, 86, 40, 8),   # 1 izq
-        pygame.Rect(65, 72, 40, 8),   # 2 der
-        pygame.Rect(25, 56, 40, 8),   # 3 izq
-        pygame.Rect(80, 42, 40, 8),   # 4 der
-        pygame.Rect(130, 30, 40, 8),  # 5 cima
+        pygame.Rect(4, 96, 26, 6),    # Inicio abajo izquierda
+        pygame.Rect(34, 82, 22, 6),   # Escalón 1
+        pygame.Rect(62, 68, 22, 6),   # Escalón 2
+        pygame.Rect(90, 54, 22, 6),   # Escalón 3
+        pygame.Rect(118, 40, 24, 6),  # Escalón 4 (superior con llave)
+        pygame.Rect(148, 28, 28, 6),  # Cima llegada (superior con puerta)
     ]
+    for p in plats[1:5]:
+        # Cables tensores desde el techo
+        pygame.draw.line(s, (160, 145, 130), (p.left + 4, 0), (p.left + 4, p.top), 1)
+        pygame.draw.line(s, (160, 145, 130), (p.right - 4, 0), (p.right - 4, p.top), 1)
+
     for p in plats:
         pygame.draw.rect(s, COL_PLATAFORMA_M1, p, border_radius=2)
         pygame.draw.rect(s, COL_BORDE_PLAT, p, 1, border_radius=2)
 
     pj1 = _cargar_personaje("Celeste")
     pj2 = _cargar_personaje("Violeta")
+    llave = _cargar_llave()
     puerta = _crear_puerta_original()
 
-    pos1 = (35, 56 - 20)
-    pos2 = (75, 72 - 20)
+    pos1 = (36, 82 - 20)
+    pos2 = (8, 96 - 20)
     _dibujar_soga(s, (pos1[0] + 8, pos1[1] + 10), (pos2[0] + 8, pos2[1] + 10))
 
     s.blit(pj1, pos1)
     s.blit(pj2, pos2)
-    s.blit(puerta, (142, 30 - 26))
+    s.blit(llave, (124, 40 - 18))
+    s.blit(puerta, (150, 28 - 25))
     return s
 
 

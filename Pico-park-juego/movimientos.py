@@ -20,7 +20,7 @@ DISTANCIA_SOGA = DISTANCIA_SOGA_MAXIMA
 VELOCIDAD_MUERTE = -17
 
 
-def crear_personaje(x, y, color_carpeta="Blanco"):
+def crear_personaje(x, y, color_carpeta="Blanco", accesorio="Ninguno"):
     return {
         "x_inicial": x,
         "y_inicial": y,
@@ -33,6 +33,7 @@ def crear_personaje(x, y, color_carpeta="Blanco"):
         "en_agua": False,
         "sprites": cargar_sprites(color_carpeta),
         "color": (255, 255, 255),
+        "accesorio": accesorio or "Ninguno",
         "mirando_derecha": True,
         "frame_animacion": 1,
         "contador_anim": 0,
@@ -113,7 +114,7 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, 
         for plat in plataformas:
             if hb1.colliderect(plat):
                 # Colisión lateral sólida con la plataforma u obstáculo
-                if hb1.bottom > plat.top + 4 and hb1.top < plat.bottom - 4:
+                if hb1.bottom > plat.top + 2 and hb1.top < plat.bottom - 2:
                     if x_inicio + hb1.width <= plat.left + max(8, abs(int(p1["vel_x"])) + 2) or hb1.centerx < plat.centerx:
                         hb1.right = plat.left
                         if p1["vel_x"] > 0:
@@ -140,6 +141,10 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, 
                 p1["vel_x"] = 0
                 p1["empujando"] = True
                 p1["direccion_empuje"] = 1
+        if hb1.top <= pantalla_rect.top:
+            hb1.top = pantalla_rect.top
+            if p1["vel_y"] < 0:
+                p1["vel_y"] = 0
 
     if caja is not None:
         empujar_caja(p1, caja, p2, pantalla_rect, plataformas)
@@ -172,14 +177,17 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, 
     if plataformas:
         for plat in plataformas:
             if hb1.right > plat.left + 2 and hb1.left < plat.right - 2:
+                # 1. Aterrizaje sobre la cara superior de la plataforma
                 if p1["vel_y"] >= 0 and hb1.bottom >= plat.top and y_inicio + hb1.height <= plat.top + max(14, int(p1["vel_y"]) + 10):
                     hb1.bottom = plat.top
                     p1["vel_y"] = 0
                     p1["en_suelo"] = True
                     toco_superficie = True
-                elif p1["vel_y"] < 0 and hb1.top <= plat.bottom and y_inicio >= plat.bottom - max(12, abs(int(p1["vel_y"])) + 4):
+                # 2. Choque contra el techo / cara inferior de la plataforma
+                elif hb1.top <= plat.bottom and y_inicio >= plat.bottom - max(12, abs(int(p1["vel_y"])) + 4):
                     hb1.top = plat.bottom
-                    p1["vel_y"] = 0
+                    if p1["vel_y"] < 0:
+                        p1["vel_y"] = 0
 
     if caja is not None:
         caja_rect = caja["rect"]
@@ -433,15 +441,14 @@ def actualizar_estado_soga_muerte(p1, p2, estado_soga=None, d_max=DISTANCIA_SOGA
 
 def actualizar_fisica_soga(p1, p2, estado_soga=None, d_reposo=DISTANCIA_SOGA_REPOSO, d_max=DISTANCIA_SOGA_MAXIMA):
     """
-    Aplica una física de soga suave, continua y natural:
-    - Cuando los personajes están dentro de la distancia de reposo (distancia <= d_reposo),
+    Aplica una física de soga suave, continua y natural con límite estricto de estiramiento:
+    - Cuando los personajes están dentro de la distancia de reposo (distancia <= d_reposo = 140px),
       la soga está floja y no genera tensión ni fuerzas (libertad total de movimiento).
-    - Al superar d_reposo, la tensión elástica aparece progresivamente hasta d_max (~20 px de estiramiento).
-    - Distingue adecuadamente entre personajes en el suelo y en el aire:
-      * En suelo: actúan como ancla firme, sin arrastres molestos si ambos caminan.
-      * En el aire: conservan su inercia y movimiento transversal (péndulo), sin frenazos bruscos.
-      * Trata por separado la componente longitudinal (a lo largo de la soga) de la transversal,
-        evitando que la gravedad o el desplazamiento horizontal interfieran de forma artificial.
+    - Al superar d_reposo, la tensión elástica aparece progresivamente hasta d_max (~20 px de estiramiento = 160px).
+    - Al alcanzar d_max, transmite tensión y limita la separación afectando la velocidad de los personajes,
+      impidiendo que la cuerda se estire más de lo permitido.
+    - Conserva de manera fidedigna la inercia tangencial pendular y la trayectoria continua del péndulo.
+    - Distingue adecuadamente entre personajes en el suelo y en el aire sin aceleraciones exageradas ni tirones bruscos.
     """
     if p1.get("muerto", False) or p2.get("muerto", False) or (estado_soga is not None and estado_soga.get("rota", False)):
         actualizar_estado_soga_muerte(p1, p2, estado_soga, d_max)
@@ -478,7 +485,7 @@ def actualizar_fisica_soga(p1, p2, estado_soga=None, d_reposo=DISTANCIA_SOGA_REP
     if estado_soga is not None:
         tension_actual = estado_soga.get("tension", 0.0)
         if tension_objetivo > tension_actual:
-            factor_retardo = 0.35 if distancia < d_max else 0.70
+            factor_retardo = 0.35 if distancia < d_max else 0.85
             tension_actual += (tension_objetivo - tension_actual) * factor_retardo
         else:
             tension_actual += (tension_objetivo - tension_actual) * 0.50
@@ -501,64 +508,154 @@ def actualizar_fisica_soga(p1, p2, estado_soga=None, d_reposo=DISTANCIA_SOGA_REP
     v_separacion = v_rel.dot(direccion)
 
     # 2. Situación A: Ambos personajes en el suelo
-    # Si ambos caminan sobre una superficie sólida, no deben tirarse ni frenarse constantemente.
-    # Solo al límite máximo experimentan resistencia suave al alejamiento.
+    # Límite estricto a d_max (~20px adicionales = 160px). Ninguno puede alejarse más allá del límite.
     if p1_suelo and p2_suelo:
         if v_separacion > 0:
-            factor_freno = t * 0.45
-            if distancia >= d_max - 1.0:
-                factor_freno = min(0.85, t * 0.80)
-            if v1.dot(direccion) < 0:
-                p1["vel_x"] += direccion.x * (v_separacion * factor_freno * 0.5)
-            if v2.dot(direccion) > 0:
-                p2["vel_x"] -= direccion.x * (v_separacion * factor_freno * 0.5)
+            sep_max_permitida = max(0.0, d_max - distancia)
+            exceso_vel = max(0.0, v_separacion - sep_max_permitida)
+            if exceso_vel > 0:
+                p1_away = max(0.0, -v1.dot(direccion))
+                p2_away = max(0.0, v2.dot(direccion))
+                tot = p1_away + p2_away
+                if tot > 0.001:
+                    p1["vel_x"] += direccion.x * (exceso_vel * (p1_away / tot))
+                    p2["vel_x"] -= direccion.x * (exceso_vel * (p2_away / tot))
+            else:
+                factor_freno = t * 0.60
+                if v1.dot(direccion) < 0:
+                    p1["vel_x"] += direccion.x * (v_separacion * factor_freno * 0.5)
+                if v2.dot(direccion) > 0:
+                    p2["vel_x"] -= direccion.x * (v_separacion * factor_freno * 0.5)
         return
 
     # 3. Situación B: P1 en el suelo, P2 en el aire
-    # P1 es ancla firme y no es arrastrado por P2.
-    # P2 (en el aire) siente la tracción de la soga hacia P1 y soporte de peso si está suspendido.
+    # P1 actúa como ancla sobre la plataforma. P2 cuelga y se balancea como un péndulo continuo.
     if p1_suelo and not p2_suelo:
         fuerza_tiron = t * 1.3
 
-        # Si P2 cuelga o cae por debajo de P1 (direccion.y > 0.15), la cuerda ejerce soporte vertical (-direccion.y < 0)
-        if direccion.y > 0.15:
-            soporte = direccion.y * (1.2 + t * 0.8)
-            p2["vel_y"] -= soporte
-        elif direccion.y < -0.15:
-            p2["vel_y"] -= direccion.y * (t * 0.6)
+        if direccion.y > 0.05:
+            # P2 cuelga por debajo de P1: física de péndulo real
+            # 1. Soporte radial contra la gravedad
+            p2["vel_y"] -= t * GRAVEDAD * (direccion.y * direccion.y)
+            p2["vel_x"] -= t * GRAVEDAD * (direccion.y * direccion.x)
 
-        # Tracción horizontal suave hacia P1
-        p2["vel_x"] -= direccion.x * (fuerza_tiron * 0.6)
+            # 2. Aceleración centrípeta a lo largo del arco de oscilación
+            v_tan = v_rel - v_separacion * direccion
+            v_tan_mag = v_tan.length()
+            a_c = min(3.5, (v_tan_mag * v_tan_mag) / max(1.0, distancia))
+            p2["vel_x"] -= t * a_c * direccion.x
+            p2["vel_y"] -= t * a_c * direccion.y
 
-        # Amortiguación suave únicamente en la dirección de separación
-        if v_separacion > 0:
-            damp = v_separacion * (0.25 + 0.45 * t)
-            p2["vel_x"] -= direccion.x * damp
-            p2["vel_y"] -= direccion.y * damp
+            # 3. Control de velocidad de separación
+            if v_separacion > 0:
+                sep_max_permitida = max(0.0, d_max - distancia)
+                exceso_vel = max(0.0, v_separacion - sep_max_permitida)
+                if exceso_vel > 0:
+                    # Al límite máximo, P1 no puede seguir alejándose libremente
+                    v1_away = max(0.0, -v1.dot(direccion))
+                    if v1_away > 0:
+                        p1["vel_x"] += direccion.x * min(v1_away, exceso_vel)
+                    p2["vel_x"] -= direccion.x * (exceso_vel * 0.5)
+                    p2["vel_y"] -= direccion.y * (exceso_vel * 0.5)
+                else:
+                    damp = v_separacion * (0.45 + 0.35 * t)
+                    p2["vel_x"] -= direccion.x * damp
+                    p2["vel_y"] -= direccion.y * damp
+
+            # 4. Tracción transmitida al personaje ancla en el suelo (P1)
+            tension_total = t * (GRAVEDAD * direccion.y + a_c + max(0.0, v_separacion) * 0.5)
+            pull_x = tension_total * direccion.x
+            if distancia >= d_max:
+                v1_away = max(0.0, -v1.dot(direccion))
+                if v1_away > 0:
+                    p1["vel_x"] += direccion.x * v1_away
+                else:
+                    p1["vel_x"] += pull_x * 0.25
+            else:
+                if p1.get("moviendo", False):
+                    p1["vel_x"] += pull_x * 0.15
+                else:
+                    p1["vel_x"] += pull_x * 0.40
+        else:
+            # P2 está por encima o al mismo nivel de P1 (salto estándar)
+            if direccion.y < -0.15:
+                p2["vel_y"] -= direccion.y * (t * 0.6)
+            p2["vel_x"] -= direccion.x * (fuerza_tiron * 0.6)
+            p1["vel_x"] += direccion.x * (fuerza_tiron * 0.5)
+            if v_separacion > 0:
+                sep_max_permitida = max(0.0, d_max - distancia)
+                exceso_vel = max(0.0, v_separacion - sep_max_permitida)
+                if exceso_vel > 0:
+                    p1["vel_x"] += direccion.x * (exceso_vel * 0.5)
+                    p2["vel_x"] -= direccion.x * (exceso_vel * 0.5)
+                else:
+                    damp = v_separacion * (0.35 + 0.45 * t)
+                    p2["vel_x"] -= direccion.x * (damp * 0.6)
+                    p1["vel_x"] += direccion.x * (damp * 0.4)
         return
 
-    # 4. Situación C: P2 en el suelo, P1 en el aire (simétrico a B)
+    # 4. Situación C: P2 en el suelo, P1 en el aire (completamente simétrico a Situación B)
     if p2_suelo and not p1_suelo:
         fuerza_tiron = t * 1.3
+        if direccion.y < -0.05:
+            dir_hacia_p1 = -direccion
+            v_rel_p1 = v1 - v2
+            v_sep_p1 = v_rel_p1.dot(dir_hacia_p1)
 
-        if direccion.y < -0.15:
-            soporte = (-direccion.y) * (1.2 + t * 0.8)
-            p1["vel_y"] -= soporte
-        elif direccion.y > 0.15:
-            p1["vel_y"] += direccion.y * (t * 0.6)
+            p1["vel_y"] -= t * GRAVEDAD * (dir_hacia_p1.y * dir_hacia_p1.y)
+            p1["vel_x"] -= t * GRAVEDAD * (dir_hacia_p1.y * dir_hacia_p1.x)
 
-        # Tracción horizontal suave hacia P2
-        p1["vel_x"] += direccion.x * (fuerza_tiron * 0.6)
+            v_tan = v_rel_p1 - v_sep_p1 * dir_hacia_p1
+            v_tan_mag = v_tan.length()
+            a_c = min(3.5, (v_tan_mag * v_tan_mag) / max(1.0, distancia))
+            p1["vel_x"] -= t * a_c * dir_hacia_p1.x
+            p1["vel_y"] -= t * a_c * dir_hacia_p1.y
 
-        # Amortiguación únicamente en la dirección de separación
-        if v_separacion > 0:
-            damp = v_separacion * (0.25 + 0.45 * t)
-            p1["vel_x"] += direccion.x * damp
-            p1["vel_y"] += direccion.y * damp
+            if v_sep_p1 > 0:
+                sep_max_permitida = max(0.0, d_max - distancia)
+                exceso_vel = max(0.0, v_sep_p1 - sep_max_permitida)
+                if exceso_vel > 0:
+                    v2_away = max(0.0, -v2.dot(dir_hacia_p1))
+                    if v2_away > 0:
+                        p2["vel_x"] += dir_hacia_p1.x * min(v2_away, exceso_vel)
+                    p1["vel_x"] -= dir_hacia_p1.x * (exceso_vel * 0.5)
+                    p1["vel_y"] -= dir_hacia_p1.y * (exceso_vel * 0.5)
+                else:
+                    damp = v_sep_p1 * (0.45 + 0.35 * t)
+                    p1["vel_x"] -= dir_hacia_p1.x * damp
+                    p1["vel_y"] -= dir_hacia_p1.y * damp
+
+            tension_total = t * (GRAVEDAD * dir_hacia_p1.y + a_c + max(0.0, v_sep_p1) * 0.5)
+            pull_x = tension_total * dir_hacia_p1.x
+            if distancia >= d_max:
+                v2_away = max(0.0, -v2.dot(dir_hacia_p1))
+                if v2_away > 0:
+                    p2["vel_x"] += dir_hacia_p1.x * v2_away
+                else:
+                    p2["vel_x"] += pull_x * 0.25
+            else:
+                if p2.get("moviendo", False):
+                    p2["vel_x"] += pull_x * 0.15
+                else:
+                    p2["vel_x"] += pull_x * 0.40
+        else:
+            if direccion.y > 0.15:
+                p1["vel_y"] += direccion.y * (t * 0.6)
+            p1["vel_x"] += direccion.x * (fuerza_tiron * 0.6)
+            p2["vel_x"] -= direccion.x * (fuerza_tiron * 0.5)
+            if v_separacion > 0:
+                sep_max_permitida = max(0.0, d_max - distancia)
+                exceso_vel = max(0.0, v_separacion - sep_max_permitida)
+                if exceso_vel > 0:
+                    p1["vel_x"] += direccion.x * (exceso_vel * 0.5)
+                    p2["vel_x"] -= direccion.x * (exceso_vel * 0.5)
+                else:
+                    damp = v_separacion * (0.35 + 0.45 * t)
+                    p1["vel_x"] += direccion.x * (damp * 0.6)
+                    p2["vel_x"] -= direccion.x * (damp * 0.4)
         return
 
     # 5. Situación D: Ambos personajes en el aire
-    # Tensión mutua y simétrica: ambos sienten la fuerza hacia el centro de masa sin frenar su avance
     fuerza_tiron = t * 1.0
     p1["vel_x"] += direccion.x * (fuerza_tiron * 0.5)
     p1["vel_y"] += direccion.y * (fuerza_tiron * 0.5)
@@ -566,20 +663,28 @@ def actualizar_fisica_soga(p1, p2, estado_soga=None, d_reposo=DISTANCIA_SOGA_REP
     p2["vel_y"] -= direccion.y * (fuerza_tiron * 0.5)
 
     if v_separacion > 0:
-        damp = v_separacion * (0.20 + 0.35 * t)
-        p1["vel_x"] += direccion.x * (damp * 0.5)
-        p1["vel_y"] += direccion.y * (damp * 0.5)
-        p2["vel_x"] -= direccion.x * (damp * 0.5)
-        p2["vel_y"] -= direccion.y * (damp * 0.5)
+        sep_max_permitida = max(0.0, d_max - distancia)
+        exceso_vel = max(0.0, v_separacion - sep_max_permitida)
+        if exceso_vel > 0:
+            p1["vel_x"] += direccion.x * (exceso_vel * 0.5)
+            p1["vel_y"] += direccion.y * (exceso_vel * 0.5)
+            p2["vel_x"] -= direccion.x * (exceso_vel * 0.5)
+            p2["vel_y"] -= direccion.y * (exceso_vel * 0.5)
+        else:
+            damp = v_separacion * (0.40 + 0.35 * t)
+            p1["vel_x"] += direccion.x * (damp * 0.5)
+            p1["vel_y"] += direccion.y * (damp * 0.5)
+            p2["vel_x"] -= direccion.x * (damp * 0.5)
+            p2["vel_y"] -= direccion.y * (damp * 0.5)
 
 
 def aplicar_restriccion_soga(p1, p2, distancia_maxima=DISTANCIA_SOGA_MAXIMA, plataformas=None, suelo=None, estado_soga=None):
     """
     Garantiza el límite absoluto de distancia sin teletransportes ni tirones bruscos:
     - Aplica una estabilización suave únicamente si la distancia supera el límite máximo.
-    - Respeta colisiones sólidas con plataformas y suelo sin vibraciones ni bloqueos.
-    - No arrastra al personaje que está quieto en el suelo.
-    - Permite al personaje en el suelo moverse cuando el otro cuelga en el aire.
+    - Respeta colisiones sólidas con plataformas y suelo impidiendo atravesar techos o suelos.
+    - Distribuye la corrección equilibradamente para no desplazar instantáneamente a personajes colgados.
+    - Mantiene la trayectoria continua y natural del balanceo pendular.
     """
     if p1.get("muerto", False) or p2.get("muerto", False) or (estado_soga is not None and estado_soga.get("rota", False)):
         return
@@ -598,39 +703,46 @@ def aplicar_restriccion_soga(p1, p2, distancia_maxima=DISTANCIA_SOGA_MAXIMA, pla
     p1_suelo = p1.get("en_suelo", False)
     p2_suelo = p2.get("en_suelo", False)
 
-    # El personaje en el suelo actúa como ancla firme y no es arrastrado
+    # Distribución equilibrada de la corrección posicional
     if p1_suelo and not p2_suelo:
-        w1, w2 = 0.0, 1.0
+        w1, w2 = 0.40, 0.60
     elif p2_suelo and not p1_suelo:
-        w1, w2 = 1.0, 0.0
+        w1, w2 = 0.60, 0.40
     elif p1_suelo and p2_suelo:
-        p1_mov = abs(p1.get("vel_x", 0.0)) > 0.1
-        p2_mov = abs(p2.get("vel_x", 0.0)) > 0.1
-        if p1_mov and not p2_mov:
-            w1, w2 = 1.0, 0.0
-        elif p2_mov and not p1_mov:
-            w1, w2 = 0.0, 1.0
-        else:
-            w1, w2 = 0.5, 0.5
+        w1, w2 = 0.50, 0.50
     else:
-        w1, w2 = 0.5, 0.5
+        w1, w2 = 0.50, 0.50
+
+    # Cancelar residualmente velocidad de separación a lo largo de la cuerda
+    v1 = pygame.Vector2(p1.get("vel_x", 0.0), p1.get("vel_y", 0.0))
+    v2 = pygame.Vector2(p2.get("vel_x", 0.0), p2.get("vel_y", 0.0))
+    v_separacion = (v2 - v1).dot(direccion)
+
+    if v_separacion > 0:
+        p1["vel_x"] += direccion.x * (v_separacion * w1)
+        p1["vel_y"] += direccion.y * (v_separacion * w1)
+        p2["vel_x"] -= direccion.x * (v_separacion * w2)
+        p2["vel_y"] -= direccion.y * (v_separacion * w2)
 
     desp1 = direccion * (exceso * w1)
     desp2 = -direccion * (exceso * w2)
 
     def ajustar_posicion_con_solidez(p, desp):
         hb = p["hitbox"]
+        x_prev = hb.x
+        y_prev = hb.y
+
         dx = int(round(desp.x))
         if dx != 0:
             hb.x += dx
             if plataformas:
                 for plat in plataformas:
-                    if hb.colliderect(plat) and hb.bottom > plat.top + 8 and hb.top < plat.bottom - 8:
-                        if dx > 0:
+                    if hb.colliderect(plat) and hb.bottom > plat.top + 2 and hb.top < plat.bottom - 2:
+                        if dx > 0 and x_prev + hb.width <= plat.left + 4:
                             hb.right = plat.left
                             if p.get("vel_x", 0) > 0:
                                 p["vel_x"] = 0
-                        elif dx < 0:
+                        elif dx < 0 and x_prev >= plat.right - 4:
                             hb.left = plat.right
                             if p.get("vel_x", 0) < 0:
                                 p["vel_x"] = 0
@@ -647,13 +759,19 @@ def aplicar_restriccion_soga(p1, p2, distancia_maxima=DISTANCIA_SOGA_MAXIMA, pla
             if plataformas:
                 for plat in plataformas:
                     if hb.colliderect(plat):
-                        # Solo se apoya sobre una plataforma si sus pies estaban cayendo sobre su cara superior
-                        if dy > 0 and hb.bottom >= plat.top and (hb.bottom - dy) <= plat.top + 6:
+                        # Aterrizaje sobre cara superior viniendo desde arriba
+                        if dy > 0 and y_prev + hb.height <= plat.top + 6:
                             hb.bottom = plat.top
                             if p.get("vel_y", 0) > 0:
                                 p["vel_y"] = 0
                             p["en_suelo"] = True
-                        elif dy < 0 and hb.top <= plat.bottom and (hb.top - dy) >= plat.bottom - 6:
+                        # Toque contra el techo / cara inferior viniendo desde abajo
+                        elif dy < 0 and y_prev >= plat.bottom - 6:
+                            hb.top = plat.bottom
+                            if p.get("vel_y", 0) < 0:
+                                p["vel_y"] = 0
+                        # Bloqueo impenetrable si el personaje ya estaba abajo: NUNCA permitir atravesar hacia arriba
+                        elif y_prev >= plat.bottom:
                             hb.top = plat.bottom
                             if p.get("vel_y", 0) < 0:
                                 p["vel_y"] = 0
@@ -662,17 +780,6 @@ def aplicar_restriccion_soga(p1, p2, distancia_maxima=DISTANCIA_SOGA_MAXIMA, pla
         ajustar_posicion_con_solidez(p1, desp1)
     if w2 > 0:
         ajustar_posicion_con_solidez(p2, desp2)
-
-    # Cancelar únicamente la velocidad que tienda a seguir separando a los personajes a lo largo de la cuerda
-    v1 = pygame.Vector2(p1.get("vel_x", 0.0), p1.get("vel_y", 0.0))
-    v2 = pygame.Vector2(p2.get("vel_x", 0.0), p2.get("vel_y", 0.0))
-    v_separacion = (v2 - v1).dot(direccion)
-
-    if v_separacion > 0:
-        p1["vel_x"] += direccion.x * (v_separacion * w1)
-        p1["vel_y"] += direccion.y * (v_separacion * w1)
-        p2["vel_x"] -= direccion.x * (v_separacion * w2)
-        p2["vel_y"] -= direccion.y * (v_separacion * w2)
 
 
 def crear_llave(x, y):
@@ -737,6 +844,21 @@ def actualizar_llave(llave, personajes, puerta):
             llave["portador"] = None
 
 
+class PinchoRect(pygame.Rect):
+    """
+    Rectángulo para pincho con soporte de dirección (arriba, abajo, izquierda, derecha)
+    para dibujo y cálculo geométrico adecuado.
+    """
+    def __init__(self, *args, direccion="arriba"):
+        super().__init__(*args)
+        self.direccion = direccion
+
+
+def crear_pincho(x, y, ancho=32, alto=22, direccion="arriba"):
+    """Crea una instancia de PinchoRect orientada."""
+    return PinchoRect(x, y, ancho, alto, direccion=direccion)
+
+
 def crear_pinchos(y_suelo=640):
     alto, ancho = 28, 45
     return [pygame.Rect(x, y_suelo - alto, ancho, alto) for x in (350, 400, 700, 950, 1000, 1250, 1550, 1600, 1800)]
@@ -770,6 +892,13 @@ def comprobar_pinchos(p, pinchos):
             if hb.right > pincho.left + 2 and hb.left < pincho.right - 2:
                 y_prev_bottom = hb.bottom - int(vy)
                 if y_prev_bottom <= pincho.top + 4 and hb.bottom >= pincho.top:
+                    matar_personaje(p)
+                    return True
+        elif vy < 0:
+            # Detección continua anti-túnel cuando el personaje salta hacia pinchos en el techo
+            if hb.right > pincho.left + 2 and hb.left < pincho.right - 2:
+                y_prev_top = hb.top - int(vy)
+                if y_prev_top >= pincho.bottom - 4 and hb.top <= pincho.bottom:
                     matar_personaje(p)
                     return True
     return False
@@ -806,12 +935,38 @@ def actualizar_estado_agua(p, zona_agua=ZONA_AGUA):
     return p["en_agua"]
 
 
-def aplicar_fisica_agua(p, tecla_arriba=False, tecla_abajo=False):
+def aplicar_fisica_agua(p, tecla_arriba=False, tecla_abajo=False, submarino=False):
     """
     Aplica la flotabilidad, nado y fricción viscosa del agua (Mundo 3).
-    - Recibe: personaje 'p', y estados de las teclas arriba/abajo para nadar.
-    - Efecto: reduce la gravedad drásticamente, aplica impulso vertical y fricción suave.
+    - Recibe: personaje 'p', estados de las teclas arriba/abajo para nadar, y modo 'submarino'.
+    - Si submarino=True: control libre en 4 direcciones sin caída gravitacional. Los personajes
+      pueden flotar en suspensión a cualquier altura y controlar su desplazamiento vertical y horizontal.
+    - Si submarino=False: física acuática estándar con flotabilidad parcial.
     """
+    if submarino:
+        vel_nado = 4.5
+        acel = 1.2
+        if tecla_arriba and not tecla_abajo:
+            if p["vel_y"] > 0:
+                p["vel_y"] = -2.5
+            else:
+                p["vel_y"] = max(-vel_nado, p["vel_y"] - acel)
+            p["moviendo"] = True
+            p["en_suelo"] = False
+        elif tecla_abajo and not tecla_arriba:
+            if p["vel_y"] < 0:
+                p["vel_y"] = 2.5
+            else:
+                p["vel_y"] = min(vel_nado, p["vel_y"] + acel)
+            p["moviendo"] = True
+        else:
+            p["vel_y"] *= 0.82
+            if abs(p["vel_y"]) < 0.15:
+                p["vel_y"] = 0.0
+
+        p["vel_y"] = max(-vel_nado, min(vel_nado, p["vel_y"]))
+        return
+
     p["vel_y"] += GRAVEDAD_AGUA
 
     if tecla_arriba:
