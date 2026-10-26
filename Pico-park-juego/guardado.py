@@ -384,7 +384,7 @@ def solicitar_texto_modal(pantalla, reloj, titulo, subtitulo, valor_inicial="", 
 
     rect_input = pygame.Rect(rect_card.left + 50, rect_card.top + 115, w_card - 100, 46)
 
-    w_btn, h_btn = 180, 52
+    w_btn, h_btn = 177, 52
     y_btns = rect_card.top + 218
     btn_cancelar = pygame.Rect(rect_card.centerx - w_btn - 12, y_btns, w_btn, h_btn)
     btn_confirmar = pygame.Rect(rect_card.centerx + 12, y_btns, w_btn, h_btn)
@@ -833,7 +833,7 @@ def mostrar_dialogo_partida_existente(pantalla, reloj, nombre):
     w_card, h_card = 560, 290
     rect_card = pygame.Rect((ancho - w_card) // 2, (alto - h_card) // 2, w_card, h_card)
 
-    w_btn, h_btn = 160, 48
+    w_btn, h_btn = 163, 48
     gap_btn = 16
     total_w = w_btn * 3 + gap_btn * 2
     x_base = rect_card.centerx - (total_w // 2)
@@ -1279,10 +1279,10 @@ def mostrar_dialogo_guardar_salir(pantalla, reloj, niveles_desbloqueados, id_par
     ancho_card, alto_card = 560, 480
     rect_card = pygame.Rect((ancho - ancho_card) // 2, (alto - alto_card) // 2, ancho_card, alto_card)
 
-    w_btn, h_btn = 260, 72
+    w_btn, h_btn = 272, 80
     x_btn = rect_card.centerx - (w_btn // 2)
-    y_base_btns = rect_card.top + 145
-    espacio_btns = 16
+    y_base_btns = rect_card.top + 140
+    espacio_btns = 14
 
     btn_guardar = pygame.Rect(x_btn, y_base_btns, w_btn, h_btn)
     btn_no_guardar = pygame.Rect(x_btn, y_base_btns + h_btn + espacio_btns, w_btn, h_btn)
@@ -1413,7 +1413,7 @@ def mostrar_dialogo_confirmar_borrado(pantalla, reloj, partida):
     ancho_card, alto_card = 560, 310
     rect_card = pygame.Rect((ancho - ancho_card) // 2, (alto - alto_card) // 2, ancho_card, alto_card)
 
-    w_btn, h_btn = 205, 54
+    w_btn, h_btn = 184, 54
     gap_btn = 22
     total_w_btns = (w_btn * 2) + gap_btn
     x_cancelar = rect_card.centerx - (total_w_btns // 2)

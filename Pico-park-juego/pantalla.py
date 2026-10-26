@@ -81,7 +81,7 @@ def pantalla_muerte(pantalla, reloj):
     fuente_titulo = obtener_fuente_titulo(TAMANO_TITULO_GRANDE, tamano_fallback=60)
     fuente_texto = obtener_fuente_texto(TAMANO_SUBTITULO_GRANDE, tamano_fallback=36)
 
-    w_btn, h_btn = 260, 76
+    w_btn, h_btn = 272, 80
 
     boton_menu_normal = cargar_boton("Ventanas/boton-menu.png") or cargar_boton("boton-menu.png") or cargar_boton("salir.png")
     boton_menu_semi = cargar_boton("Ventanas/boton-menu-semiapretado.png") or cargar_boton("boton-menu-semiapretado.png") or cargar_boton("salir-preapretado.png")
@@ -107,8 +107,8 @@ def pantalla_muerte(pantalla, reloj):
         boton_menu_semi = pygame.transform.smoothscale(boton_menu_semi, (w_btn, h_btn))
     boton_menu_apretado = pygame.transform.smoothscale(boton_menu_apretado, (w_btn, h_btn))
 
-    boton_reiniciar = boton_reiniciar_normal.get_rect(center=(ANCHO // 2 - 150, 400))
-    boton_menu = boton_menu_normal.get_rect(center=(ANCHO // 2 + 150, 400))
+    boton_reiniciar = boton_reiniciar_normal.get_rect(center=(ANCHO // 2 - 160, 400))
+    boton_menu = boton_menu_normal.get_rect(center=(ANCHO // 2 + 160, 400))
 
     boton_reiniciar_hover = aclarar_boton(boton_reiniciar_normal)
     boton_menu_hover = aclarar_boton(boton_menu_normal)
@@ -1756,17 +1756,17 @@ def iniciar_mundo(
     reloj = pygame.time.Clock()
     fuente_tut = obtener_fuente_texto(TAMANO_TEXTO_GRANDE, tamano_fallback=32)
 
-    TAM_BOTON_HUD = 92
-    MARGEN_DER, MARGEN_SUP, ESPACIO_BOTONES = 25, 20, 16
+    W_BOTON_HUD, H_BOTON_HUD = 44, 52
+    MARGEN_DER, MARGEN_SUP, ESPACIO_BOTONES = 18, 16, 12
 
-    rect_btn_x = pygame.Rect(pantalla.get_width() - MARGEN_DER - TAM_BOTON_HUD, MARGEN_SUP, TAM_BOTON_HUD, TAM_BOTON_HUD)
-    rect_btn_reiniciar = pygame.Rect(rect_btn_x.left - ESPACIO_BOTONES - TAM_BOTON_HUD, MARGEN_SUP, TAM_BOTON_HUD, TAM_BOTON_HUD)
-    rect_btn_casa = pygame.Rect(rect_btn_reiniciar.left - ESPACIO_BOTONES - TAM_BOTON_HUD, MARGEN_SUP, TAM_BOTON_HUD, TAM_BOTON_HUD)
-    rect_btn_config = pygame.Rect(rect_btn_casa.left - ESPACIO_BOTONES - TAM_BOTON_HUD, MARGEN_SUP, TAM_BOTON_HUD, TAM_BOTON_HUD)
+    rect_btn_x = pygame.Rect(pantalla.get_width() - MARGEN_DER - W_BOTON_HUD, MARGEN_SUP, W_BOTON_HUD, H_BOTON_HUD)
+    rect_btn_reiniciar = pygame.Rect(rect_btn_x.left - ESPACIO_BOTONES - W_BOTON_HUD, MARGEN_SUP, W_BOTON_HUD, H_BOTON_HUD)
+    rect_btn_casa = pygame.Rect(rect_btn_reiniciar.left - ESPACIO_BOTONES - W_BOTON_HUD, MARGEN_SUP, W_BOTON_HUD, H_BOTON_HUD)
+    rect_btn_config = pygame.Rect(rect_btn_casa.left - ESPACIO_BOTONES - W_BOTON_HUD, MARGEN_SUP, W_BOTON_HUD, H_BOTON_HUD)
 
     def _cargar_hud(nombre):
         img = cargar_boton(nombre)
-        return pygame.transform.scale(img, (TAM_BOTON_HUD, TAM_BOTON_HUD)) if img else None
+        return pygame.transform.smoothscale(img, (W_BOTON_HUD, H_BOTON_HUD)) if img else None
 
     spr_x_normal = _cargar_hud("boton-x.png")
     spr_x_semi = _cargar_hud("boton-x-semiapretado.png")

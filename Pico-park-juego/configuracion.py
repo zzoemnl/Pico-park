@@ -300,48 +300,64 @@ def mostrar_pestana_configuracion(pantalla, reloj):
     H_MODAL = 400
     rect_modal = pygame.Rect((ancho_p - W_MODAL) // 2, (alto_p - H_MODAL) // 2, W_MODAL, H_MODAL)
 
-    # Botón de cerrar (X) en la esquina superior derecha del panel
-    TAM_X_CFG = 34
-    rect_x_header = pygame.Rect(rect_modal.right - TAM_X_CFG - 12, rect_modal.top + 12, TAM_X_CFG, TAM_X_CFG)
+    # Botón de cerrar (X) en la esquina superior derecha del panel (con proporción nativa 0.8496 y centrado en cabecera)
+    W_X_CFG, H_X_CFG = 29, 34
+    rect_x_header = pygame.Rect(rect_modal.right - W_X_CFG - 14, rect_modal.top + (54 - H_X_CFG) // 2, W_X_CFG, H_X_CFG)
 
-    # Cargar sprites para los botones de volumen (con tamaño HUD moderado)
-    TAM_BTN_VOL = 52
+    # Cargar sprites para los botones de volumen con proporción nativa 0.8496 (870x1024 -> 42x50)
+    W_BTN_VOL, H_BTN_VOL = 42, 50
     def _cargar_scaled(nombre, w, h):
         img = cargar_boton(nombre)
         return pygame.transform.smoothscale(img, (w, h)) if img else None
 
     # Botón Bajar Volumen (Parlante con X / Silencio)
-    spr_menos_norm = _cargar_scaled("HUD/boton-bajar-volumen.png", TAM_BTN_VOL, TAM_BTN_VOL) or _cargar_scaled("boton-bajar-volumen.png", TAM_BTN_VOL, TAM_BTN_VOL)
-    spr_menos_semi = _cargar_scaled("HUD/boton-bajar-volumen-semiapretado.png", TAM_BTN_VOL, TAM_BTN_VOL) or _cargar_scaled("boton-bajar-volumen-semiapretado.png", TAM_BTN_VOL, TAM_BTN_VOL)
-    spr_menos_apr = _cargar_scaled("HUD/boton-bajar-volumen-apretado.png", TAM_BTN_VOL, TAM_BTN_VOL) or _cargar_scaled("boton-bajar-volumen-apretado.png", TAM_BTN_VOL, TAM_BTN_VOL)
+    spr_menos_norm = _cargar_scaled("HUD/boton-bajar-volumen.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-bajar-volumen.png", W_BTN_VOL, H_BTN_VOL)
+    spr_menos_semi = _cargar_scaled("HUD/boton-bajar-volumen-semiapretado.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-bajar-volumen-semiapretado.png", W_BTN_VOL, H_BTN_VOL)
+    spr_menos_apr = _cargar_scaled("HUD/boton-bajar-volumen-apretado.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-bajar-volumen-apretado.png", W_BTN_VOL, H_BTN_VOL)
     spr_menos_hov = aclarar_boton(spr_menos_norm)
 
     # Botón Subir Volumen (Parlante con ondas sonoras)
-    spr_mas_norm = _cargar_scaled("HUD/boton-subir-volumen.png", TAM_BTN_VOL, TAM_BTN_VOL) or _cargar_scaled("boton-subir-volumen.png", TAM_BTN_VOL, TAM_BTN_VOL)
-    spr_mas_semi = _cargar_scaled("HUD/boton-subir-volumen-semiapretado.png", TAM_BTN_VOL, TAM_BTN_VOL) or _cargar_scaled("boton-subir-volumen-semiapretado.png", TAM_BTN_VOL, TAM_BTN_VOL)
-    spr_mas_apr = _cargar_scaled("HUD/boton-subir-volumen-apretado.png", TAM_BTN_VOL, TAM_BTN_VOL) or _cargar_scaled("boton-subir-volumen-apretado.png", TAM_BTN_VOL, TAM_BTN_VOL)
+    spr_mas_norm = _cargar_scaled("HUD/boton-subir-volumen.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-subir-volumen.png", W_BTN_VOL, H_BTN_VOL)
+    spr_mas_semi = _cargar_scaled("HUD/boton-subir-volumen-semiapretado.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-subir-volumen-semiapretado.png", W_BTN_VOL, H_BTN_VOL)
+    spr_mas_apr = _cargar_scaled("HUD/boton-subir-volumen-apretado.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-subir-volumen-apretado.png", W_BTN_VOL, H_BTN_VOL)
     spr_mas_hov = aclarar_boton(spr_mas_norm)
 
     # Botón X de cabecera
-    spr_x_norm = _cargar_scaled("HUD/boton-x.png", TAM_X_CFG, TAM_X_CFG) or _cargar_scaled("boton-x.png", TAM_X_CFG, TAM_X_CFG)
-    spr_x_semi = _cargar_scaled("HUD/boton-x-semiapretado.png", TAM_X_CFG, TAM_X_CFG) or _cargar_scaled("boton-x-semiapretado.png", TAM_X_CFG, TAM_X_CFG)
-    spr_x_apr = _cargar_scaled("HUD/boton-x-apretado.png", TAM_X_CFG, TAM_X_CFG) or _cargar_scaled("boton-x-apretado.png", TAM_X_CFG, TAM_X_CFG)
+    spr_x_norm = _cargar_scaled("HUD/boton-x.png", W_X_CFG, H_X_CFG) or _cargar_scaled("boton-x.png", W_X_CFG, H_X_CFG)
+    spr_x_semi = _cargar_scaled("HUD/boton-x-semiapretado.png", W_X_CFG, H_X_CFG) or _cargar_scaled("boton-x-semiapretado.png", W_X_CFG, H_X_CFG)
+    spr_x_apr = _cargar_scaled("HUD/boton-x-apretado.png", W_X_CFG, H_X_CFG) or _cargar_scaled("boton-x-apretado.png", W_X_CFG, H_X_CFG)
     spr_x_hov = aclarar_boton(spr_x_norm)
 
-    # Layout interno del panel
-    y_seccion_vol = rect_modal.top + 80
-    rect_btn_menos = pygame.Rect(rect_modal.left + 46, y_seccion_vol + 26, TAM_BTN_VOL, TAM_BTN_VOL)
-    rect_barra_bg = pygame.Rect(rect_btn_menos.right + 16, y_seccion_vol + 38, 230, 26)
-    rect_btn_mas = pygame.Rect(rect_barra_bg.right + 16, y_seccion_vol + 26, TAM_BTN_VOL, TAM_BTN_VOL)
-
-    y_seccion_idioma = rect_modal.top + 195
+    # Layout interno del panel (simétrico y centrado)
     w_btn_lang, h_btn_lang, gap_lang = 136, 42, 14
-    x_inicio_lang = rect_modal.left + (W_MODAL - (3 * w_btn_lang + 2 * gap_lang)) // 2
-    rect_lang_es = pygame.Rect(x_inicio_lang, y_seccion_idioma + 32, w_btn_lang, h_btn_lang)
-    rect_lang_en = pygame.Rect(rect_lang_es.right + gap_lang, y_seccion_idioma + 32, w_btn_lang, h_btn_lang)
-    rect_lang_zh = pygame.Rect(rect_lang_en.right + gap_lang, y_seccion_idioma + 32, w_btn_lang, h_btn_lang)
+    total_w_content = 3 * w_btn_lang + 2 * gap_lang  # 436 px
+    x_margen_contenido = rect_modal.left + (W_MODAL - total_w_content) // 2  # 42 px de margen izquierdo y derecho
 
-    rect_btn_cerrar = pygame.Rect(rect_modal.centerx - 100, rect_modal.bottom - 60, 200, 44)
+    # Sección 1: Volumen (alineada exactamente a 436 px con botones proporcionales y centros unificados)
+    gap_vol = 14
+    w_barra = total_w_content - (2 * W_BTN_VOL + 2 * gap_vol)  # 324 px
+    h_barra = 28
+
+    y_seccion_vol = rect_modal.top + 78
+    cy_vol_fila = rect_modal.top + 130  # Centro vertical compartido de la fila de volumen
+
+    rect_btn_menos = pygame.Rect(x_margen_contenido, 0, W_BTN_VOL, H_BTN_VOL)
+    rect_btn_menos.centery = cy_vol_fila
+
+    rect_barra_bg = pygame.Rect(rect_btn_menos.right + gap_vol, 0, w_barra, h_barra)
+    rect_barra_bg.centery = cy_vol_fila
+
+    rect_btn_mas = pygame.Rect(rect_barra_bg.right + gap_vol, 0, W_BTN_VOL, H_BTN_VOL)
+    rect_btn_mas.centery = cy_vol_fila
+
+    # Sección 2: Idioma
+    y_seccion_idioma = rect_modal.top + 188
+    y_btns_lang = y_seccion_idioma + 30
+    rect_lang_es = pygame.Rect(x_margen_contenido, y_btns_lang, w_btn_lang, h_btn_lang)
+    rect_lang_en = pygame.Rect(rect_lang_es.right + gap_lang, y_btns_lang, w_btn_lang, h_btn_lang)
+    rect_lang_zh = pygame.Rect(rect_lang_en.right + gap_lang, y_btns_lang, w_btn_lang, h_btn_lang)
+
+    rect_btn_cerrar = pygame.Rect(rect_modal.centerx - 100, rect_modal.bottom - 58, 200, 42)
 
     modal_activo = True
     while modal_activo:
@@ -446,7 +462,7 @@ def mostrar_pestana_configuracion(pantalla, reloj):
         # --- SECCIÓN 1: VOLUMEN ---
         fuente_seccion = obtener_fuente_subtitulo(18, negrita=True, tamano_fallback=18)
         t_vol_lbl = fuente_seccion.render(t("volumen"), True, (255, 195, 140))
-        pantalla.blit(t_vol_lbl, (rect_modal.left + 46, y_seccion_vol))
+        pantalla.blit(t_vol_lbl, (x_margen_contenido, y_seccion_vol))
 
         # Botón Bajar Volumen
         hov_menos = rect_btn_menos.collidepoint(pos_mouse)
@@ -479,7 +495,7 @@ def mostrar_pestana_configuracion(pantalla, reloj):
 
         # --- SECCIÓN 2: SELECTOR DE IDIOMA ---
         t_lang_lbl = fuente_seccion.render(t("idioma"), True, (255, 195, 140))
-        pantalla.blit(t_lang_lbl, (rect_modal.left + 46, y_seccion_idioma))
+        pantalla.blit(t_lang_lbl, (x_margen_contenido, y_seccion_idioma))
 
         opciones_idioma = [
             ("es", "Español", rect_lang_es),

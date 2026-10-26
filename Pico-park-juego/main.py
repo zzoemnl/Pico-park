@@ -164,7 +164,7 @@ def obtener_geometria_tarjeta_partida(rect_panel, idx_slot, alto_card=84, gap_ca
     # Botones a la derecha con ancho y separación reservados para no superponerse
     w_borrar = 96
     w_gestionar = 118
-    w_cargar = 110
+    w_cargar = 129
     h_btn = 38
     gap_btns = 12
     margin_der = 16
@@ -355,13 +355,13 @@ def main():
     partida_cargada_flag = False
     partida_creada_flag = False
 
-    TAM_BOTON_HUD = 92
-    MARGEN_DER, MARGEN_SUP = 25, 20
-    rect_btn_x = pygame.Rect(ANCHO_MENU - MARGEN_DER - TAM_BOTON_HUD, MARGEN_SUP, TAM_BOTON_HUD, TAM_BOTON_HUD)
+    W_BOTON_HUD, H_BOTON_HUD = 44, 52
+    MARGEN_DER, MARGEN_SUP = 18, 16
+    rect_btn_x = pygame.Rect(ANCHO_MENU - MARGEN_DER - W_BOTON_HUD, MARGEN_SUP, W_BOTON_HUD, H_BOTON_HUD)
 
     def _cargar_hud(nombre):
         img = cargar_boton(nombre)
-        return pygame.transform.scale(img, (TAM_BOTON_HUD, TAM_BOTON_HUD)) if img else None
+        return pygame.transform.smoothscale(img, (W_BOTON_HUD, H_BOTON_HUD)) if img else None
 
     spr_x_normal = _cargar_hud("boton-x.png")
     spr_x_hover = aclarar_boton(spr_x_normal)
@@ -370,16 +370,17 @@ def main():
 
     fondo_btn_x = None
 
-    ANCHO_BOTON, ALTO_BOTON, ESPACIO = 306, 72, 12
+    # Botones principales con proporción nativa exacta 3.4000 (5440x1600 -> 272x80)
+    ANCHO_BOTON, ALTO_BOTON, ESPACIO = 272, 80, 14
     x_centro = (ANCHO_MENU - ANCHO_BOTON) // 2
     total_h_menu = (ALTO_BOTON * 4) + (ESPACIO * 3)
     y_inicio_principal = (ALTO_MENU - total_h_menu) // 2 + 35
 
     def _cargar_menu_btn(nombre):
         img = cargar_boton(nombre)
-        return pygame.transform.scale(img, (ANCHO_BOTON, ALTO_BOTON)) if img else None
+        return pygame.transform.smoothscale(img, (ANCHO_BOTON, ALTO_BOTON)) if img else None
 
-    # Sprites animados de los botones del menú principal
+    # Sprites animados de los botones del menú principal (todos los estados con dimensiones exactas)
     spr_jugar_normal = _cargar_menu_btn("jugar.png")
     spr_jugar_hover = aclarar_boton(spr_jugar_normal)
     spr_jugar_semi = _cargar_menu_btn("jugar-preapretado.png")
@@ -431,26 +432,26 @@ def main():
         img = cargar_boton(nombre)
         return pygame.transform.smoothscale(img, (w, h)) if img else None
 
-    # Iconos superiores exclusivos de Selección de Niveles (Configuración, Casita y X)
-    TAM_ICONO_NIVELES = 70
-    rect_btn_x_niveles = pygame.Rect(ANCHO_MENU - MARGEN_DER - TAM_ICONO_NIVELES, MARGEN_SUP, TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
-    rect_btn_casa_niveles = pygame.Rect(rect_btn_x_niveles.left - 18 - TAM_ICONO_NIVELES, MARGEN_SUP, TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
-    rect_btn_config_niveles = pygame.Rect(rect_btn_casa_niveles.left - 18 - TAM_ICONO_NIVELES, MARGEN_SUP, TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
+    # Iconos superiores exclusivos de Selección de Niveles (Configuración, Casita y X) con proporción nativa 0.8496
+    W_ICONO_NIVELES, H_ICONO_NIVELES = 44, 52
+    rect_btn_x_niveles = pygame.Rect(ANCHO_MENU - MARGEN_DER - W_ICONO_NIVELES, MARGEN_SUP, W_ICONO_NIVELES, H_ICONO_NIVELES)
+    rect_btn_casa_niveles = pygame.Rect(rect_btn_x_niveles.left - 12 - W_ICONO_NIVELES, MARGEN_SUP, W_ICONO_NIVELES, H_ICONO_NIVELES)
+    rect_btn_config_niveles = pygame.Rect(rect_btn_casa_niveles.left - 12 - W_ICONO_NIVELES, MARGEN_SUP, W_ICONO_NIVELES, H_ICONO_NIVELES)
 
-    spr_casa_normal = _cargar_scaled("HUD/boton-casa.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-casa.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
+    spr_casa_normal = _cargar_scaled("HUD/boton-casa.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or _cargar_scaled("boton-casa.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
     spr_casa_hover = aclarar_boton(spr_casa_normal)
-    spr_casa_semi = _cargar_scaled("HUD/boton-casa-semiapretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-casa-semiapretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
-    spr_casa_apretado = _cargar_scaled("HUD/boton-casa-apretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-casa-apretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
+    spr_casa_semi = _cargar_scaled("HUD/boton-casa-semiapretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or _cargar_scaled("boton-casa-semiapretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
+    spr_casa_apretado = _cargar_scaled("HUD/boton-casa-apretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or _cargar_scaled("boton-casa-apretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
 
-    spr_confign_normal = _cargar_scaled("HUD/boton-configuracion.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-configuracion.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
+    spr_confign_normal = _cargar_scaled("HUD/boton-configuracion.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or _cargar_scaled("boton-configuracion.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
     spr_confign_hover = aclarar_boton(spr_confign_normal)
-    spr_confign_semi = _cargar_scaled("HUD/boton-configuracion-semiapretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-configuracion-semiapretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
-    spr_confign_apretado = _cargar_scaled("HUD/boton-configuracion-apretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-configuracion-apretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
+    spr_confign_semi = _cargar_scaled("HUD/boton-configuracion-semiapretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or _cargar_scaled("boton-configuracion-semiapretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
+    spr_confign_apretado = _cargar_scaled("HUD/boton-configuracion-apretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or _cargar_scaled("boton-configuracion-apretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
 
-    spr_xn_normal = _cargar_scaled("HUD/boton-x.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-x.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
+    spr_xn_normal = _cargar_scaled("HUD/boton-x.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or _cargar_scaled("boton-x.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
     spr_xn_hover = aclarar_boton(spr_xn_normal)
-    spr_xn_semi = _cargar_scaled("HUD/boton-x-semiapretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-x-semiapretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
-    spr_xn_apretado = _cargar_scaled("HUD/boton-x-apretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-x-apretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
+    spr_xn_semi = _cargar_scaled("HUD/boton-x-semiapretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or _cargar_scaled("boton-x-semiapretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
+    spr_xn_apretado = _cargar_scaled("HUD/boton-x-apretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or _cargar_scaled("boton-x-apretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
 
     # Sprites botón «VOLVER» (mundos)
     spr_volver_normal = _cargar_scaled("mundos/boton-volver.png", W_VOLVER, H_VOLVER)
@@ -492,10 +493,10 @@ def main():
     spr_nueva_primera_semi = _cargar_scaled("mundos/boton-nueva-partida-semiapretado.png", 272, 80)
     spr_nueva_primera_apretado = _cargar_scaled("mundos/boton-nueva-partida-apretado.png", 272, 80)
 
-    spr_cargar_normal = _cargar_scaled("mundos/boton-cargar.png", 110, 38)
+    spr_cargar_normal = _cargar_scaled("mundos/boton-cargar.png", 129, 38)
     spr_cargar_hover = aclarar_boton(spr_cargar_normal)
-    spr_cargar_semi = _cargar_scaled("mundos/boton-cargar-semiapretado.png", 110, 38)
-    spr_cargar_apretado = _cargar_scaled("mundos/boton-cargar-apretado.png", 110, 38)
+    spr_cargar_semi = _cargar_scaled("mundos/boton-cargar-semiapretado.png", 129, 38)
+    spr_cargar_apretado = _cargar_scaled("mundos/boton-cargar-apretado.png", 129, 38)
 
     dict_sprites_tarjeta = {
         "cargar_normal": spr_cargar_normal,
@@ -819,14 +820,15 @@ def main():
                     elif tab_personajes_actual == "accesorios":
                         accesorios_disp = obtener_accesorios_disponibles()
                         w_acc, h_acc, gap_acc_x, gap_acc_y = 126, 88, 16, 14
+                        ancho_fila_acc = 3 * w_acc + 2 * gap_acc_x
+                        x_offset_acc = (rect_f1_ev.width - ancho_fila_acc) // 2
+                        alto_filas_acc = 2 * h_acc + gap_acc_y
+                        y_offset_acc = 34 + ((rect_f1_ev.height - 34) - alto_filas_acc) // 2
                         for idx_a, acc in enumerate(accesorios_disp):
-                            if idx_a < 3:
-                                r, c = 0, idx_a
-                                x_offset_rel = 30 + c * (w_acc + gap_acc_x)
-                            else:
-                                r, c = 1, idx_a - 3
-                                x_offset_rel = 101 + c * (w_acc + gap_acc_x)
-                            y_card_a = 348 + r * (h_acc + gap_acc_y)
+                            r = idx_a // 3
+                            c = idx_a % 3
+                            x_offset_rel = x_offset_acc + c * (w_acc + gap_acc_x)
+                            y_card_a = rect_f1_ev.top + y_offset_acc + r * (h_acc + gap_acc_y)
 
                             ra1 = pygame.Rect(rect_f1_ev.left + x_offset_rel, y_card_a, w_acc, h_acc)
                             ra2 = pygame.Rect(rect_f2_ev.left + x_offset_rel, y_card_a, w_acc, h_acc)
@@ -1242,14 +1244,15 @@ def main():
             elif tab_personajes_actual == "accesorios":
                 accesorios_disp = obtener_accesorios_disponibles()
                 w_acc, h_acc, gap_acc_x, gap_acc_y = 126, 88, 16, 14
+                ancho_fila_acc = 3 * w_acc + 2 * gap_acc_x
+                x_offset_acc = (w_frame - ancho_fila_acc) // 2
+                alto_filas_acc = 2 * h_acc + gap_acc_y
+                y_offset_acc = 34 + ((h_frame - 34) - alto_filas_acc) // 2
                 for idx_a, acc in enumerate(accesorios_disp):
-                    if idx_a < 3:
-                        r, c = 0, idx_a
-                        x_offset_rel = 30 + c * (w_acc + gap_acc_x)
-                    else:
-                        r, c = 1, idx_a - 3
-                        x_offset_rel = 101 + c * (w_acc + gap_acc_x)
-                    y_card_a = 348 + r * (h_acc + gap_acc_y)
+                    r = idx_a // 3
+                    c = idx_a % 3
+                    x_offset_rel = x_offset_acc + c * (w_acc + gap_acc_x)
+                    y_card_a = y_frame + y_offset_acc + r * (h_acc + gap_acc_y)
 
                     ra1 = pygame.Rect(rect_f1.left + x_offset_rel, y_card_a, w_acc, h_acc)
                     ra2 = pygame.Rect(rect_f2.left + x_offset_rel, y_card_a, w_acc, h_acc)
