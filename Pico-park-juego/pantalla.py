@@ -22,6 +22,7 @@ from fuentes import (
     TAMANO_PEQUENA,
     TAMANO_BADGE,
 )
+from configuracion import t, mostrar_pestana_configuracion
 
 from sprites import (
     ANCHO, ALTO, FPS,
@@ -124,16 +125,16 @@ def pantalla_muerte(pantalla, reloj):
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 if boton_reiniciar.collidepoint(evento.pos):
-                    animar_pulsacion_boton(pantalla, boton_reiniciar, boton_reiniciar_semi, boton_reiniciar_apretado, (25, 25, 25))
-                    return "reiniciar"
+                    if animar_pulsacion_boton(pantalla, boton_reiniciar, boton_reiniciar_semi, boton_reiniciar_apretado, (25, 25, 25), boton_reiniciar_normal):
+                        return "reiniciar"
 
                 if boton_menu.collidepoint(evento.pos):
-                    animar_pulsacion_boton(pantalla, boton_menu, boton_menu_semi, boton_menu_apretado, (25, 25, 25))
-                    return "salir"
+                    if animar_pulsacion_boton(pantalla, boton_menu, boton_menu_semi, boton_menu_apretado, (25, 25, 25), boton_menu_normal):
+                        return "salir"
 
         pantalla.fill((25, 25, 25))
-        titulo = fuente_titulo.render("¡Te moriste!", True, (255, 80, 80))
-        texto = fuente_texto.render("¿Querés reiniciar o salir?", True, (255, 255, 255))
+        titulo = fuente_titulo.render(t("te_moriste"), True, (255, 80, 80))
+        texto = fuente_texto.render(t("reiniciar_o_salir"), True, (255, 255, 255))
         pantalla.blit(titulo, titulo.get_rect(center=(ANCHO // 2, 180)))
         pantalla.blit(texto, texto.get_rect(center=(ANCHO // 2, 250)))
 
@@ -147,7 +148,7 @@ def pantalla_muerte(pantalla, reloj):
 
 
 def obtener_fuente_elegante(tamanio, negrita=True):
-    for nombre in ["Segoe UI", "Arial Rounded MT Bold", "Arial", "Trebuchet MS", "DejaVu Sans"]:
+    for nombre in ["Microsoft YaHei", "SimHei", "SimSun", "Segoe UI", "Arial Rounded MT Bold", "Arial", "Trebuchet MS", "DejaVu Sans"]:
         try:
             return pygame.font.SysFont(nombre, tamanio, bold=negrita)
         except Exception:
@@ -698,10 +699,10 @@ def mostrar_pantalla_victoria(
     spr_sig_hover = aclarar_boton(spr_sig_normal) if spr_sig_normal else None
     spr_menu_hover = aclarar_boton(spr_menu_normal) if spr_menu_normal else None
 
-    txt_btn1 = "SIGUIENTE NIVEL →" if hay_siguiente else "¡JUEGO COMPLETADO!"
-    txt_btn2 = "VOLVER AL MENÚ"
+    txt_btn1 = t("siguiente") if hay_siguiente else t("finalizar")
+    txt_btn2 = t("volver_juego")
 
-    nom_nivel = f"MUNDO {mundo} — NIVEL {numero_nivel}"
+    nom_nivel = f"{t('mundo')} {mundo} — {t('nivel')} {numero_nivel}"
 
     # --- FASE 2: Entrada secuencial del título y botones con rebote (18 fotogramas ~ 0.3s) ---
     frames_intro = 18
@@ -719,12 +720,12 @@ def mostrar_pantalla_victoria(
         t_tit = min(1.0, f / 18.0)
         bounce_tit = math.sin(t_tit * math.pi * 2.5) * (1.0 - t_tit) if t_tit < 1.0 else 0.0
         y_tit = rect_panel.top + 35 + int(-28 * bounce_tit)
-        t_tit_surf = fuente_titulo.render("¡NIVEL COMPLETADO!", True, (255, 255, 255))
+        t_tit_surf = fuente_titulo.render(t("nivel_completado"), True, (255, 255, 255))
         pantalla.blit(t_tit_surf, t_tit_surf.get_rect(center=(cx, y_tit)))
 
         # Subtítulo y cápsula de nivel
         if f >= 8:
-            t_sub = fuente_sub.render("¡Buen trabajo!", True, (75, 70, 70))
+            t_sub = fuente_sub.render(t("buen_trabajo"), True, (75, 70, 70))
             pantalla.blit(t_sub, t_sub.get_rect(center=(cx, rect_panel.top + 98)))
 
             r_badge = pygame.Rect(cx - 150, rect_panel.top + 132, 300, 36)
@@ -810,22 +811,14 @@ def mostrar_pantalla_victoria(
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 if rect_btn1.collidepoint(evento.pos):
-                    boton_presionado = 1
+                    spr1_norm = spr_sig_normal if hay_siguiente else spr_menu_normal
+                    spr1_semi = spr_sig_semi if hay_siguiente else spr_menu_semi
+                    spr1_apr = spr_sig_apretado if hay_siguiente else spr_menu_apretado
+                    if animar_pulsacion_boton(pantalla, rect_btn1, spr1_semi, spr1_apr, fondo_limpio_btn1, spr1_norm):
+                        accion_seleccionada = "siguiente" if hay_siguiente else "menu"
                 elif rect_btn2.collidepoint(evento.pos):
-                    boton_presionado = 2
-
-            if evento.type == pygame.MOUSEBUTTONUP and evento.button == 1:
-                if boton_presionado == 1 and rect_btn1.collidepoint(evento.pos):
-                    if spr_sig_semi and spr_sig_apretado and hay_siguiente:
-                        animar_pulsacion_boton(pantalla, rect_btn1, spr_sig_semi, spr_sig_apretado, fondo_limpio_btn1)
-                    elif spr_menu_semi and spr_menu_apretado and not hay_siguiente:
-                        animar_pulsacion_boton(pantalla, rect_btn1, spr_menu_semi, spr_menu_apretado, fondo_limpio_btn1)
-                    accion_seleccionada = "siguiente" if hay_siguiente else "menu"
-                elif boton_presionado == 2 and rect_btn2.collidepoint(evento.pos):
-                    if spr_menu_semi and spr_menu_apretado:
-                        animar_pulsacion_boton(pantalla, rect_btn2, spr_menu_semi, spr_menu_apretado, fondo_limpio_btn2)
-                    accion_seleccionada = "menu"
-                boton_presionado = None
+                    if animar_pulsacion_boton(pantalla, rect_btn2, spr_menu_semi, spr_menu_apretado, fondo_limpio_btn2, spr_menu_normal):
+                        accion_seleccionada = "menu"
 
         if accion_seleccionada is not None:
             break
@@ -834,11 +827,11 @@ def mostrar_pantalla_victoria(
         dibujar_panel_victoria_solido(pantalla, rect_panel, color_p1, color_p2)
 
         # Título
-        t_tit_surf = fuente_titulo.render("¡NIVEL COMPLETADO!", True, (255, 255, 255))
+        t_tit_surf = fuente_titulo.render(t("nivel_completado"), True, (255, 255, 255))
         pantalla.blit(t_tit_surf, t_tit_surf.get_rect(center=(cx, rect_panel.top + 35)))
 
         # Subtítulo y cápsula
-        t_sub = fuente_sub.render("¡Buen trabajo!", True, (75, 70, 70))
+        t_sub = fuente_sub.render(t("buen_trabajo"), True, (75, 70, 70))
         pantalla.blit(t_sub, t_sub.get_rect(center=(cx, rect_panel.top + 98)))
 
         r_badge = pygame.Rect(cx - 150, rect_panel.top + 132, 300, 36)
@@ -1769,6 +1762,7 @@ def iniciar_mundo(
     rect_btn_x = pygame.Rect(pantalla.get_width() - MARGEN_DER - TAM_BOTON_HUD, MARGEN_SUP, TAM_BOTON_HUD, TAM_BOTON_HUD)
     rect_btn_reiniciar = pygame.Rect(rect_btn_x.left - ESPACIO_BOTONES - TAM_BOTON_HUD, MARGEN_SUP, TAM_BOTON_HUD, TAM_BOTON_HUD)
     rect_btn_casa = pygame.Rect(rect_btn_reiniciar.left - ESPACIO_BOTONES - TAM_BOTON_HUD, MARGEN_SUP, TAM_BOTON_HUD, TAM_BOTON_HUD)
+    rect_btn_config = pygame.Rect(rect_btn_casa.left - ESPACIO_BOTONES - TAM_BOTON_HUD, MARGEN_SUP, TAM_BOTON_HUD, TAM_BOTON_HUD)
 
     def _cargar_hud(nombre):
         img = cargar_boton(nombre)
@@ -1789,6 +1783,12 @@ def iniciar_mundo(
     spr_casa_apretado = _cargar_hud("boton-casa-apretado.png")
     spr_casa_hover = aclarar_boton(spr_casa_normal)
 
+    spr_config_normal = _cargar_hud("boton-configuracion.png")
+    spr_config_semi = _cargar_hud("boton-configuracion-semiapretado.png")
+    spr_config_apretado = _cargar_hud("boton-configuracion-apretado.png")
+    spr_config_hover = aclarar_boton(spr_config_normal)
+
+    fondo_btn_config = None
     fondo_btn_casa = None
     fondo_btn_reiniciar = None
     fondo_btn_x = None
@@ -3167,10 +3167,12 @@ def iniciar_mundo(
         pantalla.blit(mundo_inicio, (ancho_m, 0), pygame.Rect(cam_der_x, 0, ancho_m, ALTO))
         pygame.draw.line(pantalla, (0, 0, 0), (ancho_m, 0), (ancho_m, ALTO), 4)
 
+    fondo_btn_config = pantalla.subsurface(rect_btn_config).copy()
     fondo_btn_casa = pantalla.subsurface(rect_btn_casa).copy()
     fondo_btn_reiniciar = pantalla.subsurface(rect_btn_reiniciar).copy()
     fondo_btn_x = pantalla.subsurface(rect_btn_x).copy()
 
+    if spr_config_normal: pantalla.blit(spr_config_normal, rect_btn_config)
     if spr_casa_normal: pantalla.blit(spr_casa_normal, rect_btn_casa)
     if spr_reiniciar_normal: pantalla.blit(spr_reiniciar_normal, rect_btn_reiniciar)
     if spr_x_normal: pantalla.blit(spr_x_normal, rect_btn_x)
@@ -3292,35 +3294,37 @@ def iniciar_mundo(
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 if rect_btn_x.collidepoint(evento.pos):
-                    if spr_x_semi and spr_x_apretado:
-                        f_limpio = fondo_btn_x if fondo_btn_x else (255, 240, 195)
-                        animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, f_limpio)
-                    if hay_progreso_sin_guardar(niveles_desbloqueados, snapshot_guardado, id_partida=partida_id):
-                        resp = mostrar_dialogo_guardar_salir(
-                            pantalla, reloj,
-                            niveles_desbloqueados=niveles_desbloqueados,
-                            id_partida=partida_id,
-                            nombre_partida=partida_nombre,
-                            password_partida=partida_password,
-                        )
-                        if resp in ("guardar_salir", "salir_sin_guardar"):
+                    f_limpio = fondo_btn_x if fondo_btn_x else (255, 240, 195)
+                    if animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, f_limpio, spr_x_normal):
+                        if hay_progreso_sin_guardar(niveles_desbloqueados, snapshot_guardado, id_partida=partida_id):
+                            resp = mostrar_dialogo_guardar_salir(
+                                pantalla, reloj,
+                                niveles_desbloqueados=niveles_desbloqueados,
+                                id_partida=partida_id,
+                                nombre_partida=partida_nombre,
+                                password_partida=partida_password,
+                            )
+                            if resp in ("guardar_salir", "salir_sin_guardar"):
+                                pygame.quit()
+                                sys.exit()
+                        else:
                             pygame.quit()
                             sys.exit()
-                    else:
-                        pygame.quit()
-                        sys.exit()
 
                 if rect_btn_reiniciar.collidepoint(evento.pos):
-                    if spr_reiniciar_semi and spr_reiniciar_apretado:
-                        f_limpio = fondo_btn_reiniciar if fondo_btn_reiniciar else (255, 240, 195)
-                        animar_pulsacion_boton(pantalla, rect_btn_reiniciar, spr_reiniciar_semi, spr_reiniciar_apretado, f_limpio)
-                    _reiniciar_nivel_completo()
+                    f_limpio = fondo_btn_reiniciar if fondo_btn_reiniciar else (255, 240, 195)
+                    if animar_pulsacion_boton(pantalla, rect_btn_reiniciar, spr_reiniciar_semi, spr_reiniciar_apretado, f_limpio, spr_reiniciar_normal):
+                        _reiniciar_nivel_completo()
 
                 if rect_btn_casa.collidepoint(evento.pos):
-                    if spr_casa_semi and spr_casa_apretado:
-                        f_limpio = fondo_btn_casa if fondo_btn_casa else (255, 240, 195)
-                        animar_pulsacion_boton(pantalla, rect_btn_casa, spr_casa_semi, spr_casa_apretado, f_limpio)
-                    return "menu"
+                    f_limpio = fondo_btn_casa if fondo_btn_casa else (255, 240, 195)
+                    if animar_pulsacion_boton(pantalla, rect_btn_casa, spr_casa_semi, spr_casa_apretado, f_limpio, spr_casa_normal):
+                        return "menu"
+
+                if rect_btn_config.collidepoint(evento.pos):
+                    f_limpio = fondo_btn_config if fondo_btn_config else (255, 240, 195)
+                    if animar_pulsacion_boton(pantalla, rect_btn_config, spr_config_semi, spr_config_apretado, f_limpio, spr_config_normal):
+                        mostrar_pestana_configuracion(pantalla, reloj)
 
         teclas = pygame.key.get_pressed()
 
@@ -4039,14 +4043,17 @@ def iniciar_mundo(
         # Botones HUD en la esquina superior derecha solo si el nivel continúa activo
         if not (p1_completado and p2_completado):
             pos_m_hud = pygame.mouse.get_pos()
+            spr_cfg_hud = spr_config_hover if (rect_btn_config.collidepoint(pos_m_hud) and spr_config_hover) else spr_config_normal
             spr_c_hud = spr_casa_hover if (rect_btn_casa.collidepoint(pos_m_hud) and spr_casa_hover) else spr_casa_normal
             spr_r_hud = spr_reiniciar_hover if (rect_btn_reiniciar.collidepoint(pos_m_hud) and spr_reiniciar_hover) else spr_reiniciar_normal
             spr_x_hud = spr_x_hover if (rect_btn_x.collidepoint(pos_m_hud) and spr_x_hover) else spr_x_normal
 
+            fondo_btn_config = pantalla.subsurface(rect_btn_config).copy()
             fondo_btn_casa = pantalla.subsurface(rect_btn_casa).copy()
             fondo_btn_reiniciar = pantalla.subsurface(rect_btn_reiniciar).copy()
             fondo_btn_x = pantalla.subsurface(rect_btn_x).copy()
 
+            if spr_cfg_hud: pantalla.blit(spr_cfg_hud, rect_btn_config)
             if spr_c_hud: pantalla.blit(spr_c_hud, rect_btn_casa)
             if spr_r_hud: pantalla.blit(spr_r_hud, rect_btn_reiniciar)
             if spr_x_hud: pantalla.blit(spr_x_hud, rect_btn_x)

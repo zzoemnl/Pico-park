@@ -118,6 +118,26 @@ def obtener_fuente(categoria="texto", tamano=None, negrita=False, tamano_fallbac
 
     tamano_final = tamano if tamano is not None else tamano_defecto
 
+    # Soporte automático de glifos para Chino Simplificado
+    try:
+        import configuracion
+        idioma_actual = configuracion.obtener_idioma()
+    except Exception:
+        idioma_actual = "es"
+
+    if idioma_actual == "zh":
+        cache_key_zh = ("zh", cat, tamano_final, negrita)
+        if cache_key_zh in _CACHE_FUENTES:
+            return _CACHE_FUENTES[cache_key_zh]
+        for f_cjk in ["Microsoft YaHei", "SimHei", "SimSun", "Segoe UI", "Arial Unicode MS"]:
+            try:
+                font_obj = pygame.font.SysFont(f_cjk, tamano_final, bold=negrita)
+                if font_obj is not None:
+                    _CACHE_FUENTES[cache_key_zh] = font_obj
+                    return font_obj
+            except Exception:
+                pass
+
     cache_key = (cat, fuente_config, tamano_final, negrita, tamano_fallback)
     if cache_key in _CACHE_FUENTES:
         return _CACHE_FUENTES[cache_key]

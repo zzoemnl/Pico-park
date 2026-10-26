@@ -15,6 +15,7 @@ from sprites import (
     dibujar_accesorio_en_personaje,
 )
 from pantalla import iniciar_mundo
+from configuracion import t, mostrar_pestana_configuracion
 from menu_niveles import (
     dibujar_menu_niveles,
     obtener_geometria_menu,
@@ -430,15 +431,21 @@ def main():
         img = cargar_boton(nombre)
         return pygame.transform.smoothscale(img, (w, h)) if img else None
 
-    # Iconos superiores exclusivos de Selección de Niveles (Casita y X)
+    # Iconos superiores exclusivos de Selección de Niveles (Configuración, Casita y X)
     TAM_ICONO_NIVELES = 70
     rect_btn_x_niveles = pygame.Rect(ANCHO_MENU - MARGEN_DER - TAM_ICONO_NIVELES, MARGEN_SUP, TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
     rect_btn_casa_niveles = pygame.Rect(rect_btn_x_niveles.left - 18 - TAM_ICONO_NIVELES, MARGEN_SUP, TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
+    rect_btn_config_niveles = pygame.Rect(rect_btn_casa_niveles.left - 18 - TAM_ICONO_NIVELES, MARGEN_SUP, TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
 
     spr_casa_normal = _cargar_scaled("HUD/boton-casa.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-casa.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
     spr_casa_hover = aclarar_boton(spr_casa_normal)
     spr_casa_semi = _cargar_scaled("HUD/boton-casa-semiapretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-casa-semiapretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
     spr_casa_apretado = _cargar_scaled("HUD/boton-casa-apretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-casa-apretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
+
+    spr_confign_normal = _cargar_scaled("HUD/boton-configuracion.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-configuracion.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
+    spr_confign_hover = aclarar_boton(spr_confign_normal)
+    spr_confign_semi = _cargar_scaled("HUD/boton-configuracion-semiapretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-configuracion-semiapretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
+    spr_confign_apretado = _cargar_scaled("HUD/boton-configuracion-apretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-configuracion-apretado.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
 
     spr_xn_normal = _cargar_scaled("HUD/boton-x.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES) or _cargar_scaled("boton-x.png", TAM_ICONO_NIVELES, TAM_ICONO_NIVELES)
     spr_xn_hover = aclarar_boton(spr_xn_normal)
@@ -515,6 +522,7 @@ def main():
         obtener_geometria_panel_partidas(ANCHO_MENU, ALTO_MENU)
     )
 
+    fondo_btn_config_niveles = None
     fondo_btn_casa_niveles = None
     fondo_btn_x_niveles = None
     fondo_btn_x_main = None
@@ -553,79 +561,32 @@ def main():
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 # El botón X general no actúa en Selección de Niveles ya que esa pantalla tiene sus propios iconos
                 if estado_actual != ESTADO_SELECCION_NIVEL and rect_btn_x.collidepoint(evento.pos):
-                    if spr_x_semi and spr_x_apretado:
-                        f_limpio = fondo_btn_x_main if fondo_btn_x_main else (30, 30, 30)
-                        animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, f_limpio)
-                    intentar_salir()
+                    f_limpio = fondo_btn_x_main if fondo_btn_x_main else (30, 30, 30)
+                    if animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, f_limpio, spr_x_normal):
+                        intentar_salir()
                     break
 
                 if estado_actual == ESTADO_MENU_PRINCIPAL:
                     if btn_jugar.collidepoint(evento.pos):
-                        animar_pulsacion_boton(pantalla, btn_jugar, spr_jugar_semi, spr_jugar_apretado, fondo_limpio_btn)
-                        estado_actual = ESTADO_MODO_JUEGO
+                        if animar_pulsacion_boton(pantalla, btn_jugar, spr_jugar_semi, spr_jugar_apretado, fondo_limpio_btn, spr_jugar_normal):
+                            estado_actual = ESTADO_MODO_JUEGO
                     elif btn_personajes.collidepoint(evento.pos):
-                        animar_pulsacion_boton(pantalla, btn_personajes, spr_personajes_semi, spr_personajes_apretado, fondo_limpio_btn)
-                        estado_actual = ESTADO_PERSONAJES
+                        if animar_pulsacion_boton(pantalla, btn_personajes, spr_personajes_semi, spr_personajes_apretado, fondo_limpio_btn, spr_personajes_normal):
+                            estado_actual = ESTADO_PERSONAJES
                     elif btn_config.collidepoint(evento.pos):
-                        animar_pulsacion_boton(pantalla, btn_config, spr_opciones_semi, spr_opciones_apretado, fondo_limpio_btn)
-                        estado_actual = ESTADO_CONFIGURACION
+                        if animar_pulsacion_boton(pantalla, btn_config, spr_opciones_semi, spr_opciones_apretado, fondo_limpio_btn, spr_opciones_normal):
+                            estado_actual = ESTADO_CONFIGURACION
                     elif btn_salir.collidepoint(evento.pos):
-                        animar_pulsacion_boton(pantalla, btn_salir, spr_salir_semi, spr_salir_apretado, fondo_limpio_btn)
-                        intentar_salir()
+                        if animar_pulsacion_boton(pantalla, btn_salir, spr_salir_semi, spr_salir_apretado, fondo_limpio_btn, spr_salir_normal):
+                            intentar_salir()
 
                 elif estado_actual == ESTADO_MODO_JUEGO:
                     if btn_continuar.collidepoint(evento.pos):
-                        if spr_continuar_semi and spr_continuar_apretado:
-                            animar_pulsacion_boton(pantalla, btn_continuar, spr_continuar_semi, spr_continuar_apretado, (255, 240, 195))
-                        pagina_partidas = 0
-                        estado_actual = ESTADO_LISTA_PARTIDAS
+                        if animar_pulsacion_boton(pantalla, btn_continuar, spr_continuar_semi, spr_continuar_apretado, (255, 240, 195), spr_continuar_normal):
+                            pagina_partidas = 0
+                            estado_actual = ESTADO_LISTA_PARTIDAS
                     elif btn_nueva_partida.collidepoint(evento.pos):
-                        if spr_nueva_modo_semi and spr_nueva_modo_apretado:
-                            animar_pulsacion_boton(pantalla, btn_nueva_partida, spr_nueva_modo_semi, spr_nueva_modo_apretado, (255, 240, 195))
-                        nueva_p = flujo_crear_nueva_partida(pantalla, reloj)
-                        if nueva_p is not None:
-                            niveles_desbloqueados = copy.deepcopy(nueva_p["niveles_desbloqueados"])
-                            snapshot_guardado = copy.deepcopy(nueva_p["niveles_desbloqueados"])
-                            partida_actual_id = nueva_p["id"]
-                            partida_actual_nombre = nueva_p["nombre"]
-                            partida_actual_password = nueva_p.get("password_plain", "")
-                            partida_creada_flag = True
-                            sesion_activa = True
-                            mundo_seleccionado = 1
-                            fin_acc, mundo_seleccionado = jugar_niveles_desde(
-                                1, 0,
-                                color_p1, color_p2,
-                                niveles_desbloqueados,
-                                partida_actual_id,
-                                partida_actual_nombre,
-                                snapshot_guardado,
-                                accesorio_p1=accesorio_p1,
-                                accesorio_p2=accesorio_p2,
-                                partida_actual_password=partida_actual_password,
-                            )
-                            if fin_acc == "menu":
-                                estado_actual = ESTADO_SELECCION_NIVEL
-                            else:
-                                ejecutando = False
-                    elif btn_volver_modo.collidepoint(evento.pos):
-                        if spr_volver_semi and spr_volver_apretado:
-                            animar_pulsacion_boton(pantalla, btn_volver_modo, spr_volver_semi, spr_volver_apretado, (255, 240, 195))
-                        estado_actual = ESTADO_MENU_PRINCIPAL
-
-                elif estado_actual == ESTADO_LISTA_PARTIDAS:
-                    partidas_guardadas = cargar_partidas()
-                    rect_panel_partidas, btn_volver_partidas, btn_nueva_desde_lista, btn_iniciar_primera = (
-                        obtener_geometria_panel_partidas(ANCHO_MENU, ALTO_MENU, bool(partidas_guardadas))
-                    )
-                    total_p = len(partidas_guardadas)
-                    total_paginas = max(1, (total_p + MAX_PARTIDAS_POR_PAGINA - 1) // MAX_PARTIDAS_POR_PAGINA)
-                    if pagina_partidas >= total_paginas:
-                        pagina_partidas = max(0, total_paginas - 1)
-
-                    if not partidas_guardadas:
-                        if btn_iniciar_primera.collidepoint(evento.pos):
-                            if spr_nueva_primera_semi and spr_nueva_primera_apretado:
-                                animar_pulsacion_boton(pantalla, btn_iniciar_primera, spr_nueva_primera_semi, spr_nueva_primera_apretado, (255, 240, 195))
+                        if animar_pulsacion_boton(pantalla, btn_nueva_partida, spr_nueva_modo_semi, spr_nueva_modo_apretado, (255, 240, 195), spr_nueva_modo_normal):
                             nueva_p = flujo_crear_nueva_partida(pantalla, reloj)
                             if nueva_p is not None:
                                 niveles_desbloqueados = copy.deepcopy(nueva_p["niveles_desbloqueados"])
@@ -651,6 +612,51 @@ def main():
                                     estado_actual = ESTADO_SELECCION_NIVEL
                                 else:
                                     ejecutando = False
+                    elif btn_volver_modo.collidepoint(evento.pos):
+                        if animar_pulsacion_boton(pantalla, btn_volver_modo, spr_volver_semi, spr_volver_apretado, (255, 240, 195), spr_volver_normal):
+                            estado_actual = ESTADO_MENU_PRINCIPAL
+
+                elif estado_actual == ESTADO_LISTA_PARTIDAS:
+                    partidas_guardadas = cargar_partidas()
+                    rect_panel_partidas, btn_volver_partidas, btn_nueva_desde_lista, btn_iniciar_primera = (
+                        obtener_geometria_panel_partidas(ANCHO_MENU, ALTO_MENU, bool(partidas_guardadas))
+                    )
+                    total_p = len(partidas_guardadas)
+                    total_paginas = max(1, (total_p + MAX_PARTIDAS_POR_PAGINA - 1) // MAX_PARTIDAS_POR_PAGINA)
+                    if pagina_partidas >= total_paginas:
+                        pagina_partidas = max(0, total_paginas - 1)
+
+                    if not partidas_guardadas:
+                        if btn_iniciar_primera.collidepoint(evento.pos):
+                            pulsado = True
+                            if spr_nueva_primera_semi and spr_nueva_primera_apretado:
+                                pulsado = animar_pulsacion_boton(pantalla, btn_iniciar_primera, spr_nueva_primera_semi, spr_nueva_primera_apretado, (255, 240, 195), spr_nueva_primera_normal)
+                            if pulsado:
+                                nueva_p = flujo_crear_nueva_partida(pantalla, reloj)
+                                if nueva_p is not None:
+                                    niveles_desbloqueados = copy.deepcopy(nueva_p["niveles_desbloqueados"])
+                                    snapshot_guardado = copy.deepcopy(nueva_p["niveles_desbloqueados"])
+                                    partida_actual_id = nueva_p["id"]
+                                    partida_actual_nombre = nueva_p["nombre"]
+                                    partida_actual_password = nueva_p.get("password_plain", "")
+                                    partida_creada_flag = True
+                                    sesion_activa = True
+                                    mundo_seleccionado = 1
+                                    fin_acc, mundo_seleccionado = jugar_niveles_desde(
+                                        1, 0,
+                                        color_p1, color_p2,
+                                        niveles_desbloqueados,
+                                        partida_actual_id,
+                                        partida_actual_nombre,
+                                        snapshot_guardado,
+                                        accesorio_p1=accesorio_p1,
+                                        accesorio_p2=accesorio_p2,
+                                        partida_actual_password=partida_actual_password,
+                                    )
+                                    if fin_acc == "menu":
+                                        estado_actual = ESTADO_SELECCION_NIVEL
+                                    else:
+                                        ejecutando = False
                     else:
                         inicio_idx = pagina_partidas * MAX_PARTIDAS_POR_PAGINA
                         fin_idx = inicio_idx + MAX_PARTIDAS_POR_PAGINA
@@ -693,29 +699,31 @@ def main():
 
                             # Clic en botón CARGAR (única y exclusivamente sobre r_btn_cargar)
                             elif r_btn_cargar.collidepoint(evento.pos):
+                                pulsado = True
                                 if spr_cargar_semi and spr_cargar_apretado:
-                                    animar_pulsacion_boton(pantalla, r_btn_cargar, spr_cargar_semi, spr_cargar_apretado, (253, 246, 233))
-                                if p.get("tiene_password", False):
-                                    if not pedir_password_modal(pantalla, reloj, p):
+                                    pulsado = animar_pulsacion_boton(pantalla, r_btn_cargar, spr_cargar_semi, spr_cargar_apretado, (253, 246, 233), spr_cargar_normal)
+                                if pulsado:
+                                    if p.get("tiene_password", False):
+                                        if not pedir_password_modal(pantalla, reloj, p):
+                                            pygame.event.clear()
+                                            accion_ejecutada = True
+                                            break
                                         pygame.event.clear()
-                                        accion_ejecutada = True
-                                        break
-                                    pygame.event.clear()
-                                niveles_desbloqueados = copy.deepcopy(p["niveles_desbloqueados"])
-                                snapshot_guardado = copy.deepcopy(p["niveles_desbloqueados"])
-                                partida_actual_id = p["id"]
-                                partida_actual_nombre = p["nombre"]
-                                partida_actual_password = None
-                                partida_cargada_flag = True
-                                sesion_activa = True
-                                color_p1 = p.get("color_p1", color_p1)
-                                color_p2 = p.get("color_p2", color_p2)
-                                accesorio_p1 = p.get("accesorio_p1", accesorio_p1)
-                                accesorio_p2 = p.get("accesorio_p2", accesorio_p2)
-                                mundo_seleccionado = p["mundo_max"]
-                                estado_actual = ESTADO_SELECCION_NIVEL
-                                accion_ejecutada = True
-                                break
+                                    niveles_desbloqueados = copy.deepcopy(p["niveles_desbloqueados"])
+                                    snapshot_guardado = copy.deepcopy(p["niveles_desbloqueados"])
+                                    partida_actual_id = p["id"]
+                                    partida_actual_nombre = p["nombre"]
+                                    partida_actual_password = None
+                                    partida_cargada_flag = True
+                                    sesion_activa = True
+                                    color_p1 = p.get("color_p1", color_p1)
+                                    color_p2 = p.get("color_p2", color_p2)
+                                    accesorio_p1 = p.get("accesorio_p1", accesorio_p1)
+                                    accesorio_p2 = p.get("accesorio_p2", accesorio_p2)
+                                    mundo_seleccionado = p["mundo_max"]
+                                    estado_actual = ESTADO_SELECCION_NIVEL
+                                    accion_ejecutada = True
+                                    break
 
                         if not accion_ejecutada:
                             if total_paginas > 1:
@@ -727,45 +735,51 @@ def main():
                                     pagina_partidas += 1
 
                             if btn_nueva_desde_lista.collidepoint(evento.pos):
+                                pulsado = True
                                 if spr_nueva_lista_semi and spr_nueva_lista_apretado:
-                                    animar_pulsacion_boton(pantalla, btn_nueva_desde_lista, spr_nueva_lista_semi, spr_nueva_lista_apretado, (255, 240, 195))
-                                nueva_p = flujo_crear_nueva_partida(pantalla, reloj)
-                                if nueva_p is not None:
-                                    niveles_desbloqueados = copy.deepcopy(nueva_p["niveles_desbloqueados"])
-                                    snapshot_guardado = copy.deepcopy(nueva_p["niveles_desbloqueados"])
-                                    partida_actual_id = nueva_p["id"]
-                                    partida_actual_nombre = nueva_p["nombre"]
-                                    partida_actual_password = nueva_p.get("password_plain", "")
-                                    partida_creada_flag = True
-                                    sesion_activa = True
-                                    mundo_seleccionado = 1
-                                    fin_acc, mundo_seleccionado = jugar_niveles_desde(
-                                        1, 0,
-                                        color_p1, color_p2,
-                                        niveles_desbloqueados,
-                                        partida_actual_id,
-                                        partida_actual_nombre,
-                                        snapshot_guardado,
-                                        accesorio_p1=accesorio_p1,
-                                        accesorio_p2=accesorio_p2,
-                                        partida_actual_password=partida_actual_password,
-                                    )
-                                    if fin_acc == "menu":
-                                        estado_actual = ESTADO_SELECCION_NIVEL
-                                    else:
-                                        ejecutando = False
+                                    pulsado = animar_pulsacion_boton(pantalla, btn_nueva_desde_lista, spr_nueva_lista_semi, spr_nueva_lista_apretado, (255, 240, 195), spr_nueva_lista_normal)
+                                if pulsado:
+                                    nueva_p = flujo_crear_nueva_partida(pantalla, reloj)
+                                    if nueva_p is not None:
+                                        niveles_desbloqueados = copy.deepcopy(nueva_p["niveles_desbloqueados"])
+                                        snapshot_guardado = copy.deepcopy(nueva_p["niveles_desbloqueados"])
+                                        partida_actual_id = nueva_p["id"]
+                                        partida_actual_nombre = nueva_p["nombre"]
+                                        partida_actual_password = nueva_p.get("password_plain", "")
+                                        partida_creada_flag = True
+                                        sesion_activa = True
+                                        mundo_seleccionado = 1
+                                        fin_acc, mundo_seleccionado = jugar_niveles_desde(
+                                            1, 0,
+                                            color_p1, color_p2,
+                                            niveles_desbloqueados,
+                                            partida_actual_id,
+                                            partida_actual_nombre,
+                                            snapshot_guardado,
+                                            accesorio_p1=accesorio_p1,
+                                            accesorio_p2=accesorio_p2,
+                                            partida_actual_password=partida_actual_password,
+                                        )
+                                        if fin_acc == "menu":
+                                            estado_actual = ESTADO_SELECCION_NIVEL
+                                        else:
+                                            ejecutando = False
 
                     if btn_volver_partidas.collidepoint(evento.pos):
+                        pulsado = True
                         if spr_volver_semi and spr_volver_apretado:
-                            animar_pulsacion_boton(pantalla, btn_volver_partidas, spr_volver_semi, spr_volver_apretado, (255, 240, 195))
-                        estado_actual = ESTADO_MODO_JUEGO
+                            pulsado = animar_pulsacion_boton(pantalla, btn_volver_partidas, spr_volver_semi, spr_volver_apretado, (255, 240, 195), spr_volver_normal)
+                        if pulsado:
+                            estado_actual = ESTADO_MODO_JUEGO
 
                 elif estado_actual == ESTADO_PERSONAJES:
                     if btn_volver_personajes.collidepoint(evento.pos) or btn_guardar.collidepoint(evento.pos):
+                        pulsado = True
                         if spr_volver_semi and spr_volver_apretado and btn_volver_personajes.collidepoint(evento.pos):
-                            animar_pulsacion_boton(pantalla, btn_volver_personajes, spr_volver_semi, spr_volver_apretado, (225, 110, 80))
-                        estado_actual = ESTADO_MENU_PRINCIPAL
-                        break
+                            pulsado = animar_pulsacion_boton(pantalla, btn_volver_personajes, spr_volver_semi, spr_volver_apretado, (225, 110, 80), spr_volver_normal)
+                        if pulsado:
+                            estado_actual = ESTADO_MENU_PRINCIPAL
+                            break
 
                     # Pestañas [ COLORES ] y [ ACCESORIOS ]
                     rect_tab_col = pygame.Rect(418, 106, 210, 44)
@@ -824,30 +838,46 @@ def main():
 
                 elif estado_actual == ESTADO_CONFIGURACION:
                     if btn_volver_config.collidepoint(evento.pos):
+                        pulsado = True
                         if spr_volver_semi and spr_volver_apretado:
-                            animar_pulsacion_boton(pantalla, btn_volver_config, spr_volver_semi, spr_volver_apretado, (30, 30, 30))
-                        estado_actual = ESTADO_MENU_PRINCIPAL
+                            pulsado = animar_pulsacion_boton(pantalla, btn_volver_config, spr_volver_semi, spr_volver_apretado, (30, 30, 30), spr_volver_normal)
+                        if pulsado:
+                            estado_actual = ESTADO_MENU_PRINCIPAL
 
                 elif estado_actual == ESTADO_CREDITOS:
                     if btn_volver_creditos.collidepoint(evento.pos):
+                        pulsado = True
                         if spr_volver_semi and spr_volver_apretado:
-                            animar_pulsacion_boton(pantalla, btn_volver_creditos, spr_volver_semi, spr_volver_apretado, (30, 30, 30))
-                        estado_actual = ESTADO_MENU_PRINCIPAL
+                            pulsado = animar_pulsacion_boton(pantalla, btn_volver_creditos, spr_volver_semi, spr_volver_apretado, (30, 30, 30), spr_volver_normal)
+                        if pulsado:
+                            estado_actual = ESTADO_MENU_PRINCIPAL
 
                 elif estado_actual in (ESTADO_SELECCION_NIVEL, ESTADO_SELECCION_MUNDO):
-                    # Iconos superiores de Selección de Niveles (Casita y X)
+                    # Iconos superiores de Selección de Niveles (Configuración, Casita y X)
+                    if rect_btn_config_niveles.collidepoint(evento.pos):
+                        pulsado = True
+                        if spr_confign_semi and spr_confign_apretado:
+                            f_limpio = fondo_btn_config_niveles if fondo_btn_config_niveles else (255, 240, 195)
+                            pulsado = animar_pulsacion_boton(pantalla, rect_btn_config_niveles, spr_confign_semi, spr_confign_apretado, f_limpio, spr_confign_normal)
+                        if pulsado:
+                            mostrar_pestana_configuracion(pantalla, reloj)
+                            break
                     if rect_btn_casa_niveles.collidepoint(evento.pos):
+                        pulsado = True
                         if spr_casa_semi and spr_casa_apretado:
                             f_limpio = fondo_btn_casa_niveles if fondo_btn_casa_niveles else (255, 240, 195)
-                            animar_pulsacion_boton(pantalla, rect_btn_casa_niveles, spr_casa_semi, spr_casa_apretado, f_limpio)
-                        estado_actual = ESTADO_MENU_PRINCIPAL
-                        break
+                            pulsado = animar_pulsacion_boton(pantalla, rect_btn_casa_niveles, spr_casa_semi, spr_casa_apretado, f_limpio, spr_casa_normal)
+                        if pulsado:
+                            estado_actual = ESTADO_MENU_PRINCIPAL
+                            break
                     if rect_btn_x_niveles.collidepoint(evento.pos):
+                        pulsado = True
                         if spr_xn_semi and spr_xn_apretado:
                             f_limpio = fondo_btn_x_niveles if fondo_btn_x_niveles else (255, 240, 195)
-                            animar_pulsacion_boton(pantalla, rect_btn_x_niveles, spr_xn_semi, spr_xn_apretado, f_limpio)
-                        intentar_salir()
-                        break
+                            pulsado = animar_pulsacion_boton(pantalla, rect_btn_x_niveles, spr_xn_semi, spr_xn_apretado, f_limpio, spr_xn_normal)
+                        if pulsado:
+                            intentar_salir()
+                            break
 
                     rect_panel, tabs_info, rects_cards = obtener_geometria_menu(ANCHO_MENU, ALTO_MENU)
                     tab_presionada = False
@@ -1373,10 +1403,16 @@ def main():
             )
 
             # Capturar fondo limpio de los iconos antes de dibujarlos sobre la pantalla
+            fondo_btn_config_niveles = pantalla.subsurface(rect_btn_config_niveles).copy()
             fondo_btn_casa_niveles = pantalla.subsurface(rect_btn_casa_niveles).copy()
             fondo_btn_x_niveles = pantalla.subsurface(rect_btn_x_niveles).copy()
 
-            # Iconos superiores de Selección de Niveles: Casita (Menú Principal) y X (Salir)
+            # Iconos superiores de Selección de Niveles: Configuración, Casita (Menú Principal) y X (Salir)
+            hov_cfg = rect_btn_config_niveles.collidepoint(pos_mouse)
+            spr_cfg_dib = spr_confign_hover if (hov_cfg and spr_confign_hover) else spr_confign_normal
+            if spr_cfg_dib:
+                pantalla.blit(spr_cfg_dib, rect_btn_config_niveles)
+
             hov_casa = rect_btn_casa_niveles.collidepoint(pos_mouse)
             spr_c_dib = spr_casa_hover if (hov_casa and spr_casa_hover) else spr_casa_normal
             if spr_c_dib:

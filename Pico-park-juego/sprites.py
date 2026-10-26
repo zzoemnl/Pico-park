@@ -83,11 +83,16 @@ def aclarar_boton(surf, factor=45):
     return brillante
 
 
-def animar_pulsacion_boton(pantalla, rect, spr_semi, spr_apretado, fondo_limpio=None):
+def animar_pulsacion_boton(pantalla, rect, spr_semi, spr_apretado, fondo_limpio=None, spr_normal=None):
     """
-    Reproduce la animación de pulsación en dos etapas (semiapretado y apretado)
-    al hacer clic sobre un botón.
-    Limpia completamente el fondo para evitar que el botón sin apretar quede visible debajo.
+    Reproduce una pulsación física real en 4 etapas usando los tres sprites de cada botón:
+    1. Normal -> Semiapretado: al hacer clic, pasa rápidamente al sprite semiapretado (~55 ms).
+    2. Semiapretado -> Apretado: inmediatamente después pasa al sprite apretado (~60 ms),
+       dando la sensación de que el botón se hunde físicamente.
+    3. Mientras mantenga presionado el clic: permanece visualmente apretado de forma continua.
+    4. Al soltar: realiza una transición rápida de regreso (semiapretado ~45 ms -> normal)
+       y ejecuta la acción una sola vez por clic.
+    Si el usuario arrastra el mouse afuera antes de soltar, cancela la pulsación y retorna False.
     """
     def _limpiar():
         if fondo_limpio is not None:
@@ -105,19 +110,75 @@ def animar_pulsacion_boton(pantalla, rect, spr_semi, spr_apretado, fondo_limpio=
             col_bg = pantalla.get_at((x_muestra, y_muestra))[:3]
             pygame.draw.rect(pantalla, col_bg, rect)
 
+    # 1. Transición rápida al sprite semiapretado
     if spr_semi:
         _limpiar()
         pantalla.blit(spr_semi, rect)
         pygame.display.flip()
         pygame.event.pump()
-        pygame.time.delay(50)
+        pygame.time.delay(55)
 
+    # 2. Transición inmediata al sprite apretado (hundido físico)
     if spr_apretado:
         _limpiar()
         pantalla.blit(spr_apretado, rect)
         pygame.display.flip()
         pygame.event.pump()
-        pygame.time.delay(80)
+        pygame.time.delay(60)
+
+    # 3. Mantener apretado mientras el botón del mouse continúe presionado
+    reloj_anim = pygame.time.Clock()
+    fue_soltado_adentro = True
+
+    while pygame.mouse.get_pressed()[0]:
+        pygame.event.pump()
+        pos_m = pygame.mouse.get_pos()
+        esta_adentro = rect.collidepoint(pos_m)
+
+        _limpiar()
+        if esta_adentro:
+            if spr_apretado:
+                pantalla.blit(spr_apretado, rect)
+            fue_soltado_adentro = True
+        else:
+            if spr_normal:
+                pantalla.blit(spr_normal, rect)
+            elif spr_semi:
+                pantalla.blit(spr_semi, rect)
+            fue_soltado_adentro = False
+
+        pygame.display.flip()
+        reloj_anim.tick(60)
+
+    # 4. Al soltar: transición rápida de regreso hacia normal
+    if fue_soltado_adentro:
+        if spr_semi:
+            _limpiar()
+            pantalla.blit(spr_semi, rect)
+            pygame.display.flip()
+            pygame.event.pump()
+            pygame.time.delay(45)
+
+        _limpiar()
+        if spr_normal:
+            pantalla.blit(spr_normal, rect)
+        pygame.display.flip()
+        pygame.event.pump()
+
+        # Descartar eventos de MOUSEBUTTONUP generados por este clic
+        for _ in pygame.event.get(pygame.MOUSEBUTTONUP):
+            pass
+
+        return True
+    else:
+        _limpiar()
+        if spr_normal:
+            pantalla.blit(spr_normal, rect)
+        pygame.display.flip()
+        pygame.event.pump()
+        for _ in pygame.event.get(pygame.MOUSEBUTTONUP):
+            pass
+        return False
 
 
 
@@ -317,6 +378,7 @@ def dibujar_personaje(pantalla, p, zona_agua=None):
 
     rect_sprite = sprite.get_rect(center=p["hitbox"].center)
     pantalla.blit(sprite, rect_sprite)
+    dibujar_accesorio_en_personaje(pantalla, p, sprite, rect_sprite)
 
     if zona_agua is not None and p.get("en_agua", False):
         sprite_agua = pygame.Surface(sprite.get_size(), pygame.SRCALPHA)
@@ -327,6 +389,97 @@ def dibujar_personaje(pantalla, p, zona_agua=None):
         pantalla.set_clip(pygame.Rect(zona_agua.left, zona_agua.top, zona_agua.width, pantalla.get_height() - zona_agua.top))
         pantalla.blit(sprite_agua, rect_sprite)
         pantalla.set_clip(clip_anterior)
+
+
+_ACCESORIOS_REGISTRADOS = [
+    {"id": "Ninguno", "nombre": "Ninguno"},
+    {"id": "Corona", "nombre": "Corona"},
+    {"id": "Gorro", "nombre": "Gorro"},
+    {"id": "Anteojos", "nombre": "Anteojos"},
+    {"id": "Moño", "nombre": "Moño"},
+    {"id": "Sombrero", "nombre": "Sombrero"},
+]
+
+
+def obtener_accesorios_disponibles():
+    return list(_ACCESORIOS_REGISTRADOS)
+
+
+_CACHE_ACCESORIOS = {}
+
+
+def cargar_accesorio(id_accesorio):
+    if not id_accesorio or id_accesorio == "Ninguno":
+        return None
+    if id_accesorio in _CACHE_ACCESORIOS:
+        return _CACHE_ACCESORIOS[id_accesorio]
+
+    ruta = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Accesorios", f"{id_accesorio.lower()}.png")
+    if os.path.isfile(ruta):
+        try:
+            surf = pygame.image.load(ruta).convert_alpha()
+            _CACHE_ACCESORIOS[id_accesorio] = surf
+            return surf
+        except Exception:
+            pass
+
+    surf = pygame.Surface((36, 28), pygame.SRCALPHA)
+    if id_accesorio == "Corona":
+        pygame.draw.polygon(surf, (255, 215, 0), [(4, 24), (32, 24), (32, 8), (24, 16), (18, 4), (12, 16), (4, 8)])
+        pygame.draw.polygon(surf, (180, 140, 0), [(4, 24), (32, 24), (32, 8), (24, 16), (18, 4), (12, 16), (4, 8)], 2)
+        pygame.draw.circle(surf, (255, 50, 50), (18, 16), 3)
+    elif id_accesorio == "Gorro":
+        pygame.draw.polygon(surf, (230, 60, 60), [(6, 24), (30, 24), (18, 4)])
+        pygame.draw.polygon(surf, (160, 30, 30), [(6, 24), (30, 24), (18, 4)], 2)
+        pygame.draw.circle(surf, (255, 255, 255), (18, 4), 5)
+        pygame.draw.rect(surf, (255, 255, 255), (4, 22, 28, 5), border_radius=2)
+    elif id_accesorio == "Anteojos":
+        pygame.draw.rect(surf, (25, 25, 25), (4, 10, 12, 10), border_radius=3)
+        pygame.draw.rect(surf, (25, 25, 25), (20, 10, 12, 10), border_radius=3)
+        pygame.draw.rect(surf, (25, 25, 25), (14, 12, 8, 3))
+        pygame.draw.line(surf, (25, 25, 25), (4, 12), (0, 12), 2)
+        pygame.draw.line(surf, (25, 25, 25), (32, 12), (36, 12), 2)
+    elif id_accesorio == "Moño":
+        pygame.draw.polygon(surf, (255, 90, 130), [(6, 8), (18, 14), (6, 20)])
+        pygame.draw.polygon(surf, (255, 90, 130), [(30, 8), (18, 14), (30, 20)])
+        pygame.draw.circle(surf, (230, 50, 90), (18, 14), 4)
+    elif id_accesorio == "Sombrero":
+        pygame.draw.rect(surf, (30, 30, 35), (2, 20, 32, 6), border_radius=2)
+        pygame.draw.rect(surf, (30, 30, 35), (8, 6, 20, 15))
+        pygame.draw.rect(surf, (200, 40, 40), (8, 18, 20, 3))
+    else:
+        pygame.draw.circle(surf, (255, 200, 50), (18, 14), 10)
+
+    _CACHE_ACCESORIOS[id_accesorio] = surf
+    return surf
+
+
+def dibujar_accesorio_en_personaje(pantalla, p, sprite_personaje, rect_personaje):
+    acc_id = p.get("accesorio")
+    if not acc_id or acc_id == "Ninguno":
+        return
+    surf_acc = cargar_accesorio(acc_id)
+    if not surf_acc:
+        return
+
+    mirando_der = p.get("mirando_derecha", True)
+    if not mirando_der:
+        surf_acc = pygame.transform.flip(surf_acc, True, False)
+
+    if acc_id in ("Corona", "Gorro", "Sombrero"):
+        x_acc = rect_personaje.centerx - surf_acc.get_width() // 2
+        y_acc = rect_personaje.top - surf_acc.get_height() + 8
+    elif acc_id == "Anteojos":
+        x_acc = rect_personaje.centerx - surf_acc.get_width() // 2 + (2 if mirando_der else -2)
+        y_acc = rect_personaje.top + 16
+    elif acc_id == "Moño":
+        x_acc = rect_personaje.centerx - surf_acc.get_width() // 2
+        y_acc = rect_personaje.top + 46
+    else:
+        x_acc = rect_personaje.centerx - surf_acc.get_width() // 2
+        y_acc = rect_personaje.top - 5
+
+    pantalla.blit(surf_acc, (x_acc, y_acc))
 
 
 COLOR_AGUA = (0, 140, 240, 130)

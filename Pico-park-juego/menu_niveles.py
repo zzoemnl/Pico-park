@@ -9,6 +9,7 @@ from fuentes import (
     TAMANO_TITULO_MODAL,
     TAMANO_CARD,
 )
+from configuracion import t
 
 # Paletas de colores del menú
 COL_CIELO = (244, 238, 226)
@@ -164,12 +165,10 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
     rect_panel, tabs_info, rects_cards = obtener_geometria_menu(ancho, alto)
     thumbs = obtener_thumbnails()
 
-    if fuentes is None:
-        fuentes = {}
-    fuente_titulo = fuentes.get("titulo") or obtener_fuente_titulo(TAMANO_TITULO, tamano_fallback=55)
-    fuente_tab = fuentes.get("tab") or obtener_fuente_titulo(TAMANO_TITULO_MODAL, tamano_fallback=34)
-    fuente_card = fuentes.get("card") or obtener_fuente_boton(TAMANO_CARD, tamano_fallback=28)
-    fuente_btn_card = fuentes.get("btn", fuente_card) or obtener_fuente_boton(TAMANO_CARD, tamano_fallback=28)
+    fuente_titulo = obtener_fuente_titulo(TAMANO_TITULO, tamano_fallback=55)
+    fuente_tab = obtener_fuente_titulo(TAMANO_TITULO_MODAL, tamano_fallback=34)
+    fuente_card = obtener_fuente_boton(TAMANO_CARD, tamano_fallback=28)
+    fuente_btn_card = obtener_fuente_boton(TAMANO_CARD, tamano_fallback=28)
 
     # 1. FONDO Y SUELO ORIGINALES DEL JUEGO (idénticos al escenario de los niveles)
     pantalla.fill((255, 240, 195))
@@ -177,7 +176,7 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
 
     # Título principal
     if fuente_titulo:
-        txt_tit = fuente_titulo.render("SELECCION DE NIVEL", True, (60, 45, 35))
+        txt_tit = fuente_titulo.render(t("seleccion_nivel"), True, (60, 45, 35))
         pantalla.blit(txt_tit, txt_tit.get_rect(center=(ancho // 2, 65)))
 
     # 2. PESTAÑAS (MUNDO 1, MUNDO 2, MUNDO 3)
@@ -207,7 +206,7 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
         # Texto de la pestaña
         if fuente_tab:
             color_txt = info_col["texto"] if es_activa else (110, 100, 95)
-            txt_tab = fuente_tab.render(f"MUNDO {m}", True, color_txt)
+            txt_tab = fuente_tab.render(f"{t('mundo')} {m}", True, color_txt)
             rect_txt_tab = txt_tab.get_rect(center=(x_t + w_t // 2, y_t + h_t // 2 - 2))
             pantalla.blit(txt_tab, rect_txt_tab)
 
@@ -275,7 +274,7 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
         # Texto "NIVEL X"
         if fuente_card:
             col_texto_n = (55, 45, 35) if desbloqueado else (150, 140, 130)
-            txt_n = fuente_card.render(f"NIVEL {nivel_num}", True, col_texto_n)
+            txt_n = fuente_card.render(f"{t('nivel')} {nivel_num}", True, col_texto_n)
             rect_txt_n = txt_n.get_rect(center=(r_card.centerx, r_th.bottom + 26))
             pantalla.blit(txt_n, rect_txt_n)
 
@@ -299,12 +298,12 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
             col_pill = (96, 212, 130) if mouse_encima else (82, 194, 114)
             borde_pill = (45, 130, 70)
             txt_pill_col = (255, 255, 255)
-            texto_pill = "JUGAR ▶"
+            texto_pill = f"{t('jugar')} ▶"
         else:
             col_pill = (220, 212, 204)
             borde_pill = (180, 170, 160)
             txt_pill_col = (140, 130, 120)
-            texto_pill = "BLOQUEADO"
+            texto_pill = t("bloqueado")
 
         pygame.draw.rect(pantalla, col_pill, r_btn_status, border_radius=8)
         pygame.draw.rect(pantalla, borde_pill, r_btn_status, 2, border_radius=8)

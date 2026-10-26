@@ -7,6 +7,7 @@ import secrets
 import pygame
 
 from sprites import cargar_boton, animar_pulsacion_boton, aclarar_boton
+from configuracion import t
 
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 RUTA_PARTIDAS = os.path.join(DIRECTORIO_ACTUAL, "partidas.txt")
@@ -455,10 +456,12 @@ def solicitar_texto_modal(pantalla, reloj, titulo, subtitulo, valor_inicial="", 
                 if rect_ojo and rect_ojo.collidepoint(evento.pos):
                     mostrar_caracteres = not mostrar_caracteres
                 elif btn_cancelar.collidepoint(evento.pos):
+                    pulsado = True
                     if spr_can_semi and spr_can_apret:
-                        animar_pulsacion_boton(pantalla, btn_cancelar, spr_can_semi, spr_can_apret, fondo_tarjeta)
-                    pygame.event.clear()
-                    return None
+                        pulsado = animar_pulsacion_boton(pantalla, btn_cancelar, spr_can_semi, spr_can_apret, fondo_tarjeta, spr_can_norm)
+                    if pulsado:
+                        pygame.event.clear()
+                        return None
                 elif btn_confirmar.collidepoint(evento.pos):
                     val = texto.strip()
                     if not val and not permitir_vacio:
@@ -610,10 +613,12 @@ def pedir_password_modal(pantalla, reloj, partida):
                         reintentar = True
                         pygame.event.clear()
                     elif b_canc.collidepoint(ev.pos):
+                        pulsado = True
                         if spr_canc_semi and spr_canc_apret:
-                            animar_pulsacion_boton(pantalla, b_canc, spr_canc_semi, spr_canc_apret, (253, 246, 233))
-                        pygame.event.clear()
-                        return False
+                            pulsado = animar_pulsacion_boton(pantalla, b_canc, spr_canc_semi, spr_canc_apret, (253, 246, 233), spr_canc_norm)
+                        if pulsado:
+                            pygame.event.clear()
+                            return False
 
             pantalla.blit(captura_aviso, (0, 0))
             pygame.draw.rect(pantalla, (253, 246, 233), r_a, border_radius=14)
@@ -754,9 +759,11 @@ def modal_administrar_perfil(pantalla, reloj, partida):
                         return True
 
                 elif btn_volver.collidepoint(evento.pos):
+                    pulsado = True
                     if spr_vol_semi and spr_vol_apret:
-                        animar_pulsacion_boton(pantalla, btn_volver, spr_vol_semi, spr_vol_apret, fondo_tarjeta)
-                    return hubo_cambios
+                        pulsado = animar_pulsacion_boton(pantalla, btn_volver, spr_vol_semi, spr_vol_apret, fondo_tarjeta, spr_vol_norm)
+                    if pulsado:
+                        return hubo_cambios
 
         # Dibujar modal
         pantalla.blit(captura_previa, (0, 0))
@@ -864,9 +871,11 @@ def mostrar_dialogo_partida_existente(pantalla, reloj, nombre):
                 elif btn_sobrescribir.collidepoint(evento.pos):
                     return "sobrescribir"
                 elif btn_cancelar.collidepoint(evento.pos):
+                    pulsado = True
                     if spr_canc_semi and spr_canc_apret:
-                        animar_pulsacion_boton(pantalla, btn_cancelar, spr_canc_semi, spr_canc_apret, fondo_tarjeta)
-                    return "cancelar"
+                        pulsado = animar_pulsacion_boton(pantalla, btn_cancelar, spr_canc_semi, spr_canc_apret, fondo_tarjeta, spr_canc_norm)
+                    if pulsado:
+                        return "cancelar"
 
         pantalla.blit(captura_previa, (0, 0))
         pantalla.blit(overlay, (0, 0))
@@ -1068,9 +1077,11 @@ def modal_flujo_guardar_perfil(pantalla, reloj, niveles_desbloqueados, id_partid
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 if btn_cancelar.collidepoint(evento.pos):
+                    pulsado = True
                     if spr_can_semi and spr_can_apret:
-                        animar_pulsacion_boton(pantalla, btn_cancelar, spr_can_semi, spr_can_apret, fondo_tarjeta)
-                    return False
+                        pulsado = animar_pulsacion_boton(pantalla, btn_cancelar, spr_can_semi, spr_can_apret, fondo_tarjeta, spr_can_norm)
+                    if pulsado:
+                        return False
 
                 if btn_pag_ant and btn_pag_ant.collidepoint(evento.pos) and pagina_guardar > 0:
                     pagina_guardar -= 1
@@ -1318,27 +1329,33 @@ def mostrar_dialogo_guardar_salir(pantalla, reloj, niveles_desbloqueados, id_par
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 if btn_guardar.collidepoint(evento.pos):
+                    pulsado = True
                     if spr_g_semi and spr_g_apret:
-                        animar_pulsacion_boton(pantalla, btn_guardar, spr_g_semi, spr_g_apret, fondo_tarjeta)
-                    guardado_ok = modal_flujo_guardar_perfil(
-                        pantalla, reloj,
-                        niveles_desbloqueados=niveles_desbloqueados,
-                        id_partida_actual=id_partida,
-                        nombre_partida_actual=nombre_partida,
-                        password_partida_actual=password_partida,
-                    )
-                    if guardado_ok:
-                        return "guardar_salir"
+                        pulsado = animar_pulsacion_boton(pantalla, btn_guardar, spr_g_semi, spr_g_apret, fondo_tarjeta, spr_g_norm)
+                    if pulsado:
+                        guardado_ok = modal_flujo_guardar_perfil(
+                            pantalla, reloj,
+                            niveles_desbloqueados=niveles_desbloqueados,
+                            id_partida_actual=id_partida,
+                            nombre_partida_actual=nombre_partida,
+                            password_partida_actual=password_partida,
+                        )
+                        if guardado_ok:
+                            return "guardar_salir"
 
                 elif btn_no_guardar.collidepoint(evento.pos):
+                    pulsado = True
                     if spr_s_semi and spr_s_apret:
-                        animar_pulsacion_boton(pantalla, btn_no_guardar, spr_s_semi, spr_s_apret, fondo_tarjeta)
-                    return "salir_sin_guardar"
+                        pulsado = animar_pulsacion_boton(pantalla, btn_no_guardar, spr_s_semi, spr_s_apret, fondo_tarjeta, spr_s_norm)
+                    if pulsado:
+                        return "salir_sin_guardar"
 
                 elif btn_cancelar.collidepoint(evento.pos):
+                    pulsado = True
                     if spr_c_semi and spr_c_apret:
-                        animar_pulsacion_boton(pantalla, btn_cancelar, spr_c_semi, spr_c_apret, fondo_tarjeta)
-                    return "cancelar"
+                        pulsado = animar_pulsacion_boton(pantalla, btn_cancelar, spr_c_semi, spr_c_apret, fondo_tarjeta, spr_c_norm)
+                    if pulsado:
+                        return "cancelar"
 
         pantalla.blit(captura_previa, (0, 0))
         pantalla.blit(overlay, (0, 0))
@@ -1346,34 +1363,34 @@ def mostrar_dialogo_guardar_salir(pantalla, reloj, niveles_desbloqueados, id_par
         pygame.draw.rect(pantalla, (253, 246, 233), rect_card, border_radius=18)
         pygame.draw.rect(pantalla, (195, 168, 138), rect_card, width=3, border_radius=18)
 
-        t_tit = fuente_titulo.render("¿DESEAS SALIR?", True, (60, 45, 35))
+        t_tit = fuente_titulo.render(t("deseas_guardar"), True, (60, 45, 35))
         pantalla.blit(t_tit, t_tit.get_rect(center=(rect_card.centerx, rect_card.top + 40)))
 
-        t_info = fuente_texto.render(f"Nivel actual: Mundo {mundo_max} - Nivel {nivel_max}", True, (55, 45, 35))
+        t_info = fuente_texto.render(f"{t('mundo')} {mundo_max} - {t('nivel')} {nivel_max}", True, (55, 45, 35))
         pantalla.blit(t_info, t_info.get_rect(center=(rect_card.centerx, rect_card.top + 80)))
 
-        t_sub = fuente_texto.render("Puedes guardar tu partida en un perfil antes de salir.", True, (120, 105, 90))
+        t_sub = fuente_texto.render(t("deseas_guardar_sub", default="Puedes guardar tu partida en un perfil antes de salir."), True, (120, 105, 90))
         pantalla.blit(t_sub, t_sub.get_rect(center=(rect_card.centerx, rect_card.top + 112)))
 
         if spr_g_norm:
             pantalla.blit(spr_g_hover if (hov_g and spr_g_hover) else spr_g_norm, btn_guardar)
         else:
             pygame.draw.rect(pantalla, (82, 194, 114) if hov_g else (68, 172, 98), btn_guardar, border_radius=12)
-            t_g = fuente_btn.render("GUARDAR Y SALIR", True, (255, 255, 255))
+            t_g = fuente_btn.render(t("guardar_salir"), True, (255, 255, 255))
             pantalla.blit(t_g, t_g.get_rect(center=btn_guardar.center))
 
         if spr_s_norm:
             pantalla.blit(spr_s_hover if (hov_s and spr_s_hover) else spr_s_norm, btn_no_guardar)
         else:
             pygame.draw.rect(pantalla, (235, 95, 90) if hov_s else (215, 80, 75), btn_no_guardar, border_radius=12)
-            t_s = fuente_btn.render("SALIR SIN GUARDAR", True, (255, 255, 255))
+            t_s = fuente_btn.render(t("salir_sin_guardar"), True, (255, 255, 255))
             pantalla.blit(t_s, t_s.get_rect(center=btn_no_guardar.center))
 
         if spr_c_norm:
             pantalla.blit(spr_c_hover if (hov_c and spr_c_hover) else spr_c_norm, btn_cancelar)
         else:
             pygame.draw.rect(pantalla, (255, 255, 255) if hov_c else (242, 234, 222), btn_cancelar, border_radius=12)
-            t_c = fuente_btn.render("CANCELAR", True, (60, 45, 35))
+            t_c = fuente_btn.render(t("cancelar"), True, (60, 45, 35))
             pantalla.blit(t_c, t_c.get_rect(center=btn_cancelar.center))
 
         pygame.display.flip()
@@ -1435,9 +1452,11 @@ def mostrar_dialogo_confirmar_borrado(pantalla, reloj, partida):
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 if btn_cancelar.collidepoint(evento.pos):
+                    pulsado = True
                     if spr_can_semi and spr_can_apret:
-                        animar_pulsacion_boton(pantalla, btn_cancelar, spr_can_semi, spr_can_apret, fondo_tarjeta)
-                    return False
+                        pulsado = animar_pulsacion_boton(pantalla, btn_cancelar, spr_can_semi, spr_can_apret, fondo_tarjeta, spr_can_norm)
+                    if pulsado:
+                        return False
                 elif btn_borrar.collidepoint(evento.pos):
                     return True
 
