@@ -27,6 +27,22 @@ ESTADOS_PERSONAJE = [
 
 
 _CACHE_BOTONES = {}
+_CACHE_BOTONES_ESCALADOS = {}
+_CACHE_BOTONES_ACLARADOS = {}
+_MAPA_BOTONES = None
+
+
+def _obtener_mapa_botones():
+    global _MAPA_BOTONES
+    if _MAPA_BOTONES is None:
+        _MAPA_BOTONES = {}
+        if os.path.isdir(RUTA_BOTONES):
+            for raiz, _, archivos in os.walk(RUTA_BOTONES):
+                for arch in archivos:
+                    clave = arch.lower()
+                    if clave not in _MAPA_BOTONES:
+                        _MAPA_BOTONES[clave] = os.path.join(raiz, arch)
+    return _MAPA_BOTONES
 
 
 def cargar_boton(nombre):
@@ -57,15 +73,32 @@ def cargar_boton(nombre):
             _CACHE_BOTONES[nombre] = res
             return res
 
-    solo_nombre = os.path.basename(nombre_norm)
-    for raiz, _, archivos in os.walk(RUTA_BOTONES):
-        if solo_nombre in archivos:
-            res = _cargar(os.path.join(raiz, solo_nombre))
-            if res:
-                _CACHE_BOTONES[nombre] = res
-                return res
+    mapa = _obtener_mapa_botones()
+    solo_nombre = os.path.basename(nombre_norm).lower()
+    if solo_nombre in mapa:
+        res = _cargar(mapa[solo_nombre])
+        if res:
+            _CACHE_BOTONES[nombre] = res
+            return res
 
     _CACHE_BOTONES[nombre] = None
+    return None
+
+
+def cargar_boton_escalado(nombre, w, h):
+    """
+    Carga y escala suavemente un botón oficial del proyecto con proporciones exactas.
+    Cachea en memoria la superficie escalada para evitar recalcular transformaciones pesadas.
+    """
+    clave = (nombre, w, h)
+    if clave in _CACHE_BOTONES_ESCALADOS:
+        return _CACHE_BOTONES_ESCALADOS[clave]
+    img = cargar_boton(nombre)
+    if img is not None:
+        scaled = pygame.transform.smoothscale(img, (w, h))
+        _CACHE_BOTONES_ESCALADOS[clave] = scaled
+        return scaled
+    _CACHE_BOTONES_ESCALADOS[clave] = None
     return None
 
 
@@ -73,13 +106,18 @@ def aclarar_boton(surf, factor=45):
     """
     Genera una versión iluminada / más clara del sprite del botón para el estado hover.
     Mantiene intactos los bordes y la transparencia.
+    Cachea el resultado para no crear superficies adicionales en cada fotograma.
     """
     if surf is None:
         return None
+    clave = (id(surf), factor)
+    if clave in _CACHE_BOTONES_ACLARADOS:
+        return _CACHE_BOTONES_ACLARADOS[clave]
     brillante = surf.copy()
     capa = pygame.Surface(surf.get_size(), pygame.SRCALPHA)
     capa.fill((factor, factor, factor, 0))
     brillante.blit(capa, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
+    _CACHE_BOTONES_ACLARADOS[clave] = brillante
     return brillante
 
 
@@ -196,11 +234,18 @@ def aplicar_tinta(imagen_base, color_rgb):
     return img_tintada
 
 
+_CACHE_SPRITES_PERSONAJES = {}
+
+
 def cargar_sprites(nombre_color="Celeste"):
     """
     Carga los sprites originales del personaje según la carpeta de color.
     Si falta algún frame, intenta obtenerlo de la carpeta Blanco o quieto como respaldo.
+    Utiliza caché en memoria para no recargar desde disco en cada solicitud.
     """
+    if nombre_color in _CACHE_SPRITES_PERSONAJES:
+        return _CACHE_SPRITES_PERSONAJES[nombre_color]
+
     ruta_carpeta = os.path.join(RUTA_BASE, nombre_color)
     sprites = {}
 
@@ -232,6 +277,7 @@ def cargar_sprites(nombre_color="Celeste"):
             pygame.draw.rect(s, (0, 0, 0), (40, 25, 10, 10))
             sprites[estado] = s
 
+    _CACHE_SPRITES_PERSONAJES[nombre_color] = sprites
     return sprites
 
 
@@ -428,7 +474,7 @@ def cargar_accesorio(id_accesorio):
         pygame.draw.polygon(surf, (255, 215, 0), [(4, 24), (32, 24), (32, 8), (24, 16), (18, 4), (12, 16), (4, 8)])
         pygame.draw.polygon(surf, (180, 140, 0), [(4, 24), (32, 24), (32, 8), (24, 16), (18, 4), (12, 16), (4, 8)], 2)
         pygame.draw.circle(surf, (255, 50, 50), (18, 16), 3)
-    elif id_accesorio == "Gorro":
+    elif id_accesorio in ("Gorro", "Gorra"):
         pygame.draw.polygon(surf, (230, 60, 60), [(6, 24), (30, 24), (18, 4)])
         pygame.draw.polygon(surf, (160, 30, 30), [(6, 24), (30, 24), (18, 4)], 2)
         pygame.draw.circle(surf, (255, 255, 255), (18, 4), 5)
@@ -439,7 +485,7 @@ def cargar_accesorio(id_accesorio):
         pygame.draw.rect(surf, (25, 25, 25), (14, 12, 8, 3))
         pygame.draw.line(surf, (25, 25, 25), (4, 12), (0, 12), 2)
         pygame.draw.line(surf, (25, 25, 25), (32, 12), (36, 12), 2)
-    elif id_accesorio == "Moño":
+    elif id_accesorio in ("Moño", "Mono"):
         pygame.draw.polygon(surf, (255, 90, 130), [(6, 8), (18, 14), (6, 20)])
         pygame.draw.polygon(surf, (255, 90, 130), [(30, 8), (18, 14), (30, 20)])
         pygame.draw.circle(surf, (230, 50, 90), (18, 14), 4)
@@ -454,30 +500,51 @@ def cargar_accesorio(id_accesorio):
     return surf
 
 
-def dibujar_accesorio_en_personaje(pantalla, p, sprite_personaje, rect_personaje):
-    acc_id = p.get("accesorio")
+def dibujar_accesorio_en_personaje(
+    pantalla,
+    p,
+    sprite_personaje=None,
+    rect_personaje=None,
+    mirando_derecha=None,
+):
+    if isinstance(p, dict):
+        acc_id = p.get("accesorio")
+        mirando_der = p.get("mirando_derecha", True) if mirando_derecha is None else bool(mirando_derecha)
+    else:
+        acc_id = p
+        mirando_der = True if mirando_derecha is None else bool(mirando_derecha)
+
     if not acc_id or acc_id == "Ninguno":
         return
     surf_acc = cargar_accesorio(acc_id)
     if not surf_acc:
         return
 
-    mirando_der = p.get("mirando_derecha", True)
+    # Determinar el rectángulo sobre el que posicionar el accesorio
+    if isinstance(rect_personaje, pygame.Rect):
+        rect_base = rect_personaje
+    elif isinstance(sprite_personaje, pygame.Rect):
+        rect_base = sprite_personaje
+    elif isinstance(p, dict) and "hitbox" in p:
+        rect_base = p["hitbox"]
+    else:
+        return
+
     if not mirando_der:
         surf_acc = pygame.transform.flip(surf_acc, True, False)
 
-    if acc_id in ("Corona", "Gorro", "Sombrero"):
-        x_acc = rect_personaje.centerx - surf_acc.get_width() // 2
-        y_acc = rect_personaje.top - surf_acc.get_height() + 8
+    if acc_id in ("Corona", "Gorro", "Gorra", "Sombrero"):
+        x_acc = rect_base.centerx - surf_acc.get_width() // 2
+        y_acc = rect_base.top - surf_acc.get_height() + 8
     elif acc_id == "Anteojos":
-        x_acc = rect_personaje.centerx - surf_acc.get_width() // 2 + (2 if mirando_der else -2)
-        y_acc = rect_personaje.top + 16
-    elif acc_id == "Moño":
-        x_acc = rect_personaje.centerx - surf_acc.get_width() // 2
-        y_acc = rect_personaje.top + 46
+        x_acc = rect_base.centerx - surf_acc.get_width() // 2 + (2 if mirando_der else -2)
+        y_acc = rect_base.top + 16
+    elif acc_id in ("Moño", "Mono"):
+        x_acc = rect_base.centerx - surf_acc.get_width() // 2
+        y_acc = rect_base.top + 46
     else:
-        x_acc = rect_personaje.centerx - surf_acc.get_width() // 2
-        y_acc = rect_personaje.top - 5
+        x_acc = rect_base.centerx - surf_acc.get_width() // 2
+        y_acc = rect_base.top - 5
 
     pantalla.blit(surf_acc, (x_acc, y_acc))
 

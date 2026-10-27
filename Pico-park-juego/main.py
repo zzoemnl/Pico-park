@@ -8,6 +8,7 @@ from sprites import (
     FPS,
     cargar_sprites,
     cargar_boton,
+    cargar_boton_escalado,
     animar_pulsacion_boton,
     aclarar_boton,
     obtener_accesorios_disponibles,
@@ -320,6 +321,8 @@ def main():
     pygame.init()
 
     pantalla = pygame.display.set_mode((ANCHO, ALTO))
+    pantalla.fill((30, 30, 30))
+    pygame.display.flip()
 
     pygame.display.set_caption("Pico Park")
     reloj = pygame.time.Clock()
@@ -359,14 +362,11 @@ def main():
     MARGEN_DER, MARGEN_SUP = 18, 16
     rect_btn_x = pygame.Rect(ANCHO_MENU - MARGEN_DER - W_BOTON_HUD, MARGEN_SUP, W_BOTON_HUD, H_BOTON_HUD)
 
-    def _cargar_hud(nombre):
-        img = cargar_boton(nombre)
-        return pygame.transform.smoothscale(img, (W_BOTON_HUD, H_BOTON_HUD)) if img else None
-
-    spr_x_normal = _cargar_hud("boton-x.png")
+    # Carga anticipada exclusiva de lo indispensable para el Menú Principal
+    spr_x_normal = cargar_boton_escalado("boton-x.png", W_BOTON_HUD, H_BOTON_HUD)
     spr_x_hover = aclarar_boton(spr_x_normal)
-    spr_x_semi = _cargar_hud("boton-x-semiapretado.png")
-    spr_x_apretado = _cargar_hud("boton-x-apretado.png")
+    spr_x_semi = None
+    spr_x_apretado = None
 
     fondo_btn_x = None
 
@@ -376,30 +376,25 @@ def main():
     total_h_menu = (ALTO_BOTON * 4) + (ESPACIO * 3)
     y_inicio_principal = (ALTO_MENU - total_h_menu) // 2 + 35
 
-    def _cargar_menu_btn(nombre):
-        img = cargar_boton(nombre)
-        return pygame.transform.smoothscale(img, (ANCHO_BOTON, ALTO_BOTON)) if img else None
-
-    # Sprites animados de los botones del menú principal (todos los estados con dimensiones exactas)
-    spr_jugar_normal = _cargar_menu_btn("jugar.png")
+    spr_jugar_normal = cargar_boton_escalado("jugar.png", ANCHO_BOTON, ALTO_BOTON)
     spr_jugar_hover = aclarar_boton(spr_jugar_normal)
-    spr_jugar_semi = _cargar_menu_btn("jugar-preapretado.png")
-    spr_jugar_apretado = _cargar_menu_btn("jugar-apretado.png")
+    spr_jugar_semi = None
+    spr_jugar_apretado = None
 
-    spr_personajes_normal = _cargar_menu_btn("personajes.png")
+    spr_personajes_normal = cargar_boton_escalado("personajes.png", ANCHO_BOTON, ALTO_BOTON)
     spr_personajes_hover = aclarar_boton(spr_personajes_normal)
-    spr_personajes_semi = _cargar_menu_btn("personajes-preapretado.png")
-    spr_personajes_apretado = _cargar_menu_btn("personajes-apretado.png")
+    spr_personajes_semi = None
+    spr_personajes_apretado = None
 
-    spr_opciones_normal = _cargar_menu_btn("opciones.png")
+    spr_opciones_normal = cargar_boton_escalado("opciones.png", ANCHO_BOTON, ALTO_BOTON)
     spr_opciones_hover = aclarar_boton(spr_opciones_normal)
-    spr_opciones_semi = _cargar_menu_btn("opciones-preapretado.png")
-    spr_opciones_apretado = _cargar_menu_btn("opciones-apretado.png")
+    spr_opciones_semi = None
+    spr_opciones_apretado = None
 
-    spr_salir_normal = _cargar_menu_btn("salir.png")
+    spr_salir_normal = cargar_boton_escalado("salir.png", ANCHO_BOTON, ALTO_BOTON)
     spr_salir_hover = aclarar_boton(spr_salir_normal)
-    spr_salir_semi = _cargar_menu_btn("salir-preapretado.png")
-    spr_salir_apretado = _cargar_menu_btn("salir-apretado.png")
+    spr_salir_semi = None
+    spr_salir_apretado = None
 
     btn_jugar = pygame.Rect(x_centro, y_inicio_principal, ANCHO_BOTON, ALTO_BOTON)
     btn_personajes = pygame.Rect(x_centro, y_inicio_principal + (ALTO_BOTON + ESPACIO), ANCHO_BOTON, ALTO_BOTON)
@@ -409,18 +404,28 @@ def main():
     fondo_limpio_btn = pygame.Surface((ANCHO_BOTON, ALTO_BOTON))
     fondo_limpio_btn.fill((30, 30, 30))
 
+    # Renderizar el primer fotograma del Menú Principal INMEDIATAMENTE
+    # para que la ventana muestre la interfaz al instante sin pantalla negra.
+    pantalla.fill((30, 30, 30))
+    t_primer_frame = fuente_pixel_titulo.render("PICO PARK", True, (255, 255, 255))
+    pantalla.blit(t_primer_frame, t_primer_frame.get_rect(center=(ANCHO_MENU // 2, 70)))
+    if spr_x_normal:
+        pantalla.blit(spr_x_normal, rect_btn_x)
+    for b_r, b_s in [
+        (btn_jugar, spr_jugar_normal),
+        (btn_personajes, spr_personajes_normal),
+        (btn_config, spr_opciones_normal),
+        (btn_salir, spr_salir_normal),
+    ]:
+        if b_s:
+            pantalla.blit(b_s, b_r)
+    pygame.display.flip()
+
     color_p1 = "Celeste"
     color_p2 = "Violeta"
     accesorio_p1 = "Ninguno"
     accesorio_p2 = "Ninguno"
     tab_personajes_actual = "colores"
-
-    preview_sprites = {}
-    for p in PERSONAJES_DISPONIBLES:
-        sp = cargar_sprites(p["nombre"])
-        preview_sprites[p["nombre"]] = pygame.transform.scale(
-            sp.get("quieto", list(sp.values())[0]), (90, 105)
-        )
 
     W_VOLVER, H_VOLVER = 238, 70
     btn_volver_personajes = pygame.Rect((ANCHO_MENU - W_VOLVER) // 2, ALTO_MENU - 85, W_VOLVER, H_VOLVER)
@@ -428,42 +433,11 @@ def main():
     btn_volver_config = pygame.Rect((ANCHO_MENU - W_VOLVER) // 2, ALTO_MENU - 85, W_VOLVER, H_VOLVER)
     btn_volver_creditos = pygame.Rect((ANCHO_MENU - W_VOLVER) // 2, ALTO_MENU - 85, W_VOLVER, H_VOLVER)
 
-    def _cargar_scaled(nombre, w, h):
-        img = cargar_boton(nombre)
-        return pygame.transform.smoothscale(img, (w, h)) if img else None
-
     # Iconos superiores exclusivos de Selección de Niveles (Configuración, Casita y X) con proporción nativa 0.8496
     W_ICONO_NIVELES, H_ICONO_NIVELES = 44, 52
     rect_btn_x_niveles = pygame.Rect(ANCHO_MENU - MARGEN_DER - W_ICONO_NIVELES, MARGEN_SUP, W_ICONO_NIVELES, H_ICONO_NIVELES)
     rect_btn_casa_niveles = pygame.Rect(rect_btn_x_niveles.left - 12 - W_ICONO_NIVELES, MARGEN_SUP, W_ICONO_NIVELES, H_ICONO_NIVELES)
     rect_btn_config_niveles = pygame.Rect(rect_btn_casa_niveles.left - 12 - W_ICONO_NIVELES, MARGEN_SUP, W_ICONO_NIVELES, H_ICONO_NIVELES)
-
-    spr_casa_normal = _cargar_scaled("HUD/boton-casa.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or _cargar_scaled("boton-casa.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
-    spr_casa_hover = aclarar_boton(spr_casa_normal)
-    spr_casa_semi = _cargar_scaled("HUD/boton-casa-semiapretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or _cargar_scaled("boton-casa-semiapretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
-    spr_casa_apretado = _cargar_scaled("HUD/boton-casa-apretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or _cargar_scaled("boton-casa-apretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
-
-    spr_confign_normal = _cargar_scaled("HUD/boton-configuracion.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or _cargar_scaled("boton-configuracion.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
-    spr_confign_hover = aclarar_boton(spr_confign_normal)
-    spr_confign_semi = _cargar_scaled("HUD/boton-configuracion-semiapretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or _cargar_scaled("boton-configuracion-semiapretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
-    spr_confign_apretado = _cargar_scaled("HUD/boton-configuracion-apretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or _cargar_scaled("boton-configuracion-apretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
-
-    spr_xn_normal = _cargar_scaled("HUD/boton-x.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or _cargar_scaled("boton-x.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
-    spr_xn_hover = aclarar_boton(spr_xn_normal)
-    spr_xn_semi = _cargar_scaled("HUD/boton-x-semiapretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or _cargar_scaled("boton-x-semiapretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
-    spr_xn_apretado = _cargar_scaled("HUD/boton-x-apretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or _cargar_scaled("boton-x-apretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
-
-    # Sprites botón «VOLVER» (mundos)
-    spr_volver_normal = _cargar_scaled("mundos/boton-volver.png", W_VOLVER, H_VOLVER)
-    spr_volver_hover = aclarar_boton(spr_volver_normal)
-    spr_volver_semi = _cargar_scaled("mundos/boton-volver-semiapretado.png", W_VOLVER, H_VOLVER)
-    spr_volver_apretado = _cargar_scaled("mundos/boton-volver-apretado.png", W_VOLVER, H_VOLVER)
-
-    # Sprites botón «MENÚ» (Ventanas)
-    spr_menu_nav_normal = _cargar_scaled("Ventanas/boton-menu.png", W_VOLVER, H_VOLVER)
-    spr_menu_nav_hover = aclarar_boton(spr_menu_nav_normal)
-    spr_menu_nav_semi = _cargar_scaled("Ventanas/boton-menu-semiapretado.png", W_VOLVER, H_VOLVER)
-    spr_menu_nav_apretado = _cargar_scaled("Ventanas/boton-menu-apretado.png", W_VOLVER, H_VOLVER)
 
     # Botones interactivos para Modo de Juego (Continuar vs Nueva Partida)
     W_MODO, H_MODO = 425, 100
@@ -472,49 +446,180 @@ def main():
     btn_nueva_partida = pygame.Rect(x_modo, (ALTO_MENU // 2) + 35, W_MODO, H_MODO)
     btn_volver_modo = pygame.Rect((ANCHO_MENU - W_VOLVER) // 2, ALTO_MENU - 85, W_VOLVER, H_VOLVER)
 
-    spr_continuar_normal = _cargar_scaled("Menu/boton-continuar-cargar....png", W_MODO, H_MODO)
-    spr_continuar_hover = aclarar_boton(spr_continuar_normal)
-    spr_continuar_semi = _cargar_scaled("Menu/boton-continuar-cargar...-semiapretado.png", W_MODO, H_MODO)
-    spr_continuar_apretado = _cargar_scaled("Menu/boton-continuar-cargar...-apretado.png", W_MODO, H_MODO)
+    # Variables de sprites de submenús (inicialmente None, carga bajo demanda)
+    spr_casa_normal = None
+    spr_casa_hover = None
+    spr_casa_semi = None
+    spr_casa_apretado = None
 
-    spr_nueva_modo_normal = _cargar_scaled("mundos/boton-nueva-partida-reiniciar....png", W_MODO, H_MODO)
-    spr_nueva_modo_hover = aclarar_boton(spr_nueva_modo_normal)
-    spr_nueva_modo_semi = _cargar_scaled("mundos/boton-nueva-partida-reiniciar...-semiapretado.png", W_MODO, H_MODO)
-    spr_nueva_modo_apretado = _cargar_scaled("mundos/boton-nueva-partida-reiniciar...-apretado.png", W_MODO, H_MODO)
+    spr_confign_normal = None
+    spr_confign_hover = None
+    spr_confign_semi = None
+    spr_confign_apretado = None
 
-    # Sprites para Partidas Guardadas (mundos)
-    spr_nueva_lista_normal = _cargar_scaled("mundos/boton-nueva-partida.png", W_VOLVER, H_VOLVER)
-    spr_nueva_lista_hover = aclarar_boton(spr_nueva_lista_normal)
-    spr_nueva_lista_semi = _cargar_scaled("mundos/boton-nueva-partida-semiapretado.png", W_VOLVER, H_VOLVER)
-    spr_nueva_lista_apretado = _cargar_scaled("mundos/boton-nueva-partida-apretado.png", W_VOLVER, H_VOLVER)
+    spr_xn_normal = None
+    spr_xn_hover = None
+    spr_xn_semi = None
+    spr_xn_apretado = None
 
-    spr_nueva_primera_normal = _cargar_scaled("mundos/boton-nueva-partida.png", 272, 80)
-    spr_nueva_primera_hover = aclarar_boton(spr_nueva_primera_normal)
-    spr_nueva_primera_semi = _cargar_scaled("mundos/boton-nueva-partida-semiapretado.png", 272, 80)
-    spr_nueva_primera_apretado = _cargar_scaled("mundos/boton-nueva-partida-apretado.png", 272, 80)
+    spr_volver_normal = None
+    spr_volver_hover = None
+    spr_volver_semi = None
+    spr_volver_apretado = None
 
-    spr_cargar_normal = _cargar_scaled("mundos/boton-cargar.png", 129, 38)
-    spr_cargar_hover = aclarar_boton(spr_cargar_normal)
-    spr_cargar_semi = _cargar_scaled("mundos/boton-cargar-semiapretado.png", 129, 38)
-    spr_cargar_apretado = _cargar_scaled("mundos/boton-cargar-apretado.png", 129, 38)
+    spr_menu_nav_normal = None
+    spr_menu_nav_hover = None
+    spr_menu_nav_semi = None
+    spr_menu_nav_apretado = None
+
+    spr_continuar_normal = None
+    spr_continuar_hover = None
+    spr_continuar_semi = None
+    spr_continuar_apretado = None
+
+    spr_nueva_modo_normal = None
+    spr_nueva_modo_hover = None
+    spr_nueva_modo_semi = None
+    spr_nueva_modo_apretado = None
+
+    spr_nueva_lista_normal = None
+    spr_nueva_lista_hover = None
+    spr_nueva_lista_semi = None
+    spr_nueva_lista_apretado = None
+
+    spr_nueva_primera_normal = None
+    spr_nueva_primera_hover = None
+    spr_nueva_primera_semi = None
+    spr_nueva_primera_apretado = None
+
+    spr_cargar_normal = None
+    spr_cargar_hover = None
+    spr_cargar_semi = None
+    spr_cargar_apretado = None
 
     dict_sprites_tarjeta = {
-        "cargar_normal": spr_cargar_normal,
-        "cargar_hover": spr_cargar_hover,
-        "cargar_semi": spr_cargar_semi,
-        "cargar_apretado": spr_cargar_apretado,
+        "cargar_normal": None,
+        "cargar_hover": None,
+        "cargar_semi": None,
+        "cargar_apretado": None,
     }
 
-    # Sprites para teclas de Configuración (Controles)
     TAM_CTRL = 54
-    spr_ctrl_w = _cargar_scaled("Controles/boton-w.png", TAM_CTRL, TAM_CTRL)
-    spr_ctrl_a = _cargar_scaled("Controles/boton-a.png", TAM_CTRL, TAM_CTRL)
-    spr_ctrl_s = _cargar_scaled("Controles/boton-s.png", TAM_CTRL, TAM_CTRL)
-    spr_ctrl_d = _cargar_scaled("Controles/boton-d.png", TAM_CTRL, TAM_CTRL)
-    spr_ctrl_arr = _cargar_scaled("Controles/boton-arriba.png", TAM_CTRL, TAM_CTRL)
-    spr_ctrl_izq = _cargar_scaled("Controles/boton-izquierda.png", TAM_CTRL, TAM_CTRL)
-    spr_ctrl_aba = _cargar_scaled("Controles/boton-abajo.png", TAM_CTRL, TAM_CTRL)
-    spr_ctrl_der = _cargar_scaled("Controles/boton-derecha.png", TAM_CTRL, TAM_CTRL)
+    spr_ctrl_w = None
+    spr_ctrl_a = None
+    spr_ctrl_s = None
+    spr_ctrl_d = None
+    spr_ctrl_arr = None
+    spr_ctrl_izq = None
+    spr_ctrl_aba = None
+    spr_ctrl_der = None
+
+    def _asegurar_semi_apretados_menu():
+        nonlocal spr_jugar_semi, spr_jugar_apretado
+        nonlocal spr_personajes_semi, spr_personajes_apretado
+        nonlocal spr_opciones_semi, spr_opciones_apretado
+        nonlocal spr_salir_semi, spr_salir_apretado
+        nonlocal spr_x_semi, spr_x_apretado
+        if spr_jugar_semi is None:
+            spr_jugar_semi = cargar_boton_escalado("jugar-preapretado.png", ANCHO_BOTON, ALTO_BOTON)
+            spr_jugar_apretado = cargar_boton_escalado("jugar-apretado.png", ANCHO_BOTON, ALTO_BOTON)
+            spr_personajes_semi = cargar_boton_escalado("personajes-preapretado.png", ANCHO_BOTON, ALTO_BOTON)
+            spr_personajes_apretado = cargar_boton_escalado("personajes-apretado.png", ANCHO_BOTON, ALTO_BOTON)
+            spr_opciones_semi = cargar_boton_escalado("opciones-preapretado.png", ANCHO_BOTON, ALTO_BOTON)
+            spr_opciones_apretado = cargar_boton_escalado("opciones-apretado.png", ANCHO_BOTON, ALTO_BOTON)
+            spr_salir_semi = cargar_boton_escalado("salir-preapretado.png", ANCHO_BOTON, ALTO_BOTON)
+            spr_salir_apretado = cargar_boton_escalado("salir-apretado.png", ANCHO_BOTON, ALTO_BOTON)
+            spr_x_semi = cargar_boton_escalado("boton-x-semiapretado.png", W_BOTON_HUD, H_BOTON_HUD)
+            spr_x_apretado = cargar_boton_escalado("boton-x-apretado.png", W_BOTON_HUD, H_BOTON_HUD)
+
+    def _cargar_recursos_volver():
+        nonlocal spr_volver_normal, spr_volver_hover, spr_volver_semi, spr_volver_apretado
+        nonlocal spr_menu_nav_normal, spr_menu_nav_hover, spr_menu_nav_semi, spr_menu_nav_apretado
+        if spr_volver_normal is None:
+            spr_volver_normal = cargar_boton_escalado("mundos/boton-volver.png", W_VOLVER, H_VOLVER)
+            spr_volver_hover = aclarar_boton(spr_volver_normal)
+            spr_volver_semi = cargar_boton_escalado("mundos/boton-volver-semiapretado.png", W_VOLVER, H_VOLVER)
+            spr_volver_apretado = cargar_boton_escalado("mundos/boton-volver-apretado.png", W_VOLVER, H_VOLVER)
+
+            spr_menu_nav_normal = cargar_boton_escalado("Ventanas/boton-menu.png", W_VOLVER, H_VOLVER)
+            spr_menu_nav_hover = aclarar_boton(spr_menu_nav_normal)
+            spr_menu_nav_semi = cargar_boton_escalado("Ventanas/boton-menu-semiapretado.png", W_VOLVER, H_VOLVER)
+            spr_menu_nav_apretado = cargar_boton_escalado("Ventanas/boton-menu-apretado.png", W_VOLVER, H_VOLVER)
+
+    def _cargar_recursos_modo_juego():
+        nonlocal spr_continuar_normal, spr_continuar_hover, spr_continuar_semi, spr_continuar_apretado
+        nonlocal spr_nueva_modo_normal, spr_nueva_modo_hover, spr_nueva_modo_semi, spr_nueva_modo_apretado
+        _cargar_recursos_volver()
+        if spr_continuar_normal is None:
+            spr_continuar_normal = cargar_boton_escalado("Menu/boton-continuar-cargar....png", W_MODO, H_MODO)
+            spr_continuar_hover = aclarar_boton(spr_continuar_normal)
+            spr_continuar_semi = cargar_boton_escalado("Menu/boton-continuar-cargar...-semiapretado.png", W_MODO, H_MODO)
+            spr_continuar_apretado = cargar_boton_escalado("Menu/boton-continuar-cargar...-apretado.png", W_MODO, H_MODO)
+
+            spr_nueva_modo_normal = cargar_boton_escalado("mundos/boton-nueva-partida-reiniciar....png", W_MODO, H_MODO)
+            spr_nueva_modo_hover = aclarar_boton(spr_nueva_modo_normal)
+            spr_nueva_modo_semi = cargar_boton_escalado("mundos/boton-nueva-partida-reiniciar...-semiapretado.png", W_MODO, H_MODO)
+            spr_nueva_modo_apretado = cargar_boton_escalado("mundos/boton-nueva-partida-reiniciar...-apretado.png", W_MODO, H_MODO)
+
+    def _cargar_recursos_partidas():
+        nonlocal spr_nueva_lista_normal, spr_nueva_lista_hover, spr_nueva_lista_semi, spr_nueva_lista_apretado
+        nonlocal spr_nueva_primera_normal, spr_nueva_primera_hover, spr_nueva_primera_semi, spr_nueva_primera_apretado
+        nonlocal spr_cargar_normal, spr_cargar_hover, spr_cargar_semi, spr_cargar_apretado
+        _cargar_recursos_volver()
+        if spr_nueva_lista_normal is None:
+            spr_nueva_lista_normal = cargar_boton_escalado("mundos/boton-nueva-partida.png", W_VOLVER, H_VOLVER)
+            spr_nueva_lista_hover = aclarar_boton(spr_nueva_lista_normal)
+            spr_nueva_lista_semi = cargar_boton_escalado("mundos/boton-nueva-partida-semiapretado.png", W_VOLVER, H_VOLVER)
+            spr_nueva_lista_apretado = cargar_boton_escalado("mundos/boton-nueva-partida-apretado.png", W_VOLVER, H_VOLVER)
+
+            spr_nueva_primera_normal = cargar_boton_escalado("mundos/boton-nueva-partida.png", 272, 80)
+            spr_nueva_primera_hover = aclarar_boton(spr_nueva_primera_normal)
+            spr_nueva_primera_semi = cargar_boton_escalado("mundos/boton-nueva-partida-semiapretado.png", 272, 80)
+            spr_nueva_primera_apretado = cargar_boton_escalado("mundos/boton-nueva-partida-apretado.png", 272, 80)
+
+            spr_cargar_normal = cargar_boton_escalado("mundos/boton-cargar.png", 129, 38)
+            spr_cargar_hover = aclarar_boton(spr_cargar_normal)
+            spr_cargar_semi = cargar_boton_escalado("mundos/boton-cargar-semiapretado.png", 129, 38)
+            spr_cargar_apretado = cargar_boton_escalado("mundos/boton-cargar-apretado.png", 129, 38)
+
+            dict_sprites_tarjeta["cargar_normal"] = spr_cargar_normal
+            dict_sprites_tarjeta["cargar_hover"] = spr_cargar_hover
+            dict_sprites_tarjeta["cargar_semi"] = spr_cargar_semi
+            dict_sprites_tarjeta["cargar_apretado"] = spr_cargar_apretado
+
+    def _cargar_recursos_niveles():
+        nonlocal spr_casa_normal, spr_casa_hover, spr_casa_semi, spr_casa_apretado
+        nonlocal spr_confign_normal, spr_confign_hover, spr_confign_semi, spr_confign_apretado
+        nonlocal spr_xn_normal, spr_xn_hover, spr_xn_semi, spr_xn_apretado
+        if spr_casa_normal is None:
+            spr_casa_normal = cargar_boton_escalado("HUD/boton-casa.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or cargar_boton_escalado("boton-casa.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
+            spr_casa_hover = aclarar_boton(spr_casa_normal)
+            spr_casa_semi = cargar_boton_escalado("HUD/boton-casa-semiapretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or cargar_boton_escalado("boton-casa-semiapretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
+            spr_casa_apretado = cargar_boton_escalado("HUD/boton-casa-apretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or cargar_boton_escalado("boton-casa-apretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
+
+            spr_confign_normal = cargar_boton_escalado("HUD/boton-configuracion.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or cargar_boton_escalado("boton-configuracion.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
+            spr_confign_hover = aclarar_boton(spr_confign_normal)
+            spr_confign_semi = cargar_boton_escalado("HUD/boton-configuracion-semiapretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or cargar_boton_escalado("boton-configuracion-semiapretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
+            spr_confign_apretado = cargar_boton_escalado("HUD/boton-configuracion-apretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or cargar_boton_escalado("boton-configuracion-apretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
+
+            spr_xn_normal = cargar_boton_escalado("HUD/boton-x.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or cargar_boton_escalado("boton-x.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
+            spr_xn_hover = aclarar_boton(spr_xn_normal)
+            spr_xn_semi = cargar_boton_escalado("HUD/boton-x-semiapretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or cargar_boton_escalado("boton-x-semiapretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
+            spr_xn_apretado = cargar_boton_escalado("HUD/boton-x-apretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES) or cargar_boton_escalado("boton-x-apretado.png", W_ICONO_NIVELES, H_ICONO_NIVELES)
+
+    def _cargar_recursos_controles():
+        nonlocal spr_ctrl_w, spr_ctrl_a, spr_ctrl_s, spr_ctrl_d
+        nonlocal spr_ctrl_arr, spr_ctrl_izq, spr_ctrl_aba, spr_ctrl_der
+        _cargar_recursos_volver()
+        if spr_ctrl_w is None:
+            spr_ctrl_w = cargar_boton_escalado("Controles/boton-w.png", TAM_CTRL, TAM_CTRL)
+            spr_ctrl_a = cargar_boton_escalado("Controles/boton-a.png", TAM_CTRL, TAM_CTRL)
+            spr_ctrl_s = cargar_boton_escalado("Controles/boton-s.png", TAM_CTRL, TAM_CTRL)
+            spr_ctrl_d = cargar_boton_escalado("Controles/boton-d.png", TAM_CTRL, TAM_CTRL)
+            spr_ctrl_arr = cargar_boton_escalado("Controles/boton-arriba.png", TAM_CTRL, TAM_CTRL)
+            spr_ctrl_izq = cargar_boton_escalado("Controles/boton-izquierda.png", TAM_CTRL, TAM_CTRL)
+            spr_ctrl_aba = cargar_boton_escalado("Controles/boton-abajo.png", TAM_CTRL, TAM_CTRL)
+            spr_ctrl_der = cargar_boton_escalado("Controles/boton-derecha.png", TAM_CTRL, TAM_CTRL)
 
     # Geometría y variables para la Lista de Partidas Guardadas
     pagina_partidas = 0
@@ -555,6 +660,20 @@ def main():
     while ejecutando:
         reloj.tick(FPS)
 
+        # Cargar recursos bajo demanda según el estado actual antes de procesar eventos o dibujar
+        if estado_actual == ESTADO_MODO_JUEGO:
+            _cargar_recursos_modo_juego()
+        elif estado_actual == ESTADO_LISTA_PARTIDAS:
+            _cargar_recursos_partidas()
+        elif estado_actual == ESTADO_PERSONAJES:
+            _cargar_recursos_volver()
+        elif estado_actual == ESTADO_CONFIGURACION:
+            _cargar_recursos_controles()
+        elif estado_actual == ESTADO_CREDITOS:
+            _cargar_recursos_volver()
+        elif estado_actual in (ESTADO_SELECCION_NIVEL, ESTADO_SELECCION_MUNDO):
+            _cargar_recursos_niveles()
+
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 intentar_salir()
@@ -562,12 +681,14 @@ def main():
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 # El botón X general no actúa en Selección de Niveles ya que esa pantalla tiene sus propios iconos
                 if estado_actual != ESTADO_SELECCION_NIVEL and rect_btn_x.collidepoint(evento.pos):
+                    _asegurar_semi_apretados_menu()
                     f_limpio = fondo_btn_x_main if fondo_btn_x_main else (30, 30, 30)
                     if animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, f_limpio, spr_x_normal):
                         intentar_salir()
                     break
 
                 if estado_actual == ESTADO_MENU_PRINCIPAL:
+                    _asegurar_semi_apretados_menu()
                     if btn_jugar.collidepoint(evento.pos):
                         if animar_pulsacion_boton(pantalla, btn_jugar, spr_jugar_semi, spr_jugar_apretado, fondo_limpio_btn, spr_jugar_normal):
                             estado_actual = ESTADO_MODO_JUEGO

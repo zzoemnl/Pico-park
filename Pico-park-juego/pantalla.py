@@ -1641,30 +1641,55 @@ def dibujar_peligros_marinos_escenario(superficie, pinchos):
     """
     Dibuja los obstáculos mortales submarinos (erizos de mar puntiagudos y corales de fuego).
     Si un personaje los toca, ambos mueren y el nivel se reinicia.
+    Soporta orientación hacia arriba, abajo, izquierda y derecha con erizos alineados.
     """
     for p in pinchos:
         dir_p = getattr(p, "direccion", "arriba")
         if dir_p in ("arriba", "abajo"):
-            cx = p.centerx
-            cy = p.centery
-            r_cuerpo = min(p.width, p.height) // 2
-            num_puas = 7
-            for i in range(num_puas):
-                if dir_p == "arriba":
-                    ang = math.pi + (i / float(num_puas - 1)) * math.pi
-                else:
-                    ang = (i / float(num_puas - 1)) * math.pi
-                px = cx + math.cos(ang) * (p.width * 0.55)
-                py = cy + math.sin(ang) * (p.height * 0.75)
-                pygame.draw.line(superficie, (180, 30, 60), (cx, cy), (int(px), int(py)), 3)
-                pygame.draw.line(superficie, (255, 220, 230), (int(px - math.cos(ang) * 4), int(py - math.sin(ang) * 4)), (int(px), int(py)), 2)
+            paso_erizo = 42
+            num_erizos = max(1, p.width // paso_erizo)
+            w_seg = p.width / float(num_erizos)
+            for e_idx in range(num_erizos):
+                cx = int(p.left + (e_idx + 0.5) * w_seg)
+                cy = p.centery
+                r_cuerpo = min(int(w_seg * 0.4), p.height // 2)
+                num_puas = 7
+                for i in range(num_puas):
+                    if dir_p == "arriba":
+                        ang = math.pi + (i / float(num_puas - 1)) * math.pi
+                    else:
+                        ang = (i / float(num_puas - 1)) * math.pi
+                    px = cx + math.cos(ang) * (w_seg * 0.55)
+                    py = cy + math.sin(ang) * (p.height * 0.75)
+                    pygame.draw.line(superficie, (180, 30, 60), (cx, cy), (int(px), int(py)), 3)
+                    pygame.draw.line(superficie, (255, 220, 230), (int(px - math.cos(ang) * 4), int(py - math.sin(ang) * 4)), (int(px), int(py)), 2)
 
-            pygame.draw.circle(superficie, (45, 18, 50), (cx, cy), r_cuerpo)
-            pygame.draw.circle(superficie, (190, 45, 75), (cx, cy), r_cuerpo, width=2)
-            pygame.draw.circle(superficie, (255, 70, 95), (cx, cy), max(2, r_cuerpo // 2))
+                pygame.draw.circle(superficie, (45, 18, 50), (cx, cy), r_cuerpo)
+                pygame.draw.circle(superficie, (190, 45, 75), (cx, cy), r_cuerpo, width=2)
+                pygame.draw.circle(superficie, (255, 70, 95), (cx, cy), max(2, r_cuerpo // 2))
+        elif dir_p in ("izquierda", "derecha"):
+            paso_erizo = 42
+            num_erizos = max(1, p.height // paso_erizo)
+            h_seg = p.height / float(num_erizos)
+            for e_idx in range(num_erizos):
+                cx = p.centerx
+                cy = int(p.top + (e_idx + 0.5) * h_seg)
+                r_cuerpo = min(int(h_seg * 0.4), p.width // 2)
+                num_puas = 7
+                for i in range(num_puas):
+                    if dir_p == "izquierda":
+                        ang = 0.5 * math.pi + (i / float(num_puas - 1)) * math.pi
+                    else:
+                        ang = -0.5 * math.pi + (i / float(num_puas - 1)) * math.pi
+                    px = cx + math.cos(ang) * (p.width * 0.75)
+                    py = cy + math.sin(ang) * (h_seg * 0.55)
+                    pygame.draw.line(superficie, (180, 30, 60), (cx, cy), (int(px), int(py)), 3)
+                    pygame.draw.line(superficie, (255, 220, 230), (int(px - math.cos(ang) * 4), int(py - math.sin(ang) * 4)), (int(px), int(py)), 2)
+
+                pygame.draw.circle(superficie, (45, 18, 50), (cx, cy), r_cuerpo)
+                pygame.draw.circle(superficie, (190, 45, 75), (cx, cy), r_cuerpo, width=2)
+                pygame.draw.circle(superficie, (255, 70, 95), (cx, cy), max(2, r_cuerpo // 2))
         else:
-            cx = p.centerx
-            cy = p.centery
             pygame.draw.rect(superficie, (180, 30, 60), p, border_radius=3)
             pygame.draw.rect(superficie, (255, 210, 220), p, width=2, border_radius=3)
 
@@ -1717,6 +1742,987 @@ def actualizar_y_dibujar_burbujas_m3(superficie, burbujas, jugadores, tick=0):
                 burbujas.pop(0)
 
 
+def dibujar_corales_escenario(superficie, corales_info, tick=0):
+    """
+    Dibuja corales marinos vivos de alta fidelidad estética inspirados en arrecifes de coral:
+    - Ramificados (staghorn / asta de ciervo) con puntas luminiscentes que ondean con la marea.
+    - Cerebro (dome / estriado) con circunvoluciones y texturas rugosas.
+    - Abanico de mar (sea fans) con mallas translúcidas y filamentos radiantes.
+    - Tubulares (esponjas / chimeneas) con orificios superiores sombreados.
+    - Anémonas bioluminiscentes con tentáculos ondulantes.
+    """
+    if not corales_info:
+        return
+
+    for c in corales_info:
+        tipo = c.get("tipo", "ramificado")
+        cx = int(c["x"])
+        cy = int(c["y"])
+        escala = float(c.get("escala", 1.0))
+        fase = float(c.get("fase", 0.0))
+        col_base = c.get("color", (245, 105, 140))
+        col_sec = c.get("color_sec", (255, 190, 210))
+        anclaje = c.get("anclaje", "abajo")
+
+        dir_y = -1 if anclaje == "abajo" else (1 if anclaje == "arriba" else 0)
+        dir_x = 1 if anclaje == "izq" else (-1 if anclaje == "der" else 0)
+
+        ondulacion = math.sin(tick * 0.04 + fase)
+
+        if tipo == "ramificado":
+            h_tronco = int(24 * escala)
+            w_tronco = max(3, int(6 * escala))
+            top_x = cx + int(ondulacion * 2.5)
+            top_y = cy + dir_y * h_tronco if dir_y != 0 else cy
+            if dir_x != 0:
+                top_x = cx + dir_x * h_tronco
+                top_y = cy + int(ondulacion * 2.5)
+
+            pygame.draw.line(superficie, col_base, (cx, cy), (top_x, top_y), w_tronco)
+
+            ramas = [
+                (-16 * escala, dir_y * 18 * escala, -0.6),
+                (16 * escala, dir_y * 20 * escala, 0.6),
+                (-8 * escala, dir_y * 26 * escala, -0.2),
+                (10 * escala, dir_y * 28 * escala, 0.3),
+            ]
+            for rx, ry, r_factor in ramas:
+                sway = math.sin(tick * 0.045 + fase + r_factor) * 3.5 * escala
+                punta_x = top_x + int(rx + sway)
+                punta_y = top_y + int(ry)
+                w_rama = max(2, int(4 * escala))
+                pygame.draw.line(superficie, col_base, (top_x, top_y), (punta_x, punta_y), w_rama)
+                r_punta = max(2, int(3.5 * escala))
+                pygame.draw.circle(superficie, col_sec, (punta_x, punta_y), r_punta)
+                pygame.draw.circle(superficie, (255, 255, 255), (punta_x - 1, punta_y - 1), max(1, r_punta // 2))
+
+        elif tipo == "cerebro":
+            r_ancho = int(18 * escala)
+            r_alto = int(13 * escala)
+            rect_base = pygame.Rect(cx - r_ancho, cy + (dir_y * r_alto if dir_y < 0 else -r_alto // 2), r_ancho * 2, r_alto * 2)
+            pygame.draw.ellipse(superficie, col_base, rect_base)
+            pygame.draw.ellipse(superficie, (max(0, col_base[0] - 50), max(0, col_base[1] - 50), max(0, col_base[2] - 50)), rect_base, 2)
+            for i in range(1, 4):
+                factor = 1.0 - (i * 0.25)
+                w_e = int(r_ancho * 2 * factor)
+                h_e = int(r_alto * 2 * factor)
+                x_e = rect_base.centerx - w_e // 2
+                y_e = rect_base.centery - h_e // 2
+                pygame.draw.arc(superficie, col_sec, (x_e, y_e, w_e, h_e), 0.2, math.pi - 0.2, max(1, int(2 * escala)))
+
+        elif tipo == "abanico":
+            h_fan = int(32 * escala)
+            w_fan = int(30 * escala)
+            stem_y = cy + dir_y * (h_fan // 3) if dir_y != 0 else cy
+            stem_x = cx + dir_x * (h_fan // 3) if dir_x != 0 else cx
+            pygame.draw.line(superficie, (max(0, col_base[0] - 40), max(0, col_base[1] - 40), max(0, col_base[2] - 40)), (cx, cy), (stem_x, stem_y), max(2, int(4 * escala)))
+
+            num_costillas = 7
+            puntos_borde = []
+            for i in range(num_costillas):
+                t = i / float(num_costillas - 1)
+                ang = (-math.pi * 0.85) + t * (math.pi * 0.7) if dir_y <= 0 else (math.pi * 0.15 + t * (math.pi * 0.7))
+                sway = math.sin(tick * 0.035 + fase + i * 0.3) * (4.0 * escala)
+                px = stem_x + math.cos(ang) * (w_fan * 0.9) + sway
+                py = stem_y + math.sin(ang) * (h_fan * 0.9)
+                puntos_borde.append((int(px), int(py)))
+                pygame.draw.line(superficie, col_base, (stem_x, stem_y), (int(px), int(py)), max(1, int(2 * escala)))
+
+            if len(puntos_borde) >= 2:
+                pygame.draw.lines(superficie, col_sec, False, puntos_borde, max(2, int(3 * escala)))
+                for bx, by in puntos_borde:
+                    pygame.draw.circle(superficie, (255, 240, 210), (bx, by), max(1, int(2 * escala)))
+
+        elif tipo == "tubular":
+            num_tubos = 3
+            anchos = [int(10 * escala), int(8 * escala), int(9 * escala)]
+            altos = [int(28 * escala), int(22 * escala), int(25 * escala)]
+            offsets_x = [-int(9 * escala), int(1 * escala), int(10 * escala)]
+
+            for i in range(num_tubos):
+                tx = cx + offsets_x[i]
+                th = altos[i]
+                tw = anchos[i]
+                ty = cy - th if dir_y <= 0 else cy
+                rect_tubo = pygame.Rect(tx - tw // 2, ty, tw, th)
+                pygame.draw.rect(superficie, col_base, rect_tubo, border_radius=max(2, int(3 * escala)))
+                pygame.draw.rect(superficie, (max(0, col_base[0] - 40), max(0, col_base[1] - 40), max(0, col_base[2] - 40)), rect_tubo, 1, border_radius=max(2, int(3 * escala)))
+                boca_y = rect_tubo.top if dir_y <= 0 else rect_tubo.bottom - int(5 * escala)
+                rect_boca = pygame.Rect(rect_tubo.left, boca_y, tw, int(6 * escala))
+                pygame.draw.ellipse(superficie, (max(0, col_base[0] - 60), max(0, col_base[1] - 60), max(0, col_base[2] - 60)), rect_boca)
+                pygame.draw.ellipse(superficie, col_sec, rect_boca, 1)
+
+        elif tipo == "anemona":
+            r_cuerpo = int(8 * escala)
+            pygame.draw.circle(superficie, col_base, (cx, cy), r_cuerpo)
+            num_tentaculos = 8
+            for i in range(num_tentaculos):
+                ang = -math.pi + (i / float(num_tentaculos - 1)) * math.pi if dir_y <= 0 else (i / float(num_tentaculos - 1)) * math.pi
+                largo = (14 + (i % 3) * 4) * escala
+                sway = math.sin(tick * 0.05 + fase + i * 0.7) * (3.5 * escala)
+                tip_x = cx + int(math.cos(ang) * largo + sway)
+                tip_y = cy + int(math.sin(ang) * largo)
+                pygame.draw.line(superficie, col_base, (cx, cy), (tip_x, tip_y), max(1, int(2.5 * escala)))
+                pygame.draw.circle(superficie, col_sec, (tip_x, tip_y), max(2, int(3 * escala)))
+                pygame.draw.circle(superficie, (255, 255, 255), (tip_x, tip_y), 1)
+
+
+def generar_laberinto_coral_m3_n2(ancho_mundo, alto_mundo, y_suelo, y_techo, rng_seed=None):
+    """
+    Genera proceduralmente el laberinto de coral para Mundo 3 Nivel 2:
+    - Laberinto submarino navegable en 4 direcciones (natación libre sin gravedad terrestre).
+    - Formado por rocas marinas milenarias, arrecifes de coral y barreras de quelpo sólido.
+    - Garantiza 100% resolubilidad matemática (árbol de expansión DFS con atajos selectivos).
+    - Asegura la existencia de múltiples callejones sin salida genuinos para exploración y desorientación.
+    - Ubica la llave oculta en el fondo de un callejón sin salida distante.
+    - Puerta de salida ubicada en una terraza marina en la cámara final.
+    - Distribución procedural aleatoria única en cada nueva partida o reinicio del nivel.
+    """
+    rng = random.Random(rng_seed)
+
+    x_offset = 220
+    x_final = 2380
+    w_total_lab = x_final - x_offset  # 2160
+    NUM_COLS = 9
+    w_cell = w_total_lab // NUM_COLS  # 240
+
+    h_total_lab = y_suelo - y_techo   # 620
+    NUM_FILAS = 4
+    h_cell = h_total_lab // NUM_FILAS # 155
+    grosor_muro = 24
+
+    # Generar árbol de expansión garantizando callejones sin salida
+    while True:
+        row_inicio = rng.choice([1, 2])
+        row_salida = rng.choice([1, 2])
+
+        v_walls = {(c, r): True for c in range(NUM_COLS - 1) for r in range(NUM_FILAS)}
+        h_walls = {(c, r): True for c in range(NUM_COLS) for r in range(NUM_FILAS - 1)}
+
+        visited = set([(0, row_inicio)])
+        stack = [(0, row_inicio)]
+
+        while stack:
+            curr_c, curr_r = stack[-1]
+            unvisited_neighbors = []
+
+            if curr_r > 0 and (curr_c, curr_r - 1) not in visited:
+                unvisited_neighbors.append((curr_c, curr_r - 1, 'h', (curr_c, curr_r - 1)))
+            if curr_r < NUM_FILAS - 1 and (curr_c, curr_r + 1) not in visited:
+                unvisited_neighbors.append((curr_c, curr_r + 1, 'h', (curr_c, curr_r)))
+            if curr_c > 0 and (curr_c - 1, curr_r) not in visited:
+                unvisited_neighbors.append((curr_c - 1, curr_r, 'v', (curr_c - 1, curr_r)))
+            if curr_c < NUM_COLS - 1 and (curr_c + 1, curr_r) not in visited:
+                unvisited_neighbors.append((curr_c + 1, curr_r, 'v', (curr_c, curr_r)))
+
+            if unvisited_neighbors:
+                next_c, next_r, w_type, w_pos = rng.choice(unvisited_neighbors)
+                if w_type == 'h':
+                    h_walls[w_pos] = False
+                else:
+                    v_walls[w_pos] = False
+                visited.add((next_c, next_r))
+                stack.append((next_c, next_r))
+            else:
+                stack.pop()
+
+        adj = {(c, r): [] for c in range(NUM_COLS) for r in range(NUM_FILAS)}
+        for c in range(NUM_COLS):
+            for r in range(NUM_FILAS):
+                if r > 0 and not h_walls[(c, r - 1)]:
+                    adj[(c, r)].append((c, r - 1))
+                if r < NUM_FILAS - 1 and not h_walls[(c, r)]:
+                    adj[(c, r)].append((c, r + 1))
+                if c > 0 and not v_walls[(c - 1, r)]:
+                    adj[(c, r)].append((c - 1, r))
+                if c < NUM_COLS - 1 and not v_walls[(c, r)]:
+                    adj[(c, r)].append((c + 1, r))
+
+        start_node = (0, row_inicio)
+        exit_node = (NUM_COLS - 1, row_salida)
+        dead_ends = [cell for cell in adj if len(adj[cell]) == 1 and cell != start_node and cell != exit_node]
+        if len(dead_ends) >= 5:
+            break
+
+    # Remover selectivamente algunos muros interiores SOLO entre celdas con grado >= 2
+    candidatos_remover = []
+    for (c, r), v in v_walls.items():
+        if v and len(adj[(c, r)]) >= 2 and len(adj[(c + 1, r)]) >= 2:
+            candidatos_remover.append(('v', (c, r)))
+    for (c, r), v in h_walls.items():
+        if v and len(adj[(c, r)]) >= 2 and len(adj[(c, r + 1)]) >= 2:
+            candidatos_remover.append(('h', (c, r)))
+
+    num_remover = min(len(candidatos_remover), 3)
+    if candidatos_remover and num_remover > 0:
+        for w_type, k in rng.sample(candidatos_remover, num_remover):
+            if w_type == 'v':
+                v_walls[k] = False
+                adj[(k[0], k[1])].append((k[0] + 1, k[1]))
+                adj[(k[0] + 1, k[1])].append((k[0], k[1]))
+            else:
+                h_walls[k] = False
+                adj[(k[0], k[1])].append((k[0], k[1] + 1))
+                adj[(k[0], k[1] + 1)].append((k[0], k[1]))
+
+    # Distancias BFS desde el inicio
+    dist = {start_node: 0}
+    q = [start_node]
+    while q:
+        curr = q.pop(0)
+        for nxt in adj[curr]:
+            if nxt not in dist:
+                dist[nxt] = dist[curr] + 1
+                q.append(nxt)
+
+    dead_ends = [cell for cell in adj if len(adj[cell]) == 1 and cell != start_node and cell != exit_node]
+    candidatos_llave = [c for c in dead_ends if dist[c] >= 4 and c[0] != NUM_COLS - 1]
+    if not candidatos_llave:
+        candidatos_llave = [c for c in dead_ends if c != exit_node]
+    if not candidatos_llave:
+        candidatos_llave = [max(adj.keys(), key=lambda x: dist[x] if x != exit_node else -1)]
+
+    key_cell = rng.choice(candidatos_llave)
+
+    rocas = []
+    barreras = []
+    corales = []
+    algas = []
+
+    # Muros de contorno izquierdo (entrada)
+    x_muro_izq = x_offset - grosor_muro // 2
+    for r in range(NUM_FILAS):
+        if r != row_inicio:
+            rocas.append({"rect": pygame.Rect(x_muro_izq, y_techo + r * h_cell, grosor_muro, h_cell)})
+
+    # Muros de contorno derecho (salida)
+    x_muro_der = x_final - grosor_muro // 2
+    for r in range(NUM_FILAS):
+        if r != row_salida:
+            rocas.append({"rect": pygame.Rect(x_muro_der, y_techo + r * h_cell, grosor_muro, h_cell)})
+
+    colores_coral = [
+        ((250, 95, 135), (255, 185, 205)),   # Magenta / rosa arrecife
+        ((255, 135, 70), (255, 205, 140)),   # Coral anaranjado
+        ((255, 195, 50), (255, 240, 160)),   # Dorado ámbar
+        ((45, 200, 180), (130, 245, 230)),   # Turquesa marino
+        ((175, 95, 220), (225, 170, 255)),   # Violeta profundo
+    ]
+
+    # Muros verticales interiores
+    for (c, r), v in v_walls.items():
+        if v:
+            xw = x_offset + (c + 1) * w_cell - grosor_muro // 2
+            yw = y_techo + r * h_cell
+            rect = pygame.Rect(xw, yw, grosor_muro, h_cell)
+            if (c * 3 + r) % 5 == 1:
+                barreras.append({"rect": rect})
+            elif (c + r) % 6 == 4:
+                col_c, col_s = rng.choice(colores_coral)
+                rocas.append({"rect": rect, "coral": True, "color_coral": col_c})
+            else:
+                rocas.append({"rect": rect})
+
+    # Muros horizontales interiores
+    for (c, r), v in h_walls.items():
+        if v:
+            xw = x_offset + c * w_cell
+            yw = y_techo + (r + 1) * h_cell - grosor_muro // 2
+            rect = pygame.Rect(xw, yw, w_cell, grosor_muro)
+            if (c + r * 2) % 5 == 2:
+                barreras.append({"rect": rect})
+            elif (c * 2 + r) % 7 == 3:
+                col_c, col_s = rng.choice(colores_coral)
+                rocas.append({"rect": rect, "coral": True, "color_coral": col_c})
+            else:
+                rocas.append({"rect": rect})
+
+            if rng.random() < 0.45:
+                pos_x = xw + rng.randint(30, w_cell - 30)
+                algas.append({
+                    "x": pos_x, "y": yw, "alto": rng.randint(45, 75),
+                    "amplitud": rng.uniform(10, 15), "fase": rng.uniform(0, 6.28),
+                    "capa": rng.choice(["fondo", "frente"])
+                })
+            elif rng.random() < 0.40:
+                pos_x = xw + rng.randint(25, w_cell - 25)
+                tipo_c = rng.choice(["ramificado", "cerebro", "abanico", "tubular"])
+                col_c, col_s = rng.choice(colores_coral)
+                corales.append({
+                    "tipo": tipo_c, "x": pos_x, "y": yw,
+                    "escala": rng.uniform(0.75, 1.05), "fase": rng.uniform(0, 6.28),
+                    "color": col_c, "color_sec": col_s, "anclaje": "abajo"
+                })
+
+    # Postes de esquina y cruces
+    for c in range(1, NUM_COLS):
+        for r in range(1, NUM_FILAS):
+            tiene_muro = (
+                v_walls.get((c - 1, r - 1), False) or v_walls.get((c - 1, r), False) or
+                h_walls.get((c - 1, r - 1), False) or h_walls.get((c, r - 1), False)
+            )
+            if tiene_muro:
+                rocas.append({"rect": pygame.Rect(x_offset + c * w_cell - grosor_muro // 2, y_techo + r * h_cell - grosor_muro // 2, grosor_muro, grosor_muro)})
+
+    p_center_y = y_techo + row_inicio * h_cell + (h_cell - 65) // 2
+    p1_x = 75
+    p1_y = p_center_y
+    p2_x = 145
+    p2_y = p_center_y
+
+    puerta_x = 2460
+    puerta_y = y_suelo - 90
+    pedestal_puerta = pygame.Rect(2420, y_suelo - 15, 150, 15)
+    rocas.append({"rect": pedestal_puerta, "coral": True, "color_coral": (255, 135, 70)})
+
+    corales.append({"tipo": "ramificado", "x": 2430, "y": y_suelo, "escala": 1.25, "fase": 0.5, "color": (250, 95, 135), "color_sec": (255, 185, 205), "anclaje": "abajo"})
+    corales.append({"tipo": "abanico", "x": 2540, "y": y_suelo, "escala": 1.2, "fase": 2.1, "color": (175, 95, 220), "color_sec": (225, 170, 255), "anclaje": "abajo"})
+    corales.append({"tipo": "tubular", "x": 2405, "y": y_suelo, "escala": 1.1, "fase": 1.2, "color": (45, 200, 180), "color_sec": (130, 245, 230), "anclaje": "abajo"})
+    corales.append({"tipo": "cerebro", "x": 2565, "y": y_suelo, "escala": 1.15, "fase": 3.4, "color": (255, 135, 70), "color_sec": (255, 205, 140), "anclaje": "abajo"})
+
+    llave_x = x_offset + key_cell[0] * w_cell + (w_cell - 25) // 2
+    llave_y = y_techo + key_cell[1] * h_cell + (h_cell - 46) // 2
+
+    corales.append({"tipo": "anemona", "x": llave_x + 12, "y": llave_y + 46, "escala": 1.2, "fase": 1.0, "color": (255, 210, 60), "color_sec": (255, 255, 180), "anclaje": "abajo"})
+    corales.append({"tipo": "ramificado", "x": llave_x - 38, "y": llave_y + 46, "escala": 0.95, "fase": 2.5, "color": (250, 95, 135), "color_sec": (255, 185, 205), "anclaje": "abajo"})
+    corales.append({"tipo": "tubular", "x": llave_x + 55, "y": llave_y + 46, "escala": 0.9, "fase": 0.8, "color": (45, 200, 180), "color_sec": (130, 245, 230), "anclaje": "abajo"})
+
+    for dead_c, dead_r in dead_ends:
+        if (dead_c, dead_r) == key_cell:
+            continue
+        cx = x_offset + dead_c * w_cell + w_cell // 2
+        cy = y_techo + dead_r * h_cell + h_cell - 4
+        tipo_c = rng.choice(["ramificado", "cerebro", "abanico", "tubular", "anemona"])
+        col_c, col_s = rng.choice(colores_coral)
+        corales.append({
+            "tipo": tipo_c, "x": cx + rng.randint(-30, 30), "y": cy,
+            "escala": rng.uniform(0.85, 1.15), "fase": rng.uniform(0, 6.28),
+            "color": col_c, "color_sec": col_s, "anclaje": "abajo"
+        })
+
+    for px in range(40, ancho_mundo - 50, 95):
+        if rng.random() < 0.65:
+            algas.append({
+                "x": px + rng.randint(-15, 15),
+                "y": y_suelo,
+                "alto": rng.randint(85, 145),
+                "amplitud": rng.uniform(14, 20),
+                "fase": rng.uniform(0, 6.28),
+                "capa": rng.choice(["fondo", "frente"])
+            })
+
+    return {
+        "rocas": rocas,
+        "barreras": barreras,
+        "corales": corales,
+        "algas": algas,
+        "p1_x": p1_x, "p1_y": p1_y,
+        "p2_x": p2_x, "p2_y": p2_y,
+        "llave_x": llave_x, "llave_y": llave_y,
+        "puerta_x": puerta_x, "puerta_y": puerta_y,
+        "key_cell": key_cell,
+        "exit_cell": exit_node,
+        "distancia_llave": dist[key_cell],
+        "distancia_salida": dist[exit_node],
+        "num_callejones": len(dead_ends),
+    }
+
+
+_SURF_LUZ_LINTERNA = None
+_SURF_LUZ_TENUE = None
+
+
+def obtener_superficies_luz_linterna(radio_linterna=145, radio_tenue=34):
+    """
+    Crea o retorna en caché las superficies circulares de luz para las linternas de Mundo 3 Nivel 4:
+    - Haz principal de la linterna: radio 145px con gradiente radial suave.
+    - Resplandor personal tenue: radio 34px (cuando la linterna está apagada).
+    """
+    global _SURF_LUZ_LINTERNA, _SURF_LUZ_TENUE
+    if _SURF_LUZ_LINTERNA is not None and _SURF_LUZ_TENUE is not None:
+        return _SURF_LUZ_LINTERNA, _SURF_LUZ_TENUE
+
+    diam_linterna = radio_linterna * 2
+    s_linterna = pygame.Surface((diam_linterna, diam_linterna), pygame.SRCALPHA)
+    for r in range(radio_linterna, 0, -2):
+        frac = r / float(radio_linterna)
+        alpha = int(255 * (1.0 - frac * frac))
+        pygame.draw.circle(s_linterna, (alpha, alpha, alpha, alpha), (radio_linterna, radio_linterna), r)
+    _SURF_LUZ_LINTERNA = s_linterna
+
+    diam_tenue = radio_tenue * 2
+    s_tenue = pygame.Surface((diam_tenue, diam_tenue), pygame.SRCALPHA)
+    for r in range(radio_tenue, 0, -2):
+        frac = r / float(radio_tenue)
+        alpha = int(210 * (1.0 - frac))
+        pygame.draw.circle(s_tenue, (alpha, alpha, alpha, alpha), (radio_tenue, radio_tenue), r)
+    _SURF_LUZ_TENUE = s_tenue
+
+    return _SURF_LUZ_LINTERNA, _SURF_LUZ_TENUE
+
+
+def dibujar_linterna_minero(superficie, jugador, encendida):
+    """Dibuja una linterna de buceo submarino montada en la cabeza del personaje."""
+    if jugador.get("muerto", False):
+        return
+    hx = jugador["hitbox"].centerx
+    hy = jugador["hitbox"].top + 10
+    dir_mirar = 1 if jugador.get("mirando_derecha", True) else -1
+    lamp_x = hx + dir_mirar * 12
+    lamp_y = hy - 2
+    pygame.draw.circle(superficie, (35, 45, 55), (lamp_x, lamp_y), 6)
+    if encendida:
+        pygame.draw.circle(superficie, (255, 240, 140), (lamp_x, lamp_y), 4)
+        pygame.draw.circle(superficie, (255, 255, 255), (lamp_x, lamp_y), 2)
+        foco_x = lamp_x + dir_mirar * 5
+        pygame.draw.circle(superficie, (255, 250, 180), (foco_x, lamp_y), 3)
+    else:
+        pygame.draw.circle(superficie, (75, 80, 90), (lamp_x, lamp_y), 4)
+
+
+def dibujar_oscuridad_laberinto(superficie, jugadores_info, surf_oscuridad, surf_luz, surf_tenue):
+    """
+    Aplica la capa de oscuridad total sobre el mundo y substrae los haces de luz circulares
+    de las linternas activas de cada personaje:
+    - jugadores_info: lista de tuplas (jugador, linterna_activa, completado)
+    - Ilumina únicamente un círculo alrededor de cada personaje (~145px cuando linterna está ON).
+    - Cuando la linterna está OFF, solo queda un resplandor personal tenue (~34px).
+    - Los elementos fuera del haz de luz (rocas, trampas, llave, puerta) quedan ocultos en la penumbra.
+    """
+    for jugador, linterna_on, completado in jugadores_info:
+        if not completado and not jugador.get("muerto", False):
+            dibujar_linterna_minero(superficie, jugador, linterna_on)
+
+    surf_oscuridad.fill((4, 7, 14, 252))
+
+    w_luz, h_luz = surf_luz.get_size()
+    rad_luz = w_luz // 2
+    w_tenue, h_tenue = surf_tenue.get_size()
+    rad_tenue = w_tenue // 2
+
+    for jugador, linterna_on, completado in jugadores_info:
+        if completado or jugador.get("muerto", False):
+            continue
+        cx = jugador["hitbox"].centerx
+        cy = jugador["hitbox"].centery
+        if linterna_on:
+            surf_oscuridad.blit(surf_luz, (cx - rad_luz, cy - rad_luz), special_flags=pygame.BLEND_RGBA_SUB)
+        else:
+            surf_oscuridad.blit(surf_tenue, (cx - rad_tenue, cy - rad_tenue), special_flags=pygame.BLEND_RGBA_SUB)
+
+    superficie.blit(surf_oscuridad, (0, 0))
+
+
+def _dibujar_hud_linternas_m3_n4(pantalla_surf, linterna_p1, linterna_p2, p1_color, p2_color):
+    """
+    Dibuja un HUD estilizado y claro en la esquina superior izquierda indicando el estado
+    y los controles de las linternas independientes de cada jugador:
+    - P1: [E] ON / OFF
+    - P2: [L] ON / OFF
+    """
+    fuente_hud = pygame.font.SysFont("Segoe UI, Arial, sans-serif", 13, bold=True)
+
+    x1, y1 = 28, 22
+    w_badge, h_badge = 190, 32
+
+    # Badge Jugador 1
+    s_p1 = pygame.Surface((w_badge, h_badge), pygame.SRCALPHA)
+    pygame.draw.rect(s_p1, (12, 22, 36, 220), (0, 0, w_badge, h_badge), border_radius=16)
+    borde_p1 = (80, 210, 255) if linterna_p1 else (70, 85, 105)
+    pygame.draw.rect(s_p1, borde_p1, (0, 0, w_badge, h_badge), width=2, border_radius=16)
+
+    col_luz_p1 = (255, 240, 110) if linterna_p1 else (65, 75, 90)
+    pygame.draw.circle(s_p1, col_luz_p1, (18, h_badge // 2), 6)
+    if linterna_p1:
+        pygame.draw.circle(s_p1, (255, 255, 220), (18, h_badge // 2), 3)
+
+    txt_estado_p1 = "LINTERNA ON" if linterna_p1 else "LINTERNA OFF"
+    col_txt_p1 = (255, 250, 190) if linterna_p1 else (140, 155, 175)
+    t1_surf = fuente_hud.render(f"P1 [E]: {txt_estado_p1}", True, col_txt_p1)
+    s_p1.blit(t1_surf, (32, (h_badge - t1_surf.get_height()) // 2))
+    pantalla_surf.blit(s_p1, (x1, y1))
+
+    # Badge Jugador 2
+    x2 = x1 + w_badge + 12
+    s_p2 = pygame.Surface((w_badge, h_badge), pygame.SRCALPHA)
+    pygame.draw.rect(s_p2, (12, 22, 36, 220), (0, 0, w_badge, h_badge), border_radius=16)
+    borde_p2 = (220, 140, 255) if linterna_p2 else (70, 85, 105)
+    pygame.draw.rect(s_p2, borde_p2, (0, 0, w_badge, h_badge), width=2, border_radius=16)
+
+    col_luz_p2 = (255, 240, 110) if linterna_p2 else (65, 75, 90)
+    pygame.draw.circle(s_p2, col_luz_p2, (18, h_badge // 2), 6)
+    if linterna_p2:
+        pygame.draw.circle(s_p2, (255, 255, 220), (18, h_badge // 2), 3)
+
+    txt_estado_p2 = "LINTERNA ON" if linterna_p2 else "LINTERNA OFF"
+    col_txt_p2 = (255, 250, 190) if linterna_p2 else (140, 155, 175)
+    t2_surf = fuente_hud.render(f"P2 [L]: {txt_estado_p2}", True, col_txt_p2)
+    s_p2.blit(t2_surf, (32, (h_badge - t2_surf.get_height()) // 2))
+    pantalla_surf.blit(s_p2, (x2, y1))
+
+
+def generar_laberinto_oscuro_m3_n4(ancho_mundo, alto_mundo, y_suelo, y_techo, rng_seed=None):
+    """
+    Genera proceduralmente el laberinto oscuro para Mundo 3 Nivel 4:
+    - Laberinto submarino oscuro navegable en 4 direcciones (natación libre).
+    - Formado por rocas marinas ancestrales, arrecifes de coral y barreras de quelpo.
+    - Garantiza 100% resolubilidad matemática (árbol de expansión DFS con atajos selectivos).
+    - Incluye callejones sin salida genuinos y trampas mortales (erizos de mar) en cul-de-sacs secundarios.
+    - Ubica la llave oculta en un callejón seguro distante.
+    - Puerta de salida ubicada en la terraza marina final.
+    - Tanto la llave como la puerta y los peligros permanecen ocultos en la oscuridad hasta ser iluminados por las linternas.
+    """
+    rng = random.Random(rng_seed)
+
+    x_offset = 220
+    x_final = 2380
+    w_total_lab = x_final - x_offset  # 2160
+    NUM_COLS = 9
+    w_cell = w_total_lab // NUM_COLS  # 240
+
+    h_total_lab = y_suelo - y_techo   # 620
+    NUM_FILAS = 4
+    h_cell = h_total_lab // NUM_FILAS # 155
+    grosor_muro = 24
+
+    # Generar árbol de expansión garantizando callejones sin salida
+    while True:
+        row_inicio = rng.choice([1, 2])
+        row_salida = rng.choice([1, 2])
+
+        v_walls = {(c, r): True for c in range(NUM_COLS - 1) for r in range(NUM_FILAS)}
+        h_walls = {(c, r): True for c in range(NUM_COLS) for r in range(NUM_FILAS - 1)}
+
+        visited = set([(0, row_inicio)])
+        stack = [(0, row_inicio)]
+
+        while stack:
+            curr_c, curr_r = stack[-1]
+            unvisited_neighbors = []
+
+            if curr_r > 0 and (curr_c, curr_r - 1) not in visited:
+                unvisited_neighbors.append((curr_c, curr_r - 1, 'h', (curr_c, curr_r - 1)))
+            if curr_r < NUM_FILAS - 1 and (curr_c, curr_r + 1) not in visited:
+                unvisited_neighbors.append((curr_c, curr_r + 1, 'h', (curr_c, curr_r)))
+            if curr_c > 0 and (curr_c - 1, curr_r) not in visited:
+                unvisited_neighbors.append((curr_c - 1, curr_r, 'v', (curr_c - 1, curr_r)))
+            if curr_c < NUM_COLS - 1 and (curr_c + 1, curr_r) not in visited:
+                unvisited_neighbors.append((curr_c + 1, curr_r, 'v', (curr_c, curr_r)))
+
+            if unvisited_neighbors:
+                next_c, next_r, w_type, w_pos = rng.choice(unvisited_neighbors)
+                if w_type == 'h':
+                    h_walls[w_pos] = False
+                else:
+                    v_walls[w_pos] = False
+                visited.add((next_c, next_r))
+                stack.append((next_c, next_r))
+            else:
+                stack.pop()
+
+        adj = {(c, r): [] for c in range(NUM_COLS) for r in range(NUM_FILAS)}
+        for c in range(NUM_COLS):
+            for r in range(NUM_FILAS):
+                if r > 0 and not h_walls[(c, r - 1)]:
+                    adj[(c, r)].append((c, r - 1))
+                if r < NUM_FILAS - 1 and not h_walls[(c, r)]:
+                    adj[(c, r)].append((c, r + 1))
+                if c > 0 and not v_walls[(c - 1, r)]:
+                    adj[(c, r)].append((c - 1, r))
+                if c < NUM_COLS - 1 and not v_walls[(c, r)]:
+                    adj[(c, r)].append((c + 1, r))
+
+        start_node = (0, row_inicio)
+        exit_node = (NUM_COLS - 1, row_salida)
+        dead_ends = [cell for cell in adj if len(adj[cell]) == 1 and cell != start_node and cell != exit_node]
+        if len(dead_ends) >= 5:
+            break
+
+    # Remover selectivamente algunos muros interiores SOLO entre celdas con grado >= 2
+    candidatos_remover = []
+    for (c, r), v in v_walls.items():
+        if v and len(adj[(c, r)]) >= 2 and len(adj[(c + 1, r)]) >= 2:
+            candidatos_remover.append(('v', (c, r)))
+    for (c, r), v in h_walls.items():
+        if v and len(adj[(c, r)]) >= 2 and len(adj[(c, r + 1)]) >= 2:
+            candidatos_remover.append(('h', (c, r)))
+
+    num_remover = min(len(candidatos_remover), 3)
+    if candidatos_remover and num_remover > 0:
+        for w_type, k in rng.sample(candidatos_remover, num_remover):
+            if w_type == 'v':
+                v_walls[k] = False
+                adj[(k[0], k[1])].append((k[0] + 1, k[1]))
+                adj[(k[0] + 1, k[1])].append((k[0], k[1]))
+            else:
+                h_walls[k] = False
+                adj[(k[0], k[1])].append((k[0], k[1] + 1))
+                adj[(k[0], k[1] + 1)].append((k[0], k[1]))
+
+    # Distancias BFS desde el inicio
+    dist = {start_node: 0}
+    q = [start_node]
+    while q:
+        curr = q.pop(0)
+        for nxt in adj[curr]:
+            if nxt not in dist:
+                dist[nxt] = dist[curr] + 1
+                q.append(nxt)
+
+    dead_ends = [cell for cell in adj if len(adj[cell]) == 1 and cell != start_node and cell != exit_node]
+    candidatos_llave = [c for c in dead_ends if dist[c] >= 4 and c[0] != NUM_COLS - 1]
+    if not candidatos_llave:
+        candidatos_llave = [c for c in dead_ends if c != exit_node]
+    if not candidatos_llave:
+        candidatos_llave = [max(adj.keys(), key=lambda x: dist[x] if x != exit_node else -1)]
+
+    key_cell = rng.choice(candidatos_llave)
+
+    # Seleccionar callejones para trampas mortales (que NO sean la llave ni la entrada)
+    callejones_trampa = [c for c in dead_ends if c != key_cell and c[0] > 0]
+    num_trampas = min(len(callejones_trampa), rng.randint(2, 3))
+    trap_cells = rng.sample(callejones_trampa, num_trampas) if callejones_trampa else []
+
+    rocas = []
+    barreras = []
+    corales = []
+    algas = []
+    pinchos = []
+
+    # Muros de contorno izquierdo (entrada)
+    x_muro_izq = x_offset - grosor_muro // 2
+    for r in range(NUM_FILAS):
+        if r != row_inicio:
+            rocas.append({"rect": pygame.Rect(x_muro_izq, y_techo + r * h_cell, grosor_muro, h_cell)})
+
+    # Muros de contorno derecho (salida)
+    x_muro_der = x_final - grosor_muro // 2
+    for r in range(NUM_FILAS):
+        if r != row_salida:
+            rocas.append({"rect": pygame.Rect(x_muro_der, y_techo + r * h_cell, grosor_muro, h_cell)})
+
+    colores_coral = [
+        ((250, 95, 135), (255, 185, 205)),
+        ((255, 135, 70), (255, 205, 140)),
+        ((255, 195, 50), (255, 240, 160)),
+        ((45, 200, 180), (130, 245, 230)),
+        ((175, 95, 220), (225, 170, 255)),
+    ]
+
+    # Muros verticales interiores
+    for (c, r), v in v_walls.items():
+        if v:
+            xw = x_offset + (c + 1) * w_cell - grosor_muro // 2
+            yw = y_techo + r * h_cell
+            rect = pygame.Rect(xw, yw, grosor_muro, h_cell)
+            if (c * 3 + r) % 5 == 1:
+                barreras.append({"rect": rect})
+            elif (c + r) % 6 == 4:
+                col_c, col_s = rng.choice(colores_coral)
+                rocas.append({"rect": rect, "coral": True, "color_coral": col_c})
+            else:
+                rocas.append({"rect": rect})
+
+    # Muros horizontales interiores
+    for (c, r), v in h_walls.items():
+        if v:
+            xw = x_offset + c * w_cell
+            yw = y_techo + (r + 1) * h_cell - grosor_muro // 2
+            rect = pygame.Rect(xw, yw, w_cell, grosor_muro)
+            if (c + r * 2) % 5 == 2:
+                barreras.append({"rect": rect})
+            elif (c * 2 + r) % 7 == 3:
+                col_c, col_s = rng.choice(colores_coral)
+                rocas.append({"rect": rect, "coral": True, "color_coral": col_c})
+            else:
+                rocas.append({"rect": rect})
+
+            if rng.random() < 0.40:
+                pos_x = xw + rng.randint(30, w_cell - 30)
+                algas.append({
+                    "x": pos_x, "y": yw, "alto": rng.randint(45, 75),
+                    "amplitud": rng.uniform(10, 15), "fase": rng.uniform(0, 6.28),
+                    "capa": rng.choice(["fondo", "frente"])
+                })
+            elif rng.random() < 0.35:
+                pos_x = xw + rng.randint(25, w_cell - 25)
+                tipo_c = rng.choice(["ramificado", "cerebro", "abanico", "tubular"])
+                col_c, col_s = rng.choice(colores_coral)
+                corales.append({
+                    "tipo": tipo_c, "x": pos_x, "y": yw,
+                    "escala": rng.uniform(0.75, 1.05), "fase": rng.uniform(0, 6.28),
+                    "color": col_c, "color_sec": col_s, "anclaje": "abajo"
+                })
+
+    # Postes de esquina y cruces
+    for c in range(1, NUM_COLS):
+        for r in range(1, NUM_FILAS):
+            tiene_muro = (
+                v_walls.get((c - 1, r - 1), False) or v_walls.get((c - 1, r), False) or
+                h_walls.get((c - 1, r - 1), False) or h_walls.get((c, r - 1), False)
+            )
+            if tiene_muro:
+                rocas.append({"rect": pygame.Rect(x_offset + c * w_cell - grosor_muro // 2, y_techo + r * h_cell - grosor_muro // 2, grosor_muro, grosor_muro)})
+
+    p_center_y = y_techo + row_inicio * h_cell + (h_cell - 65) // 2
+    p1_x = 75
+    p1_y = p_center_y
+    p2_x = 145
+    p2_y = p_center_y
+
+    puerta_x = 2460
+    puerta_y = y_suelo - 90
+    pedestal_puerta = pygame.Rect(2420, y_suelo - 15, 150, 15)
+    rocas.append({"rect": pedestal_puerta, "coral": True, "color_coral": (255, 135, 70)})
+
+    corales.append({"tipo": "ramificado", "x": 2430, "y": y_suelo, "escala": 1.25, "fase": 0.5, "color": (250, 95, 135), "color_sec": (255, 185, 205), "anclaje": "abajo"})
+    corales.append({"tipo": "abanico", "x": 2540, "y": y_suelo, "escala": 1.2, "fase": 2.1, "color": (175, 95, 220), "color_sec": (225, 170, 255), "anclaje": "abajo"})
+    corales.append({"tipo": "tubular", "x": 2405, "y": y_suelo, "escala": 1.1, "fase": 1.2, "color": (45, 200, 180), "color_sec": (130, 245, 230), "anclaje": "abajo"})
+
+    llave_x = x_offset + key_cell[0] * w_cell + (w_cell - 25) // 2
+    llave_y = y_techo + key_cell[1] * h_cell + (h_cell - 46) // 2
+
+    corales.append({"tipo": "anemona", "x": llave_x + 12, "y": llave_y + 46, "escala": 1.2, "fase": 1.0, "color": (255, 210, 60), "color_sec": (255, 255, 180), "anclaje": "abajo"})
+    corales.append({"tipo": "ramificado", "x": llave_x - 38, "y": llave_y + 46, "escala": 0.95, "fase": 2.5, "color": (250, 95, 135), "color_sec": (255, 185, 205), "anclaje": "abajo"})
+
+    # Trampas mortales en los callejones sin salida seleccionados
+    for tc, tr in trap_cells:
+        cell_x = x_offset + tc * w_cell
+        cell_y = y_techo + tr * h_cell
+        vecinos = adj[(tc, tr)]
+        if vecinos:
+            vc, vr = vecinos[0]
+            if vc < tc:
+                p_rect = crear_pincho(cell_x + w_cell - 45, cell_y + 35, 24, 85, direccion="izquierda")
+            elif vc > tc:
+                p_rect = crear_pincho(cell_x + 20, cell_y + 35, 24, 85, direccion="derecha")
+            elif vr < tr:
+                p_rect = crear_pincho(cell_x + 60, cell_y + h_cell - 28, 110, 24, direccion="arriba")
+            else:
+                p_rect = crear_pincho(cell_x + 60, cell_y + 4, 110, 24, direccion="abajo")
+            pinchos.append(p_rect)
+
+    for dead_c, dead_r in dead_ends:
+        if (dead_c, dead_r) == key_cell or (dead_c, dead_r) in trap_cells:
+            continue
+        cx = x_offset + dead_c * w_cell + w_cell // 2
+        cy = y_techo + dead_r * h_cell + h_cell - 4
+        tipo_c = rng.choice(["ramificado", "cerebro", "abanico", "tubular", "anemona"])
+        col_c, col_s = rng.choice(colores_coral)
+        corales.append({
+            "tipo": tipo_c, "x": cx + rng.randint(-30, 30), "y": cy,
+            "escala": rng.uniform(0.85, 1.15), "fase": rng.uniform(0, 6.28),
+            "color": col_c, "color_sec": col_s, "anclaje": "abajo"
+        })
+
+    for px in range(40, ancho_mundo - 50, 95):
+        if rng.random() < 0.65:
+            algas.append({
+                "x": px + rng.randint(-15, 15),
+                "y": y_suelo,
+                "alto": rng.randint(85, 145),
+                "amplitud": rng.uniform(14, 20),
+                "fase": rng.uniform(0, 6.28),
+                "capa": rng.choice(["fondo", "frente"])
+            })
+
+    return {
+        "rocas": rocas,
+        "barreras": barreras,
+        "corales": corales,
+        "algas": algas,
+        "pinchos": pinchos,
+        "p1_x": p1_x, "p1_y": p1_y,
+        "p2_x": p2_x, "p2_y": p2_y,
+        "llave_x": llave_x, "llave_y": llave_y,
+        "puerta_x": puerta_x, "puerta_y": puerta_y,
+        "key_cell": key_cell,
+        "exit_cell": exit_node,
+        "distancia_llave": dist[key_cell],
+        "distancia_salida": dist[exit_node],
+        "num_callejones": len(dead_ends),
+        "num_trampas": len(pinchos),
+    }
+
+
+def dibujar_camaras_aire_escenario(superficie, camaras_aire, tick):
+    """
+    Dibuja las cámaras de aire y zonas seguras para respirar en Mundo 3 Nivel 5:
+    - Bóveda de aire translúcida con brillo cian y borde burbujeante.
+    - Superficie líquida ondulante que separa el agua del aire.
+    - Microburbujas de oxígeno ascendentes que invitan al jugador a recargar.
+    - Rótulo resplandeciente 'AIRE / O2' indicando claramente la zona segura.
+    """
+    fuente_aire = pygame.font.SysFont("Segoe UI, Arial, sans-serif", 12, bold=True)
+    for cam in camaras_aire:
+        r = cam["rect"]
+
+        # 1. Bóveda de aire translúcida
+        s_aire = pygame.Surface((r.width, r.height), pygame.SRCALPHA)
+        pulso_alfa = int(40 + 12 * math.sin(tick * 0.05 + r.x * 0.01))
+        pygame.draw.rect(s_aire, (180, 240, 255, pulso_alfa), (0, 0, r.width, r.height), border_radius=14)
+        pygame.draw.rect(s_aire, (140, 230, 255, 140), (0, 0, r.width, r.height), width=2, border_radius=14)
+
+        # 2. Microburbujas de oxígeno flotando hacia arriba dentro de la cámara
+        for b_idx in range(6):
+            bx = (r.x * 7 + b_idx * 31 + tick * 0.6) % (r.width - 20) + 10
+            by = (r.height - 10) - ((tick * 1.2 + b_idx * 27) % (r.height - 20))
+            r_burbuja = 2 if b_idx % 2 == 0 else 3
+            pygame.draw.circle(s_aire, (225, 250, 255, 180), (int(bx), int(by)), r_burbuja)
+            pygame.draw.circle(s_aire, (255, 255, 255, 240), (int(bx), int(by)), 1)
+
+        superficie.blit(s_aire, (r.x, r.y))
+
+        # 3. Ondulación superficial en la entrada inferior/abierta
+        for ox in range(r.left, r.right, 6):
+            oy = r.bottom - 4 + int(math.sin(tick * 0.12 + ox * 0.08) * 3)
+            pygame.draw.circle(superficie, (200, 245, 255), (ox, oy), 2)
+
+        # 4. Cartel o insignia 'AIRE O2'
+        ancho_tag, alto_tag = 76, 20
+        tag_x = r.centerx - ancho_tag // 2
+        tag_y = r.top + 8
+        s_tag = pygame.Surface((ancho_tag, alto_tag), pygame.SRCALPHA)
+        pygame.draw.rect(s_tag, (15, 30, 48, 200), (0, 0, ancho_tag, alto_tag), border_radius=10)
+        pygame.draw.rect(s_tag, (100, 225, 255, 220), (0, 0, ancho_tag, alto_tag), width=1, border_radius=10)
+        lbl_surf = fuente_aire.render("AIRE  O2", True, (220, 250, 255))
+        s_tag.blit(lbl_surf, ((ancho_tag - lbl_surf.get_width()) // 2, (alto_tag - lbl_surf.get_height()) // 2))
+        superficie.blit(s_tag, (tag_x, tag_y))
+
+
+def dibujar_corrientes_marinas_escenario(superficie, corrientes_marinas, tick):
+    """
+    Dibuja las corrientes marinas y sus vectores de fuerza en Mundo 3 Nivel 5:
+    - Ondas de flujo translúcidas dinámicas en la dirección del empuje.
+    - Flechas chevrons de corriente submarina mostrando la trayectoria.
+    - Partículas y estelas de burbujas arrastradas a alta velocidad.
+    """
+    for corr in corrientes_marinas:
+        r = corr["rect"]
+        fx = corr["fuerza_x"]
+        fy = corr["fuerza_y"]
+        direccion = corr.get("direccion", "derecha")
+
+        s_corr = pygame.Surface((r.width, r.height), pygame.SRCALPHA)
+        pygame.draw.rect(s_corr, (110, 215, 255, 28), (0, 0, r.width, r.height), border_radius=8)
+
+        if direccion in ("derecha", "izquierda"):
+            vel_signo = 1 if fx > 0 else -1
+            num_lineas = max(2, r.height // 35)
+            for li in range(num_lineas):
+                ly = int((li + 0.5) * (r.height / float(num_lineas)))
+                offset_x = int((tick * (abs(fx) * 1.8) * vel_signo) % 60)
+                for lx in range(-60, r.width + 60, 60):
+                    x_start = lx + offset_x
+                    x_end = x_start + int(36 * (1 if fx > 0 else -1))
+                    if 0 <= x_start <= r.width or 0 <= x_end <= r.width:
+                        pygame.draw.line(s_corr, (160, 235, 255, 75), (max(0, min(r.width, x_start)), ly), (max(0, min(r.width, x_end)), ly), 2)
+                        arrow_tip_x = x_end
+                        if 5 <= arrow_tip_x <= r.width - 5:
+                            if fx > 0:
+                                pygame.draw.lines(s_corr, (210, 245, 255, 120), False, [(arrow_tip_x - 7, ly - 5), (arrow_tip_x, ly), (arrow_tip_x - 7, ly + 5)], 2)
+                            else:
+                                pygame.draw.lines(s_corr, (210, 245, 255, 120), False, [(arrow_tip_x + 7, ly - 5), (arrow_tip_x, ly), (arrow_tip_x + 7, ly + 5)], 2)
+        elif direccion in ("arriba", "abajo"):
+            vel_signo = 1 if fy > 0 else -1
+            num_lineas = max(2, r.width // 35)
+            for li in range(num_lineas):
+                lx = int((li + 0.5) * (r.width / float(num_lineas)))
+                offset_y = int((tick * (abs(fy) * 1.8) * vel_signo) % 60)
+                for ly in range(-60, r.height + 60, 60):
+                    y_start = ly + offset_y
+                    y_end = y_start + int(36 * (1 if fy > 0 else -1))
+                    if 0 <= y_start <= r.height or 0 <= y_end <= r.height:
+                        pygame.draw.line(s_corr, (160, 235, 255, 75), (lx, max(0, min(r.height, y_start))), (lx, max(0, min(r.height, y_end))), 2)
+                        arrow_tip_y = y_end
+                        if 5 <= arrow_tip_y <= r.height - 5:
+                            if fy > 0:
+                                pygame.draw.lines(s_corr, (210, 245, 255, 120), False, [(lx - 5, arrow_tip_y - 7), (lx, arrow_tip_y), (lx + 5, arrow_tip_y - 7)], 2)
+                            else:
+                                pygame.draw.lines(s_corr, (210, 245, 255, 120), False, [(lx - 5, arrow_tip_y + 7), (lx, arrow_tip_y), (lx + 5, arrow_tip_y + 7)], 2)
+
+        superficie.blit(s_corr, (r.x, r.y))
+
+
+def _dibujar_hud_oxigeno_m3_n5(pantalla_surf, oxigeno_p1, oxigeno_p2, p1_color, p2_color, tick):
+    """
+    Dibuja los medidores de oxígeno de ambos jugadores en la esquina superior izquierda de la pantalla:
+    - Barra de oxígeno fluida con color cian/verde cuando está llena, ámbar en nivel medio, y rojo palpitante en peligro.
+    - Porcentaje numérico exacto de reserva de aire.
+    - Alerta visual destacada cuando el oxígeno cae por debajo del 25%.
+    """
+    fuente_hud = pygame.font.SysFont("Segoe UI, Arial, sans-serif", 12, bold=True)
+    fuente_pct = pygame.font.SysFont("Segoe UI, Arial, sans-serif", 11, bold=True)
+
+    w_badge, h_badge = 195, 34
+    x_base, y_base = 28, 22
+
+    datos_p = [
+        (oxigeno_p1, "P1", p1_color, x_base, y_base),
+        (oxigeno_p2, "P2", p2_color, x_base + w_badge + 12, y_base),
+    ]
+
+    for o2, tag_p, col_p, bx, by in datos_p:
+        s_hud = pygame.Surface((w_badge, h_badge), pygame.SRCALPHA)
+        pct = max(0.0, min(100.0, o2))
+        es_critico = pct < 25.0
+
+        col_fondo = (20, 10, 15, 230) if (es_critico and (tick // 15) % 2 == 0) else (12, 22, 36, 225)
+        pygame.draw.rect(s_hud, col_fondo, (0, 0, w_badge, h_badge), border_radius=17)
+
+        if es_critico:
+            borde_col = (255, 60, 75) if (tick // 10) % 2 == 0 else (180, 40, 50)
+        elif pct < 50.0:
+            borde_col = (255, 205, 50)
+        else:
+            borde_col = (75, 210, 245)
+        pygame.draw.rect(s_hud, borde_col, (0, 0, w_badge, h_badge), width=2, border_radius=17)
+
+        cx_ico, cy_ico = 16, h_badge // 2
+        col_ico = (255, 70, 80) if es_critico else (100, 235, 255)
+        pygame.draw.circle(s_hud, col_ico, (cx_ico, cy_ico), 7)
+        pygame.draw.circle(s_hud, (255, 255, 255), (cx_ico - 2, cy_ico - 2), 2)
+
+        t_jug = fuente_hud.render(f"O2 {tag_p}", True, (255, 255, 255))
+        s_hud.blit(t_jug, (28, 4))
+
+        t_pct = fuente_pct.render(f"{int(pct)}%", True, (255, 240, 200) if not es_critico else (255, 100, 110))
+        s_hud.blit(t_pct, (w_badge - t_pct.get_width() - 10, 4))
+
+        bar_x, bar_y = 28, 20
+        bar_w, bar_h = w_badge - 38, 9
+        pygame.draw.rect(s_hud, (25, 35, 48), (bar_x, bar_y, bar_w, bar_h), border_radius=4)
+
+        w_llenado = int(bar_w * (pct / 100.0))
+        if w_llenado > 0:
+            if es_critico:
+                col_bar = (255, 55, 75)
+            elif pct < 50.0:
+                col_bar = (255, 205, 45)
+            else:
+                col_bar = (45, 220, 185)
+            pygame.draw.rect(s_hud, col_bar, (bar_x, bar_y, w_llenado, bar_h), border_radius=4)
+            if bar_h > 3:
+                pygame.draw.rect(s_hud, (255, 255, 255, 120), (bar_x, bar_y, w_llenado, 2), border_radius=2)
+
+        pantalla_surf.blit(s_hud, (bx, by))
+
+
+def dibujar_alerta_oxigeno_personaje(superficie, jugador, oxigeno, tick):
+    """Muestra un icono flotante de advertencia cuando el personaje está a punto de ahogarse."""
+    if jugador.get("muerto", False) or oxigeno >= 22.0:
+        return
+    if (tick // 12) % 2 == 0:
+        hx = jugador["hitbox"].centerx
+        hy = jugador["hitbox"].top - 18
+        s_alerta = pygame.Surface((38, 16), pygame.SRCALPHA)
+        pygame.draw.rect(s_alerta, (230, 40, 50, 220), (0, 0, 38, 16), border_radius=8)
+        fuente_aviso = pygame.font.SysFont("Segoe UI, Arial, sans-serif", 10, bold=True)
+        lbl = fuente_aviso.render("! O2", True, (255, 255, 255))
+        s_alerta.blit(lbl, ((38 - lbl.get_width()) // 2, (16 - lbl.get_height()) // 2))
+        superficie.blit(s_alerta, (hx - 19, hy))
+
+
 def iniciar_mundo(
     mecanicas=None,
     numero_nivel=1,
@@ -1747,6 +2753,18 @@ def iniciar_mundo(
     usar_agua = "agua" in mecanicas
     usar_pinchos = "pinchos" in mecanicas
     usar_llave = True
+
+    linterna_p1 = True
+    linterna_p2 = True
+    surf_oscuridad_m3_n4 = None
+    surf_luz_linterna = None
+    surf_luz_tenue = None
+
+    oxigeno_p1 = 100.0
+    oxigeno_p2 = 100.0
+    OXIGENO_MAX = 100.0
+    camaras_aire = []
+    corrientes_marinas = []
 
     pantalla = pygame.display.get_surface()
     if pantalla is None:
@@ -2125,6 +3143,7 @@ def iniciar_mundo(
     plataformas_alternadas = None
     rocas_submarinas = None
     barreras_algas = None
+    corales_decorativos = None
     algas_decorativas = None
     burbujas_m3 = None
     tick_m3 = 0
@@ -2813,36 +3832,41 @@ def iniciar_mundo(
 
         caja = None
 
-        # Abismo continuo cubierto de pinchos mortales bajo toda la escalera (x: 200..955)
+        # Abismo continuo cubierto de pinchos mortales bajo todas las plataformas alternadas (x: 200..840)
         pozo_nivel = {
             "x": 200,
             "y": 570,
-            "ancho": 755,
+            "ancho": 640,
             "alto": 70,
         }
-        pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(205, 950, 32)]
+        pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(205, 835, 32)]
 
-        # Plataforma superior de llegada con la puerta en la cima (x: 955..1300, y=170)
-        plat_llegada = pygame.Rect(955, 170, 345, 26)
-        plat_llegada_base = pygame.Rect(955, 196, 345, suelo.top - 196 + 80)
+        # Plataforma de llegada segura a la derecha con la puerta de salida (x: 840..1300, y=480)
+        plat_llegada = pygame.Rect(840, 480, 460, 26)
+        plat_llegada_base = pygame.Rect(840, 506, 460, suelo.top - 506 + 80)
 
         plataformas_base = [plat_inicio, plat_inicio_base, plat_llegada, plat_llegada_base]
 
-        # Escalera ascendente continua: cada plataforma está 70px más alta que la anterior y desplazada 45px a la derecha.
-        # Recorrido: Inicio (y=520) -> Escalón 1 (y=450) -> Escalón 2 (y=380) -> Escalón 3 (y=310) -> Escalón 4 (y=240, Llave) -> Cima Llegada (y=170, Puerta)
+        # Plataformas INTERCALADAS horizontalmente: izquierda -> derecha -> izquierda -> derecha
+        # Distribución en zig-zag con espacio horizontal real entre plataformas consecutivas:
+        # P1: Izquierda (x: 240..460, y: 440) - Centro 350
+        # P2: Derecha   (x: 500..720, y: 365) - Centro 610 (dx = +260 hacia la derecha)
+        # P3: Izquierda (x: 180..410, y: 290) - Centro 295 (dx = -315 hacia la izquierda)
+        # P4: Derecha   (x: 540..760, y: 215) - Centro 650 (dx = +355 hacia la derecha, pedestal con Llave)
+        # Recorrido cooperativo: INICIO (y=520) -> P1 (y=440) -> P2 (y=365) -> P3 (y=290) -> P4 (y=215, Llave) -> SALIDA (y=480, Puerta)
         plataformas_alternadas = [
-            pygame.Rect(245, 450, 130, 24),   # Escalón 1 (y=450, sube 70px)
-            pygame.Rect(420, 380, 130, 24),   # Escalón 2 (y=380, sube 70px)
-            pygame.Rect(595, 310, 130, 24),   # Escalón 3 (y=310, sube 70px)
-            pygame.Rect(770, 240, 140, 24),   # Escalón 4 (y=240, sube 70px, con pedestal y llave)
+            pygame.Rect(240, 440, 220, 24),  # P1: Izquierda (y=440)
+            pygame.Rect(500, 365, 220, 24),  # P2: Derecha   (y=365)
+            pygame.Rect(180, 290, 230, 24),  # P3: Izquierda (y=290)
+            pygame.Rect(540, 215, 220, 24),  # P4: Derecha   (y=215, cumbre con pedestal y llave)
         ]
         plataformas = list(plataformas_base) + list(plataformas_alternadas)
 
-        # Llave en la plataforma superior previa a la cima (Escalón 4, y=240)
-        llave = crear_llave(770 + 140 // 2 - 12, 240 - 46)
+        # Llave dorada en el pedestal de la cumbre derecha (P4, x=650, y=215)
+        llave = crear_llave(650 - 12, 215 - 46)
 
-        # Puerta de salida en la plataforma final de llegada en la cima más alta (y=170)
-        puerta = crear_puerta(1120, 170 - 90)
+        # Puerta de salida en la plataforma final de llegada (x=980, y=480)
+        puerta = crear_puerta(980, 480 - 90)
     elif numero_mundo == 3 and numero_nivel == 1:
         # Mundo 3 — Nivel 1: «El jardín de algas» (Niveles.pdf, páginas 10 y 13)
         # Objetivo: explorar el escenario submarino, encontrar la llave y llegar a la puerta de salida.
@@ -2966,6 +3990,409 @@ def iniciar_mundo(
         # Sistema de burbujas flotantes
         burbujas_m3 = crear_sistema_burbujas_m3(ancho_mundo_nivel, cantidad=45)
         tick_m3 = 0
+    elif numero_mundo == 3 and numero_nivel == 2:
+        # Nivel 3-2: El laberinto de coral (Mundo Submarino)
+        # - Laberinto generado proceduralmente en cada partida y reinicio con 100% de resolubilidad garantizada.
+        # - Muros de roca submarina ancestral, arrecifes de coral y densas barreras de quelpo entrelazado.
+        # - Múltiples bifurcaciones, rutas alternativas y callejones sin salida para exploración.
+        # - Llave oculta en las profundidades de un callejón sin salida del laberinto.
+        # - Ambos personajes nadan de forma independiente (sin cuerda, movimiento libre en 4 direcciones).
+        # - Algas y corales luminiscentes decoran los pasajes y callejones.
+        # - Puerta de salida en la terraza final tras encontrar la llave.
+        ancho_mundo_nivel = 2600
+        suelo = pygame.Rect(0, ALTO - 75, ancho_mundo_nivel, 75)
+        mundo_rect = pygame.Rect(0, 0, ancho_mundo_nivel, ALTO)
+
+        usar_caja = False
+        usar_soga = False
+        usar_agua = True
+        usar_pinchos = False
+        usar_llave = True
+
+        ZONA_AGUA.x = 0
+        ZONA_AGUA.y = 0
+        ZONA_AGUA.width = ancho_mundo_nivel
+        ZONA_AGUA.height = ALTO
+
+        techo_agua = pygame.Rect(0, 0, ancho_mundo_nivel, 25)
+
+        datos_lab = generar_laberinto_coral_m3_n2(ancho_mundo_nivel, ALTO, suelo.top, techo_agua.bottom)
+        rocas_submarinas = datos_lab["rocas"]
+        barreras_algas = datos_lab["barreras"]
+        corales_decorativos = datos_lab["corales"]
+        algas_decorativas = datos_lab["algas"]
+
+        jugador1 = crear_personaje(datos_lab["p1_x"], datos_lab["p1_y"], p1_color)
+        jugador2 = crear_personaje(datos_lab["p2_x"], datos_lab["p2_y"], p2_color)
+        jugador1["en_agua"] = True
+        jugador2["en_agua"] = True
+
+        caja = None
+        pinchos = []
+
+        plataformas_base = [techo_agua] + [r["rect"] for r in rocas_submarinas] + [b["rect"] for b in barreras_algas]
+        plataformas = list(plataformas_base)
+
+        llave = crear_llave(datos_lab["llave_x"], datos_lab["llave_y"])
+        puerta = crear_puerta(datos_lab["puerta_x"], datos_lab["puerta_y"])
+
+        burbujas_m3 = crear_sistema_burbujas_m3(ancho_mundo_nivel, cantidad=50)
+        tick_m3 = 0
+    elif numero_mundo == 3 and numero_nivel == 3:
+        # Nivel 3-3: Las rocas peligrosas (Mundo Submarino)
+        # - Pasillos estrechos con estalactitas, estalagmitas y formaciones rocosas marinas.
+        # - Pinchos y erizos submarinos mortales sobresaliendo tanto del suelo como del techo y cornisas.
+        # - Los personajes se mueven de forma independiente (sin cuerda, según las reglas de Mundo 3) en 4 direcciones.
+        # - Maniobras de precisión obligatorias para esquivar los pinchos; si cualquiera toca uno, ambos mueren.
+        # - Llave oculta en una gruta peligrosa protegida por rocas y pinchos.
+        # - Puerta de salida ubicada al otro lado del desfiladero, sobre una terraza marina de coral.
+        ancho_mundo_nivel = 2700
+        suelo = pygame.Rect(0, ALTO - 75, ancho_mundo_nivel, 75)
+        mundo_rect = pygame.Rect(0, 0, ancho_mundo_nivel, ALTO)
+
+        usar_caja = False
+        usar_soga = False
+        usar_agua = True
+        usar_pinchos = True
+        usar_llave = True
+
+        ZONA_AGUA.x = 0
+        ZONA_AGUA.y = 0
+        ZONA_AGUA.width = ancho_mundo_nivel
+        ZONA_AGUA.height = ALTO
+
+        techo_agua = pygame.Rect(0, 0, ancho_mundo_nivel, 30)
+
+        # Personajes inician en la zona segura inicial antes del estrecho
+        jugador1 = crear_personaje(110, 330, p1_color)
+        jugador2 = crear_personaje(210, 330, p2_color)
+        jugador1["en_agua"] = True
+        jugador2["en_agua"] = True
+
+        caja = None
+
+        # Formaciones rocosas que definen los pasillos estrechos
+        rocas_submarinas = [
+            # Zona 1: Entrada y primer estrechamiento (x = 0 .. 440)
+            {"rect": pygame.Rect(320, techo_agua.bottom, 130, 95)},
+            {"rect": pygame.Rect(320, 520, 130, suelo.top - 520)},
+
+            # Zona 2: Desfiladero serpenteante en S (x = 450 .. 1120)
+            {"rect": pygame.Rect(480, techo_agua.bottom, 210, 240)},
+            {"rect": pygame.Rect(720, 390, 190, suelo.top - 390)},
+            {"rect": pygame.Rect(700, techo_agua.bottom, 230, 90)},
+            {"rect": pygame.Rect(940, techo_agua.bottom, 180, 230)},
+
+            # Zona 3: Gran bifurcación y Gruta de la Llave (x = 1140 .. 1720)
+            {"rect": pygame.Rect(1140, techo_agua.bottom, 480, 75)},
+            {"rect": pygame.Rect(1200, 270, 360, 120), "coral": True, "color_coral": (245, 110, 140)},
+            {"rect": pygame.Rect(1350, 220, 80, 20), "coral": True, "color_coral": (255, 180, 80)},
+            {"rect": pygame.Rect(1240, 530, 260, suelo.top - 530)},
+
+            # Zona 4: Laberinto de pilares y colmillos de roca (x = 1750 .. 2320)
+            {"rect": pygame.Rect(1780, techo_agua.bottom, 85, 300)},
+            {"rect": pygame.Rect(1940, 310, 85, suelo.top - 310)},
+            {"rect": pygame.Rect(2100, techo_agua.bottom, 85, 290)},
+            {"rect": pygame.Rect(2090, 530, 105, suelo.top - 530)},
+
+            # Zona 5: Terraza final de llegada con la puerta (x = 2380 .. 2700)
+            {"rect": pygame.Rect(2380, 480, 320, suelo.top - 480), "coral": True, "color_coral": (255, 140, 80)},
+        ]
+
+        # Obstáculos mortales: erizos de mar y corales puntiagudos en suelo y techo
+        pinchos = [
+            # Zona 1: Primer estrechamiento
+            crear_pincho(340, techo_agua.bottom + 95, 75, 24, direccion="abajo"),
+            crear_pincho(340, 520 - 24, 75, 24, direccion="arriba"),
+
+            # Zona 2: Serpentín en S
+            crear_pincho(520, techo_agua.bottom + 240, 130, 24, direccion="abajo"),
+            crear_pincho(540, suelo.top - 24, 100, 24, direccion="arriba"),
+            crear_pincho(740, 390 - 24, 145, 24, direccion="arriba"),
+            crear_pincho(735, techo_agua.bottom + 90, 150, 24, direccion="abajo"),
+            crear_pincho(965, techo_agua.bottom + 230, 125, 24, direccion="abajo"),
+            crear_pincho(980, suelo.top - 24, 100, 24, direccion="arriba"),
+
+            # Zona 3: La gruta de la llave
+            crear_pincho(1200, techo_agua.bottom + 75, 110, 24, direccion="abajo"),
+            crear_pincho(1460, techo_agua.bottom + 75, 110, 24, direccion="abajo"),
+            crear_pincho(1210, 270 - 24, 100, 24, direccion="arriba"),
+            crear_pincho(1465, 270 - 24, 90, 24, direccion="arriba"),
+            crear_pincho(1280, 390, 140, 24, direccion="abajo"),
+            crear_pincho(1285, 530 - 24, 150, 24, direccion="arriba"),
+
+            # Zona 4: Pilares y desfiladero final
+            crear_pincho(1785, techo_agua.bottom + 300, 75, 24, direccion="abajo"),
+            crear_pincho(1775, suelo.top - 24, 95, 24, direccion="arriba"),
+            crear_pincho(1945, 310 - 24, 75, 24, direccion="arriba"),
+            crear_pincho(1940, techo_agua.bottom, 85, 24, direccion="abajo"),
+            crear_pincho(2105, techo_agua.bottom + 290, 75, 24, direccion="abajo"),
+            crear_pincho(2095, 530 - 24, 95, 24, direccion="arriba"),
+        ]
+
+        barreras_algas = [
+            {"rect": pygame.Rect(1620, 420, 35, suelo.top - 420)},
+        ]
+
+        # Plataformas sólidas combinadas
+        plataformas_base = [techo_agua] + [r["rect"] for r in rocas_submarinas] + [b["rect"] for b in barreras_algas]
+        plataformas = list(plataformas_base)
+
+        # La llave sobre la repisa segura en la gruta
+        llave = crear_llave(1378, 220 - 46)
+
+        # Puerta de salida en la terraza final
+        puerta = crear_puerta(2480, 480 - 90)
+
+        # Corales decorativos temáticos
+        corales_decorativos = [
+            # Entrada
+            {"tipo": "ramificado", "x": 160, "y": suelo.top, "escala": 1.1, "fase": 0.4, "color": (250, 95, 135), "color_sec": (255, 185, 205), "anclaje": "abajo"},
+            # Gruta de la llave
+            {"tipo": "anemona", "x": 1390, "y": 220, "escala": 1.15, "fase": 1.2, "color": (255, 210, 60), "color_sec": (255, 255, 180), "anclaje": "abajo"},
+            {"tipo": "ramificado", "x": 1345, "y": 220, "escala": 0.85, "fase": 0.5, "color": (255, 105, 145), "color_sec": (255, 185, 205), "anclaje": "abajo"},
+            {"tipo": "tubular", "x": 1435, "y": 220, "escala": 0.85, "fase": 2.2, "color": (45, 195, 180), "color_sec": (130, 245, 230), "anclaje": "abajo"},
+            {"tipo": "cerebro", "x": 1280, "y": 270, "escala": 1.0, "fase": 3.0, "color": (230, 110, 180), "color_sec": (255, 185, 225), "anclaje": "abajo"},
+            {"tipo": "abanico", "x": 1500, "y": 270, "escala": 0.95, "fase": 1.8, "color": (175, 95, 220), "color_sec": (225, 170, 255), "anclaje": "abajo"},
+            # Terraza de salida
+            {"tipo": "ramificado", "x": 2420, "y": 480, "escala": 1.25, "fase": 0.8, "color": (255, 130, 70), "color_sec": (255, 200, 140), "anclaje": "abajo"},
+            {"tipo": "abanico", "x": 2560, "y": 480, "escala": 1.15, "fase": 2.5, "color": (175, 95, 220), "color_sec": (225, 170, 255), "anclaje": "abajo"},
+            {"tipo": "tubular", "x": 2390, "y": 480, "escala": 1.05, "fase": 1.2, "color": (45, 195, 180), "color_sec": (130, 245, 230), "anclaje": "abajo"},
+        ]
+
+        # Algas marinas decorativas ondeando con la marea
+        algas_decorativas = [
+            {"x": 80, "y": suelo.top, "alto": 120, "amplitud": 16, "fase": 0.0, "capa": "fondo"},
+            {"x": 260, "y": suelo.top, "alto": 140, "amplitud": 18, "fase": 1.3, "capa": "fondo"},
+            {"x": 670, "y": suelo.top, "alto": 115, "amplitud": 15, "fase": 2.7, "capa": "fondo"},
+            {"x": 1120, "y": suelo.top, "alto": 130, "amplitud": 17, "fase": 0.8, "capa": "fondo"},
+            {"x": 1700, "y": suelo.top, "alto": 145, "amplitud": 19, "fase": 3.2, "capa": "fondo"},
+            {"x": 2040, "y": suelo.top, "alto": 125, "amplitud": 16, "fase": 1.9, "capa": "fondo"},
+            {"x": 2320, "y": suelo.top, "alto": 135, "amplitud": 18, "fase": 0.5, "capa": "fondo"},
+            {"x": 2630, "y": suelo.top, "alto": 140, "amplitud": 17, "fase": 2.1, "capa": "fondo"},
+            {"x": 140, "y": suelo.top, "alto": 95, "amplitud": 14, "fase": 2.2, "capa": "frente"},
+            {"x": 880, "y": suelo.top, "alto": 105, "amplitud": 15, "fase": 0.6, "capa": "frente"},
+            {"x": 1660, "y": suelo.top, "alto": 110, "amplitud": 16, "fase": 3.4, "capa": "frente"},
+            {"x": 2260, "y": suelo.top, "alto": 100, "amplitud": 15, "fase": 1.2, "capa": "frente"},
+        ]
+
+        burbujas_m3 = crear_sistema_burbujas_m3(ancho_mundo_nivel, cantidad=45)
+        tick_m3 = 0
+    elif numero_mundo == 3 and numero_nivel == 4:
+        # Mundo 3 Nivel 4: "El laberinto oscuro" (Página 13 del PDF)
+        # Objetivo: Encontrar la llave y llegar a la puerta de salida atravesando un laberinto submarino oscuro.
+        # - Exploración con linternas independientes (P1: E/F/Espacio, P2: L/Enter/RShift/RCtrl).
+        # - Haz de luz circular limitado (~145px) alrededor de cada personaje; brillo tenue personal cuando está apagada.
+        # - Laberinto generado proceduralmente en cada partida o reinicio con 100% resolubilidad.
+        # - Callejones sin salida y trampas mortales (erizos de mar) en cul-de-sacs secundarios.
+        # - Llave y puerta completamente ocultas en la oscuridad hasta ser iluminadas por la linterna.
+        # - Natación libre en 4 direcciones sin gravedad ni corrientes molestas.
+        ancho_mundo_nivel = 2600
+        suelo = pygame.Rect(0, ALTO - 75, ancho_mundo_nivel, 75)
+        mundo_rect = pygame.Rect(0, 0, ancho_mundo_nivel, ALTO)
+
+        usar_caja = False
+        usar_soga = False
+        usar_agua = True
+        usar_pinchos = True
+        usar_llave = True
+
+        ZONA_AGUA.x = 0
+        ZONA_AGUA.y = 0
+        ZONA_AGUA.width = ancho_mundo_nivel
+        ZONA_AGUA.height = ALTO
+
+        techo_agua = pygame.Rect(0, 0, ancho_mundo_nivel, 25)
+
+        linterna_p1 = True
+        linterna_p2 = True
+
+        datos_lab = generar_laberinto_oscuro_m3_n4(ancho_mundo_nivel, ALTO, suelo.top, techo_agua.bottom)
+
+        jugador1 = crear_personaje(datos_lab["p1_x"], datos_lab["p1_y"], p1_color)
+        jugador2 = crear_personaje(datos_lab["p2_x"], datos_lab["p2_y"], p2_color)
+        jugador1["en_agua"] = True
+        jugador2["en_agua"] = True
+
+        caja = None
+        rocas_submarinas = datos_lab["rocas"]
+        barreras_algas = datos_lab["barreras"]
+        corales_decorativos = datos_lab["corales"]
+        algas_decorativas = datos_lab["algas"]
+        pinchos = datos_lab["pinchos"]
+
+        plataformas_base = [techo_agua] + [r["rect"] for r in rocas_submarinas] + [b["rect"] for b in barreras_algas]
+        plataformas = list(plataformas_base)
+
+        llave = crear_llave(datos_lab["llave_x"], datos_lab["llave_y"])
+        puerta = crear_puerta(datos_lab["puerta_x"], datos_lab["puerta_y"])
+
+        burbujas_m3 = crear_sistema_burbujas_m3(ancho_mundo_nivel, cantidad=45)
+        tick_m3 = 0
+
+        surf_oscuridad_m3_n4 = pygame.Surface((ancho_mundo_nivel, ALTO), pygame.SRCALPHA)
+        surf_luz_linterna, surf_luz_tenue = obtener_superficies_luz_linterna()
+    elif numero_mundo == 3 and numero_nivel == 5:
+        # Mundo 3 — Nivel 5: «El abismo submarino» (Niveles.pdf, páginas 13 y 14)
+        # Último nivel del Mundo 3:
+        # Objetivo: conseguir la llave y llegar a la puerta atravesando una zona submarina peligrosa,
+        # esquivando obstáculos, resistiendo las corrientes marinas y administrando el oxígeno.
+        #
+        # Mecánicas principales:
+        # 1. Movimiento submarino libre en 4 direcciones y neutral buoyancy (sin soga).
+        # 2. Corrientes de agua que empujan a los personajes (lateral, ascendente, descendente).
+        # 3. Gestión de Oxígeno: cada personaje tiene una barra de oxígeno visible. Disminuye bajo el agua (~20s).
+        # 4. Cámaras de aire / Zonas seguras: distribuidas estratégicamente para recargar oxígeno.
+        # 5. Riesgo de ahogamiento: si el oxígeno llega a cero, el personaje muere y el nivel se reinicia.
+        # 6. Obstáculos mortales: erizos marinos y corales puntiagudos en suelo, paredes y techo.
+        ancho_mundo_nivel = 2600
+        suelo = pygame.Rect(0, ALTO - 75, ancho_mundo_nivel, 75)
+        mundo_rect = pygame.Rect(0, 0, ancho_mundo_nivel, ALTO)
+
+        usar_caja = False
+        usar_soga = False
+        usar_agua = True
+        usar_pinchos = True
+        usar_llave = True
+
+        ZONA_AGUA.x = 0
+        ZONA_AGUA.y = 0
+        ZONA_AGUA.width = ancho_mundo_nivel
+        ZONA_AGUA.height = ALTO
+
+        techo_agua = pygame.Rect(0, 0, ancho_mundo_nivel, 25)
+
+        oxigeno_p1 = 100.0
+        oxigeno_p2 = 100.0
+
+        # Personajes inician dentro del primer refugio de aire (Cámara 1)
+        jugador1 = crear_personaje(80, 280, p1_color)
+        jugador2 = crear_personaje(150, 280, p2_color)
+        jugador1["en_agua"] = True
+        jugador2["en_agua"] = True
+
+        caja = None
+
+        # 1. Cámaras de aire (Zonas seguras de respiración y recarga de O2)
+        camaras_aire = [
+            {"rect": pygame.Rect(40, 160, 200, 260), "nombre": "Cámara 1: Refugio Inicial"},
+            {"rect": pygame.Rect(860, 50, 190, 200), "nombre": "Cámara 2: Gruta Superior"},
+            {"rect": pygame.Rect(1440, 420, 190, 225), "nombre": "Cámara 3: Fosa de la Llave"},
+            {"rect": pygame.Rect(2020, 60, 190, 210), "nombre": "Cámara 4: Refugio Final"},
+        ]
+
+        # 2. Corrientes marinas dinámicas
+        corrientes_marinas = [
+            {"rect": pygame.Rect(320, 300, 440, 240), "fuerza_x": 2.4, "fuerza_y": 0.0, "direccion": "derecha"},
+            {"rect": pygame.Rect(780, 180, 120, 440), "fuerza_x": 0.0, "fuerza_y": -2.6, "direccion": "arriba"},
+            {"rect": pygame.Rect(1140, 140, 260, 380), "fuerza_x": 1.4, "fuerza_y": 2.4, "direccion": "abajo"},
+            {"rect": pygame.Rect(1620, 360, 360, 280), "fuerza_x": -2.6, "fuerza_y": 0.0, "direccion": "izquierda"},
+            {"rect": pygame.Rect(2180, 220, 240, 320), "fuerza_x": 1.8, "fuerza_y": -1.8, "direccion": "arriba"},
+        ]
+
+        # 3. Formaciones rocosas que definen el gran abismo submarino
+        rocas_submarinas = [
+            # Sector 1: Entrada y cámara inicial
+            {"rect": pygame.Rect(260, techo_agua.bottom, 90, 260)},
+            {"rect": pygame.Rect(260, 560, 90, suelo.top - 560)},
+
+            # Sector 2: Estrecho de la corriente rápida
+            {"rect": pygame.Rect(460, techo_agua.bottom, 180, 180)},
+            {"rect": pygame.Rect(480, 560, 220, suelo.top - 560)},
+
+            # Sector 2/3: Pilar del Geiser ascendente
+            {"rect": pygame.Rect(720, 280, 70, suelo.top - 280)},
+            {"rect": pygame.Rect(890, 250, 150, 260)},
+
+            # Sector 3: Meseta central y desfiladero
+            {"rect": pygame.Rect(1040, techo_agua.bottom, 120, 280)},
+            {"rect": pygame.Rect(1180, 520, 220, suelo.top - 520)},
+
+            # Sector 4: Techo de la Fosa de la Llave
+            {"rect": pygame.Rect(1400, techo_agua.bottom, 220, 380)},
+            {"rect": pygame.Rect(1640, techo_agua.bottom, 340, 240)},
+            {"rect": pygame.Rect(1640, 480, 140, suelo.top - 480)},
+
+            # Repisa abisal donde reposa la llave dorada
+            {"rect": pygame.Rect(1780, 590, 110, suelo.top - 590), "coral": True, "color_coral": (255, 135, 70)},
+
+            # Sector 5: Pared antes del refugio y terraza
+            {"rect": pygame.Rect(1980, 270, 110, suelo.top - 270)},
+            {"rect": pygame.Rect(2210, techo_agua.bottom, 180, 200)},
+            {"rect": pygame.Rect(2210, 540, 180, suelo.top - 540)},
+
+            # Terraza final de llegada con la puerta
+            {"rect": pygame.Rect(2390, 440, 210, suelo.top - 440), "coral": True, "color_coral": (255, 140, 80)},
+        ]
+
+        barreras_algas = [
+            {"rect": pygame.Rect(1380, 380, 30, suelo.top - 380)},
+        ]
+
+        # 4. Obstáculos mortales: erizos de mar puntiagudos
+        pinchos = [
+            # Sector 1/2: Corredor de la corriente
+            crear_pincho(350, techo_agua.bottom, 110, 24, direccion="abajo"),
+            crear_pincho(370, 560 - 24, 90, 24, direccion="arriba"),
+
+            # Sector 2/3: Techo del geiser
+            crear_pincho(780, techo_agua.bottom, 110, 24, direccion="abajo"),
+
+            # Sector 3: Pared y lecho abisal
+            crear_pincho(950, suelo.top - 24, 120, 24, direccion="arriba"),
+            crear_pincho(1200, 520 - 24, 140, 24, direccion="arriba"),
+
+            # Sector 4: Alrededores de la llave
+            crear_pincho(1640, 480 - 24, 100, 24, direccion="arriba"),
+            crear_pincho(1890, suelo.top - 24, 90, 24, direccion="arriba"),
+
+            # Sector 5: Desfiladero final hacia la terraza
+            crear_pincho(2180, 540 - 24, 120, 24, direccion="arriba"),
+            crear_pincho(2210, techo_agua.bottom + 200, 100, 24, direccion="abajo"),
+        ]
+
+        plataformas_base = [techo_agua] + [r["rect"] for r in rocas_submarinas] + [b["rect"] for b in barreras_algas]
+        plataformas = list(plataformas_base)
+
+        # Llave escondida en la profunda repisa abisal
+        llave = crear_llave(1820, 590 - 46)
+
+        # Puerta de salida en la terraza final
+        puerta = crear_puerta(2460, 440 - 90)
+
+        # Corales decorativos en cámaras y terrazas
+        corales_decorativos = [
+            # Cámara 1
+            {"tipo": "ramificado", "x": 120, "y": 420, "escala": 1.1, "fase": 0.5, "color": (250, 95, 135), "color_sec": (255, 185, 205), "anclaje": "abajo"},
+            # Cámara 2
+            {"tipo": "anemona", "x": 920, "y": 250, "escala": 1.2, "fase": 1.2, "color": (255, 210, 60), "color_sec": (255, 255, 180), "anclaje": "abajo"},
+            {"tipo": "abanico", "x": 980, "y": 250, "escala": 1.0, "fase": 2.1, "color": (175, 95, 220), "color_sec": (225, 170, 255), "anclaje": "abajo"},
+            # Cámara 3
+            {"tipo": "cerebro", "x": 1500, "y": suelo.top, "escala": 1.15, "fase": 3.0, "color": (230, 110, 180), "color_sec": (255, 185, 225), "anclaje": "abajo"},
+            {"tipo": "tubular", "x": 1560, "y": suelo.top, "escala": 1.05, "fase": 1.4, "color": (45, 195, 180), "color_sec": (130, 245, 230), "anclaje": "abajo"},
+            # Repisa de la llave
+            {"tipo": "anemona", "x": 1845, "y": 590, "escala": 1.15, "fase": 1.8, "color": (255, 220, 70), "color_sec": (255, 255, 190), "anclaje": "abajo"},
+            # Terraza de salida
+            {"tipo": "ramificado", "x": 2420, "y": 440, "escala": 1.25, "fase": 0.8, "color": (255, 130, 70), "color_sec": (255, 200, 140), "anclaje": "abajo"},
+            {"tipo": "abanico", "x": 2550, "y": 440, "escala": 1.15, "fase": 2.5, "color": (175, 95, 220), "color_sec": (225, 170, 255), "anclaje": "abajo"},
+        ]
+
+        algas_decorativas = [
+            {"x": 60, "y": suelo.top, "alto": 120, "amplitud": 16, "fase": 0.0, "capa": "fondo"},
+            {"x": 210, "y": suelo.top, "alto": 135, "amplitud": 18, "fase": 1.1, "capa": "fondo"},
+            {"x": 680, "y": suelo.top, "alto": 110, "amplitud": 15, "fase": 2.5, "capa": "fondo"},
+            {"x": 1340, "y": suelo.top, "alto": 130, "amplitud": 17, "fase": 0.9, "capa": "fondo"},
+            {"x": 1720, "y": suelo.top, "alto": 140, "amplitud": 19, "fase": 3.1, "capa": "fondo"},
+            {"x": 2080, "y": suelo.top, "alto": 125, "amplitud": 16, "fase": 1.8, "capa": "fondo"},
+            {"x": 2350, "y": suelo.top, "alto": 135, "amplitud": 18, "fase": 0.6, "capa": "fondo"},
+            {"x": 140, "y": suelo.top, "alto": 95, "amplitud": 14, "fase": 2.2, "capa": "frente"},
+            {"x": 890, "y": suelo.top, "alto": 105, "amplitud": 15, "fase": 0.6, "capa": "frente"},
+            {"x": 1600, "y": suelo.top, "alto": 110, "amplitud": 16, "fase": 3.4, "capa": "frente"},
+            {"x": 2480, "y": suelo.top, "alto": 100, "amplitud": 15, "fase": 1.2, "capa": "frente"},
+        ]
+
+        burbujas_m3 = crear_sistema_burbujas_m3(ancho_mundo_nivel, cantidad=45)
+        tick_m3 = 0
     else:
         ancho_mundo_nivel = ANCHO_MUNDO
         suelo = pygame.Rect(0, ALTO - 80, ANCHO_MUNDO, 80)
@@ -3016,16 +4443,30 @@ def iniciar_mundo(
         dibujar_lecho_marino(mundo_inicio, suelo, ancho_mundo_nivel)
         if algas_decorativas:
             dibujar_algas_decorativas_escenario(mundo_inicio, algas_decorativas, 0, capa="fondo")
+        if corrientes_marinas:
+            dibujar_corrientes_marinas_escenario(mundo_inicio, corrientes_marinas, 0)
+        if camaras_aire:
+            dibujar_camaras_aire_escenario(mundo_inicio, camaras_aire, 0)
         if rocas_submarinas:
             dibujar_rocas_submarinas_escenario(mundo_inicio, rocas_submarinas)
         if barreras_algas:
             dibujar_barreras_algas_escenario(mundo_inicio, barreras_algas, 0)
+        if corales_decorativos:
+            dibujar_corales_escenario(mundo_inicio, corales_decorativos, 0)
         if algas_decorativas:
             dibujar_algas_decorativas_escenario(mundo_inicio, algas_decorativas, 0, capa="frente")
         if pinchos:
             dibujar_peligros_marinos_escenario(mundo_inicio, pinchos)
         if burbujas_m3:
             actualizar_y_dibujar_burbujas_m3(mundo_inicio, burbujas_m3, [jugador1, jugador2], 0)
+        if numero_mundo == 3 and numero_nivel == 4 and surf_oscuridad_m3_n4 is not None:
+            dibujar_oscuridad_laberinto(
+                mundo_inicio,
+                [(jugador1, linterna_p1, False), (jugador2, linterna_p2, False)],
+                surf_oscuridad_m3_n4,
+                surf_luz_linterna,
+                surf_luz_tenue
+            )
     else:
         mundo_inicio.fill((255, 240, 195))
 
@@ -3186,6 +4627,8 @@ def iniciar_mundo(
     def _reiniciar_nivel_completo():
         nonlocal p1_completado, p2_completado, mostrar_tutorial, contador_tutorial
         nonlocal p1_movio, p2_movio, alpha_tut_p1, alpha_tut_p2, p1_soplado, p2_soplado, plataformas
+        nonlocal rocas_submarinas, barreras_algas, corales_decorativos, algas_decorativas, plataformas_base, llave, pinchos, linterna_p1, linterna_p2
+        nonlocal oxigeno_p1, oxigeno_p2, camaras_aire, corrientes_marinas
 
         reiniciar_juego(jugador1, jugador2, caja, llave, puerta, estado_soga=estado_soga)
         jugador1["accesorio"] = p1_acc
@@ -3263,6 +4706,91 @@ def iniciar_mundo(
             if burbujas_m3:
                 burbujas_m3[:] = crear_sistema_burbujas_m3(ancho_mundo_nivel, cantidad=45)
 
+        if numero_mundo == 3 and numero_nivel == 2:
+            datos_lab = generar_laberinto_coral_m3_n2(ancho_mundo_nivel, ALTO, suelo.top, techo_agua.bottom)
+            rocas_submarinas = datos_lab["rocas"]
+            barreras_algas = datos_lab["barreras"]
+            corales_decorativos = datos_lab["corales"]
+            algas_decorativas = datos_lab["algas"]
+            plataformas_base = [techo_agua] + [r["rect"] for r in rocas_submarinas] + [b["rect"] for b in barreras_algas]
+            plataformas = list(plataformas_base)
+            llave["x_inicial"] = datos_lab["llave_x"]
+            llave["y_inicial"] = datos_lab["llave_y"]
+            llave["x_float"] = float(datos_lab["llave_x"])
+            llave["y_float"] = float(datos_lab["llave_y"])
+            llave["rect"].x = datos_lab["llave_x"]
+            llave["rect"].y = datos_lab["llave_y"]
+            llave["recolectada"] = False
+            llave["portador"] = None
+            puerta["abierta"] = False
+            jugador1["x_inicial"] = datos_lab["p1_x"]
+            jugador1["y_inicial"] = datos_lab["p1_y"]
+            jugador1["hitbox"].x = datos_lab["p1_x"]
+            jugador1["hitbox"].y = datos_lab["p1_y"]
+            jugador1["vel_x"] = 0
+            jugador1["vel_y"] = 0
+            jugador1["en_agua"] = True
+            jugador2["x_inicial"] = datos_lab["p2_x"]
+            jugador2["y_inicial"] = datos_lab["p2_y"]
+            jugador2["hitbox"].x = datos_lab["p2_x"]
+            jugador2["hitbox"].y = datos_lab["p2_y"]
+            jugador2["vel_x"] = 0
+            jugador2["vel_y"] = 0
+            jugador2["en_agua"] = True
+            if burbujas_m3:
+                burbujas_m3[:] = crear_sistema_burbujas_m3(ancho_mundo_nivel, cantidad=50)
+
+        if numero_mundo == 3 and numero_nivel == 3:
+            jugador1["en_agua"] = True
+            jugador2["en_agua"] = True
+            if burbujas_m3:
+                burbujas_m3[:] = crear_sistema_burbujas_m3(ancho_mundo_nivel, cantidad=45)
+
+        if numero_mundo == 3 and numero_nivel == 4:
+            linterna_p1 = True
+            linterna_p2 = True
+            datos_lab = generar_laberinto_oscuro_m3_n4(ancho_mundo_nivel, ALTO, suelo.top, techo_agua.bottom)
+            rocas_submarinas = datos_lab["rocas"]
+            barreras_algas = datos_lab["barreras"]
+            corales_decorativos = datos_lab["corales"]
+            algas_decorativas = datos_lab["algas"]
+            pinchos = datos_lab["pinchos"]
+            plataformas_base = [techo_agua] + [r["rect"] for r in rocas_submarinas] + [b["rect"] for b in barreras_algas]
+            plataformas = list(plataformas_base)
+            llave["x_inicial"] = datos_lab["llave_x"]
+            llave["y_inicial"] = datos_lab["llave_y"]
+            llave["x_float"] = float(datos_lab["llave_x"])
+            llave["y_float"] = float(datos_lab["llave_y"])
+            llave["rect"].x = datos_lab["llave_x"]
+            llave["rect"].y = datos_lab["llave_y"]
+            llave["recolectada"] = False
+            llave["portador"] = None
+            puerta["abierta"] = False
+            jugador1["x_inicial"] = datos_lab["p1_x"]
+            jugador1["y_inicial"] = datos_lab["p1_y"]
+            jugador1["hitbox"].x = datos_lab["p1_x"]
+            jugador1["hitbox"].y = datos_lab["p1_y"]
+            jugador1["vel_x"] = 0
+            jugador1["vel_y"] = 0
+            jugador1["en_agua"] = True
+            jugador2["x_inicial"] = datos_lab["p2_x"]
+            jugador2["y_inicial"] = datos_lab["p2_y"]
+            jugador2["hitbox"].x = datos_lab["p2_x"]
+            jugador2["hitbox"].y = datos_lab["p2_y"]
+            jugador2["vel_x"] = 0
+            jugador2["vel_y"] = 0
+            jugador2["en_agua"] = True
+            if burbujas_m3:
+                burbujas_m3[:] = crear_sistema_burbujas_m3(ancho_mundo_nivel, cantidad=45)
+
+        if numero_mundo == 3 and numero_nivel == 5:
+            oxigeno_p1 = 100.0
+            oxigeno_p2 = 100.0
+            jugador1["en_agua"] = True
+            jugador2["en_agua"] = True
+            if burbujas_m3:
+                burbujas_m3[:] = crear_sistema_burbujas_m3(ancho_mundo_nivel, cantidad=45)
+
     mundo = pygame.Surface((ancho_mundo_nivel, ALTO)).convert()
     ejecutando = True
     while ejecutando:
@@ -3291,6 +4819,11 @@ def iniciar_mundo(
                         f_limpio = fondo_btn_reiniciar if fondo_btn_reiniciar else (255, 240, 195)
                         animar_pulsacion_boton(pantalla, rect_btn_reiniciar, spr_reiniciar_semi, spr_reiniciar_apretado, f_limpio)
                     _reiniciar_nivel_completo()
+                elif numero_mundo == 3 and numero_nivel == 4:
+                    if evento.key in (pygame.K_e, pygame.K_f, pygame.K_SPACE):
+                        linterna_p1 = not linterna_p1
+                    elif evento.key in (pygame.K_l, pygame.K_RETURN, pygame.K_RSHIFT, pygame.K_RCTRL):
+                        linterna_p2 = not linterna_p2
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 if rect_btn_x.collidepoint(evento.pos):
@@ -3746,6 +5279,39 @@ def iniciar_mundo(
         if not jugador2["muerto"] and not p2_completado:
             resolver_colisiones(jugador2, jugador1 if not p1_completado else None, suelo, mundo_rect, caja if usar_caja else None, jugador2["en_agua"], plataformas)
 
+        if numero_mundo == 3 and numero_nivel == 5:
+            # 1. Empuje de corrientes marinas sobre personajes activos
+            for p, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]:
+                if not comp and not p["muerto"]:
+                    for corr in corrientes_marinas:
+                        if p["hitbox"].colliderect(corr["rect"]):
+                            p["hitbox"].x += int(corr["fuerza_x"])
+                            p["hitbox"].y += int(corr["fuerza_y"])
+
+            # 2. Gestión del oxígeno de Jugador 1
+            if not p1_completado and not jugador1["muerto"]:
+                en_camara_p1 = any(cam["rect"].colliderect(jugador1["hitbox"]) for cam in camaras_aire)
+                if en_camara_p1:
+                    oxigeno_p1 = min(OXIGENO_MAX, oxigeno_p1 + 0.85)
+                else:
+                    oxigeno_p1 = max(0.0, oxigeno_p1 - 0.082)
+                    if oxigeno_p1 <= 0.0:
+                        matar_personaje(jugador1)
+                        if not jugador2["muerto"] and not p2_completado:
+                            matar_personaje(jugador2)
+
+            # 3. Gestión del oxígeno de Jugador 2
+            if not p2_completado and not jugador2["muerto"]:
+                en_camara_p2 = any(cam["rect"].colliderect(jugador2["hitbox"]) for cam in camaras_aire)
+                if en_camara_p2:
+                    oxigeno_p2 = min(OXIGENO_MAX, oxigeno_p2 + 0.85)
+                else:
+                    oxigeno_p2 = max(0.0, oxigeno_p2 - 0.086)
+                    if oxigeno_p2 <= 0.0:
+                        matar_personaje(jugador2)
+                        if not jugador1["muerto"] and not p1_completado:
+                            matar_personaje(jugador1)
+
         if usar_soga and not p1_completado and not p2_completado:
             aplicar_restriccion_soga(jugador1, jugador2, DISTANCIA_SOGA_MAXIMA, plataformas, suelo, estado_soga)
         if usar_llave:
@@ -3850,10 +5416,16 @@ def iniciar_mundo(
             dibujar_lecho_marino(mundo, suelo, ancho_mundo_nivel)
             if algas_decorativas:
                 dibujar_algas_decorativas_escenario(mundo, algas_decorativas, tick_m3, capa="fondo")
+            if corrientes_marinas:
+                dibujar_corrientes_marinas_escenario(mundo, corrientes_marinas, tick_m3)
+            if camaras_aire:
+                dibujar_camaras_aire_escenario(mundo, camaras_aire, tick_m3)
             if rocas_submarinas:
                 dibujar_rocas_submarinas_escenario(mundo, rocas_submarinas)
             if barreras_algas:
                 dibujar_barreras_algas_escenario(mundo, barreras_algas, tick_m3)
+            if corales_decorativos:
+                dibujar_corales_escenario(mundo, corales_decorativos, tick_m3)
             if algas_decorativas:
                 dibujar_algas_decorativas_escenario(mundo, algas_decorativas, tick_m3, capa="frente")
             if pinchos:
@@ -3999,6 +5571,20 @@ def iniciar_mundo(
         if not p1_completado: dibujar_personaje(mundo, jugador1, ZONA_AGUA if usar_agua else None)
         if not p2_completado: dibujar_personaje(mundo, jugador2, ZONA_AGUA if usar_agua else None)
 
+        if numero_mundo == 3 and numero_nivel == 4 and surf_oscuridad_m3_n4 is not None:
+            dibujar_oscuridad_laberinto(
+                mundo,
+                [(jugador1, linterna_p1, p1_completado), (jugador2, linterna_p2, p2_completado)],
+                surf_oscuridad_m3_n4,
+                surf_luz_linterna,
+                surf_luz_tenue
+            )
+        if numero_mundo == 3 and numero_nivel == 5:
+            if not p1_completado:
+                dibujar_alerta_oxigeno_personaje(mundo, jugador1, oxigeno_p1, tick_m3)
+            if not p2_completado:
+                dibujar_alerta_oxigeno_personaje(mundo, jugador2, oxigeno_p2, tick_m3)
+
         # Controles tutorial directamente arriba de cada personaje
         if numero_mundo == 1 and numero_nivel == 1 and mostrar_tutorial:
             _dibujar_controles_tutorial(mundo, alpha_p1=alpha_tut_p1, alpha_p2=alpha_tut_p2, teclas_actuales=teclas)
@@ -4057,6 +5643,11 @@ def iniciar_mundo(
             if spr_c_hud: pantalla.blit(spr_c_hud, rect_btn_casa)
             if spr_r_hud: pantalla.blit(spr_r_hud, rect_btn_reiniciar)
             if spr_x_hud: pantalla.blit(spr_x_hud, rect_btn_x)
+
+        if numero_mundo == 3 and numero_nivel == 4 and not (p1_completado and p2_completado):
+            _dibujar_hud_linternas_m3_n4(pantalla, linterna_p1, linterna_p2, p1_color, p2_color)
+        if numero_mundo == 3 and numero_nivel == 5 and not (p1_completado and p2_completado):
+            _dibujar_hud_oxigeno_m3_n5(pantalla, oxigeno_p1, oxigeno_p2, p1_color, p2_color, tick_m3)
 
         pygame.display.flip()
 

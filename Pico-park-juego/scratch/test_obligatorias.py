@@ -10,9 +10,13 @@ PICO_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PICO_DIR not in sys.path:
     sys.path.insert(0, PICO_DIR)
 
+SCRATCH_DIR = os.path.abspath(os.path.dirname(__file__))
+if SCRATCH_DIR not in sys.path:
+    sys.path.insert(0, SCRATCH_DIR)
+
 artifact_scratch = r"C:\Users\Malena\.gemini\antigravity-ide\brain\323844cd-f17b-4da4-b5c5-06c34bbf5309\scratch"
 if os.path.isdir(artifact_scratch) and artifact_scratch not in sys.path:
-    sys.path.insert(0, artifact_scratch)
+    sys.path.append(artifact_scratch)
 
 pygame.init()
 pantalla = pygame.display.set_mode((1280, 720))
