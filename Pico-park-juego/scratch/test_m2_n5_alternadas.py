@@ -24,41 +24,41 @@ from movimientos import (
 )
 
 ALTO = 720
-ancho_mundo_nivel = 1300
+ancho_mundo_nivel = 1400
 suelo = pygame.Rect(0, ALTO - 80, ancho_mundo_nivel, 80)
 mundo_rect = pygame.Rect(0, 0, ancho_mundo_nivel, ALTO)
 
-plat_inicio = pygame.Rect(0, 520, 200, 26)
-plat_inicio_base = pygame.Rect(0, 546, 200, suelo.top - 546 + 80)
+plat_inicio = pygame.Rect(0, 560, 160, 26)
+plat_inicio_base = pygame.Rect(0, 586, 160, suelo.top - 586 + 80)
 
-plat_llegada = pygame.Rect(690, 245, 610, 26)
-plat_llegada_base = pygame.Rect(690, 271, 610, suelo.top - 271 + 80)
+plat_llegada = pygame.Rect(730, 130, 670, 26)
+plat_llegada_base = pygame.Rect(730, 156, 670, suelo.top - 156 + 80)
 
-# Layout alternado en zigzag corregido:
-# P1: Izquierda (x: 200..420, y: 465) - Centro 310
-# P2: Derecha   (x: 400..620, y: 410) - Centro 510
-# P3: Izquierda (x: 130..350, y: 355) - Centro 240 (desfasada 70px de P1)
-# P4: Derecha   (x: 450..670, y: 300) - Centro 560 (desfasada 50px de P2)
+# Layout alternado en zigzag con amplio despeje vertical (headroom > 70px):
+# P1: Izquierda (x: 180..410, y: 480) - Centro 295
+# P2: Derecha   (x: 430..660, y: 390) - Centro 545 (dx = +250 hacia la derecha)
+# P3: Izquierda (x: 130..360, y: 300) - Centro 245 (dx = -300 hacia la izquierda, 180px vertical sobre P1)
+# P4: Derecha   (x: 480..710, y: 210) - Centro 595 (dx = +350 hacia la derecha, 180px vertical sobre P2)
 plataformas_alternadas = [
-    pygame.Rect(200, 465, 220, 24),  # P1 (Izquierda, y=465)
-    pygame.Rect(400, 410, 220, 24),  # P2 (Derecha,   y=410)
-    pygame.Rect(130, 355, 220, 24),  # P3 (Izquierda, y=355)
-    pygame.Rect(450, 300, 220, 24),  # P4 (Derecha,   y=300)
+    pygame.Rect(180, 480, 230, 24),  # P1 (Izquierda, y=480)
+    pygame.Rect(430, 390, 230, 24),  # P2 (Derecha,   y=390)
+    pygame.Rect(130, 300, 230, 24),  # P3 (Izquierda, y=300)
+    pygame.Rect(480, 210, 230, 24),  # P4 (Derecha,   y=210)
 ]
 
 plataformas_base = [plat_inicio, plat_inicio_base, plat_llegada, plat_llegada_base]
 plataformas = list(plataformas_base) + list(plataformas_alternadas)
 
 pozo_nivel = {
-    "x": 200,
+    "x": 160,
     "y": 570,
-    "ancho": 490,
+    "ancho": 570,
     "alto": 70,
 }
-pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(205, 685, 32)]
+pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(165, 725, 32)]
 
-llave = crear_llave(560 - 12, 300 - 46)
-puerta = crear_puerta(820, 245 - 90)
+llave = crear_llave(595 - 12, 210 - 46)
+puerta = crear_puerta(810, 130 - 90)
 
 print(f"Total pinchos en el abismo: {len(pinchos)}")
 print(f"Pozo: x={pozo_nivel['x']}..{pozo_nivel['x'] + pozo_nivel['ancho']}")
@@ -103,8 +103,8 @@ assert comprobar_pinchos(p_muere, pinchos) == True and p_muere["muerto"] == True
 print("[OK] Detección de muerte por pinchos/abismo correcta.")
 
 # 5. Simular recorrido cooperativo con física real
-p1 = crear_personaje(50, 520 - ALTO_HITBOX, "Celeste")
-p2 = crear_personaje(120, 520 - ALTO_HITBOX, "Violeta")
+p1 = crear_personaje(40, 560 - ALTO_HITBOX, "Celeste")
+p2 = crear_personaje(100, 560 - ALTO_HITBOX, "Violeta")
 
 def simular_paso_jugador(p, dir_x, saltar=False):
     if saltar and p["en_suelo"]:
@@ -121,7 +121,7 @@ assert p2["en_suelo"] and p2["hitbox"].bottom == plat_inicio.top
 print("[OK] Inicio en plat_inicio correcto.")
 
 # Salto a P1 (Izquierda)
-p1["hitbox"].x = 150
+p1["hitbox"].x = 110
 for f in range(35):
     simular_paso_jugador(p1, dir_x=1, saltar=(f==0))
     if p1["en_suelo"] and p1["hitbox"].bottom == plataformas_alternadas[0].top:

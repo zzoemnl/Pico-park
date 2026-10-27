@@ -3868,11 +3868,11 @@ def iniciar_mundo(
         # - Las plataformas forman una escalera que asciende claramente desde abajo a la izquierda hasta arriba a la derecha.
         # - Cada plataforma siguiente está más alta que la anterior y desplazada hacia la derecha (ascenso vertical progresivo).
         # - La soga une a ambos personajes y transmite tensión con límite estricto de estiramiento (+20px).
-        # - El nivel es compacto horizontalmente (1300px) y aprovecha la altura vertical del escenario.
+        # - El nivel es compacto horizontalmente (1400px) y aprovecha la altura vertical del escenario.
         # - Debajo de toda la escalera hay un abismo continuo con pinchos mortales.
         # - La llave se encuentra en el escalón superior antes de la cima; la puerta está arriba de todo en la plataforma final.
         # - Ambos personajes deben recoger la llave y llegar juntos a la puerta en la cima para terminar el nivel.
-        ancho_mundo_nivel = 1300
+        ancho_mundo_nivel = 1400
         suelo = pygame.Rect(0, ALTO - 80, ancho_mundo_nivel, 80)
         mundo_rect = pygame.Rect(0, 0, ancho_mundo_nivel, ALTO)
 
@@ -3882,50 +3882,50 @@ def iniciar_mundo(
         usar_pinchos = True
         usar_llave = True
 
-        # Plataforma inicial segura en la base izquierda (x: 0..200, y=520)
-        plat_inicio = pygame.Rect(0, 520, 200, 26)
-        plat_inicio_base = pygame.Rect(0, 546, 200, suelo.top - 546 + 80)
+        # Plataforma inicial segura en la base izquierda (x: 0..160, y=560)
+        plat_inicio = pygame.Rect(0, 560, 160, 26)
+        plat_inicio_base = pygame.Rect(0, 586, 160, suelo.top - 586 + 80)
 
         # Ambos personajes inician juntos abajo a la izquierda unidos por la soga
-        jugador1 = crear_personaje(50, 520 - ALTO_HITBOX, p1_color)
-        jugador2 = crear_personaje(130, 520 - ALTO_HITBOX, p2_color)
+        jugador1 = crear_personaje(40, 560 - ALTO_HITBOX, p1_color)
+        jugador2 = crear_personaje(100, 560 - ALTO_HITBOX, p2_color)
 
         caja = None
 
-        # Abismo continuo cubierto de pinchos mortales bajo todas las plataformas alternadas (x: 200..690)
+        # Abismo continuo cubierto de pinchos mortales bajo todas las plataformas alternadas (x: 160..730)
         pozo_nivel = {
-            "x": 200,
+            "x": 160,
             "y": 570,
-            "ancho": 490,
+            "ancho": 570,
             "alto": 70,
         }
-        pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(205, 685, 32)]
+        pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(165, 725, 32)]
 
-        # Plataforma de llegada segura a la derecha en la cima con la puerta de salida (x: 690..1300, y=245)
-        plat_llegada = pygame.Rect(690, 245, 610, 26)
-        plat_llegada_base = pygame.Rect(690, 271, 610, suelo.top - 271 + 80)
+        # Plataforma de llegada segura a la derecha en la cima con la puerta de salida (x: 730..1400, y=130)
+        plat_llegada = pygame.Rect(730, 130, 670, 26)
+        plat_llegada_base = pygame.Rect(730, 156, 670, suelo.top - 156 + 80)
 
         plataformas_base = [plat_inicio, plat_inicio_base, plat_llegada, plat_llegada_base]
 
-        # Plataformas INTERCALADAS horizontalmente en zigzag lateral claro y jugable:
-        # P1: Izquierda (x: 200..420, y: 465) - Centro 310
-        # P2: Derecha   (x: 400..620, y: 410) - Centro 510 (dx = +200 hacia la derecha)
-        # P3: Izquierda (x: 130..350, y: 355) - Centro 240 (dx = -270 hacia la izquierda, desfasada 70px de P1)
-        # P4: Derecha   (x: 450..670, y: 300) - Centro 560 (dx = +320 hacia la derecha, desfasada 50px de P2, con Llave)
-        # Recorrido cooperativo: INICIO (y=520) -> P1 (y=465) -> P2 (y=410) -> P3 (y=355) -> P4 (y=300, Llave) -> SALIDA (y=245, Puerta)
+        # Plataformas en ZIGZAG lateral con amplio despeje vertical (headroom > 70px) para saltar libremente:
+        # P1: Izquierda (x: 180..410, y: 480) - Centro 295
+        # P2: Derecha   (x: 430..660, y: 390) - Centro 545 (dx = +250 hacia la derecha)
+        # P3: Izquierda (x: 130..360, y: 300) - Centro 245 (dx = -300 hacia la izquierda, 180px vertical sobre P1)
+        # P4: Derecha   (x: 480..710, y: 210) - Centro 595 (dx = +350 hacia la derecha, 180px vertical sobre P2, con Llave)
+        # Recorrido cooperativo: INICIO (y=560) -> P1 (y=480) -> P2 (y=390) -> P3 (y=300) -> P4 (y=210, Llave) -> SALIDA (y=130, Puerta)
         plataformas_alternadas = [
-            pygame.Rect(200, 465, 220, 24),  # P1: Izquierda (y=465)
-            pygame.Rect(400, 410, 220, 24),  # P2: Derecha   (y=410)
-            pygame.Rect(130, 355, 220, 24),  # P3: Izquierda (y=355)
-            pygame.Rect(450, 300, 220, 24),  # P4: Derecha   (y=300, cumbre con pedestal y llave)
+            pygame.Rect(180, 480, 230, 24),  # P1: Izquierda (y=480)
+            pygame.Rect(430, 390, 230, 24),  # P2: Derecha   (y=390)
+            pygame.Rect(130, 300, 230, 24),  # P3: Izquierda (y=300)
+            pygame.Rect(480, 210, 230, 24),  # P4: Derecha   (y=210, cumbre con pedestal y llave)
         ]
         plataformas = list(plataformas_base) + list(plataformas_alternadas)
 
-        # Llave dorada en el pedestal de la cumbre derecha (P4, centro 560, y=300)
-        llave = crear_llave(560 - 12, 300 - 46)
+        # Llave dorada en el pedestal de la cumbre derecha (P4, centro 595, y=210)
+        llave = crear_llave(595 - 12, 210 - 46)
 
-        # Puerta de salida en la plataforma final de llegada en la cima (x=820, y=245)
-        puerta = crear_puerta(820, 245 - 90)
+        # Puerta de salida en la plataforma final de llegada en la cima (x=810, y=130)
+        puerta = crear_puerta(810, 130 - 90)
     elif numero_mundo == 3 and numero_nivel == 1:
         # Mundo 3 — Nivel 1: «El jardín de algas» (Niveles.pdf, páginas 10 y 13)
         # Objetivo: explorar el escenario submarino, encontrar la llave y llegar a la puerta de salida.

@@ -878,22 +878,22 @@ def _crear_m2_n4():
 
 
 def _crear_m2_n5():
-    """2-5: Las plataformas alternadas (Escalera ascendente continua de plataformas, soga, cables, llave y puerta en la cima)."""
+    """2-5: Las plataformas alternadas (Zigzag ascendente con amplio despeje vertical, soga, cables, llave y puerta en la cima)."""
     s = pygame.Surface((ANCHO_MINI, ALTO_MINI))
     s.fill(COL_FONDO_M1)
 
     # Abismo inferior con pinchos mortales
-    pygame.draw.rect(s, (45, 35, 35), (0, 104, ANCHO_MINI, ALTO_MINI - 104))
-    _dibujar_pinchos(s, 0, ANCHO_MINI, 104, hacia_arriba=True, w_p=7, h_p=7)
+    pygame.draw.rect(s, (45, 35, 35), (20, 104, 75, ALTO_MINI - 104))
+    _dibujar_pinchos(s, 20, 95, 104, hacia_arriba=True, w_p=7, h_p=7)
 
-    # Plataformas formando una escalera claramente ascendente de abajo-izquierda a arriba-derecha
+    # Plataformas formando un zigzag lateral claro con amplio despeje vertical
     plats = [
-        pygame.Rect(4, 96, 26, 6),    # Inicio abajo izquierda
-        pygame.Rect(34, 82, 22, 6),   # Escalón 1
-        pygame.Rect(62, 68, 22, 6),   # Escalón 2
-        pygame.Rect(90, 54, 22, 6),   # Escalón 3
-        pygame.Rect(118, 40, 24, 6),  # Escalón 4 (superior con llave)
-        pygame.Rect(148, 28, 28, 6),  # Cima llegada (superior con puerta)
+        pygame.Rect(2, 96, 20, 6),    # Inicio abajo izquierda (y=96)
+        pygame.Rect(24, 82, 30, 5),   # P1 (Izquierda, y=82)
+        pygame.Rect(58, 66, 30, 5),   # P2 (Derecha,   y=66)
+        pygame.Rect(18, 50, 30, 5),   # P3 (Izquierda, y=50)
+        pygame.Rect(64, 34, 30, 5),   # P4 (Derecha con llave, y=34)
+        pygame.Rect(98, 20, 80, 6),   # Cima llegada con puerta (y=20)
     ]
     for p in plats[1:5]:
         # Cables tensores desde el techo
@@ -909,14 +909,14 @@ def _crear_m2_n5():
     llave = _cargar_llave()
     puerta = _crear_puerta_original()
 
-    pos1 = (36, 82 - 20)
-    pos2 = (8, 96 - 20)
+    pos1 = (26, 82 - 20)
+    pos2 = (4, 96 - 20)
     _dibujar_soga(s, (pos1[0] + 8, pos1[1] + 10), (pos2[0] + 8, pos2[1] + 10))
 
     s.blit(pj1, pos1)
     s.blit(pj2, pos2)
-    s.blit(llave, (124, 40 - 18))
-    s.blit(puerta, (150, 28 - 25))
+    s.blit(llave, (78, 34 - 18))
+    s.blit(puerta, (110, 20 - 25))
     return s
 
 
