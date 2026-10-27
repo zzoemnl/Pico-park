@@ -31,6 +31,7 @@ from sprites import (
     dibujar_personaje,
     dibujar_agua,
     cargar_boton,
+    cargar_boton_escalado,
     animar_pulsacion_boton,
     aclarar_boton,
 )
@@ -83,29 +84,19 @@ def pantalla_muerte(pantalla, reloj):
 
     w_btn, h_btn = 272, 80
 
-    boton_menu_normal = cargar_boton("Ventanas/boton-menu.png") or cargar_boton("boton-menu.png") or cargar_boton("salir.png")
-    boton_menu_semi = cargar_boton("Ventanas/boton-menu-semiapretado.png") or cargar_boton("boton-menu-semiapretado.png") or cargar_boton("salir-preapretado.png")
-    boton_menu_apretado = cargar_boton("Ventanas/boton-menu-apretado.png") or cargar_boton("boton-menu-apretado.png") or cargar_boton("salir-apretado.png")
+    boton_menu_normal = cargar_boton_escalado("Ventanas/boton-menu.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu.png", w_btn, h_btn) or cargar_boton_escalado("salir.png", w_btn, h_btn)
+    boton_menu_semi = cargar_boton_escalado("Ventanas/boton-menu-semiapretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu-semiapretado.png", w_btn, h_btn) or cargar_boton_escalado("salir-preapretado.png", w_btn, h_btn)
+    boton_menu_apretado = cargar_boton_escalado("Ventanas/boton-menu-apretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu-apretado.png", w_btn, h_btn) or cargar_boton_escalado("salir-apretado.png", w_btn, h_btn)
 
-    boton_reiniciar_normal = cargar_boton("Ventanas/boton-reiniciar.png") or cargar_boton("boton-reiniciar.png")
-    boton_reiniciar_semi = cargar_boton("Ventanas/boton-reiniciar-semiapretado.png") or cargar_boton("boton-reiniciar-semiapretado.png")
-    boton_reiniciar_apretado = cargar_boton("Ventanas/boton-reiniciar-apretado.png") or cargar_boton("boton-reiniciar-apretado.png")
+    boton_reiniciar_normal = cargar_boton_escalado("Ventanas/boton-reiniciar.png", w_btn, h_btn) or cargar_boton_escalado("boton-reiniciar.png", w_btn, h_btn)
+    boton_reiniciar_semi = cargar_boton_escalado("Ventanas/boton-reiniciar-semiapretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-reiniciar-semiapretado.png", w_btn, h_btn)
+    boton_reiniciar_apretado = cargar_boton_escalado("Ventanas/boton-reiniciar-apretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-reiniciar-apretado.png", w_btn, h_btn)
 
     if any(x is None for x in (
         boton_menu_normal, boton_menu_apretado,
         boton_reiniciar_normal, boton_reiniciar_apretado
     )):
         return "salir"
-
-    boton_reiniciar_normal = pygame.transform.smoothscale(boton_reiniciar_normal, (w_btn, h_btn))
-    if boton_reiniciar_semi:
-        boton_reiniciar_semi = pygame.transform.smoothscale(boton_reiniciar_semi, (w_btn, h_btn))
-    boton_reiniciar_apretado = pygame.transform.smoothscale(boton_reiniciar_apretado, (w_btn, h_btn))
-
-    boton_menu_normal = pygame.transform.smoothscale(boton_menu_normal, (w_btn, h_btn))
-    if boton_menu_semi:
-        boton_menu_semi = pygame.transform.smoothscale(boton_menu_semi, (w_btn, h_btn))
-    boton_menu_apretado = pygame.transform.smoothscale(boton_menu_apretado, (w_btn, h_btn))
 
     boton_reiniciar = boton_reiniciar_normal.get_rect(center=(ANCHO // 2 - 160, 400))
     boton_menu = boton_menu_normal.get_rect(center=(ANCHO // 2 + 160, 400))
@@ -680,21 +671,13 @@ def mostrar_pantalla_victoria(
     rect_btn1 = pygame.Rect(btn1_x, btn1_target_y, w_btn, h_btn)
     rect_btn2 = pygame.Rect(btn2_x, btn2_target_y, w_btn, h_btn)
 
-    spr_sig_normal = cargar_boton("Ventanas/boton-siguiente.png") or cargar_boton("boton-siguiente.png")
-    spr_sig_semi = cargar_boton("Ventanas/boton-siguiente-semiapretado.png") or cargar_boton("boton-siguiente-semiapretado.png")
-    spr_sig_apretado = cargar_boton("Ventanas/boton-siguiente-apretado.png") or cargar_boton("boton-siguiente-apretado.png")
+    spr_sig_normal = cargar_boton_escalado("Ventanas/boton-siguiente.png", w_btn, h_btn) or cargar_boton_escalado("boton-siguiente.png", w_btn, h_btn)
+    spr_sig_semi = cargar_boton_escalado("Ventanas/boton-siguiente-semiapretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-siguiente-semiapretado.png", w_btn, h_btn)
+    spr_sig_apretado = cargar_boton_escalado("Ventanas/boton-siguiente-apretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-siguiente-apretado.png", w_btn, h_btn)
 
-    spr_menu_normal = cargar_boton("Ventanas/boton-menu.png") or cargar_boton("boton-menu.png")
-    spr_menu_semi = cargar_boton("Ventanas/boton-menu-semiapretado.png") or cargar_boton("boton-menu-semiapretado.png")
-    spr_menu_apretado = cargar_boton("Ventanas/boton-menu-apretado.png") or cargar_boton("boton-menu-apretado.png")
-
-    if spr_sig_normal: spr_sig_normal = pygame.transform.smoothscale(spr_sig_normal, (w_btn, h_btn))
-    if spr_sig_semi: spr_sig_semi = pygame.transform.smoothscale(spr_sig_semi, (w_btn, h_btn))
-    if spr_sig_apretado: spr_sig_apretado = pygame.transform.smoothscale(spr_sig_apretado, (w_btn, h_btn))
-
-    if spr_menu_normal: spr_menu_normal = pygame.transform.smoothscale(spr_menu_normal, (w_btn, h_btn))
-    if spr_menu_semi: spr_menu_semi = pygame.transform.smoothscale(spr_menu_semi, (w_btn, h_btn))
-    if spr_menu_apretado: spr_menu_apretado = pygame.transform.smoothscale(spr_menu_apretado, (w_btn, h_btn))
+    spr_menu_normal = cargar_boton_escalado("Ventanas/boton-menu.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu.png", w_btn, h_btn)
+    spr_menu_semi = cargar_boton_escalado("Ventanas/boton-menu-semiapretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu-semiapretado.png", w_btn, h_btn)
+    spr_menu_apretado = cargar_boton_escalado("Ventanas/boton-menu-apretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu-apretado.png", w_btn, h_btn)
 
     spr_sig_hover = aclarar_boton(spr_sig_normal) if spr_sig_normal else None
     spr_menu_hover = aclarar_boton(spr_menu_normal) if spr_menu_normal else None
@@ -801,6 +784,8 @@ def mostrar_pantalla_victoria(
                         niveles_desbloqueados=niveles_desbloqueados,
                         id_partida=partida_id,
                         nombre_partida=partida_nombre,
+                        color_p1=color_p1,
+                        color_p2=color_p2,
                     )
                     if resp in ("guardar_salir", "salir_sin_guardar"):
                         pygame.quit()
@@ -1130,7 +1115,7 @@ def dibujar_plataformas_derrumbables_escenario(superficie, plataformas_derrumbab
                 pygame.draw.line(superficie, col_grieta, (rect_draw.x + 24, rect_draw.top + 2), (rect_draw.x + 30, rect_draw.top + 8), 1)
                 pygame.draw.line(superficie, col_grieta, (rect_draw.x + 85, rect_draw.top + 2), (rect_draw.x + 80, rect_draw.top + 9), 1)
             elif estado in ("agrietandose", "temblando"):
-                progreso_grieta = min(1.0, max(0.0, (120.0 - tiempo) / 120.0))
+                progreso_grieta = min(1.0, max(0.0, (60.0 - tiempo) / 60.0))
                 prof = int(rect_draw.height * progreso_grieta)
                 c_x = rect_draw.x + rect_draw.width // 2
                 pts_grieta = [
@@ -2163,15 +2148,20 @@ def obtener_superficies_luz_linterna(radio_linterna=145, radio_tenue=34):
 
 def dibujar_linterna_minero(superficie, jugador, encendida):
     """Dibuja una linterna de buceo submarino montada en la cabeza del personaje."""
-    if jugador.get("muerto", False):
+    if jugador.get("muerto", False) and jugador.get("muerte_terminada", False):
         return
     hx = jugador["hitbox"].centerx
     hy = jugador["hitbox"].top + 10
     dir_mirar = 1 if jugador.get("mirando_derecha", True) else -1
     lamp_x = hx + dir_mirar * 12
     lamp_y = hy - 2
+
+    # Correa elástica de sujeción sobre la frente
+    pygame.draw.line(superficie, (30, 42, 54), (hx - 15, lamp_y), (hx + 15, lamp_y), 3)
+
+    # Carcasa y lente de la linterna
     pygame.draw.circle(superficie, (35, 45, 55), (lamp_x, lamp_y), 6)
-    if encendida:
+    if encendida and not jugador.get("muerto", False):
         pygame.draw.circle(superficie, (255, 240, 140), (lamp_x, lamp_y), 4)
         pygame.draw.circle(superficie, (255, 255, 255), (lamp_x, lamp_y), 2)
         foco_x = lamp_x + dir_mirar * 5
@@ -2190,8 +2180,8 @@ def dibujar_oscuridad_laberinto(superficie, jugadores_info, surf_oscuridad, surf
     - Los elementos fuera del haz de luz (rocas, trampas, llave, puerta) quedan ocultos en la penumbra.
     """
     for jugador, linterna_on, completado in jugadores_info:
-        if not completado and not jugador.get("muerto", False):
-            dibujar_linterna_minero(superficie, jugador, linterna_on)
+        if not completado and not jugador.get("muerte_terminada", False):
+            dibujar_linterna_minero(superficie, jugador, linterna_on and not jugador.get("muerto", False))
 
     surf_oscuridad.fill((4, 7, 14, 252))
 
@@ -2201,11 +2191,11 @@ def dibujar_oscuridad_laberinto(superficie, jugadores_info, surf_oscuridad, surf
     rad_tenue = w_tenue // 2
 
     for jugador, linterna_on, completado in jugadores_info:
-        if completado or jugador.get("muerto", False):
+        if completado or jugador.get("muerte_terminada", False):
             continue
         cx = jugador["hitbox"].centerx
         cy = jugador["hitbox"].centery
-        if linterna_on:
+        if linterna_on and not jugador.get("muerto", False):
             surf_oscuridad.blit(surf_luz, (cx - rad_luz, cy - rad_luz), special_flags=pygame.BLEND_RGBA_SUB)
         else:
             surf_oscuridad.blit(surf_tenue, (cx - rad_tenue, cy - rad_tenue), special_flags=pygame.BLEND_RGBA_SUB)
@@ -2213,23 +2203,94 @@ def dibujar_oscuridad_laberinto(superficie, jugadores_info, surf_oscuridad, surf
     superficie.blit(surf_oscuridad, (0, 0))
 
 
-def _dibujar_hud_linternas_m3_n4(pantalla_surf, linterna_p1, linterna_p2, p1_color, p2_color):
+def dibujar_linternas_submarinas_m3_n5(superficie, jugadores_info, tick=0):
     """
-    Dibuja un HUD estilizado y claro en la esquina superior izquierda indicando el estado
+    Renderiza el sistema de linternas submarinas independientes para Mundo 3 Nivel 5:
+    - Cada personaje porta su linterna de buceo montada en la cabeza.
+    - Cuando está encendida, emite un haz de luz cónico con degradado suave y partículas
+      que acompaña al buceador e ilumina el océano frente a él.
+    - El escenario completo permanece 100% visible en todo momento (no se oscurece la pantalla).
+    - Cuando está apagada, la linterna frontal permanece apagada sin proyectar haz de luz.
+    """
+    s_haz_local = pygame.Surface((340, 180), pygame.SRCALPHA)
+
+    for jugador, linterna_on, completado in jugadores_info:
+        if completado or jugador.get("muerte_terminada", False):
+            continue
+
+        esta_muerto = jugador.get("muerto", False)
+        # 1. Dibujar linterna frontal en la cabeza del buceador
+        dibujar_linterna_minero(superficie, jugador, linterna_on and not esta_muerto)
+
+        # 2. Si está encendida y vivo, proyectar el haz de luz submarino direccional
+        if linterna_on and not esta_muerto:
+            hx = jugador["hitbox"].centerx
+            hy = jugador["hitbox"].top + 10
+            dir_mirar = 1 if jugador.get("mirando_derecha", True) else -1
+            lamp_x = hx + dir_mirar * 12
+            lamp_y = hy - 2
+
+            s_haz_local.fill((0, 0, 0, 0))
+
+            ox = 60 if dir_mirar > 0 else 280
+            oy = 90
+
+            # Aura radial suave alrededor del buceador
+            for r_aura, a_aura in [(80, 10), (60, 18), (40, 26)]:
+                pygame.draw.circle(s_haz_local, (215, 240, 255, a_aura), (ox - dir_mirar * 12, oy), r_aura)
+
+            # Capas cónicas del haz de luz con degradado suave y leve oscilación marina
+            flicker = math.sin(tick * 0.08) * 2.5
+            capas_haz = [
+                (250, 56, (200, 235, 255, 14)),
+                (210, 44, (215, 245, 255, 24)),
+                (170, 32, (240, 250, 255, 38)),
+                (120, 20, (255, 252, 225, 58)),
+                (65, 11, (255, 255, 240, 85)),
+            ]
+            for largo, apertura, col in capas_haz:
+                pts = [
+                    (ox, oy - 3),
+                    (ox + dir_mirar * largo, int(oy - apertura + flicker)),
+                    (ox + dir_mirar * largo, int(oy + apertura + flicker)),
+                    (ox, oy + 3),
+                ]
+                pygame.draw.polygon(s_haz_local, col, pts)
+
+            # Resplandor frontal en la lente
+            pygame.draw.circle(s_haz_local, (255, 250, 210, 130), (ox, oy), 14)
+            pygame.draw.circle(s_haz_local, (255, 255, 255, 200), (ox, oy), 6)
+
+            # Partículas / motas de luz flotando en suspensión dentro del haz acuático
+            for i, (offset_base, y_base_m, r_mota, alpha_base) in enumerate([
+                (45, 4, 2, 95), (95, -7, 3, 115), (145, 11, 2, 90), (195, -5, 2, 75)
+            ]):
+                fase = tick * 0.06 + i * 1.5
+                desp_x = ox + dir_mirar * (offset_base + math.sin(fase) * 6)
+                desp_y = oy + y_base_m + math.cos(fase * 1.2) * 5
+                pygame.draw.circle(s_haz_local, (255, 255, 240, alpha_base), (int(desp_x), int(desp_y)), r_mota)
+
+            superficie.blit(s_haz_local, (lamp_x - ox, lamp_y - oy))
+
+
+def _dibujar_hud_linternas_m3_n4(pantalla_surf, linterna_p1, linterna_p2, p1_color, p2_color, y_base=22):
+    """
+    Dibuja un HUD estilizado y claro indicando el estado
     y los controles de las linternas independientes de cada jugador:
     - P1: [E] ON / OFF
     - P2: [L] ON / OFF
     """
     fuente_hud = pygame.font.SysFont("Segoe UI, Arial, sans-serif", 13, bold=True)
 
-    x1, y1 = 28, 22
-    w_badge, h_badge = 190, 32
+    x1, y1 = 28, y_base
+    w_badge = 195 if y_base > 30 else 190
+    h_badge = 30 if y_base > 30 else 32
 
     # Badge Jugador 1
     s_p1 = pygame.Surface((w_badge, h_badge), pygame.SRCALPHA)
-    pygame.draw.rect(s_p1, (12, 22, 36, 220), (0, 0, w_badge, h_badge), border_radius=16)
+    pygame.draw.rect(s_p1, (12, 22, 36, 220), (0, 0, w_badge, h_badge), border_radius=15)
     borde_p1 = (80, 210, 255) if linterna_p1 else (70, 85, 105)
-    pygame.draw.rect(s_p1, borde_p1, (0, 0, w_badge, h_badge), width=2, border_radius=16)
+    pygame.draw.rect(s_p1, borde_p1, (0, 0, w_badge, h_badge), width=2, border_radius=15)
 
     col_luz_p1 = (255, 240, 110) if linterna_p1 else (65, 75, 90)
     pygame.draw.circle(s_p1, col_luz_p1, (18, h_badge // 2), 6)
@@ -2243,11 +2304,11 @@ def _dibujar_hud_linternas_m3_n4(pantalla_surf, linterna_p1, linterna_p2, p1_col
     pantalla_surf.blit(s_p1, (x1, y1))
 
     # Badge Jugador 2
-    x2 = x1 + w_badge + 12
+    x2 = 235 if y_base > 30 else (x1 + w_badge + 12)
     s_p2 = pygame.Surface((w_badge, h_badge), pygame.SRCALPHA)
-    pygame.draw.rect(s_p2, (12, 22, 36, 220), (0, 0, w_badge, h_badge), border_radius=16)
+    pygame.draw.rect(s_p2, (12, 22, 36, 220), (0, 0, w_badge, h_badge), border_radius=15)
     borde_p2 = (220, 140, 255) if linterna_p2 else (70, 85, 105)
-    pygame.draw.rect(s_p2, borde_p2, (0, 0, w_badge, h_badge), width=2, border_radius=16)
+    pygame.draw.rect(s_p2, borde_p2, (0, 0, w_badge, h_badge), width=2, border_radius=15)
 
     col_luz_p2 = (255, 240, 110) if linterna_p2 else (65, 75, 90)
     pygame.draw.circle(s_p2, col_luz_p2, (18, h_badge // 2), 6)
@@ -2783,8 +2844,7 @@ def iniciar_mundo(
     rect_btn_config = pygame.Rect(rect_btn_casa.left - ESPACIO_BOTONES - W_BOTON_HUD, MARGEN_SUP, W_BOTON_HUD, H_BOTON_HUD)
 
     def _cargar_hud(nombre):
-        img = cargar_boton(nombre)
-        return pygame.transform.smoothscale(img, (W_BOTON_HUD, H_BOTON_HUD)) if img else None
+        return cargar_boton_escalado(nombre, W_BOTON_HUD, H_BOTON_HUD)
 
     spr_x_normal = _cargar_hud("boton-x.png")
     spr_x_semi = _cargar_hud("boton-x-semiapretado.png")
@@ -3726,7 +3786,7 @@ def iniciar_mundo(
     elif numero_mundo == 2 and numero_nivel == 4:
         # Mundo 2 — Nivel 4: «Las plataformas que se derrumban» (Niveles.pdf, página 8)
         # Objetivo: cruzar un abismo lleno de pinchos, conseguir la llave y llegar a la puerta de salida sin caer.
-        # Mecánica principal: Las plataformas son temporales y se derrumban 3 segundos después de ser pisadas.
+        # Mecánica principal: Las plataformas son temporales y se derrumban aproximadamente 1 segundo (60 frames) tras ser pisadas.
         # Los personajes están unidos por una soga y deben sincronizar sus saltos rápidamente antes de que caigan.
         # A mitad del recorrido se encuentra la llave, sobre las plataformas suspendidas sobre el abismo.
         # Si un personaje cae al abismo o toca los pinchos, ambos pierden y el nivel se reinicia.
@@ -3765,7 +3825,7 @@ def iniciar_mundo(
 
         plataformas_base = [plat_inicio, plat_inicio_base, plat_llegada, plat_llegada_base]
 
-        # Serie de 8 plataformas pequeñas que se derrumban 1.5 segundos (90 frames) tras pisarlas
+        # Serie de 8 plataformas pequeñas que se derrumban 1.0 segundo (60 frames) tras pisarlas
         def _crear_p_derrumbable(px, py, pw=120, ph=22):
             return {
                 "rect": pygame.Rect(px, py, pw, ph),
@@ -3776,7 +3836,7 @@ def iniciar_mundo(
                 "ancho": pw,
                 "alto": ph,
                 "estado": "intacta",  # "intacta", "agrietandose", "temblando", "derrumbada"
-                "tiempo_restante": 90,  # 1.5 segundos a 60 FPS
+                "tiempo_restante": 60,  # 1.0 segundo a 60 FPS
                 "pisada": False,
                 "particulas": [],
             }
@@ -3832,41 +3892,40 @@ def iniciar_mundo(
 
         caja = None
 
-        # Abismo continuo cubierto de pinchos mortales bajo todas las plataformas alternadas (x: 200..840)
+        # Abismo continuo cubierto de pinchos mortales bajo todas las plataformas alternadas (x: 200..690)
         pozo_nivel = {
             "x": 200,
             "y": 570,
-            "ancho": 640,
+            "ancho": 490,
             "alto": 70,
         }
-        pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(205, 835, 32)]
+        pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(205, 685, 32)]
 
-        # Plataforma de llegada segura a la derecha con la puerta de salida (x: 840..1300, y=480)
-        plat_llegada = pygame.Rect(840, 480, 460, 26)
-        plat_llegada_base = pygame.Rect(840, 506, 460, suelo.top - 506 + 80)
+        # Plataforma de llegada segura a la derecha en la cima con la puerta de salida (x: 690..1300, y=245)
+        plat_llegada = pygame.Rect(690, 245, 610, 26)
+        plat_llegada_base = pygame.Rect(690, 271, 610, suelo.top - 271 + 80)
 
         plataformas_base = [plat_inicio, plat_inicio_base, plat_llegada, plat_llegada_base]
 
-        # Plataformas INTERCALADAS horizontalmente: izquierda -> derecha -> izquierda -> derecha
-        # Distribución en zig-zag con espacio horizontal real entre plataformas consecutivas:
-        # P1: Izquierda (x: 240..460, y: 440) - Centro 350
-        # P2: Derecha   (x: 500..720, y: 365) - Centro 610 (dx = +260 hacia la derecha)
-        # P3: Izquierda (x: 180..410, y: 290) - Centro 295 (dx = -315 hacia la izquierda)
-        # P4: Derecha   (x: 540..760, y: 215) - Centro 650 (dx = +355 hacia la derecha, pedestal con Llave)
-        # Recorrido cooperativo: INICIO (y=520) -> P1 (y=440) -> P2 (y=365) -> P3 (y=290) -> P4 (y=215, Llave) -> SALIDA (y=480, Puerta)
+        # Plataformas INTERCALADAS horizontalmente en zigzag lateral claro y jugable:
+        # P1: Izquierda (x: 200..420, y: 465) - Centro 310
+        # P2: Derecha   (x: 400..620, y: 410) - Centro 510 (dx = +200 hacia la derecha)
+        # P3: Izquierda (x: 130..350, y: 355) - Centro 240 (dx = -270 hacia la izquierda, desfasada 70px de P1)
+        # P4: Derecha   (x: 450..670, y: 300) - Centro 560 (dx = +320 hacia la derecha, desfasada 50px de P2, con Llave)
+        # Recorrido cooperativo: INICIO (y=520) -> P1 (y=465) -> P2 (y=410) -> P3 (y=355) -> P4 (y=300, Llave) -> SALIDA (y=245, Puerta)
         plataformas_alternadas = [
-            pygame.Rect(240, 440, 220, 24),  # P1: Izquierda (y=440)
-            pygame.Rect(500, 365, 220, 24),  # P2: Derecha   (y=365)
-            pygame.Rect(180, 290, 230, 24),  # P3: Izquierda (y=290)
-            pygame.Rect(540, 215, 220, 24),  # P4: Derecha   (y=215, cumbre con pedestal y llave)
+            pygame.Rect(200, 465, 220, 24),  # P1: Izquierda (y=465)
+            pygame.Rect(400, 410, 220, 24),  # P2: Derecha   (y=410)
+            pygame.Rect(130, 355, 220, 24),  # P3: Izquierda (y=355)
+            pygame.Rect(450, 300, 220, 24),  # P4: Derecha   (y=300, cumbre con pedestal y llave)
         ]
         plataformas = list(plataformas_base) + list(plataformas_alternadas)
 
-        # Llave dorada en el pedestal de la cumbre derecha (P4, x=650, y=215)
-        llave = crear_llave(650 - 12, 215 - 46)
+        # Llave dorada en el pedestal de la cumbre derecha (P4, centro 560, y=300)
+        llave = crear_llave(560 - 12, 300 - 46)
 
-        # Puerta de salida en la plataforma final de llegada (x=980, y=480)
-        puerta = crear_puerta(980, 480 - 90)
+        # Puerta de salida en la plataforma final de llegada en la cima (x=820, y=245)
+        puerta = crear_puerta(820, 245 - 90)
     elif numero_mundo == 3 and numero_nivel == 1:
         # Mundo 3 — Nivel 1: «El jardín de algas» (Niveles.pdf, páginas 10 y 13)
         # Objetivo: explorar el escenario submarino, encontrar la llave y llegar a la puerta de salida.
@@ -4264,6 +4323,8 @@ def iniciar_mundo(
 
         oxigeno_p1 = 100.0
         oxigeno_p2 = 100.0
+        linterna_p1 = True
+        linterna_p2 = True
 
         # Personajes inician dentro del primer refugio de aire (Cámara 1)
         jugador1 = crear_personaje(80, 280, p1_color)
@@ -4459,14 +4520,6 @@ def iniciar_mundo(
             dibujar_peligros_marinos_escenario(mundo_inicio, pinchos)
         if burbujas_m3:
             actualizar_y_dibujar_burbujas_m3(mundo_inicio, burbujas_m3, [jugador1, jugador2], 0)
-        if numero_mundo == 3 and numero_nivel == 4 and surf_oscuridad_m3_n4 is not None:
-            dibujar_oscuridad_laberinto(
-                mundo_inicio,
-                [(jugador1, linterna_p1, False), (jugador2, linterna_p2, False)],
-                surf_oscuridad_m3_n4,
-                surf_luz_linterna,
-                surf_luz_tenue
-            )
     else:
         mundo_inicio.fill((255, 240, 195))
 
@@ -4593,6 +4646,21 @@ def iniciar_mundo(
     dibujar_personaje(mundo_inicio, jugador1, ZONA_AGUA if usar_agua else None)
     dibujar_personaje(mundo_inicio, jugador2, ZONA_AGUA if usar_agua else None)
 
+    if numero_mundo == 3 and numero_nivel == 4 and surf_oscuridad_m3_n4 is not None:
+        dibujar_oscuridad_laberinto(
+            mundo_inicio,
+            [(jugador1, linterna_p1, False), (jugador2, linterna_p2, False)],
+            surf_oscuridad_m3_n4,
+            surf_luz_linterna,
+            surf_luz_tenue
+        )
+    elif numero_mundo == 3 and numero_nivel == 5:
+        dibujar_linternas_submarinas_m3_n5(
+            mundo_inicio,
+            [(jugador1, linterna_p1, False), (jugador2, linterna_p2, False)],
+            0
+        )
+
     distancia_ini = abs(jugador1["hitbox"].centerx - jugador2["hitbox"].centerx)
     if distancia_ini <= DISTANCIA_SPLIT:
         centro_ini = (jugador1["hitbox"].centerx + jugador2["hitbox"].centerx) // 2
@@ -4685,7 +4753,7 @@ def iniciar_mundo(
                 p_d["vel_y"] = 0.0
                 p_d["estado"] = "intacta"
                 p_d["pisada"] = False
-                p_d["tiempo_restante"] = 90
+                p_d["tiempo_restante"] = 60
                 p_d["particulas"].clear()
 
         p1_completado, p2_completado = False, False
@@ -4784,6 +4852,8 @@ def iniciar_mundo(
                 burbujas_m3[:] = crear_sistema_burbujas_m3(ancho_mundo_nivel, cantidad=45)
 
         if numero_mundo == 3 and numero_nivel == 5:
+            linterna_p1 = True
+            linterna_p2 = True
             oxigeno_p1 = 100.0
             oxigeno_p2 = 100.0
             jugador1["en_agua"] = True
@@ -4805,6 +4875,10 @@ def iniciar_mundo(
                         id_partida=partida_id,
                         nombre_partida=partida_nombre,
                         password_partida=partida_password,
+                        color_p1=color_p1,
+                        color_p2=color_p2,
+                        accesorio_p1=p1_acc,
+                        accesorio_p2=p2_acc,
                     )
                     if resp in ("guardar_salir", "salir_sin_guardar"):
                         pygame.quit()
@@ -4819,11 +4893,13 @@ def iniciar_mundo(
                         f_limpio = fondo_btn_reiniciar if fondo_btn_reiniciar else (255, 240, 195)
                         animar_pulsacion_boton(pantalla, rect_btn_reiniciar, spr_reiniciar_semi, spr_reiniciar_apretado, f_limpio)
                     _reiniciar_nivel_completo()
-                elif numero_mundo == 3 and numero_nivel == 4:
+                elif numero_mundo == 3 and numero_nivel in (4, 5):
                     if evento.key in (pygame.K_e, pygame.K_f, pygame.K_SPACE):
-                        linterna_p1 = not linterna_p1
+                        if not jugador1.get("muerto", False):
+                            linterna_p1 = not linterna_p1
                     elif evento.key in (pygame.K_l, pygame.K_RETURN, pygame.K_RSHIFT, pygame.K_RCTRL):
-                        linterna_p2 = not linterna_p2
+                        if not jugador2.get("muerto", False):
+                            linterna_p2 = not linterna_p2
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 if rect_btn_x.collidepoint(evento.pos):
@@ -4836,6 +4912,10 @@ def iniciar_mundo(
                                 id_partida=partida_id,
                                 nombre_partida=partida_nombre,
                                 password_partida=partida_password,
+                                color_p1=color_p1,
+                                color_p2=color_p2,
+                                accesorio_p1=p1_acc,
+                                accesorio_p2=p2_acc,
                             )
                             if resp in ("guardar_salir", "salir_sin_guardar"):
                                 pygame.quit()
@@ -4901,13 +4981,13 @@ def iniciar_mundo(
                 mostrar_tutorial = False
 
         p1_sobre_p2 = (
-            not p1_completado and not p2_completado
+            not p1_completado and not p2_completado and not jugador1["muerto"] and not jugador2["muerto"]
             and abs(jugador1["hitbox"].bottom - jugador2["hitbox"].top) <= 8
             and jugador1["hitbox"].right > jugador2["hitbox"].left + 2
             and jugador1["hitbox"].left < jugador2["hitbox"].right - 2
         )
         p2_sobre_p1 = (
-            not p1_completado and not p2_completado
+            not p1_completado and not p2_completado and not jugador1["muerto"] and not jugador2["muerto"]
             and abs(jugador2["hitbox"].bottom - jugador1["hitbox"].top) <= 8
             and jugador2["hitbox"].right > jugador1["hitbox"].left + 2
             and jugador2["hitbox"].left < jugador1["hitbox"].right - 2
@@ -4997,12 +5077,14 @@ def iniciar_mundo(
             actualizar_fisica_soga(jugador1, jugador2, estado_soga, DISTANCIA_SOGA_REPOSO, DISTANCIA_SOGA_MAXIMA)
 
         if usar_agua:
-            actualizar_estado_agua(jugador1, ZONA_AGUA)
-            actualizar_estado_agua(jugador2, ZONA_AGUA)
-            if jugador1["en_agua"]:
-                aplicar_fisica_agua(jugador1, teclas[pygame.K_w], teclas[pygame.K_s], submarino=(numero_mundo == 3))
-            if jugador2["en_agua"]:
-                aplicar_fisica_agua(jugador2, teclas[pygame.K_UP], teclas[pygame.K_DOWN], submarino=(numero_mundo == 3))
+            if not jugador1["muerto"]:
+                actualizar_estado_agua(jugador1, ZONA_AGUA)
+                if jugador1["en_agua"]:
+                    aplicar_fisica_agua(jugador1, teclas[pygame.K_w], teclas[pygame.K_s], submarino=(numero_mundo == 3))
+            if not jugador2["muerto"]:
+                actualizar_estado_agua(jugador2, ZONA_AGUA)
+                if jugador2["en_agua"]:
+                    aplicar_fisica_agua(jugador2, teclas[pygame.K_UP], teclas[pygame.K_DOWN], submarino=(numero_mundo == 3))
 
         if boton_nivel is not None and pared_nivel is not None:
             caja_sobre_btn = (
@@ -5215,12 +5297,12 @@ def iniciar_mundo(
                                 break
                     if pjs_pisando:
                         p_d["pisada"] = True
-                        p_d["tiempo_restante"] = 90  # Exactamente 1.5 segundos a 60 FPS (no se reinicia al permanecer encima)
+                        p_d["tiempo_restante"] = 60  # Exactamente 1.0 segundo a 60 FPS (no se reinicia al permanecer encima)
 
                 # 2. Descontar temporizador
                 if p_d["pisada"] and p_d["tiempo_restante"] > 0:
                     p_d["tiempo_restante"] -= 1
-                    if p_d["tiempo_restante"] <= 30:
+                    if p_d["tiempo_restante"] <= 20:
                         p_d["estado"] = "temblando"
                     else:
                         p_d["estado"] = "agrietandose"
@@ -5249,7 +5331,7 @@ def iniciar_mundo(
 
                 # 3. Caída libre de la plataforma si se derrumbó (caída rápida)
                 if p_d["estado"] == "derrumbada":
-                    p_d["vel_y"] += 1.2
+                    p_d["vel_y"] += 1.5
                     p_d["y"] += p_d["vel_y"]
                     p_d["rect"].y = int(p_d["y"])
 
@@ -5275,9 +5357,9 @@ def iniciar_mundo(
                     caja["rect"].left = 20
 
         if not jugador1["muerto"] and not p1_completado:
-            resolver_colisiones(jugador1, jugador2 if not p2_completado else None, suelo, mundo_rect, caja if usar_caja else None, jugador1["en_agua"], plataformas)
+            resolver_colisiones(jugador1, jugador2 if not p2_completado and not jugador2["muerto"] else None, suelo, mundo_rect, caja if usar_caja else None, jugador1["en_agua"], plataformas)
         if not jugador2["muerto"] and not p2_completado:
-            resolver_colisiones(jugador2, jugador1 if not p1_completado else None, suelo, mundo_rect, caja if usar_caja else None, jugador2["en_agua"], plataformas)
+            resolver_colisiones(jugador2, jugador1 if not p1_completado and not jugador1["muerto"] else None, suelo, mundo_rect, caja if usar_caja else None, jugador2["en_agua"], plataformas)
 
         if numero_mundo == 3 and numero_nivel == 5:
             # 1. Empuje de corrientes marinas sobre personajes activos
@@ -5297,7 +5379,7 @@ def iniciar_mundo(
                     oxigeno_p1 = max(0.0, oxigeno_p1 - 0.082)
                     if oxigeno_p1 <= 0.0:
                         matar_personaje(jugador1)
-                        if not jugador2["muerto"] and not p2_completado:
+                        if numero_mundo != 3 and not jugador2["muerto"] and not p2_completado:
                             matar_personaje(jugador2)
 
             # 3. Gestión del oxígeno de Jugador 2
@@ -5309,13 +5391,13 @@ def iniciar_mundo(
                     oxigeno_p2 = max(0.0, oxigeno_p2 - 0.086)
                     if oxigeno_p2 <= 0.0:
                         matar_personaje(jugador2)
-                        if not jugador1["muerto"] and not p1_completado:
+                        if numero_mundo != 3 and not jugador1["muerto"] and not p1_completado:
                             matar_personaje(jugador1)
 
         if usar_soga and not p1_completado and not p2_completado:
             aplicar_restriccion_soga(jugador1, jugador2, DISTANCIA_SOGA_MAXIMA, plataformas, suelo, estado_soga)
         if usar_llave:
-            personajes_activos = [p for p, comp in [(jugador1, p1_completado), (jugador2, p2_completado)] if not comp]
+            personajes_activos = [p for p, comp in [(jugador1, p1_completado), (jugador2, p2_completado)] if not comp and not p["muerto"]]
             actualizar_llave(llave, personajes_activos, puerta)
         if usar_pinchos:
             p1_toco = False
@@ -5325,21 +5407,10 @@ def iniciar_mundo(
             if not p2_completado:
                 p2_toco = comprobar_pinchos(jugador2, pinchos)
 
-            if p1_toco and not jugador2["muerto"] and not p2_completado:
-                matar_personaje(jugador2)
-            elif p2_toco and not jugador1["muerto"] and not p1_completado:
-                matar_personaje(jugador1)
-
-        if usar_soga:
-            p1_cayo = not jugador1["muerto"] and not p1_completado and jugador1["hitbox"].top >= ALTO - 50
-            p2_cayo = not jugador2["muerto"] and not p2_completado and jugador2["hitbox"].top >= ALTO - 50
-            if p1_cayo:
-                matar_personaje(jugador1)
-                if not jugador2["muerto"] and not p2_completado:
+            if numero_mundo != 3:
+                if p1_toco and not jugador2["muerto"] and not p2_completado:
                     matar_personaje(jugador2)
-            elif p2_cayo:
-                matar_personaje(jugador2)
-                if not jugador1["muerto"] and not p1_completado:
+                elif p2_toco and not jugador1["muerto"] and not p1_completado:
                     matar_personaje(jugador1)
 
         if laser_nivel is not None:
@@ -5363,12 +5434,61 @@ def iniciar_mundo(
                 if not comp and not p["muerto"]:
                     if laser_nivel["rect_dano"].width > 0 and p["hitbox"].colliderect(laser_nivel["rect_dano"]):
                         matar_personaje(p)
+                        if numero_mundo != 3:
+                            otro = jugador2 if p is jugador1 else jugador1
+                            comp_otro = p2_completado if p is jugador1 else p1_completado
+                            if not comp_otro and not otro.get("muerto", False):
+                                matar_personaje(otro)
+
+        # Detección continua de muerte cuando un personaje cae o sale completamente de la pantalla o del escenario
+        for p, comp, otro, comp_otro in [
+            (jugador1, p1_completado, jugador2, p2_completado),
+            (jugador2, p2_completado, jugador1, p1_completado),
+        ]:
+            if not comp and not p.get("muerto", False):
+                hb = p["hitbox"]
+                # Solo se detecta muerte si sale completamente de los límites (evitando falsos positivos parciales)
+                caida_abajo = hb.top >= ALTO
+                salida_izq = hb.right <= 0
+                salida_der = hb.left >= ancho_mundo_nivel
+                salida_arriba = hb.bottom <= -50
+
+                if caida_abajo or salida_izq or salida_der or salida_arriba:
+                    if caida_abajo:
+                        # Asegurar que inicie el salto de muerte desde el borde para que sea visible en pantalla
+                        hb.top = ALTO
+                    matar_personaje(p)
+
+                    # Si el personaje que cayó portaba la llave, reubicarla en su posición inicial
+                    # para que el sobreviviente pueda continuar sin quedar bloqueado indefinidamente
+                    if usar_llave and llave and llave.get("recolectada", False) and llave.get("portador") is p:
+                        llave["recolectada"] = False
+                        llave["portador"] = None
+                        llave["rect"].x = llave["x_inicial"]
+                        llave["rect"].y = llave["y_inicial"]
+                        llave["x_float"] = float(llave["x_inicial"])
+                        llave["y_float"] = float(llave["y_inicial"])
+
+                    # Reglas por mundo:
+                    # - Mundos 1 y 2: muerte compartida (si uno muere, mueren ambos)
+                    # - Mundo 3: muerte independiente (el otro continúa con vida)
+                    if numero_mundo != 3:
+                        if not comp_otro and not otro.get("muerto", False):
+                            matar_personaje(otro)
 
         actualizar_muerte(jugador1)
         actualizar_muerte(jugador2)
 
-        if not jugador1["muerto"] and not p1_completado: jugador1["hitbox"].clamp_ip(mundo_rect)
-        if not jugador2["muerto"] and not p2_completado: jugador2["hitbox"].clamp_ip(mundo_rect)
+        # Limitar horizontalmente y techo para personajes vivos, permitiendo caída libre por el fondo
+        for p, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]:
+            if not comp and not p.get("muerto", False):
+                hb = p["hitbox"]
+                if hb.left < 0:
+                    hb.left = 0
+                elif hb.right > ancho_mundo_nivel:
+                    hb.right = ancho_mundo_nivel
+                if hb.top < 0:
+                    hb.top = 0
 
         # Detección de interacción especial en Mundo 1 Nivel 1: soplar indicadores del personaje quieto al saltar sobre él
         if numero_mundo == 1 and numero_nivel == 1:
@@ -5579,7 +5699,12 @@ def iniciar_mundo(
                 surf_luz_linterna,
                 surf_luz_tenue
             )
-        if numero_mundo == 3 and numero_nivel == 5:
+        elif numero_mundo == 3 and numero_nivel == 5:
+            dibujar_linternas_submarinas_m3_n5(
+                mundo,
+                [(jugador1, linterna_p1, p1_completado), (jugador2, linterna_p2, p2_completado)],
+                tick_m3
+            )
             if not p1_completado:
                 dibujar_alerta_oxigeno_personaje(mundo, jugador1, oxigeno_p1, tick_m3)
             if not p2_completado:
@@ -5601,9 +5726,22 @@ def iniciar_mundo(
             # Jugador 2 ya pasó por la puerta: cámara completa siguiendo al Jugador 1
             cam_x = max(0, min(jugador1["hitbox"].centerx - ANCHO // 2, ancho_mundo_nivel - ANCHO))
             pantalla.blit(mundo, (0, 0), pygame.Rect(cam_x, 0, ANCHO, ALTO))
-        elif p1_completado and p2_completado:
-            # Ambos personajes completaron el nivel: cámara fija centrada en la puerta de salida
+        elif (p1_completado and p2_completado) or (numero_mundo == 3 and ((jugador1["muerto"] and p2_completado) or (jugador2["muerto"] and p1_completado))):
+            # Nivel completado: cámara fija centrada en la puerta de salida
             cam_x = max(0, min(puerta["rect"].centerx - ANCHO // 2, ancho_mundo_nivel - ANCHO))
+            pantalla.blit(mundo, (0, 0), pygame.Rect(cam_x, 0, ANCHO, ALTO))
+        elif numero_mundo == 3 and jugador1["muerto"] and not jugador2["muerto"]:
+            # En Mundo 3, P1 murió: la cámara sigue completamente al sobreviviente P2
+            cam_x = max(0, min(jugador2["hitbox"].centerx - ANCHO // 2, ancho_mundo_nivel - ANCHO))
+            pantalla.blit(mundo, (0, 0), pygame.Rect(cam_x, 0, ANCHO, ALTO))
+        elif numero_mundo == 3 and jugador2["muerto"] and not jugador1["muerto"]:
+            # En Mundo 3, P2 murió: la cámara sigue completamente al sobreviviente P1
+            cam_x = max(0, min(jugador1["hitbox"].centerx - ANCHO // 2, ancho_mundo_nivel - ANCHO))
+            pantalla.blit(mundo, (0, 0), pygame.Rect(cam_x, 0, ANCHO, ALTO))
+        elif numero_mundo == 3 and jugador1["muerto"] and jugador2["muerto"]:
+            # Ambos murieron en Mundo 3: mantener la cámara en el centro promedio
+            centro = (jugador1["hitbox"].centerx + jugador2["hitbox"].centerx) // 2
+            cam_x = max(0, min(centro - ANCHO // 2, ancho_mundo_nivel - ANCHO))
             pantalla.blit(mundo, (0, 0), pygame.Rect(cam_x, 0, ANCHO, ALTO))
         else:
             # Ambos personajes están en juego
@@ -5648,16 +5786,39 @@ def iniciar_mundo(
             _dibujar_hud_linternas_m3_n4(pantalla, linterna_p1, linterna_p2, p1_color, p2_color)
         if numero_mundo == 3 and numero_nivel == 5 and not (p1_completado and p2_completado):
             _dibujar_hud_oxigeno_m3_n5(pantalla, oxigeno_p1, oxigeno_p2, p1_color, p2_color, tick_m3)
+            _dibujar_hud_linternas_m3_n4(pantalla, linterna_p1, linterna_p2, p1_color, p2_color, y_base=60)
 
         pygame.display.flip()
 
-        if jugador1["muerte_terminada"] or jugador2["muerte_terminada"]:
+        # Gestión de pantalla de muerte y reinicio según las reglas de cada mundo
+        debe_mostrar_muerte = False
+        if numero_mundo == 3:
+            if jugador1["muerto"] and jugador2["muerto"]:
+                if jugador1["muerte_terminada"] and jugador2["muerte_terminada"]:
+                    debe_mostrar_muerte = True
+        else:
+            muertos = [p for p in (jugador1, jugador2) if p.get("muerto", False)]
+            if muertos and all(p.get("muerte_terminada", False) for p in muertos):
+                debe_mostrar_muerte = True
+
+        if debe_mostrar_muerte:
             resultado = pantalla_muerte(pantalla, reloj)
             if resultado == "salir": return "salir"
             if resultado == "reiniciar":
                 _reiniciar_nivel_completo()
 
-        if p1_completado and p2_completado:
+        # Condición de nivel superado
+        nivel_superado = False
+        if numero_mundo == 3:
+            if (p1_completado and p2_completado) or \
+               (jugador1["muerto"] and p2_completado) or \
+               (jugador2["muerto"] and p1_completado):
+                nivel_superado = True
+        else:
+            if p1_completado and p2_completado:
+                nivel_superado = True
+
+        if nivel_superado:
             cam_puerta_x = max(0, min(puerta["rect"].centerx - ANCHO // 2, ancho_mundo_nivel - ANCHO)) if puerta else 0
             return animar_transicion_nivel_completado(
                 pantalla=pantalla,

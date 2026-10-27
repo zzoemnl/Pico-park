@@ -121,6 +121,121 @@ def aclarar_boton(surf, factor=45):
     return brillante
 
 
+def precargar_botones_comunes():
+    """
+    Precarga y prepara en memoria todos los sprites de botones utilizados
+    en menús, configuración, selección de niveles, HUD y pantallas de juego.
+    Garantiza que el primer fotograma de cualquier pantalla muestre todos los
+    botones correspondientes desde el primer momento, sin demoras ni apariciones tardías.
+    """
+    # 1. Botones del Menú Principal y Diálogos estándar (272, 80)
+    botones_menu_272_80 = [
+        "jugar.png", "jugar-preapretado.png", "jugar-apretado.png",
+        "personajes.png", "personajes-preapretado.png", "personajes-apretado.png",
+        "opciones.png", "opciones-preapretado.png", "opciones-apretado.png",
+        "salir.png", "salir-preapretado.png", "salir-apretado.png",
+        "mundos/boton-nueva-partida.png", "mundos/boton-nueva-partida-semiapretado.png", "mundos/boton-nueva-partida-apretado.png",
+        "Ventanas/boton-reiniciar.png", "Ventanas/boton-reiniciar-semiapretado.png", "Ventanas/boton-reiniciar-apretado.png",
+        "Ventanas/boton-siguiente.png", "Ventanas/boton-siguiente-semiapretado.png", "Ventanas/boton-siguiente-apretado.png",
+        "Ventanas/boton-menu.png", "Ventanas/boton-menu-semiapretado.png", "Ventanas/boton-menu-apretado.png",
+    ]
+    for b in botones_menu_272_80:
+        s = cargar_boton_escalado(b, 272, 80)
+        if s:
+            aclarar_boton(s)
+
+    # 2. Botones de HUD superior (44, 52)
+    botones_hud_44_52 = [
+        "boton-x.png", "boton-x-semiapretado.png", "boton-x-apretado.png",
+        "HUD/boton-x.png", "HUD/boton-x-semiapretado.png", "HUD/boton-x-apretado.png",
+        "boton-casa.png", "boton-casa-semiapretado.png", "boton-casa-apretado.png",
+        "HUD/boton-casa.png", "HUD/boton-casa-semiapretado.png", "HUD/boton-casa-apretado.png",
+        "boton-configuracion.png", "boton-configuracion-semiapretado.png", "boton-configuracion-apretado.png",
+        "HUD/boton-configuracion.png", "HUD/boton-configuracion-semiapretado.png", "HUD/boton-configuracion-apretado.png",
+        "boton-reiniciar-icono.png", "boton-reiniciar-icono-semiapretado.png", "boton-reiniciar-icono-apretado.png",
+    ]
+    for b in botones_hud_44_52:
+        s = cargar_boton_escalado(b, 44, 52)
+        if s:
+            aclarar_boton(s)
+
+    # 3. Botones de Configuración (Volumen y Cerrar)
+    botones_cfg = [
+        ("HUD/boton-bajar-volumen.png", 42, 50),
+        ("HUD/boton-bajar-volumen-semiapretado.png", 42, 50),
+        ("HUD/boton-bajar-volumen-apretado.png", 42, 50),
+        ("HUD/boton-subir-volumen.png", 42, 50),
+        ("HUD/boton-subir-volumen-semiapretado.png", 42, 50),
+        ("HUD/boton-subir-volumen-apretado.png", 42, 50),
+        ("HUD/boton-x.png", 29, 34),
+        ("HUD/boton-x-semiapretado.png", 29, 34),
+        ("HUD/boton-x-apretado.png", 29, 34),
+    ]
+    for b, w, h in botones_cfg:
+        s = cargar_boton_escalado(b, w, h)
+        if s:
+            aclarar_boton(s)
+
+    # 4. Botones de Volver y Navegación (238, 70)
+    botones_nav_238_70 = [
+        "mundos/boton-volver.png", "mundos/boton-volver-semiapretado.png", "mundos/boton-volver-apretado.png",
+        "Ventanas/boton-menu.png", "Ventanas/boton-menu-semiapretado.png", "Ventanas/boton-menu-apretado.png",
+        "mundos/boton-nueva-partida.png", "mundos/boton-nueva-partida-semiapretado.png", "mundos/boton-nueva-partida-apretado.png",
+    ]
+    for b in botones_nav_238_70:
+        s = cargar_boton_escalado(b, 238, 70)
+        if s:
+            aclarar_boton(s)
+
+    # 5. Botones de Selección de Modo (425, 100)
+    botones_modo_425_100 = [
+        "Menu/boton-continuar-cargar....png", "Menu/boton-continuar-cargar...-semiapretado.png", "Menu/boton-continuar-cargar...-apretado.png",
+        "mundos/boton-nueva-partida-reiniciar....png", "mundos/boton-nueva-partida-reiniciar...-semiapretado.png", "mundos/boton-nueva-partida-reiniciar...-apretado.png",
+    ]
+    for b in botones_modo_425_100:
+        s = cargar_boton_escalado(b, 425, 100)
+        if s:
+            aclarar_boton(s)
+
+    # 6. Botones de Guardar / Salir y Tarjetas
+    botones_guardar = [
+        ("mundos/boton-cargar.png", 129, 38),
+        ("mundos/boton-cargar-semiapretado.png", 129, 38),
+        ("mundos/boton-cargar-apretado.png", 129, 38),
+        ("Ventanas/boton-guardar-y-salir.png", 260, 64),
+        ("Ventanas/boton-guardar-y-salir-semiapretado.png", 260, 64),
+        ("Ventanas/boton-guardar-y-salir-apretado.png", 260, 64),
+        ("Ventanas/boton-salir-sin-guardar.png", 260, 64),
+        ("Menu/boton-salir-sin-guardar-semiapretado.png", 260, 64),
+        ("Ventanas/boton-salir-sin-guardar-apretado.png", 260, 64),
+        ("Menu/boton-cancelar.png", 260, 64),
+        ("Menu/boton-cancelar-semiapretado.png", 260, 64),
+        ("Menu/boton-cancelar-apretado.png", 260, 64),
+        ("Ventanas/boton-guardar-y-salir.png", 200, 52),
+        ("Ventanas/boton-guardar-y-salir-semiapretado.png", 200, 52),
+        ("Ventanas/boton-guardar-y-salir-apretado.png", 200, 52),
+        ("Ventanas/boton-salir-sin-guardar.png", 200, 52),
+        ("Menu/boton-salir-sin-guardar-semiapretado.png", 200, 52),
+        ("Ventanas/boton-salir-sin-guardar-apretado.png", 200, 52),
+        ("Menu/boton-cancelar.png", 200, 52),
+        ("Menu/boton-cancelar-semiapretado.png", 200, 52),
+        ("Menu/boton-cancelar-apretado.png", 200, 52),
+    ]
+    for b, w, h in botones_guardar:
+        s = cargar_boton_escalado(b, w, h)
+        if s:
+            aclarar_boton(s)
+
+    # 7. Controles tutoriales (54, 54) y (32, 32)
+    botones_ctrl = [
+        "Controles/boton-w.png", "Controles/boton-a.png", "Controles/boton-s.png", "Controles/boton-d.png",
+        "Controles/boton-arriba.png", "Controles/boton-abajo.png", "Controles/boton-izquierda.png", "Controles/boton-derecha.png",
+    ]
+    for b in botones_ctrl:
+        cargar_boton_escalado(b, 54, 54)
+        cargar_boton_escalado(b, 32, 32)
+
+
 def animar_pulsacion_boton(pantalla, rect, spr_semi, spr_apretado, fondo_limpio=None, spr_normal=None):
     """
     Reproduce una pulsación física real en 4 etapas usando los tres sprites de cada botón:

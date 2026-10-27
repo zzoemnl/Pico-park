@@ -9,6 +9,7 @@ from sprites import (
     cargar_sprites,
     cargar_boton,
     cargar_boton_escalado,
+    precargar_botones_comunes,
     animar_pulsacion_boton,
     aclarar_boton,
     obtener_accesorios_disponibles,
@@ -20,7 +21,7 @@ from configuracion import t, mostrar_pestana_configuracion
 from menu_niveles import (
     dibujar_menu_niveles,
     obtener_geometria_menu,
-    obtener_mecanicas_nivel,
+    obtener_mecanicas_nivel,  
     dibujar_mascota_gato,
     COLORES_TABS,
     COL_PANEL,
@@ -33,6 +34,7 @@ from guardado import (
     eliminar_partida,
     mostrar_dialogo_guardar_salir,
     mostrar_dialogo_confirmar_borrado,
+    mostrar_dialogo_confirmar_atuendos,
     cargar_fuente_pixel,
     hay_progreso_sin_guardar,
     calcular_niveles_completados,
@@ -321,10 +323,8 @@ def main():
     pygame.init()
 
     pantalla = pygame.display.set_mode((ANCHO, ALTO))
-    pantalla.fill((30, 30, 30))
-    pygame.display.flip()
-
     pygame.display.set_caption("Pico Park")
+    precargar_botones_comunes()
     reloj = pygame.time.Clock()
     fuente_pixel_titulo = obtener_fuente_titulo(TAMANO_TITULO, tamano_fallback=55)
     fuente_pixel_btn_grande = obtener_fuente_boton(TAMANO_BOTON_GRANDE, tamano_fallback=32)
@@ -404,27 +404,11 @@ def main():
     fondo_limpio_btn = pygame.Surface((ANCHO_BOTON, ALTO_BOTON))
     fondo_limpio_btn.fill((30, 30, 30))
 
-    # Renderizar el primer fotograma del Menú Principal INMEDIATAMENTE
-    # para que la ventana muestre la interfaz al instante sin pantalla negra.
-    pantalla.fill((30, 30, 30))
-    t_primer_frame = fuente_pixel_titulo.render("PICO PARK", True, (255, 255, 255))
-    pantalla.blit(t_primer_frame, t_primer_frame.get_rect(center=(ANCHO_MENU // 2, 70)))
-    if spr_x_normal:
-        pantalla.blit(spr_x_normal, rect_btn_x)
-    for b_r, b_s in [
-        (btn_jugar, spr_jugar_normal),
-        (btn_personajes, spr_personajes_normal),
-        (btn_config, spr_opciones_normal),
-        (btn_salir, spr_salir_normal),
-    ]:
-        if b_s:
-            pantalla.blit(b_s, b_r)
-    pygame.display.flip()
-
     color_p1 = "Celeste"
     color_p2 = "Violeta"
     accesorio_p1 = "Ninguno"
     accesorio_p2 = "Ninguno"
+    personalizacion_modificada_en_menu = False
     tab_personajes_actual = "colores"
 
     W_VOLVER, H_VOLVER = 238, 70
@@ -621,6 +605,30 @@ def main():
             spr_ctrl_aba = cargar_boton_escalado("Controles/boton-abajo.png", TAM_CTRL, TAM_CTRL)
             spr_ctrl_der = cargar_boton_escalado("Controles/boton-derecha.png", TAM_CTRL, TAM_CTRL)
 
+    # Cargar y preparar de forma anticipada todos los recursos de botones para todas las pantallas
+    _asegurar_semi_apretados_menu()
+    _cargar_recursos_volver()
+    _cargar_recursos_modo_juego()
+    _cargar_recursos_partidas()
+    _cargar_recursos_niveles()
+    _cargar_recursos_controles()
+
+    # Renderizar el primer fotograma del Menú Principal con todos los botones e interfaz completamente listos
+    pantalla.fill((30, 30, 30))
+    t_primer_frame = fuente_pixel_titulo.render("PICO PARK", True, (255, 255, 255))
+    pantalla.blit(t_primer_frame, t_primer_frame.get_rect(center=(ANCHO_MENU // 2, 70)))
+    if spr_x_normal:
+        pantalla.blit(spr_x_normal, rect_btn_x)
+    for b_r, b_s in [
+        (btn_jugar, spr_jugar_normal),
+        (btn_personajes, spr_personajes_normal),
+        (btn_config, spr_opciones_normal),
+        (btn_salir, spr_salir_normal),
+    ]:
+        if b_s:
+            pantalla.blit(b_s, b_r)
+    pygame.display.flip()
+
     # Geometría y variables para la Lista de Partidas Guardadas
     pagina_partidas = 0
     MAX_PARTIDAS_POR_PAGINA = 5
@@ -646,6 +654,10 @@ def main():
                 id_partida=partida_actual_id,
                 nombre_partida=partida_actual_nombre,
                 password_partida=partida_actual_password,
+                color_p1=color_p1,
+                color_p2=color_p2,
+                accesorio_p1=accesorio_p1,
+                accesorio_p2=accesorio_p2,
             )
             if resp == "guardar_salir":
                 snapshot_guardado = copy.deepcopy(niveles_desbloqueados)
@@ -709,8 +721,13 @@ def main():
                             estado_actual = ESTADO_LISTA_PARTIDAS
                     elif btn_nueva_partida.collidepoint(evento.pos):
                         if animar_pulsacion_boton(pantalla, btn_nueva_partida, spr_nueva_modo_semi, spr_nueva_modo_apretado, (255, 240, 195), spr_nueva_modo_normal):
-                            nueva_p = flujo_crear_nueva_partida(pantalla, reloj)
+                            nueva_p = flujo_crear_nueva_partida(
+                                pantalla, reloj,
+                                color_p1=color_p1, color_p2=color_p2,
+                                accesorio_p1=accesorio_p1, accesorio_p2=accesorio_p2,
+                            )
                             if nueva_p is not None:
+                                personalizacion_modificada_en_menu = False
                                 niveles_desbloqueados = copy.deepcopy(nueva_p["niveles_desbloqueados"])
                                 snapshot_guardado = copy.deepcopy(nueva_p["niveles_desbloqueados"])
                                 partida_actual_id = nueva_p["id"]
@@ -754,8 +771,13 @@ def main():
                             if spr_nueva_primera_semi and spr_nueva_primera_apretado:
                                 pulsado = animar_pulsacion_boton(pantalla, btn_iniciar_primera, spr_nueva_primera_semi, spr_nueva_primera_apretado, (255, 240, 195), spr_nueva_primera_normal)
                             if pulsado:
-                                nueva_p = flujo_crear_nueva_partida(pantalla, reloj)
+                                nueva_p = flujo_crear_nueva_partida(
+                                    pantalla, reloj,
+                                    color_p1=color_p1, color_p2=color_p2,
+                                    accesorio_p1=accesorio_p1, accesorio_p2=accesorio_p2,
+                                )
                                 if nueva_p is not None:
+                                    personalizacion_modificada_en_menu = False
                                     niveles_desbloqueados = copy.deepcopy(nueva_p["niveles_desbloqueados"])
                                     snapshot_guardado = copy.deepcopy(nueva_p["niveles_desbloqueados"])
                                     partida_actual_id = nueva_p["id"]
@@ -831,6 +853,53 @@ def main():
                                             accion_ejecutada = True
                                             break
                                         pygame.event.clear()
+
+                                    atuendo_guardado = (
+                                        p.get("color_p1", "Celeste"),
+                                        p.get("color_p2", "Violeta"),
+                                        p.get("accesorio_p1", "Ninguno"),
+                                        p.get("accesorio_p2", "Ninguno"),
+                                    )
+                                    atuendo_actual = (color_p1, color_p2, accesorio_p1, accesorio_p2)
+                                    hay_cambios_pendientes = personalizacion_modificada_en_menu and (atuendo_actual != atuendo_guardado)
+
+                                    if hay_cambios_pendientes:
+                                        decision = mostrar_dialogo_confirmar_atuendos(
+                                            pantalla, reloj, p,
+                                            color_p1_nuevo=color_p1,
+                                            color_p2_nuevo=color_p2,
+                                            acc_p1_nuevo=accesorio_p1,
+                                            acc_p2_nuevo=accesorio_p2,
+                                        )
+                                        if decision == "cancelar":
+                                            pygame.event.clear()
+                                            accion_ejecutada = True
+                                            break
+                                        elif decision == "mantener":
+                                            color_p1, color_p2, accesorio_p1, accesorio_p2 = atuendo_guardado
+                                            personalizacion_modificada_en_menu = False
+                                        elif decision == "cambiar":
+                                            p_actualizada = guardar_partida(
+                                                niveles_desbloqueados=p["niveles_desbloqueados"],
+                                                id_partida=p["id"],
+                                                nombre_partida=p["nombre"],
+                                                password_hash=p.get("password_hash"),
+                                                password_salt=p.get("password_salt"),
+                                                color_p1=color_p1,
+                                                color_p2=color_p2,
+                                                accesorio_p1=accesorio_p1,
+                                                accesorio_p2=accesorio_p2,
+                                            )
+                                            if p_actualizada:
+                                                p["color_p1"] = color_p1
+                                                p["color_p2"] = color_p2
+                                                p["accesorio_p1"] = accesorio_p1
+                                                p["accesorio_p2"] = accesorio_p2
+                                            personalizacion_modificada_en_menu = False
+                                    else:
+                                        color_p1, color_p2, accesorio_p1, accesorio_p2 = atuendo_guardado
+                                        personalizacion_modificada_en_menu = False
+
                                     niveles_desbloqueados = copy.deepcopy(p["niveles_desbloqueados"])
                                     snapshot_guardado = copy.deepcopy(p["niveles_desbloqueados"])
                                     partida_actual_id = p["id"]
@@ -838,10 +907,6 @@ def main():
                                     partida_actual_password = None
                                     partida_cargada_flag = True
                                     sesion_activa = True
-                                    color_p1 = p.get("color_p1", color_p1)
-                                    color_p2 = p.get("color_p2", color_p2)
-                                    accesorio_p1 = p.get("accesorio_p1", accesorio_p1)
-                                    accesorio_p2 = p.get("accesorio_p2", accesorio_p2)
                                     mundo_seleccionado = p["mundo_max"]
                                     estado_actual = ESTADO_SELECCION_NIVEL
                                     accion_ejecutada = True
@@ -861,8 +926,13 @@ def main():
                                 if spr_nueva_lista_semi and spr_nueva_lista_apretado:
                                     pulsado = animar_pulsacion_boton(pantalla, btn_nueva_desde_lista, spr_nueva_lista_semi, spr_nueva_lista_apretado, (255, 240, 195), spr_nueva_lista_normal)
                                 if pulsado:
-                                    nueva_p = flujo_crear_nueva_partida(pantalla, reloj)
+                                    nueva_p = flujo_crear_nueva_partida(
+                                        pantalla, reloj,
+                                        color_p1=color_p1, color_p2=color_p2,
+                                        accesorio_p1=accesorio_p1, accesorio_p2=accesorio_p2,
+                                    )
                                     if nueva_p is not None:
+                                        personalizacion_modificada_en_menu = False
                                         niveles_desbloqueados = copy.deepcopy(nueva_p["niveles_desbloqueados"])
                                         snapshot_guardado = copy.deepcopy(nueva_p["niveles_desbloqueados"])
                                         partida_actual_id = nueva_p["id"]
@@ -934,9 +1004,13 @@ def main():
                             r2 = pygame.Rect(rect_f2_ev.left + x_offset_rel, y_sw, w_sw, h_sw)
 
                             if r1.collidepoint(evento.pos):
-                                color_p1 = p_info["nombre"]
+                                if color_p1 != p_info["nombre"]:
+                                    color_p1 = p_info["nombre"]
+                                    personalizacion_modificada_en_menu = True
                             if r2.collidepoint(evento.pos):
-                                color_p2 = p_info["nombre"]
+                                if color_p2 != p_info["nombre"]:
+                                    color_p2 = p_info["nombre"]
+                                    personalizacion_modificada_en_menu = True
 
                     elif tab_personajes_actual == "accesorios":
                         accesorios_disp = obtener_accesorios_disponibles()
@@ -955,9 +1029,13 @@ def main():
                             ra2 = pygame.Rect(rect_f2_ev.left + x_offset_rel, y_card_a, w_acc, h_acc)
 
                             if ra1.collidepoint(evento.pos):
-                                accesorio_p1 = acc["id"]
+                                if accesorio_p1 != acc["id"]:
+                                    accesorio_p1 = acc["id"]
+                                    personalizacion_modificada_en_menu = True
                             if ra2.collidepoint(evento.pos):
-                                accesorio_p2 = acc["id"]
+                                if accesorio_p2 != acc["id"]:
+                                    accesorio_p2 = acc["id"]
+                                    personalizacion_modificada_en_menu = True
 
                 elif estado_actual == ESTADO_CONFIGURACION:
                     if btn_volver_config.collidepoint(evento.pos):

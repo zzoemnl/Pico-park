@@ -12,7 +12,7 @@ import math
 import struct
 import pygame
 
-from sprites import cargar_boton, animar_pulsacion_boton, aclarar_boton
+from sprites import cargar_boton, cargar_boton_escalado, animar_pulsacion_boton, aclarar_boton
 from fuentes import (
     obtener_fuente_titulo,
     obtener_fuente_subtitulo,
@@ -307,8 +307,7 @@ def mostrar_pestana_configuracion(pantalla, reloj):
     # Cargar sprites para los botones de volumen con proporción nativa 0.8496 (870x1024 -> 42x50)
     W_BTN_VOL, H_BTN_VOL = 42, 50
     def _cargar_scaled(nombre, w, h):
-        img = cargar_boton(nombre)
-        return pygame.transform.smoothscale(img, (w, h)) if img else None
+        return cargar_boton_escalado(nombre, w, h)
 
     # Botón Bajar Volumen (Parlante con X / Silencio)
     spr_menos_norm = _cargar_scaled("HUD/boton-bajar-volumen.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-bajar-volumen.png", W_BTN_VOL, H_BTN_VOL)

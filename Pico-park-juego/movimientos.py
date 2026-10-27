@@ -212,11 +212,12 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, 
             hb1.top = hb2.bottom
             p1["vel_y"] = 0
 
-    if hb1.bottom >= suelo.top and p1["vel_y"] >= 0:
-        hb1.bottom = suelo.top
-        p1["vel_y"] = 0
-        p1["en_suelo"] = True
-        toco_superficie = True
+    if suelo is not None and hb1.right > suelo.left and hb1.left < suelo.right:
+        if hb1.bottom >= suelo.top and p1["vel_y"] >= 0:
+            hb1.bottom = suelo.top
+            p1["vel_y"] = 0
+            p1["en_suelo"] = True
+            toco_superficie = True
 
     if not toco_superficie and not p2_encima:
         p1["en_suelo"] = False
@@ -750,7 +751,7 @@ def aplicar_restriccion_soga(p1, p2, distancia_maxima=DISTANCIA_SOGA_MAXIMA, pla
         dy = int(round(desp.y))
         if dy != 0:
             hb.y += dy
-            if suelo and hb.bottom > suelo.top:
+            if suelo is not None and hb.right > suelo.left and hb.left < suelo.right and hb.bottom > suelo.top:
                 hb.bottom = suelo.top
                 if p.get("vel_y", 0) > 0:
                     p["vel_y"] = 0
@@ -817,6 +818,11 @@ def actualizar_llave(llave, personajes, puerta):
     else:
         if llave["portador"] is not None and not puerta["abierta"]:
             p = llave["portador"]
+            if p.get("muerto", False):
+                # Si el portador muere, suelta la llave en su posición actual para que el compañero pueda recogerla
+                llave["portador"] = None
+                llave["recolectada"] = False
+                return
             distancia_separacion = 25
             objetivo_x = p["hitbox"].left - llave["rect"].width - distancia_separacion if p["mirando_derecha"] else p["hitbox"].right + distancia_separacion
             objetivo_y = p["hitbox"].centery - (llave["rect"].height // 2)
@@ -867,7 +873,10 @@ def crear_pinchos(y_suelo=640):
 def matar_personaje(p):
     """
     Aplica el estado de muerte al personaje con el impulso vertical característico.
+    Si ya está muerto, no se vuelve a activar ni se reinicia el impulso.
     """
+    if p.get("muerto", False):
+        return
     p["muerto"] = True
     p["vel_y"] = VELOCIDAD_MUERTE
     p["en_suelo"] = False
@@ -931,6 +940,9 @@ def actualizar_estado_agua(p, zona_agua=ZONA_AGUA):
     - Modifica: p["en_agua"] = True/False según colisión con la hitbox.
     - Devuelve: booleano indicando si está sumergido.
     """
+    if p.get("muerto", False):
+        p["en_agua"] = False
+        return False
     p["en_agua"] = zona_agua.colliderect(p["hitbox"])
     return p["en_agua"]
 
@@ -942,7 +954,11 @@ def aplicar_fisica_agua(p, tecla_arriba=False, tecla_abajo=False, submarino=Fals
     - Si submarino=True: control libre en 4 direcciones sin caída gravitacional. Los personajes
       pueden flotar en suspensión a cualquier altura y controlar su desplazamiento vertical y horizontal.
     - Si submarino=False: física acuática estándar con flotabilidad parcial.
+    - Si el personaje está muerto, no se aplica amortiguación ni restricción acuática para
+      conservar la velocidad y aceleración de caída natural de la animación de muerte.
     """
+    if p.get("muerto", False):
+        return
     if submarino:
         vel_nado = 4.5
         acel = 1.2

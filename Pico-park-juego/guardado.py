@@ -6,7 +6,7 @@ import hashlib
 import secrets
 import pygame
 
-from sprites import cargar_boton, animar_pulsacion_boton, aclarar_boton
+from sprites import cargar_boton, cargar_boton_escalado, animar_pulsacion_boton, aclarar_boton
 from configuracion import t
 
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
@@ -14,9 +14,8 @@ RUTA_PARTIDAS = os.path.join(DIRECTORIO_ACTUAL, "partidas.txt")
 
 
 def _cargar_sprite_boton(nombre, w, h):
-    """Carga y escala suavemente un botón oficial del proyecto con proporciones exactas."""
-    img = cargar_boton(nombre)
-    return pygame.transform.smoothscale(img, (w, h)) if img else None
+    """Carga y escala suavemente un botón oficial del proyecto con proporciones exactas usando caché."""
+    return cargar_boton_escalado(nombre, w, h)
 
 
 from fuentes import (
@@ -201,6 +200,20 @@ def cargar_partidas():
                     try:
                         pwd_hash = partes[6] if len(partes) > 6 else ""
                         pwd_salt = partes[7] if len(partes) > 7 else ""
+                        c_p1 = "Celeste"
+                        c_p2 = "Violeta"
+                        a_p1 = "Ninguno"
+                        a_p2 = "Ninguno"
+                        if len(partes) >= 9 and partes[8].strip():
+                            pers_partes = [x.strip() for x in partes[8].strip().split(",")]
+                            if len(pers_partes) >= 1 and pers_partes[0]:
+                                c_p1 = pers_partes[0]
+                            if len(pers_partes) >= 2 and pers_partes[1]:
+                                c_p2 = pers_partes[1]
+                            if len(pers_partes) >= 3 and pers_partes[2]:
+                                a_p1 = pers_partes[2]
+                            if len(pers_partes) >= 4 and pers_partes[3]:
+                                a_p2 = pers_partes[3]
                         p = {
                             "id": int(partes[0]),
                             "nombre": partes[1],
@@ -211,6 +224,10 @@ def cargar_partidas():
                             "password_hash": pwd_hash,
                             "password_salt": pwd_salt,
                             "tiene_password": bool(pwd_hash and pwd_salt),
+                            "color_p1": c_p1,
+                            "color_p2": c_p2,
+                            "accesorio_p1": a_p1,
+                            "accesorio_p2": a_p2,
                         }
                         partidas.append(p)
                     except (ValueError, IndexError):
@@ -234,13 +251,18 @@ def guardar_partidas_seguras(partidas):
     try:
         with open(ruta_tmp, "w", encoding="utf-8") as f:
             f.write("# Archivo de guardado de partidas - Pico Park\n")
-            f.write("# Formato: ID|Nombre|MundoMax|NivelMax|Fecha|NivelesDesbloqueados|PasswordHash|PasswordSalt\n")
+            f.write("# Formato: ID|Nombre|MundoMax|NivelMax|Fecha|NivelesDesbloqueados|PasswordHash|PasswordSalt|Personalizacion\n")
             for p in partidas:
                 p_hash = p.get("password_hash", "")
                 p_salt = p.get("password_salt", "")
+                c_p1 = p.get("color_p1", "Celeste")
+                c_p2 = p.get("color_p2", "Violeta")
+                a_p1 = p.get("accesorio_p1", "Ninguno")
+                a_p2 = p.get("accesorio_p2", "Ninguno")
+                pers_str = f"{c_p1},{c_p2},{a_p1},{a_p2}"
                 f.write(
                     f"{p['id']}|{p['nombre']}|{p['mundo_max']}|{p['nivel_max']}|"
-                    f"{p['fecha']}|{encode_desbloqueados(p['niveles_desbloqueados'])}|{p_hash}|{p_salt}\n"
+                    f"{p['fecha']}|{encode_desbloqueados(p['niveles_desbloqueados'])}|{p_hash}|{p_salt}|{pers_str}\n"
                 )
             f.flush()
             os.fsync(f.fileno())
@@ -259,11 +281,22 @@ def guardar_partidas_seguras(partidas):
         return False
 
 
-def guardar_partida(niveles_desbloqueados, id_partida=None, nombre_partida=None, password=None, password_hash=None, password_salt=None):
+def guardar_partida(
+    niveles_desbloqueados,
+    id_partida=None,
+    nombre_partida=None,
+    password=None,
+    password_hash=None,
+    password_salt=None,
+    color_p1=None,
+    color_p2=None,
+    accesorio_p1=None,
+    accesorio_p2=None,
+):
     """
     Guarda o actualiza una partida en partidas.txt.
     Si id_partida existe, la actualiza; si no, crea una nueva.
-    Soporta opcionalmente contraseña (texto plano que se hashea con salt o hash precalculado).
+    Soporta opcionalmente contraseña y personalización individual de los personajes (colores y accesorios).
     Retorna la partida guardada si tuvo éxito, o None si falló.
     """
     partidas = cargar_partidas()
@@ -300,6 +333,27 @@ def guardar_partida(niveles_desbloqueados, id_partida=None, nombre_partida=None,
         partida_encontrada["password_hash"] = p_hash
         partida_encontrada["password_salt"] = p_salt
         partida_encontrada["tiene_password"] = bool(p_hash and p_salt)
+
+        if color_p1 is not None:
+            partida_encontrada["color_p1"] = color_p1
+        elif "color_p1" not in partida_encontrada:
+            partida_encontrada["color_p1"] = "Celeste"
+
+        if color_p2 is not None:
+            partida_encontrada["color_p2"] = color_p2
+        elif "color_p2" not in partida_encontrada:
+            partida_encontrada["color_p2"] = "Violeta"
+
+        if accesorio_p1 is not None:
+            partida_encontrada["accesorio_p1"] = accesorio_p1
+        elif "accesorio_p1" not in partida_encontrada:
+            partida_encontrada["accesorio_p1"] = "Ninguno"
+
+        if accesorio_p2 is not None:
+            partida_encontrada["accesorio_p2"] = accesorio_p2
+        elif "accesorio_p2" not in partida_encontrada:
+            partida_encontrada["accesorio_p2"] = "Ninguno"
+
         partida_guardada = partida_encontrada
     else:
         nuevo_id = 1
@@ -316,6 +370,10 @@ def guardar_partida(niveles_desbloqueados, id_partida=None, nombre_partida=None,
             "password_hash": p_hash,
             "password_salt": p_salt,
             "tiene_password": bool(p_hash and p_salt),
+            "color_p1": color_p1 if color_p1 is not None else "Celeste",
+            "color_p2": color_p2 if color_p2 is not None else "Violeta",
+            "accesorio_p1": accesorio_p1 if accesorio_p1 is not None else "Ninguno",
+            "accesorio_p2": accesorio_p2 if accesorio_p2 is not None else "Ninguno",
         }
         partidas.append(nueva)
         partida_guardada = nueva
@@ -919,15 +977,22 @@ def mostrar_dialogo_partida_existente(pantalla, reloj, nombre):
         pygame.display.flip()
 
 
-def flujo_crear_nueva_partida(pantalla, reloj):
+def flujo_crear_nueva_partida(
+    pantalla,
+    reloj,
+    color_p1="Celeste",
+    color_p2="Violeta",
+    accesorio_p1="Ninguno",
+    accesorio_p2="Ninguno",
+):
     """
     Permite crear una partida independiente:
     - Pide un nombre para identificarla.
     - Si ya existe una con ese nombre, pide confirmación o solicita otro nombre (nunca sobrescribe silenciosamente).
     - Permite establecer una contraseña opcional.
-    - Crea un progreso nuevo en memoria como provisional (no escribe a disco hasta confirmar «GUARDAR Y SALIR»).
+    - Guarda la personalización actual de ambos personajes (colores y accesorios) en esta partida.
     - Si se cancela en cualquier paso, retorna None y no persiste ningún cambio.
-    - Retorna el diccionario de la nueva partida provisional, o None si se canceló.
+    - Retorna el diccionario de la nueva partida creada, o None si se canceló.
     """
     partidas = cargar_partidas()
     nuevo_id = max([p["id"] for p in partidas], default=0) + 1
@@ -990,6 +1055,10 @@ def flujo_crear_nueva_partida(pantalla, reloj):
         id_partida=id_sobrescribir,
         nombre_partida=nombre_final,
         password=pwd,
+        color_p1=color_p1,
+        color_p2=color_p2,
+        accesorio_p1=accesorio_p1,
+        accesorio_p2=accesorio_p2,
     )
     if partida_creada is None:
         return None
@@ -998,7 +1067,18 @@ def flujo_crear_nueva_partida(pantalla, reloj):
 
 
 
-def modal_flujo_guardar_perfil(pantalla, reloj, niveles_desbloqueados, id_partida_actual=None, nombre_partida_actual=None, password_partida_actual=None):
+def modal_flujo_guardar_perfil(
+    pantalla,
+    reloj,
+    niveles_desbloqueados,
+    id_partida_actual=None,
+    nombre_partida_actual=None,
+    password_partida_actual=None,
+    color_p1=None,
+    color_p2=None,
+    accesorio_p1=None,
+    accesorio_p2=None,
+):
     """
     Flujo interactivo completo al presionar «Guardar y salir»:
     Permite:
@@ -1097,6 +1177,10 @@ def modal_flujo_guardar_perfil(pantalla, reloj, niveles_desbloqueados, id_partid
                             id_partida=id_partida_actual,
                             nombre_partida=nombre_partida_actual,
                             password=password_partida_actual,
+                            color_p1=color_p1,
+                            color_p2=color_p2,
+                            accesorio_p1=accesorio_p1,
+                            accesorio_p2=accesorio_p2,
                         )
                         if res is not None:
                             return True
@@ -1131,7 +1215,7 @@ def modal_flujo_guardar_perfil(pantalla, reloj, niveles_desbloqueados, id_partid
                                 elif decision == "sobrescribir":
                                     if existente.get("tiene_password"):
                                         if not pedir_password_modal(pantalla, reloj, existente):
-                                            continue
+                                             continue
                                     nom_final = existente["nombre"]
                                     id_sobrescribir = existente["id"]
                                     break
@@ -1161,6 +1245,10 @@ def modal_flujo_guardar_perfil(pantalla, reloj, niveles_desbloqueados, id_partid
                             id_partida=id_sobrescribir,
                             nombre_partida=nom_final,
                             password=pwd,
+                            color_p1=color_p1,
+                            color_p2=color_p2,
+                            accesorio_p1=accesorio_p1,
+                            accesorio_p2=accesorio_p2,
                         )
                         if res is not None:
                             return True
@@ -1176,6 +1264,10 @@ def modal_flujo_guardar_perfil(pantalla, reloj, niveles_desbloqueados, id_partid
                             niveles_desbloqueados,
                             id_partida=p["id"],
                             nombre_partida=p["nombre"],
+                            color_p1=color_p1 if color_p1 is not None else p.get("color_p1"),
+                            color_p2=color_p2 if color_p2 is not None else p.get("color_p2"),
+                            accesorio_p1=accesorio_p1 if accesorio_p1 is not None else p.get("accesorio_p1"),
+                            accesorio_p2=accesorio_p2 if accesorio_p2 is not None else p.get("accesorio_p2"),
                         )
                         if res is not None:
                             return True
@@ -1260,7 +1352,18 @@ def modal_flujo_guardar_perfil(pantalla, reloj, niveles_desbloqueados, id_partid
         pygame.display.flip()
 
 
-def mostrar_dialogo_guardar_salir(pantalla, reloj, niveles_desbloqueados, id_partida=None, nombre_partida=None, password_partida=None):
+def mostrar_dialogo_guardar_salir(
+    pantalla,
+    reloj,
+    niveles_desbloqueados,
+    id_partida=None,
+    nombre_partida=None,
+    password_partida=None,
+    color_p1=None,
+    color_p2=None,
+    accesorio_p1=None,
+    accesorio_p2=None,
+):
     """
     Muestra la confirmación clara obligatoria con las tres opciones:
     1. «GUARDAR Y SALIR»: abre el procedimiento para guardar y cierra solo si finalizó con éxito.
@@ -1288,21 +1391,21 @@ def mostrar_dialogo_guardar_salir(pantalla, reloj, niveles_desbloqueados, id_par
     btn_no_guardar = pygame.Rect(x_btn, y_base_btns + h_btn + espacio_btns, w_btn, h_btn)
     btn_cancelar = pygame.Rect(x_btn, y_base_btns + (h_btn + espacio_btns) * 2, w_btn, h_btn)
 
-    def _scale(img, w, h):
-        return pygame.transform.smoothscale(img, (w, h)) if img else None
+    def _scale_btn(nombre, w, h):
+        return cargar_boton_escalado(nombre, w, h)
 
     # Sprites oficiales reutilizados con animación
-    spr_g_norm = _scale(cargar_boton("Ventanas/boton-guardar-y-salir.png") or cargar_boton("boton-guardar-y-salir.png"), w_btn, h_btn)
-    spr_g_semi = _scale(cargar_boton("Ventanas/boton-guardar-y-salir-semiapretado.png") or cargar_boton("boton-guardar-y-salir-semiapretado.png"), w_btn, h_btn)
-    spr_g_apret = _scale(cargar_boton("Ventanas/boton-guardar-y-salir-apretado.png") or cargar_boton("boton-guardar-y-salir-apretado.png"), w_btn, h_btn)
+    spr_g_norm = _scale_btn("Ventanas/boton-guardar-y-salir.png", w_btn, h_btn) or _scale_btn("boton-guardar-y-salir.png", w_btn, h_btn)
+    spr_g_semi = _scale_btn("Ventanas/boton-guardar-y-salir-semiapretado.png", w_btn, h_btn) or _scale_btn("boton-guardar-y-salir-semiapretado.png", w_btn, h_btn)
+    spr_g_apret = _scale_btn("Ventanas/boton-guardar-y-salir-apretado.png", w_btn, h_btn) or _scale_btn("boton-guardar-y-salir-apretado.png", w_btn, h_btn)
 
-    spr_s_norm = _scale(cargar_boton("Ventanas/boton-salir-sin-guardar.png") or cargar_boton("Menu/boton-salir-sin-guardar.png") or cargar_boton("boton-salir-sin-guardar.png"), w_btn, h_btn)
-    spr_s_semi = _scale(cargar_boton("Menu/boton-salir-sin-guardar-semiapretado.png") or cargar_boton("boton-salir-sin-guardar-semiapretado.png"), w_btn, h_btn)
-    spr_s_apret = _scale(cargar_boton("Ventanas/boton-salir-sin-guardar-apretado.png") or cargar_boton("Menu/boton-salir-sin-guardar-apretado.png") or cargar_boton("boton-salir-sin-guardar-apretado.png"), w_btn, h_btn)
+    spr_s_norm = _scale_btn("Ventanas/boton-salir-sin-guardar.png", w_btn, h_btn) or _scale_btn("Menu/boton-salir-sin-guardar.png", w_btn, h_btn) or _scale_btn("boton-salir-sin-guardar.png", w_btn, h_btn)
+    spr_s_semi = _scale_btn("Menu/boton-salir-sin-guardar-semiapretado.png", w_btn, h_btn) or _scale_btn("boton-salir-sin-guardar-semiapretado.png", w_btn, h_btn)
+    spr_s_apret = _scale_btn("Ventanas/boton-salir-sin-guardar-apretado.png", w_btn, h_btn) or _scale_btn("Menu/boton-salir-sin-guardar-apretado.png", w_btn, h_btn) or _scale_btn("boton-salir-sin-guardar-apretado.png", w_btn, h_btn)
 
-    spr_c_norm = _scale(cargar_boton("Menu/boton-cancelar.png") or cargar_boton("boton-cancelar.png"), w_btn, h_btn)
-    spr_c_semi = _scale(cargar_boton("Menu/boton-cancelar-semiapretado.png") or cargar_boton("boton-cancelar-semiapretado.png"), w_btn, h_btn)
-    spr_c_apret = _scale(cargar_boton("Menu/boton-cancelar-apretado.png") or cargar_boton("boton-cancelar-apretado.png"), w_btn, h_btn)
+    spr_c_norm = _scale_btn("Menu/boton-cancelar.png", w_btn, h_btn) or _scale_btn("boton-cancelar.png", w_btn, h_btn)
+    spr_c_semi = _scale_btn("Menu/boton-cancelar-semiapretado.png", w_btn, h_btn) or _scale_btn("boton-cancelar-semiapretado.png", w_btn, h_btn)
+    spr_c_apret = _scale_btn("Menu/boton-cancelar-apretado.png", w_btn, h_btn) or _scale_btn("boton-cancelar-apretado.png", w_btn, h_btn)
 
     spr_g_hover = aclarar_boton(spr_g_norm) if spr_g_norm else None
     spr_s_hover = aclarar_boton(spr_s_norm) if spr_s_norm else None
@@ -1339,6 +1442,10 @@ def mostrar_dialogo_guardar_salir(pantalla, reloj, niveles_desbloqueados, id_par
                             id_partida_actual=id_partida,
                             nombre_partida_actual=nombre_partida,
                             password_partida_actual=password_partida,
+                            color_p1=color_p1,
+                            color_p2=color_p2,
+                            accesorio_p1=accesorio_p1,
+                            accesorio_p2=accesorio_p2,
                         )
                         if guardado_ok:
                             return "guardar_salir"
@@ -1423,12 +1530,12 @@ def mostrar_dialogo_confirmar_borrado(pantalla, reloj, partida):
     btn_cancelar = pygame.Rect(x_cancelar, y_btns, w_btn, h_btn)
     btn_borrar = pygame.Rect(x_borrar, y_btns, w_btn, h_btn)
 
-    def _scale(img, w, h):
-        return pygame.transform.smoothscale(img, (w, h)) if img else None
+    def _scale_btn(nombre, w, h):
+        return cargar_boton_escalado(nombre, w, h)
 
-    spr_can_norm = _scale(cargar_boton("Menu/boton-cancelar.png") or cargar_boton("boton-cancelar.png"), w_btn, h_btn)
-    spr_can_semi = _scale(cargar_boton("Menu/boton-cancelar-semiapretado.png") or cargar_boton("boton-cancelar-semiapretado.png"), w_btn, h_btn)
-    spr_can_apret = _scale(cargar_boton("Menu/boton-cancelar-apretado.png") or cargar_boton("boton-cancelar-apretado.png"), w_btn, h_btn)
+    spr_can_norm = _scale_btn("Menu/boton-cancelar.png", w_btn, h_btn) or _scale_btn("boton-cancelar.png", w_btn, h_btn)
+    spr_can_semi = _scale_btn("Menu/boton-cancelar-semiapretado.png", w_btn, h_btn) or _scale_btn("boton-cancelar-semiapretado.png", w_btn, h_btn)
+    spr_can_apret = _scale_btn("Menu/boton-cancelar-apretado.png", w_btn, h_btn) or _scale_btn("boton-cancelar-apretado.png", w_btn, h_btn)
     spr_can_hover = aclarar_boton(spr_can_norm) if spr_can_norm else None
     fondo_tarjeta = (253, 246, 233)
 
@@ -1494,3 +1601,225 @@ def mostrar_dialogo_confirmar_borrado(pantalla, reloj, partida):
         pantalla.blit(t_btn_bor, t_btn_bor.get_rect(center=btn_borrar.center))
 
         pygame.display.flip()
+
+
+COLORES_RGB_MAP = {
+    "Blanco": (232, 232, 232),
+    "Gris": (154, 154, 154),
+    "Negro": (89, 89, 89),
+    "Marron": (206, 136, 111),
+    "Rojo": (255, 137, 134),
+    "Rosa": (255, 150, 240),
+    "Naranja": (255, 160, 100),
+    "Amarillo": (255, 244, 123),
+    "Verde": (157, 255, 124),
+    "Verde oscuro": (105, 205, 75),
+    "Celeste": (124, 231, 255),
+    "Azul": (36, 166, 247),
+    "Violeta": (161, 123, 255),
+}
+
+
+def mostrar_dialogo_confirmar_atuendos(
+    pantalla,
+    reloj,
+    partida,
+    color_p1_nuevo,
+    color_p2_nuevo,
+    acc_p1_nuevo,
+    acc_p2_nuevo,
+):
+    """
+    Diálogo modal de confirmación cuando se modificaron colores o accesorios en el menú
+    antes de continuar una partida guardada con atuendos diferentes.
+    Opciones:
+    - «Mantener atuendos guardados»: carga la partida con los colores y accesorios que tenía
+      guardados cada personaje. Descarta para esa partida los cambios realizados antes de entrar. (Retorna "mantener")
+    - «Cambiar atuendos»: carga la partida con su progreso guardado, pero aplica y guarda los
+      colores y accesorios seleccionados para ambos personajes en esa partida. (Retorna "cambiar")
+    - Cancelar (ESC o botón X): cancela la carga de la partida y regresa al selector de partidas. (Retorna "cancelar")
+    """
+    ancho = pantalla.get_width()
+    alto = pantalla.get_height()
+
+    fuente_titulo = obtener_fuente_titulo(TAMANO_TITULO_MODAL, tamano_fallback=30)
+    fuente_sub = obtener_fuente_subtitulo(TAMANO_SUBTITULO)
+    fuente_box_tit = obtener_fuente_boton(18, tamano_fallback=18)
+    fuente_item = obtener_fuente_texto(TAMANO_TEXTO)
+    fuente_item_acc = obtener_fuente_pequena(TAMANO_PEQUENA)
+    fuente_btn_main = obtener_fuente_boton(18, tamano_fallback=18)
+    fuente_btn_sub = obtener_fuente_pequena(13)
+
+    w_card, h_card = 720, 480
+    rect_card = pygame.Rect((ancho - w_card) // 2, (alto - h_card) // 2, w_card, h_card)
+
+    btn_cerrar = pygame.Rect(rect_card.right - 44, rect_card.top + 14, 30, 30)
+
+    w_box = 315
+    h_box = 205
+    y_box = rect_card.top + 120
+    rect_box_izq = pygame.Rect(rect_card.centerx - w_box - 14, y_box, w_box, h_box)
+    rect_box_der = pygame.Rect(rect_card.centerx + 14, y_box, w_box, h_box)
+
+    w_btn = 315
+    h_btn = 64
+    y_btns = rect_card.bottom - 86
+    btn_mantener = pygame.Rect(rect_card.centerx - w_btn - 14, y_btns, w_btn, h_btn)
+    btn_cambiar = pygame.Rect(rect_card.centerx + 14, y_btns, w_btn, h_btn)
+
+    c_p1_g = partida.get("color_p1", "Celeste")
+    c_p2_g = partida.get("color_p2", "Violeta")
+    a_p1_g = partida.get("accesorio_p1", "Ninguno")
+    a_p2_g = partida.get("accesorio_p2", "Ninguno")
+
+    nombre_partida = partida.get("nombre", f"Partida {partida.get('id', 1)}")
+
+    overlay = pygame.Surface((ancho, alto), pygame.SRCALPHA)
+    overlay.fill((20, 15, 10, 185))
+    captura_previa = pantalla.copy()
+
+    pygame.event.clear()
+
+    while True:
+        reloj.tick(60)
+        pos_mouse = pygame.mouse.get_pos()
+
+        hov_cerrar = btn_cerrar.collidepoint(pos_mouse)
+        hov_mantener = btn_mantener.collidepoint(pos_mouse)
+        hov_cambiar = btn_cambiar.collidepoint(pos_mouse)
+
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT or (evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE):
+                pygame.event.clear()
+                return "cancelar"
+
+            if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                if btn_cerrar.collidepoint(evento.pos):
+                    pygame.event.clear()
+                    return "cancelar"
+
+                elif btn_mantener.collidepoint(evento.pos):
+                    pygame.draw.rect(pantalla, (230, 220, 205), btn_mantener, border_radius=12)
+                    pygame.draw.rect(pantalla, (160, 130, 100), btn_mantener, width=2, border_radius=12)
+                    pygame.display.flip()
+                    pygame.time.delay(60)
+                    pygame.event.clear()
+                    return "mantener"
+
+                elif btn_cambiar.collidepoint(evento.pos):
+                    pygame.draw.rect(pantalla, (45, 130, 70), btn_cambiar, border_radius=12)
+                    pygame.draw.rect(pantalla, (30, 95, 50), btn_cambiar, width=2, border_radius=12)
+                    pygame.display.flip()
+                    pygame.time.delay(60)
+                    pygame.event.clear()
+                    return "cambiar"
+
+        # Fondo capturado + oscurecimiento
+        pantalla.blit(captura_previa, (0, 0))
+        pantalla.blit(overlay, (0, 0))
+
+        # Tarjeta modal pastel crema
+        pygame.draw.rect(pantalla, (253, 246, 233), rect_card, border_radius=18)
+        pygame.draw.rect(pantalla, (195, 168, 138), rect_card, width=3, border_radius=18)
+
+        # Botón de cerrar (X)
+        col_x = (220, 60, 50) if hov_cerrar else (145, 125, 110)
+        t_x = fuente_sub.render("X", True, col_x)
+        pantalla.blit(t_x, t_x.get_rect(center=btn_cerrar.center))
+
+        # Título
+        t_tit = fuente_titulo.render("CAMBIAR ATUENDOS", True, (60, 45, 35))
+        pantalla.blit(t_tit, t_tit.get_rect(center=(rect_card.centerx, rect_card.top + 38)))
+
+        # Subtítulo descriptivo
+        sub_txt = f"Modificaste los personajes antes de continuar «{nombre_partida}»."
+        t_sub1 = fuente_sub.render(sub_txt, True, (115, 95, 80))
+        pantalla.blit(t_sub1, t_sub1.get_rect(center=(rect_card.centerx, rect_card.top + 70)))
+
+        t_sub2 = fuente_sub.render("¿Deseas mantener los atuendos guardados o aplicar los nuevos?", True, (135, 110, 90))
+        pantalla.blit(t_sub2, t_sub2.get_rect(center=(rect_card.centerx, rect_card.top + 94)))
+
+        # ----------------- CAJA IZQUIERDA: ATUENDOS GUARDADOS -----------------
+        pygame.draw.rect(pantalla, (246, 238, 224), rect_box_izq, border_radius=12)
+        pygame.draw.rect(pantalla, (215, 195, 175), rect_box_izq, width=2, border_radius=12)
+
+        r_cab_izq = pygame.Rect(rect_box_izq.left + 10, rect_box_izq.top + 10, rect_box_izq.width - 20, 32)
+        pygame.draw.rect(pantalla, (235, 223, 206), r_cab_izq, border_radius=8)
+        t_cab_izq = fuente_box_tit.render("ATUENDOS GUARDADOS", True, (90, 70, 55))
+        pantalla.blit(t_cab_izq, t_cab_izq.get_rect(center=r_cab_izq.center))
+
+        # P1 Guardado
+        rgb_p1_g = COLORES_RGB_MAP.get(c_p1_g, (124, 231, 255))
+        y_p1_g = rect_box_izq.top + 58
+        pygame.draw.circle(pantalla, rgb_p1_g, (rect_box_izq.left + 38, y_p1_g + 20), 17)
+        pygame.draw.circle(pantalla, (70, 55, 45), (rect_box_izq.left + 38, y_p1_g + 20), 17, 2)
+        t_p1_nom_g = fuente_item.render(f"Jugador 1: {c_p1_g}", True, (55, 45, 35))
+        pantalla.blit(t_p1_nom_g, (rect_box_izq.left + 66, y_p1_g + 6))
+        acc_txt_p1_g = f"Accesorio: {a_p1_g}" if a_p1_g != "Ninguno" else "Sin accesorio"
+        t_p1_acc_g = fuente_item_acc.render(acc_txt_p1_g, True, (120, 100, 85))
+        pantalla.blit(t_p1_acc_g, (rect_box_izq.left + 66, y_p1_g + 26))
+
+        # P2 Guardado
+        rgb_p2_g = COLORES_RGB_MAP.get(c_p2_g, (161, 123, 255))
+        y_p2_g = rect_box_izq.top + 126
+        pygame.draw.circle(pantalla, rgb_p2_g, (rect_box_izq.left + 38, y_p2_g + 20), 17)
+        pygame.draw.circle(pantalla, (70, 55, 45), (rect_box_izq.left + 38, y_p2_g + 20), 17, 2)
+        t_p2_nom_g = fuente_item.render(f"Jugador 2: {c_p2_g}", True, (55, 45, 35))
+        pantalla.blit(t_p2_nom_g, (rect_box_izq.left + 66, y_p2_g + 6))
+        acc_txt_p2_g = f"Accesorio: {a_p2_g}" if a_p2_g != "Ninguno" else "Sin accesorio"
+        t_p2_acc_g = fuente_item_acc.render(acc_txt_p2_g, True, (120, 100, 85))
+        pantalla.blit(t_p2_acc_g, (rect_box_izq.left + 66, y_p2_g + 26))
+
+        # ----------------- CAJA DERECHA: NUEVOS ATUENDOS -----------------
+        pygame.draw.rect(pantalla, (255, 250, 242), rect_box_der, border_radius=12)
+        pygame.draw.rect(pantalla, (230, 155, 85), rect_box_der, width=2, border_radius=12)
+
+        r_cab_der = pygame.Rect(rect_box_der.left + 10, rect_box_der.top + 10, rect_box_der.width - 20, 32)
+        pygame.draw.rect(pantalla, (255, 235, 215), r_cab_der, border_radius=8)
+        t_cab_der = fuente_box_tit.render("NUEVOS ATUENDOS", True, (205, 80, 35))
+        pantalla.blit(t_cab_der, t_cab_der.get_rect(center=r_cab_der.center))
+
+        # P1 Nuevo
+        rgb_p1_n = COLORES_RGB_MAP.get(color_p1_nuevo, (124, 231, 255))
+        y_p1_n = rect_box_der.top + 58
+        pygame.draw.circle(pantalla, rgb_p1_n, (rect_box_der.left + 38, y_p1_n + 20), 17)
+        pygame.draw.circle(pantalla, (70, 55, 45), (rect_box_der.left + 38, y_p1_n + 20), 17, 2)
+        t_p1_nom_n = fuente_item.render(f"Jugador 1: {color_p1_nuevo}", True, (55, 45, 35))
+        pantalla.blit(t_p1_nom_n, (rect_box_der.left + 66, y_p1_n + 6))
+        acc_txt_p1_n = f"Accesorio: {acc_p1_nuevo}" if acc_p1_nuevo != "Ninguno" else "Sin accesorio"
+        t_p1_acc_n = fuente_item_acc.render(acc_txt_p1_n, True, (120, 100, 85))
+        pantalla.blit(t_p1_acc_n, (rect_box_der.left + 66, y_p1_n + 26))
+
+        # P2 Nuevo
+        rgb_p2_n = COLORES_RGB_MAP.get(color_p2_nuevo, (161, 123, 255))
+        y_p2_n = rect_box_der.top + 126
+        pygame.draw.circle(pantalla, rgb_p2_n, (rect_box_der.left + 38, y_p2_n + 20), 17)
+        pygame.draw.circle(pantalla, (70, 55, 45), (rect_box_der.left + 38, y_p2_n + 20), 17, 2)
+        t_p2_nom_n = fuente_item.render(f"Jugador 2: {color_p2_nuevo}", True, (55, 45, 35))
+        pantalla.blit(t_p2_nom_n, (rect_box_der.left + 66, y_p2_n + 6))
+        acc_txt_p2_n = f"Accesorio: {acc_p2_nuevo}" if acc_p2_nuevo != "Ninguno" else "Sin accesorio"
+        t_p2_acc_n = fuente_item_acc.render(acc_txt_p2_n, True, (120, 100, 85))
+        pantalla.blit(t_p2_acc_n, (rect_box_der.left + 66, y_p2_n + 26))
+
+        # ----------------- BOTÓN 1: MANTENER ATUENDOS GUARDADOS -----------------
+        col_m = (255, 255, 255) if hov_mantener else (242, 234, 222)
+        borde_m = (165, 135, 105) if hov_mantener else (185, 155, 125)
+        pygame.draw.rect(pantalla, col_m, btn_mantener, border_radius=12)
+        pygame.draw.rect(pantalla, borde_m, btn_mantener, width=2, border_radius=12)
+        t_m1 = fuente_btn_main.render("MANTENER GUARDADOS", True, (60, 45, 35))
+        pantalla.blit(t_m1, t_m1.get_rect(center=(btn_mantener.centerx, btn_mantener.centery - 10)))
+        t_m2 = fuente_btn_sub.render("Conservar atuendos guardados", True, (125, 105, 90))
+        pantalla.blit(t_m2, t_m2.get_rect(center=(btn_mantener.centerx, btn_mantener.centery + 12)))
+
+        # ----------------- BOTÓN 2: CAMBIAR ATUENDOS -----------------
+        col_c = (82, 194, 114) if hov_cambiar else (68, 172, 98)
+        borde_c = (35, 115, 55) if hov_cambiar else (45, 130, 70)
+        pygame.draw.rect(pantalla, col_c, btn_cambiar, border_radius=12)
+        pygame.draw.rect(pantalla, borde_c, btn_cambiar, width=2, border_radius=12)
+        t_c1 = fuente_btn_main.render("CAMBIAR ATUENDOS", True, (255, 255, 255))
+        pantalla.blit(t_c1, t_c1.get_rect(center=(btn_cambiar.centerx, btn_cambiar.centery - 10)))
+        t_c2 = fuente_btn_sub.render("Aplicar y guardar los nuevos", True, (235, 255, 240))
+        pantalla.blit(t_c2, t_c2.get_rect(center=(btn_cambiar.centerx, btn_cambiar.centery + 12)))
+
+        pygame.display.flip()
+

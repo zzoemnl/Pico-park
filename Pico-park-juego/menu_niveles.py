@@ -825,7 +825,7 @@ def _crear_m2_n3():
 
 
 def _crear_m2_n4():
-    """2-4: Las plataformas que se derrumban (Abismo con pinchos, plataformas pequeñas que caen a los 1,5 segundos, llave central, puerta)."""
+    """2-4: Las plataformas que se derrumban (Abismo con pinchos, plataformas pequeñas que caen al cabo de 1 segundo tras ser pisadas, llave central, puerta)."""
     s = pygame.Surface((ANCHO_MINI, ALTO_MINI))
     s.fill(COL_FONDO_M1)
 

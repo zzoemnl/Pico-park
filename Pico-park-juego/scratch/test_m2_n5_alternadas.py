@@ -31,19 +31,19 @@ mundo_rect = pygame.Rect(0, 0, ancho_mundo_nivel, ALTO)
 plat_inicio = pygame.Rect(0, 520, 200, 26)
 plat_inicio_base = pygame.Rect(0, 546, 200, suelo.top - 546 + 80)
 
-plat_llegada = pygame.Rect(840, 480, 320, 26)
-plat_llegada_base = pygame.Rect(840, 506, 320, suelo.top - 506 + 80)
+plat_llegada = pygame.Rect(690, 245, 610, 26)
+plat_llegada_base = pygame.Rect(690, 271, 610, suelo.top - 271 + 80)
 
-# Layout alternado definitivo:
-# P1: Izquierda (x: 240..460, y: 440) - Centro 350
-# P2: Derecha   (x: 500..720, y: 365) - Centro 610
-# P3: Izquierda (x: 180..410, y: 290) - Centro 295
-# P4: Derecha   (x: 540..760, y: 215) - Centro 650
+# Layout alternado en zigzag corregido:
+# P1: Izquierda (x: 200..420, y: 465) - Centro 310
+# P2: Derecha   (x: 400..620, y: 410) - Centro 510
+# P3: Izquierda (x: 130..350, y: 355) - Centro 240 (desfasada 70px de P1)
+# P4: Derecha   (x: 450..670, y: 300) - Centro 560 (desfasada 50px de P2)
 plataformas_alternadas = [
-    pygame.Rect(240, 440, 220, 24),  # P1 (Izquierda, y=440)
-    pygame.Rect(500, 365, 220, 24),  # P2 (Derecha,   y=365)
-    pygame.Rect(180, 290, 230, 24),  # P3 (Izquierda, y=290)
-    pygame.Rect(540, 215, 220, 24),  # P4 (Derecha,   y=215)
+    pygame.Rect(200, 465, 220, 24),  # P1 (Izquierda, y=465)
+    pygame.Rect(400, 410, 220, 24),  # P2 (Derecha,   y=410)
+    pygame.Rect(130, 355, 220, 24),  # P3 (Izquierda, y=355)
+    pygame.Rect(450, 300, 220, 24),  # P4 (Derecha,   y=300)
 ]
 
 plataformas_base = [plat_inicio, plat_inicio_base, plat_llegada, plat_llegada_base]
@@ -52,19 +52,19 @@ plataformas = list(plataformas_base) + list(plataformas_alternadas)
 pozo_nivel = {
     "x": 200,
     "y": 570,
-    "ancho": 640,
+    "ancho": 490,
     "alto": 70,
 }
-pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(205, 835, 32)]
+pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(205, 685, 32)]
 
-llave = crear_llave(650 - 12, 215 - 46)
-puerta = crear_puerta(980, 480 - 90)
+llave = crear_llave(560 - 12, 300 - 46)
+puerta = crear_puerta(820, 245 - 90)
 
 print(f"Total pinchos en el abismo: {len(pinchos)}")
 print(f"Pozo: x={pozo_nivel['x']}..{pozo_nivel['x'] + pozo_nivel['ancho']}")
 print("Plataformas alternadas:")
 for i, p in enumerate(plataformas_alternadas):
-    lado = "IZQUIERDA" if p.centerx < 450 else "DERECHA"
+    lado = "IZQUIERDA" if p.centerx < 400 else "DERECHA"
     print(f"  P{i+1}: {lado} -> Rect({p.x}, {p.y}, {p.w}, {p.h}), Centro=({p.centerx}, {p.centery})")
 
 # 1. Comprobar alternancia horizontal estricta y alternancia de signos en delta_x:
@@ -77,11 +77,11 @@ for i in range(len(plataformas_alternadas) - 1):
     if i % 2 == 0:
         # Hacia la derecha
         assert dx > 0, f"Debe avanzar hacia la DERECHA de P{i+1} a P{i+2}"
-        assert p_cur.centerx < 450 and p_next.centerx > 450
+        assert p_cur.centerx < 400 and p_next.centerx > 400
     else:
         # Hacia la izquierda
         assert dx < 0, f"Debe avanzar hacia la IZQUIERDA de P{i+1} a P{i+2}"
-        assert p_cur.centerx > 450 and p_next.centerx < 450
+        assert p_cur.centerx > 400 and p_next.centerx < 400
 
 print(f"Deltas horizontales entre plataformas: {deltas_x}")
 assert deltas_x[0] > 0 and deltas_x[1] < 0 and deltas_x[2] > 0
