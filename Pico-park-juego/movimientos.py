@@ -874,12 +874,18 @@ def matar_personaje(p):
     """
     Aplica el estado de muerte al personaje con el impulso vertical característico.
     Si ya está muerto, no se vuelve a activar ni se reinicia el impulso.
+    Desvincula inmediatamente al personaje de cualquier velocidad residual o física de agua.
     """
     if p.get("muerto", False):
         return
     p["muerto"] = True
     p["vel_y"] = VELOCIDAD_MUERTE
+    p["vel_x"] = 0
+    p["moviendo"] = False
+    p["en_agua"] = False
     p["en_suelo"] = False
+    p["tiempo_muerte"] = 0
+    p["muerte_terminada"] = False
 
 
 def comprobar_pinchos(p, pinchos):
@@ -891,8 +897,10 @@ def comprobar_pinchos(p, pinchos):
     vy = p.get("vel_y", 0)
 
     for pincho in pinchos:
-        # Colisión directa de bounding box
-        if hb.colliderect(pincho):
+        # Colisión directa adaptada a las púas visuales reales (margen de 2px en laterales/base
+        # para que no mate al rozar zonas visualmente seguras fuera de las puntas)
+        c_rect = pincho.inflate(-4, -2) if (pincho.width > 12 and pincho.height > 6) else pincho
+        if hb.colliderect(c_rect):
             matar_personaje(p)
             return True
 
@@ -913,13 +921,14 @@ def comprobar_pinchos(p, pinchos):
     return False
 
 
-def actualizar_muerte(p):
+def actualizar_muerte(p, duracion_max=None):
     if not p["muerto"]:
         return
     p["tiempo_muerte"] += 1
     p["vel_y"] += GRAVEDAD
     p["hitbox"].y += int(p["vel_y"])
-    if p["hitbox"].top > 720:
+    d_max = duracion_max if duracion_max is not None else p.get("duracion_muerte_max", None)
+    if p["hitbox"].top > 720 or (d_max is not None and p["tiempo_muerte"] >= d_max):
         p["muerte_terminada"] = True
 
 

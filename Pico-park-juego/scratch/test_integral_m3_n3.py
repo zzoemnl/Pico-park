@@ -62,44 +62,60 @@ def test_integral_m3_n3():
     techo_bottom = 30
 
     rocas_submarinas = [
-        {"rect": pygame.Rect(320, techo_bottom, 130, 95)},
-        {"rect": pygame.Rect(320, 520, 130, y_suelo - 520)},
-        {"rect": pygame.Rect(480, techo_bottom, 210, 240)},
-        {"rect": pygame.Rect(720, 390, 190, y_suelo - 390)},
-        {"rect": pygame.Rect(700, techo_bottom, 230, 90)},
-        {"rect": pygame.Rect(940, techo_bottom, 180, 230)},
-        {"rect": pygame.Rect(1140, techo_bottom, 480, 75)},
-        {"rect": pygame.Rect(1200, 270, 360, 120), "coral": True, "color_coral": (245, 110, 140)},
-        {"rect": pygame.Rect(1350, 220, 80, 20), "coral": True, "color_coral": (255, 180, 80)},
-        {"rect": pygame.Rect(1240, 530, 260, y_suelo - 530)},
-        {"rect": pygame.Rect(1780, techo_bottom, 85, 300)},
-        {"rect": pygame.Rect(1940, 310, 85, y_suelo - 310)},
-        {"rect": pygame.Rect(2100, techo_bottom, 85, 290)},
-        {"rect": pygame.Rect(2090, 530, 105, y_suelo - 530)},
+        # Zona 1: Entrada y primer estrechamiento (x = 0 .. 440)
+        {"rect": pygame.Rect(320, techo_bottom, 120, 85)},
+        {"rect": pygame.Rect(320, 530, 120, y_suelo - 530)},
+
+        # Zona 2: Desfiladero serpenteante en S con chimeneas amplias (x = 450 .. 1120)
+        {"rect": pygame.Rect(480, techo_bottom, 160, 210)},
+        {"rect": pygame.Rect(720, 420, 180, y_suelo - 420)},
+        {"rect": pygame.Rect(720, techo_bottom, 180, 85)},
+        {"rect": pygame.Rect(980, techo_bottom, 140, 210)},
+
+        # Zona 3: Gran bifurcación y Gruta de la Llave con pasajes holgados (x = 1140 .. 1720)
+        {"rect": pygame.Rect(1140, techo_bottom, 480, 50)},
+        {"rect": pygame.Rect(1200, 280, 360, 90), "coral": True, "color_coral": (245, 110, 140)},
+        {"rect": pygame.Rect(1350, 230, 80, 18), "coral": True, "color_coral": (255, 180, 80)},
+        {"rect": pygame.Rect(1240, 555, 260, y_suelo - 555)},
+
+        # Zona 4: Laberinto de pilares con espacio para maniobrar (x = 1750 .. 2320)
+        {"rect": pygame.Rect(1760, techo_bottom, 75, 270)},
+        {"rect": pygame.Rect(1960, 340, 75, y_suelo - 340)},
+        {"rect": pygame.Rect(2160, techo_bottom, 75, 260)},
+        {"rect": pygame.Rect(2150, 560, 95, y_suelo - 560)},
+
+        # Zona 5: Terraza final de llegada con la puerta (x = 2380 .. 2700)
         {"rect": pygame.Rect(2380, 480, 320, y_suelo - 480), "coral": True, "color_coral": (255, 140, 80)},
     ]
 
     pinchos = [
-        movimientos.crear_pincho(340, techo_bottom + 95, 75, 24, direccion="abajo"),
-        movimientos.crear_pincho(340, 520 - 24, 75, 24, direccion="arriba"),
-        movimientos.crear_pincho(520, techo_bottom + 240, 130, 24, direccion="abajo"),
-        movimientos.crear_pincho(540, y_suelo - 24, 100, 24, direccion="arriba"),
-        movimientos.crear_pincho(740, 390 - 24, 145, 24, direccion="arriba"),
-        movimientos.crear_pincho(735, techo_bottom + 90, 150, 24, direccion="abajo"),
-        movimientos.crear_pincho(965, techo_bottom + 230, 125, 24, direccion="abajo"),
-        movimientos.crear_pincho(980, y_suelo - 24, 100, 24, direccion="arriba"),
-        movimientos.crear_pincho(1200, techo_bottom + 75, 110, 24, direccion="abajo"),
-        movimientos.crear_pincho(1460, techo_bottom + 75, 110, 24, direccion="abajo"),
-        movimientos.crear_pincho(1210, 270 - 24, 100, 24, direccion="arriba"),
-        movimientos.crear_pincho(1465, 270 - 24, 90, 24, direccion="arriba"),
-        movimientos.crear_pincho(1280, 390, 140, 24, direccion="abajo"),
-        movimientos.crear_pincho(1285, 530 - 24, 150, 24, direccion="arriba"),
-        movimientos.crear_pincho(1785, techo_bottom + 300, 75, 24, direccion="abajo"),
-        movimientos.crear_pincho(1775, y_suelo - 24, 95, 24, direccion="arriba"),
-        movimientos.crear_pincho(1945, 310 - 24, 75, 24, direccion="arriba"),
-        movimientos.crear_pincho(1940, techo_bottom, 85, 24, direccion="abajo"),
-        movimientos.crear_pincho(2105, techo_bottom + 290, 75, 24, direccion="abajo"),
-        movimientos.crear_pincho(2095, 530 - 24, 95, 24, direccion="arriba"),
+        # Zona 1: Primer estrechamiento
+        movimientos.crear_pincho(340, techo_bottom + 85, 75, 20, direccion="abajo"),
+        movimientos.crear_pincho(340, 530 - 20, 75, 20, direccion="arriba"),
+
+        # Zona 2: Serpentín en S
+        movimientos.crear_pincho(500, techo_bottom + 210, 120, 20, direccion="abajo"),
+        movimientos.crear_pincho(510, y_suelo - 20, 110, 20, direccion="arriba"),
+        movimientos.crear_pincho(740, 420 - 20, 140, 20, direccion="arriba"),
+        movimientos.crear_pincho(740, techo_bottom + 85, 140, 20, direccion="abajo"),
+        movimientos.crear_pincho(1000, techo_bottom + 210, 100, 20, direccion="abajo"),
+        movimientos.crear_pincho(1000, y_suelo - 20, 100, 20, direccion="arriba"),
+
+        # Zona 3: La gruta de la llave
+        movimientos.crear_pincho(1200, techo_bottom + 50, 100, 20, direccion="abajo"),
+        movimientos.crear_pincho(1460, techo_bottom + 50, 100, 20, direccion="abajo"),
+        movimientos.crear_pincho(1210, 280 - 20, 90, 20, direccion="arriba"),
+        movimientos.crear_pincho(1465, 280 - 20, 90, 20, direccion="arriba"),
+        movimientos.crear_pincho(1280, 370, 130, 20, direccion="abajo"),
+        movimientos.crear_pincho(1285, 555 - 20, 140, 20, direccion="arriba"),
+
+        # Zona 4: Pilares y desfiladero final
+        movimientos.crear_pincho(1765, techo_bottom + 270, 65, 20, direccion="abajo"),
+        movimientos.crear_pincho(1755, y_suelo - 20, 85, 20, direccion="arriba"),
+        movimientos.crear_pincho(1965, 340 - 20, 65, 20, direccion="arriba"),
+        movimientos.crear_pincho(1960, techo_bottom, 75, 20, direccion="abajo"),
+        movimientos.crear_pincho(2165, techo_bottom + 260, 65, 20, direccion="abajo"),
+        movimientos.crear_pincho(2155, 560 - 20, 85, 20, direccion="arriba"),
     ]
 
     barreras = [{"rect": pygame.Rect(1620, 420, 35, y_suelo - 420)}]
@@ -110,34 +126,40 @@ def test_integral_m3_n3():
 
     waypoints = [
         (110, 330),   # Inicio seguro
-        (380, 330),   # Cruce entre pinchos Zona 1
-        (580, 480),   # Canal inferior Zona 2
-        (810, 230),   # Canal superior sobre Inflexión
-        (1030, 480),  # Canal inferior bajo Techo 3
-        (1160, 140),  # Entrada a la Gruta de la Llave
-        (1378, 140),  # Recolección de la Llave sobre la repisa
-        (1580, 140),  # Salida de la Gruta de la Llave
+        (380, 270),   # Cruce Zona 1
+        (540, 480),   # Canal inferior Zona 2
+        (660, 480),   # Base chimenea ascendente Zona 2
+        (660, 200),   # Cima chimenea ascendente Zona 2
+        (810, 200),   # Canal superior Zona 2
+        (925, 200),   # Cima chimenea descendente Zona 2
+        (925, 480),   # Base chimenea descendente Zona 2
+        (1050, 480),  # Canal inferior bajo Roca 4
+        (1140, 140),  # Entrada Gruta de la Llave
+        (1378, 140),  # Recolección Llave en repisa
+        (1600, 140),  # Salida Gruta
         (1700, 340),  # Antecámara abierta
-        (1820, 500),  # Paso bajo Pilar 1
-        (1980, 160),  # Paso sobre Pilar 2
-        (2140, 420),  # Ventana media en Pilar 3
-        (2340, 390),  # Llegada a terraza
-        (2480, 390),  # Puerta de salida
+        (1860, 460),  # Paso bajo Pilar 1
+        (1860, 160),  # Ascenso entre Pilar 1 y Pilar 2
+        (2060, 160),  # Paso sobre Pilar 2
+        (2060, 420),  # Descenso entre Pilar 2 y Pilar 3
+        (2260, 420),  # Salida tras Pilar 3
+        (2380, 370),  # Llegada terraza coralina
+        (2480, 370),  # Puerta de salida
     ]
 
     for idx, (wx, wy) in enumerate(waypoints):
-        test_hb = pygame.Rect(wx, wy, 50, 65)
+        test_hb = pygame.Rect(wx, wy, movimientos.ANCHO_HITBOX, movimientos.ALTO_HITBOX)
         for m in muros:
             assert not test_hb.colliderect(m), f"Waypoint {idx} ({wx}, {wy}) colisiona con muro {m}"
         for pin in pinchos:
             assert not test_hb.colliderect(pin), f"Waypoint {idx} ({wx}, {wy}) colisiona con pincho {pin}"
 
-    print(f"-> Verificados {len(waypoints)} waypoints: 100% transitables y sin colisión.")
+    print(f"-> Verificados {len(waypoints)} waypoints con hitboxes reales de {movimientos.ANCHO_HITBOX}x{movimientos.ALTO_HITBOX}: 100% transitables y sin colisión.")
     print("[OK] Test 3 superado exitosamente.")
 
     # --- TEST 4: DINÁMICA DE LLAVE Y PUERTA ---
     print("\n--- TEST 4: RECOGER LLAVE, ABRIR PUERTA Y COMPLETAR NIVEL ---")
-    llave = movimientos.crear_llave(1378, 220 - 46)
+    llave = movimientos.crear_llave(1378, 230 - 46)
     puerta = movimientos.crear_puerta(2480, 480 - 90)
 
     assert not llave["recolectada"]

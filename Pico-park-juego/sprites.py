@@ -456,13 +456,39 @@ def cargar_sprites_puerta():
             pass
 
     if sprites["cerrada"] is None:
-        sprites["cerrada"] = pygame.Surface((60, 90), pygame.SRCALPHA)
-        sprites["cerrada"].fill((139, 69, 19))
-        pygame.draw.circle(sprites["cerrada"], (255, 215, 0), (50, 45), 5)
+        s = pygame.Surface((60, 90), pygame.SRCALPHA)
+        # Marco exterior de la puerta
+        pygame.draw.rect(s, (70, 40, 20), (0, 0, 60, 90), border_radius=4)
+        # Hoja de madera
+        pygame.draw.rect(s, (150, 85, 35), (4, 4, 52, 82), border_radius=2)
+        # Paneles decorativos clásicos de puerta
+        pygame.draw.rect(s, (120, 65, 25), (8, 8, 44, 34), border_radius=2)
+        pygame.draw.rect(s, (135, 75, 30), (10, 10, 40, 30))
+        pygame.draw.rect(s, (120, 65, 25), (8, 48, 44, 34), border_radius=2)
+        pygame.draw.rect(s, (135, 75, 30), (10, 50, 40, 30))
+        # Pomo dorado brillante con relieve y cerradura
+        pygame.draw.circle(s, (255, 225, 60), (48, 45), 6)
+        pygame.draw.circle(s, (200, 160, 20), (48, 45), 6, 1)
+        pygame.draw.circle(s, (255, 255, 180), (46, 43), 2)
+        pygame.draw.rect(s, (40, 25, 10), (46, 54, 4, 7))
+        pygame.draw.circle(s, (40, 25, 10), (48, 54), 3)
+        sprites["cerrada"] = s
 
     if sprites["abierta"] is None:
-        sprites["abierta"] = pygame.Surface((60, 90), pygame.SRCALPHA)
-        pygame.draw.rect(sprites["abierta"], (139, 69, 19), (0, 0, 15, 90))
+        s = pygame.Surface((60, 90), pygame.SRCALPHA)
+        # Marco exterior de la puerta
+        pygame.draw.rect(s, (70, 40, 20), (0, 0, 60, 90), border_radius=4)
+        # Interior abierto: umbral oscuro con atmósfera de salida Pico Park
+        pygame.draw.rect(s, (15, 22, 38), (4, 4, 52, 82), border_radius=2)
+        pygame.draw.rect(s, (28, 40, 65), (8, 8, 44, 76), border_radius=2)
+        # Umbral brillante dorado/ámbar en la base del portal
+        pygame.draw.rect(s, (255, 225, 120), (8, 80, 44, 4), border_radius=1)
+        # Puerta abierta batida hacia la izquierda
+        pygame.draw.rect(s, (135, 75, 30), (4, 4, 14, 82), border_radius=2)
+        pygame.draw.rect(s, (95, 50, 18), (4, 4, 14, 82), 1, border_radius=2)
+        # Pomo en la puerta abierta
+        pygame.draw.circle(s, (255, 220, 60), (13, 45), 3)
+        sprites["abierta"] = s
 
     return sprites
 

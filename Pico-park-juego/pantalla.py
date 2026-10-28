@@ -2117,11 +2117,11 @@ _SURF_LUZ_LINTERNA = None
 _SURF_LUZ_TENUE = None
 
 
-def obtener_superficies_luz_linterna(radio_linterna=145, radio_tenue=34):
+def obtener_superficies_luz_linterna(radio_linterna=165, radio_tenue=45):
     """
-    Crea o retorna en caché las superficies circulares de luz para las linternas de Mundo 3 Nivel 4:
-    - Haz principal de la linterna: radio 145px con gradiente radial suave.
-    - Resplandor personal tenue: radio 34px (cuando la linterna está apagada).
+    Crea o retorna en caché las superficies circulares de luz para las linternas de Mundo 3 Niveles 4 y 5:
+    - Haz principal de la linterna: radio 165px con núcleo transparente y gradiente suave.
+    - Resplandor personal tenue: radio 45px (cuando la linterna está apagada).
     """
     global _SURF_LUZ_LINTERNA, _SURF_LUZ_TENUE
     if _SURF_LUZ_LINTERNA is not None and _SURF_LUZ_TENUE is not None:
@@ -2131,7 +2131,11 @@ def obtener_superficies_luz_linterna(radio_linterna=145, radio_tenue=34):
     s_linterna = pygame.Surface((diam_linterna, diam_linterna), pygame.SRCALPHA)
     for r in range(radio_linterna, 0, -2):
         frac = r / float(radio_linterna)
-        alpha = int(255 * (1.0 - frac * frac))
+        if frac <= 0.45:
+            alpha = 255
+        else:
+            t = (frac - 0.45) / 0.55
+            alpha = int(255 * (1.0 - t * t))
         pygame.draw.circle(s_linterna, (alpha, alpha, alpha, alpha), (radio_linterna, radio_linterna), r)
     _SURF_LUZ_LINTERNA = s_linterna
 
@@ -2139,7 +2143,11 @@ def obtener_superficies_luz_linterna(radio_linterna=145, radio_tenue=34):
     s_tenue = pygame.Surface((diam_tenue, diam_tenue), pygame.SRCALPHA)
     for r in range(radio_tenue, 0, -2):
         frac = r / float(radio_tenue)
-        alpha = int(210 * (1.0 - frac))
+        if frac <= 0.35:
+            alpha = 255
+        else:
+            t = (frac - 0.35) / 0.65
+            alpha = int(255 * (1.0 - t * t))
         pygame.draw.circle(s_tenue, (alpha, alpha, alpha, alpha), (radio_tenue, radio_tenue), r)
     _SURF_LUZ_TENUE = s_tenue
 
@@ -2170,20 +2178,17 @@ def dibujar_linterna_minero(superficie, jugador, encendida):
         pygame.draw.circle(superficie, (75, 80, 90), (lamp_x, lamp_y), 4)
 
 
-def dibujar_oscuridad_laberinto(superficie, jugadores_info, surf_oscuridad, surf_luz, surf_tenue):
+def aplicar_oscuridad_submarina(superficie, jugadores_info, surf_oscuridad, surf_luz, surf_tenue):
     """
     Aplica la capa de oscuridad total sobre el mundo y substrae los haces de luz circulares
     de las linternas activas de cada personaje:
     - jugadores_info: lista de tuplas (jugador, linterna_activa, completado)
-    - Ilumina únicamente un círculo alrededor de cada personaje (~145px cuando linterna está ON).
-    - Cuando la linterna está OFF, solo queda un resplandor personal tenue (~34px).
-    - Los elementos fuera del haz de luz (rocas, trampas, llave, puerta) quedan ocultos en la penumbra.
+    - Ilumina un área circular amplia (~165px) alrededor de cada personaje cuando su linterna está ON.
+    - Cuando la linterna está OFF, solo deja una silueta de tenue presencia (~45px).
+    - Si dos linternas iluminan zonas cercanas, sus áreas de luz se combinan de manera natural en surf_oscuridad.
+    - Los elementos fuera del haz de luz (rocas, pinchos, corrientes, llave, puerta, flechas) quedan ocultos en la penumbra.
     """
-    for jugador, linterna_on, completado in jugadores_info:
-        if not completado and not jugador.get("muerte_terminada", False):
-            dibujar_linterna_minero(superficie, jugador, linterna_on and not jugador.get("muerto", False))
-
-    surf_oscuridad.fill((4, 7, 14, 252))
+    surf_oscuridad.fill((3, 7, 15, 252))
 
     w_luz, h_luz = surf_luz.get_size()
     rad_luz = w_luz // 2
@@ -2203,74 +2208,82 @@ def dibujar_oscuridad_laberinto(superficie, jugadores_info, surf_oscuridad, surf
     superficie.blit(surf_oscuridad, (0, 0))
 
 
-def dibujar_linternas_submarinas_m3_n5(superficie, jugadores_info, tick=0):
+# Alias para compatibilidad con código existente
+dibujar_oscuridad_laberinto = aplicar_oscuridad_submarina
+
+
+def dibujar_flechas_indicadoras_escenario(superficie, flechas, tick=0):
     """
-    Renderiza el sistema de linternas submarinas independientes para Mundo 3 Nivel 5:
-    - Cada personaje porta su linterna de buceo montada en la cabeza.
-    - Cuando está encendida, emite un haz de luz cónico con degradado suave y partículas
-      que acompaña al buceador e ilumina el océano frente a él.
-    - El escenario completo permanece 100% visible en todo momento (no se oscurece la pantalla).
-    - Cuando está apagada, la linterna frontal permanece apagada sin proyectar haz de luz.
+    Dibuja carteles submarinos de navegación con flechas direccionales e iconos temáticos:
+    - Se dibujan sobre las paredes/fondos y quedan ocultos en la oscuridad hasta que
+      la linterna de un personaje los ilumina.
+    - tipo: 'llave' (dorado con llave), 'oxigeno' (cian con O2), 'salida' (esmeralda con puerta), 'ruta' (celeste)
+    - direccion: 'derecha', 'izquierda', 'arriba', 'abajo'
     """
-    s_haz_local = pygame.Surface((340, 180), pygame.SRCALPHA)
+    for f in flechas:
+        x = f["x"]
+        y = f["y"]
+        direccion = f["direccion"]
+        tipo = f.get("tipo", "ruta")
 
-    for jugador, linterna_on, completado in jugadores_info:
-        if completado or jugador.get("muerte_terminada", False):
-            continue
+        es_horiz = direccion in ("derecha", "izquierda")
+        w_placa = 52 if es_horiz else 34
+        h_placa = 34 if es_horiz else 52
 
-        esta_muerto = jugador.get("muerto", False)
-        # 1. Dibujar linterna frontal en la cabeza del buceador
-        dibujar_linterna_minero(superficie, jugador, linterna_on and not esta_muerto)
+        rx = x - w_placa // 2
+        ry = y - h_placa // 2
 
-        # 2. Si está encendida y vivo, proyectar el haz de luz submarino direccional
-        if linterna_on and not esta_muerto:
-            hx = jugador["hitbox"].centerx
-            hy = jugador["hitbox"].top + 10
-            dir_mirar = 1 if jugador.get("mirando_derecha", True) else -1
-            lamp_x = hx + dir_mirar * 12
-            lamp_y = hy - 2
+        # Placa base de piedra marina oscura con remaches
+        pygame.draw.rect(superficie, (12, 22, 34), (rx, ry, w_placa, h_placa), border_radius=6)
+        pygame.draw.rect(superficie, (35, 60, 85), (rx, ry, w_placa, h_placa), width=2, border_radius=6)
 
-            s_haz_local.fill((0, 0, 0, 0))
+        # Remaches en las esquinas
+        for px, py in [(rx + 4, ry + 4), (rx + w_placa - 4, ry + 4), (rx + 4, ry + h_placa - 4), (rx + w_placa - 4, ry + h_placa - 4)]:
+            pygame.draw.circle(superficie, (65, 95, 125), (px, py), 1)
 
-            ox = 60 if dir_mirar > 0 else 280
-            oy = 90
+        # Colores según el tipo con sutil pulso
+        pulso = int(20 * math.sin(tick * 0.09 + x * 0.02))
+        if tipo == "llave":
+            col_main = (min(255, 245 + pulso), min(255, 195 + pulso), 40)
+            col_light = (255, 250, 180)
+        elif tipo == "oxigeno":
+            col_main = (50, min(255, 225 + pulso), min(255, 245 + pulso))
+            col_light = (205, 255, 255)
+        elif tipo == "salida":
+            col_main = (min(255, 80 + pulso), min(255, 235 + pulso), 130)
+            col_light = (215, 255, 225)
+        else: # ruta
+            col_main = (60, min(255, 205 + pulso), min(255, 235 + pulso))
+            col_light = (210, 250, 255)
 
-            # Aura radial suave alrededor del buceador
-            for r_aura, a_aura in [(80, 10), (60, 18), (40, 26)]:
-                pygame.draw.circle(s_haz_local, (215, 240, 255, a_aura), (ox - dir_mirar * 12, oy), r_aura)
+        cx, cy = x, y
 
-            # Capas cónicas del haz de luz con degradado suave y leve oscilación marina
-            flicker = math.sin(tick * 0.08) * 2.5
-            capas_haz = [
-                (250, 56, (200, 235, 255, 14)),
-                (210, 44, (215, 245, 255, 24)),
-                (170, 32, (240, 250, 255, 38)),
-                (120, 20, (255, 252, 225, 58)),
-                (65, 11, (255, 255, 240, 85)),
-            ]
-            for largo, apertura, col in capas_haz:
-                pts = [
-                    (ox, oy - 3),
-                    (ox + dir_mirar * largo, int(oy - apertura + flicker)),
-                    (ox + dir_mirar * largo, int(oy + apertura + flicker)),
-                    (ox, oy + 3),
-                ]
-                pygame.draw.polygon(s_haz_local, col, pts)
+        # Polígono de flecha según la dirección
+        if direccion == "derecha":
+            pts = [(cx - 10, cy - 8), (cx + 2, cy - 8), (cx + 2, cy - 12), (cx + 14, cy), (cx + 2, cy + 12), (cx + 2, cy + 8), (cx - 10, cy + 8)]
+            core = [(cx - 8, cy - 4), (cx + 1, cy - 4), (cx + 1, cy - 7), (cx + 9, cy), (cx + 1, cy + 7), (cx + 1, cy + 4), (cx - 8, cy + 4)]
+        elif direccion == "izquierda":
+            pts = [(cx + 10, cy - 8), (cx - 2, cy - 8), (cx - 2, cy - 12), (cx - 14, cy), (cx - 2, cy + 12), (cx - 2, cy + 8), (cx + 10, cy + 8)]
+            core = [(cx + 8, cy - 4), (cx - 1, cy - 4), (cx - 1, cy - 7), (cx - 9, cy), (cx - 1, cy + 7), (cx - 1, cy + 4), (cx + 8, cy + 4)]
+        elif direccion == "arriba":
+            pts = [(cx - 8, cy + 10), (cx - 8, cy - 2), (cx - 12, cy - 2), (cx, cy - 14), (cx + 12, cy - 2), (cx + 8, cy - 2), (cx + 8, cy + 10)]
+            core = [(cx - 4, cy + 8), (cx - 4, cy - 1), (cx - 7, cy - 1), (cx, cy - 9), (cx + 7, cy - 1), (cx + 4, cy - 1), (cx + 4, cy + 8)]
+        else: # abajo
+            pts = [(cx - 8, cy - 10), (cx - 8, cy + 2), (cx - 12, cy + 2), (cx, cy + 14), (cx + 12, cy + 2), (cx + 8, cy + 2), (cx + 8, cy - 10)]
+            core = [(cx - 4, cy - 8), (cx - 4, cy + 1), (cx - 7, cy + 1), (cx, cy + 9), (cx + 7, cy + 1), (cx + 4, cy + 1), (cx + 4, cy - 8)]
 
-            # Resplandor frontal en la lente
-            pygame.draw.circle(s_haz_local, (255, 250, 210, 130), (ox, oy), 14)
-            pygame.draw.circle(s_haz_local, (255, 255, 255, 200), (ox, oy), 6)
+        pygame.draw.polygon(superficie, col_main, pts)
+        pygame.draw.polygon(superficie, col_light, core)
 
-            # Partículas / motas de luz flotando en suspensión dentro del haz acuático
-            for i, (offset_base, y_base_m, r_mota, alpha_base) in enumerate([
-                (45, 4, 2, 95), (95, -7, 3, 115), (145, 11, 2, 90), (195, -5, 2, 75)
-            ]):
-                fase = tick * 0.06 + i * 1.5
-                desp_x = ox + dir_mirar * (offset_base + math.sin(fase) * 6)
-                desp_y = oy + y_base_m + math.cos(fase * 1.2) * 5
-                pygame.draw.circle(s_haz_local, (255, 255, 240, alpha_base), (int(desp_x), int(desp_y)), r_mota)
-
-            superficie.blit(s_haz_local, (lamp_x - ox, lamp_y - oy))
+        # Detalle distintivo según el tipo
+        if tipo == "oxigeno":
+            b_x = rx + 8 if direccion == "derecha" else (rx + w_placa - 8 if direccion == "izquierda" else cx)
+            b_y = ry + 8 if direccion == "abajo" else (ry + h_placa - 8 if direccion == "arriba" else cy)
+            pygame.draw.circle(superficie, (180, 250, 255), (b_x, b_y), 3, 1)
+        elif tipo == "llave":
+            d_x = rx + 8 if direccion == "derecha" else (rx + w_placa - 8 if direccion == "izquierda" else cx)
+            d_y = ry + 8 if direccion == "abajo" else (ry + h_placa - 8 if direccion == "arriba" else cy)
+            pygame.draw.circle(superficie, (255, 240, 120), (d_x, d_y), 2)
 
 
 def _dibujar_hud_linternas_m3_n4(pantalla_surf, linterna_p1, linterna_p2, p1_color, p2_color, y_base=22):
@@ -2587,12 +2600,120 @@ def generar_laberinto_oscuro_m3_n4(ancho_mundo, alto_mundo, y_suelo, y_techo, rn
                 "capa": rng.choice(["fondo", "frente"])
             })
 
+    # Generar flechas indicadoras dinámicas a lo largo de los caminos óptimos (Llave y Salida)
+    def _encontrar_camino_bfs(origen, destino):
+        if origen == destino:
+            return [origen]
+        cola = [[origen]]
+        visitados = set([origen])
+        while cola:
+            camino = cola.pop(0)
+            nodo = camino[-1]
+            for vecino in adj.get(nodo, []):
+                if vecino == destino:
+                    return camino + [vecino]
+                if vecino not in visitados:
+                    visitados.add(vecino)
+                    cola.append(camino + [vecino])
+        return [origen, destino]
+
+    camino_llave = _encontrar_camino_bfs(start_node, key_cell)
+    camino_salida = _encontrar_camino_bfs(key_cell, exit_node)
+
+    flechas = []
+    posiciones_usadas = set()
+
+    # 1. Flechas guiando hacia la llave
+    dir_anterior = None
+    for i in range(len(camino_llave) - 1):
+        curr = camino_llave[i]
+        nxt = camino_llave[i + 1]
+
+        if nxt[0] > curr[0]: dir_nombre = "derecha"
+        elif nxt[0] < curr[0]: dir_nombre = "izquierda"
+        elif nxt[1] > curr[1]: dir_nombre = "abajo"
+        else: dir_nombre = "arriba"
+
+        es_inicio = (i == 0)
+        es_giro = (dir_nombre != dir_anterior)
+        es_interseccion = len(adj.get(curr, [])) >= 3
+
+        if es_inicio or es_giro or es_interseccion or (i % 2 == 0):
+            cx_min = x_offset + curr[0] * w_cell
+            cx_max = x_offset + (curr[0] + 1) * w_cell
+            cy_min = y_techo + curr[1] * h_cell
+            cy_max = y_techo + (curr[1] + 1) * h_cell
+            centro_x = cx_min + w_cell // 2
+            centro_y = cy_min + h_cell // 2
+
+            if dir_nombre == "derecha":
+                fx, fy = cx_max - 50, centro_y
+            elif dir_nombre == "izquierda":
+                fx, fy = cx_min + 50, centro_y
+            elif dir_nombre == "abajo":
+                fx, fy = centro_x, cy_max - 40
+            else:
+                fx, fy = centro_x, cy_min + 40
+
+            k_pos = (fx // 25, fy // 25)
+            if k_pos not in posiciones_usadas:
+                posiciones_usadas.add(k_pos)
+                flechas.append({
+                    "x": fx, "y": fy,
+                    "direccion": dir_nombre,
+                    "tipo": "llave"
+                })
+        dir_anterior = dir_nombre
+
+    # 2. Flechas guiando desde la llave hacia la salida
+    dir_anterior = None
+    for i in range(len(camino_salida) - 1):
+        curr = camino_salida[i]
+        nxt = camino_salida[i + 1]
+
+        if nxt[0] > curr[0]: dir_nombre = "derecha"
+        elif nxt[0] < curr[0]: dir_nombre = "izquierda"
+        elif nxt[1] > curr[1]: dir_nombre = "abajo"
+        else: dir_nombre = "arriba"
+
+        es_inicio = (i == 0)
+        es_giro = (dir_nombre != dir_anterior)
+        es_interseccion = len(adj.get(curr, [])) >= 3
+
+        if es_inicio or es_giro or es_interseccion or (i % 2 == 0):
+            cx_min = x_offset + curr[0] * w_cell
+            cx_max = x_offset + (curr[0] + 1) * w_cell
+            cy_min = y_techo + curr[1] * h_cell
+            cy_max = y_techo + (curr[1] + 1) * h_cell
+            centro_x = cx_min + w_cell // 2
+            centro_y = cy_min + h_cell // 2
+
+            if dir_nombre == "derecha":
+                fx, fy = cx_max - 50, centro_y
+            elif dir_nombre == "izquierda":
+                fx, fy = cx_min + 50, centro_y
+            elif dir_nombre == "abajo":
+                fx, fy = centro_x, cy_max - 40
+            else:
+                fx, fy = centro_x, cy_min + 40
+
+            k_pos = (fx // 25, fy // 25)
+            if k_pos not in posiciones_usadas:
+                posiciones_usadas.add(k_pos)
+                flechas.append({
+                    "x": fx, "y": fy,
+                    "direccion": dir_nombre,
+                    "tipo": "salida"
+                })
+        dir_anterior = dir_nombre
+
     return {
         "rocas": rocas,
         "barreras": barreras,
         "corales": corales,
         "algas": algas,
         "pinchos": pinchos,
+        "flechas": flechas,
         "p1_x": p1_x, "p1_y": p1_y,
         "p2_x": p2_x, "p2_y": p2_y,
         "llave_x": llave_x, "llave_y": llave_y,
@@ -2817,9 +2938,11 @@ def iniciar_mundo(
 
     linterna_p1 = True
     linterna_p2 = True
+    surf_oscuridad_m3 = None
     surf_oscuridad_m3_n4 = None
     surf_luz_linterna = None
     surf_luz_tenue = None
+    flechas_indicadoras = []
 
     oxigeno_p1 = 100.0
     oxigeno_p2 = 100.0
@@ -3788,9 +3911,10 @@ def iniciar_mundo(
         # Objetivo: cruzar un abismo lleno de pinchos, conseguir la llave y llegar a la puerta de salida sin caer.
         # Mecánica principal: Las plataformas son temporales y se derrumban aproximadamente 1 segundo (60 frames) tras ser pisadas.
         # Los personajes están unidos por una soga y deben sincronizar sus saltos rápidamente antes de que caigan.
+        # Separación horizontal calibrada (gaps de 120-125px) con riesgo real de caer al abismo si no se salta con precisión.
         # A mitad del recorrido se encuentra la llave, sobre las plataformas suspendidas sobre el abismo.
         # Si un personaje cae al abismo o toca los pinchos, ambos pierden y el nivel se reinicia.
-        ancho_mundo_nivel = 2400
+        ancho_mundo_nivel = 2600
         suelo = pygame.Rect(0, ALTO - 80, ancho_mundo_nivel, 80)
         mundo_rect = pygame.Rect(0, 0, ancho_mundo_nivel, ALTO)
 
@@ -3800,33 +3924,34 @@ def iniciar_mundo(
         usar_pinchos = True
         usar_llave = True
 
-        # Plataforma inicial segura (x: 0..240, y=460)
-        plat_inicio = pygame.Rect(0, 460, 240, 26)
-        plat_inicio_base = pygame.Rect(0, 486, 240, suelo.top - 486 + 80)
+        # Plataforma inicial segura (x: 0..200, y=460)
+        plat_inicio = pygame.Rect(0, 460, 200, 26)
+        plat_inicio_base = pygame.Rect(0, 486, 200, suelo.top - 486 + 80)
 
         # Ambos personajes inician unidos por la soga en el lado izquierdo
-        jugador1 = crear_personaje(60, 460 - ALTO_HITBOX, p1_color)
-        jugador2 = crear_personaje(150, 460 - ALTO_HITBOX, p2_color)
+        jugador1 = crear_personaje(50, 460 - ALTO_HITBOX, p1_color)
+        jugador2 = crear_personaje(120, 460 - ALTO_HITBOX, p2_color)
 
         caja = None
 
-        # Abismo continuo cubierto de pinchos mortales debajo de todas las plataformas (x: 240..1960)
+        # Abismo continuo cubierto de pinchos mortales debajo de todas las plataformas (x: 200..2190)
         pozo_nivel = {
-            "x": 240,
+            "x": 200,
             "y": 570,
-            "ancho": 1720,
+            "ancho": 1990,
             "alto": 70,
         }
-        pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(245, 1955, 35)]
+        pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(205, 2185, 35)]
 
-        # Plataforma final de llegada con la puerta (x: 1960..2400, y=460)
-        plat_llegada = pygame.Rect(1960, 460, 440, 26)
-        plat_llegada_base = pygame.Rect(1960, 486, 440, suelo.top - 486 + 80)
+        # Plataforma final de llegada con la puerta (x: 2190..2600, y=460)
+        plat_llegada = pygame.Rect(2190, 460, 410, 26)
+        plat_llegada_base = pygame.Rect(2190, 486, 410, suelo.top - 486 + 80)
 
         plataformas_base = [plat_inicio, plat_inicio_base, plat_llegada, plat_llegada_base]
 
         # Serie de 8 plataformas pequeñas que se derrumban 1.0 segundo (60 frames) tras pisarlas
-        def _crear_p_derrumbable(px, py, pw=120, ph=22):
+        # Separación horizontal moderada (gaps de 120-125px) para exigir saltos reales y coordinación
+        def _crear_p_derrumbable(px, py, pw=110, ph=22):
             return {
                 "rect": pygame.Rect(px, py, pw, ph),
                 "x_inicial": px,
@@ -3842,23 +3967,23 @@ def iniciar_mundo(
             }
 
         coords_plats = [
-            (310, 460),
-            (510, 430),
-            (720, 460),
-            (930, 420),   # Plataforma central con la llave
-            (1140, 450),
-            (1350, 410),
-            (1560, 440),
-            (1770, 460),
+            (320, 460),   # Gap desde inicio (200): 120px
+            (550, 430),   # Gap desde P1 (430): 120px, dy = -30px
+            (785, 460),   # Gap desde P2 (660): 125px, dy = +30px
+            (1020, 420),  # Gap desde P3 (895): 125px, dy = -40px (Plataforma con la llave)
+            (1255, 450),  # Gap desde P4 (1130): 125px, dy = +30px
+            (1490, 420),  # Gap desde P5 (1365): 125px, dy = -30px
+            (1725, 450),  # Gap desde P6 (1600): 125px, dy = +30px
+            (1960, 460),  # Gap desde P7 (1835): 125px, dy = +10px
         ]
         plataformas_derrumbables = [_crear_p_derrumbable(px, py) for px, py in coords_plats]
         plataformas = list(plataformas_base) + [p["rect"] for p in plataformas_derrumbables]
 
         # Llave a mitad del recorrido sobre la 4ta plataforma
-        llave = crear_llave(975, 420 - 46)
+        llave = crear_llave(1075, 420 - 46)
 
         # Puerta de salida en la plataforma de destino
-        puerta = crear_puerta(2220, 460 - 90)
+        puerta = crear_puerta(2380, 460 - 90)
     elif numero_mundo == 2 and numero_nivel == 5:
         # Mundo 2 — Nivel 5: «Las plataformas alternadas» (Niveles.pdf, página 9)
         # Objetivo: llegar hasta la puerta saltando de plataforma en plataforma sin caer al abismo.
@@ -4099,10 +4224,12 @@ def iniciar_mundo(
         tick_m3 = 0
     elif numero_mundo == 3 and numero_nivel == 3:
         # Nivel 3-3: Las rocas peligrosas (Mundo Submarino)
-        # - Pasillos estrechos con estalactitas, estalagmitas y formaciones rocosas marinas.
+        # - Pasillos con estalactitas, estalagmitas y formaciones rocosas marinas.
+        # - Pasadizos calibrados y moderadamente ampliados para permitir maniobrar cómodamente.
+        # - Distancias seguras entre pinchos enfrentados (margen vertical >= 45-75px, chimeneas de 80-125px).
         # - Pinchos y erizos submarinos mortales sobresaliendo tanto del suelo como del techo y cornisas.
         # - Los personajes se mueven de forma independiente (sin cuerda, según las reglas de Mundo 3) en 4 direcciones.
-        # - Maniobras de precisión obligatorias para esquivar los pinchos; si cualquiera toca uno, ambos mueren.
+        # - Maniobras de precisión pero justas y superables jugando bien; si cualquiera toca uno, ambos mueren.
         # - Llave oculta en una gruta peligrosa protegida por rocas y pinchos.
         # - Puerta de salida ubicada al otro lado del desfiladero, sobre una terraza marina de coral.
         ancho_mundo_nivel = 2700
@@ -4130,29 +4257,29 @@ def iniciar_mundo(
 
         caja = None
 
-        # Formaciones rocosas que definen los pasillos estrechos
+        # Formaciones rocosas moderadamente ampliadas para permitir maniobrar
         rocas_submarinas = [
             # Zona 1: Entrada y primer estrechamiento (x = 0 .. 440)
-            {"rect": pygame.Rect(320, techo_agua.bottom, 130, 95)},
-            {"rect": pygame.Rect(320, 520, 130, suelo.top - 520)},
+            {"rect": pygame.Rect(320, techo_agua.bottom, 120, 85)},
+            {"rect": pygame.Rect(320, 530, 120, suelo.top - 530)},
 
-            # Zona 2: Desfiladero serpenteante en S (x = 450 .. 1120)
-            {"rect": pygame.Rect(480, techo_agua.bottom, 210, 240)},
-            {"rect": pygame.Rect(720, 390, 190, suelo.top - 390)},
-            {"rect": pygame.Rect(700, techo_agua.bottom, 230, 90)},
-            {"rect": pygame.Rect(940, techo_agua.bottom, 180, 230)},
+            # Zona 2: Desfiladero serpenteante en S con chimeneas amplias (x = 450 .. 1120)
+            {"rect": pygame.Rect(480, techo_agua.bottom, 160, 210)},
+            {"rect": pygame.Rect(720, 420, 180, suelo.top - 420)},
+            {"rect": pygame.Rect(720, techo_agua.bottom, 180, 85)},
+            {"rect": pygame.Rect(980, techo_agua.bottom, 140, 210)},
 
-            # Zona 3: Gran bifurcación y Gruta de la Llave (x = 1140 .. 1720)
-            {"rect": pygame.Rect(1140, techo_agua.bottom, 480, 75)},
-            {"rect": pygame.Rect(1200, 270, 360, 120), "coral": True, "color_coral": (245, 110, 140)},
-            {"rect": pygame.Rect(1350, 220, 80, 20), "coral": True, "color_coral": (255, 180, 80)},
-            {"rect": pygame.Rect(1240, 530, 260, suelo.top - 530)},
+            # Zona 3: Gran bifurcación y Gruta de la Llave con pasajes holgados (x = 1140 .. 1720)
+            {"rect": pygame.Rect(1140, techo_agua.bottom, 480, 50)},
+            {"rect": pygame.Rect(1200, 280, 360, 90), "coral": True, "color_coral": (245, 110, 140)},
+            {"rect": pygame.Rect(1350, 230, 80, 18), "coral": True, "color_coral": (255, 180, 80)},
+            {"rect": pygame.Rect(1240, 555, 260, suelo.top - 555)},
 
-            # Zona 4: Laberinto de pilares y colmillos de roca (x = 1750 .. 2320)
-            {"rect": pygame.Rect(1780, techo_agua.bottom, 85, 300)},
-            {"rect": pygame.Rect(1940, 310, 85, suelo.top - 310)},
-            {"rect": pygame.Rect(2100, techo_agua.bottom, 85, 290)},
-            {"rect": pygame.Rect(2090, 530, 105, suelo.top - 530)},
+            # Zona 4: Laberinto de pilares con espacio para maniobrar (x = 1750 .. 2320)
+            {"rect": pygame.Rect(1760, techo_agua.bottom, 75, 270)},
+            {"rect": pygame.Rect(1960, 340, 75, suelo.top - 340)},
+            {"rect": pygame.Rect(2160, techo_agua.bottom, 75, 260)},
+            {"rect": pygame.Rect(2150, 560, 95, suelo.top - 560)},
 
             # Zona 5: Terraza final de llegada con la puerta (x = 2380 .. 2700)
             {"rect": pygame.Rect(2380, 480, 320, suelo.top - 480), "coral": True, "color_coral": (255, 140, 80)},
@@ -4161,32 +4288,32 @@ def iniciar_mundo(
         # Obstáculos mortales: erizos de mar y corales puntiagudos en suelo y techo
         pinchos = [
             # Zona 1: Primer estrechamiento
-            crear_pincho(340, techo_agua.bottom + 95, 75, 24, direccion="abajo"),
-            crear_pincho(340, 520 - 24, 75, 24, direccion="arriba"),
+            crear_pincho(340, techo_agua.bottom + 85, 75, 20, direccion="abajo"),
+            crear_pincho(340, 530 - 20, 75, 20, direccion="arriba"),
 
             # Zona 2: Serpentín en S
-            crear_pincho(520, techo_agua.bottom + 240, 130, 24, direccion="abajo"),
-            crear_pincho(540, suelo.top - 24, 100, 24, direccion="arriba"),
-            crear_pincho(740, 390 - 24, 145, 24, direccion="arriba"),
-            crear_pincho(735, techo_agua.bottom + 90, 150, 24, direccion="abajo"),
-            crear_pincho(965, techo_agua.bottom + 230, 125, 24, direccion="abajo"),
-            crear_pincho(980, suelo.top - 24, 100, 24, direccion="arriba"),
+            crear_pincho(500, techo_agua.bottom + 210, 120, 20, direccion="abajo"),
+            crear_pincho(510, suelo.top - 20, 110, 20, direccion="arriba"),
+            crear_pincho(740, 420 - 20, 140, 20, direccion="arriba"),
+            crear_pincho(740, techo_agua.bottom + 85, 140, 20, direccion="abajo"),
+            crear_pincho(1000, techo_agua.bottom + 210, 100, 20, direccion="abajo"),
+            crear_pincho(1000, suelo.top - 20, 100, 20, direccion="arriba"),
 
             # Zona 3: La gruta de la llave
-            crear_pincho(1200, techo_agua.bottom + 75, 110, 24, direccion="abajo"),
-            crear_pincho(1460, techo_agua.bottom + 75, 110, 24, direccion="abajo"),
-            crear_pincho(1210, 270 - 24, 100, 24, direccion="arriba"),
-            crear_pincho(1465, 270 - 24, 90, 24, direccion="arriba"),
-            crear_pincho(1280, 390, 140, 24, direccion="abajo"),
-            crear_pincho(1285, 530 - 24, 150, 24, direccion="arriba"),
+            crear_pincho(1200, techo_agua.bottom + 50, 100, 20, direccion="abajo"),
+            crear_pincho(1460, techo_agua.bottom + 50, 100, 20, direccion="abajo"),
+            crear_pincho(1210, 280 - 20, 90, 20, direccion="arriba"),
+            crear_pincho(1465, 280 - 20, 90, 20, direccion="arriba"),
+            crear_pincho(1280, 370, 130, 20, direccion="abajo"),
+            crear_pincho(1285, 555 - 20, 140, 20, direccion="arriba"),
 
             # Zona 4: Pilares y desfiladero final
-            crear_pincho(1785, techo_agua.bottom + 300, 75, 24, direccion="abajo"),
-            crear_pincho(1775, suelo.top - 24, 95, 24, direccion="arriba"),
-            crear_pincho(1945, 310 - 24, 75, 24, direccion="arriba"),
-            crear_pincho(1940, techo_agua.bottom, 85, 24, direccion="abajo"),
-            crear_pincho(2105, techo_agua.bottom + 290, 75, 24, direccion="abajo"),
-            crear_pincho(2095, 530 - 24, 95, 24, direccion="arriba"),
+            crear_pincho(1765, techo_agua.bottom + 270, 65, 20, direccion="abajo"),
+            crear_pincho(1755, suelo.top - 20, 85, 20, direccion="arriba"),
+            crear_pincho(1965, 340 - 20, 65, 20, direccion="arriba"),
+            crear_pincho(1960, techo_agua.bottom, 75, 20, direccion="abajo"),
+            crear_pincho(2165, techo_agua.bottom + 260, 65, 20, direccion="abajo"),
+            crear_pincho(2155, 560 - 20, 85, 20, direccion="arriba"),
         ]
 
         barreras_algas = [
@@ -4198,7 +4325,7 @@ def iniciar_mundo(
         plataformas = list(plataformas_base)
 
         # La llave sobre la repisa segura en la gruta
-        llave = crear_llave(1378, 220 - 46)
+        llave = crear_llave(1378, 230 - 46)
 
         # Puerta de salida en la terraza final
         puerta = crear_puerta(2480, 480 - 90)
@@ -4208,11 +4335,11 @@ def iniciar_mundo(
             # Entrada
             {"tipo": "ramificado", "x": 160, "y": suelo.top, "escala": 1.1, "fase": 0.4, "color": (250, 95, 135), "color_sec": (255, 185, 205), "anclaje": "abajo"},
             # Gruta de la llave
-            {"tipo": "anemona", "x": 1390, "y": 220, "escala": 1.15, "fase": 1.2, "color": (255, 210, 60), "color_sec": (255, 255, 180), "anclaje": "abajo"},
-            {"tipo": "ramificado", "x": 1345, "y": 220, "escala": 0.85, "fase": 0.5, "color": (255, 105, 145), "color_sec": (255, 185, 205), "anclaje": "abajo"},
-            {"tipo": "tubular", "x": 1435, "y": 220, "escala": 0.85, "fase": 2.2, "color": (45, 195, 180), "color_sec": (130, 245, 230), "anclaje": "abajo"},
-            {"tipo": "cerebro", "x": 1280, "y": 270, "escala": 1.0, "fase": 3.0, "color": (230, 110, 180), "color_sec": (255, 185, 225), "anclaje": "abajo"},
-            {"tipo": "abanico", "x": 1500, "y": 270, "escala": 0.95, "fase": 1.8, "color": (175, 95, 220), "color_sec": (225, 170, 255), "anclaje": "abajo"},
+            {"tipo": "anemona", "x": 1390, "y": 230, "escala": 1.15, "fase": 1.2, "color": (255, 210, 60), "color_sec": (255, 255, 180), "anclaje": "abajo"},
+            {"tipo": "ramificado", "x": 1345, "y": 230, "escala": 0.85, "fase": 0.5, "color": (255, 105, 145), "color_sec": (255, 185, 205), "anclaje": "abajo"},
+            {"tipo": "tubular", "x": 1435, "y": 230, "escala": 0.85, "fase": 2.2, "color": (45, 195, 180), "color_sec": (130, 245, 230), "anclaje": "abajo"},
+            {"tipo": "cerebro", "x": 1280, "y": 280, "escala": 1.0, "fase": 3.0, "color": (230, 110, 180), "color_sec": (255, 185, 225), "anclaje": "abajo"},
+            {"tipo": "abanico", "x": 1500, "y": 280, "escala": 0.95, "fase": 1.8, "color": (175, 95, 220), "color_sec": (225, 170, 255), "anclaje": "abajo"},
             # Terraza de salida
             {"tipo": "ramificado", "x": 2420, "y": 480, "escala": 1.25, "fase": 0.8, "color": (255, 130, 70), "color_sec": (255, 200, 140), "anclaje": "abajo"},
             {"tipo": "abanico", "x": 2560, "y": 480, "escala": 1.15, "fase": 2.5, "color": (175, 95, 220), "color_sec": (225, 170, 255), "anclaje": "abajo"},
@@ -4279,6 +4406,7 @@ def iniciar_mundo(
         corales_decorativos = datos_lab["corales"]
         algas_decorativas = datos_lab["algas"]
         pinchos = datos_lab["pinchos"]
+        flechas_indicadoras = datos_lab.get("flechas", [])
 
         plataformas_base = [techo_agua] + [r["rect"] for r in rocas_submarinas] + [b["rect"] for b in barreras_algas]
         plataformas = list(plataformas_base)
@@ -4289,8 +4417,9 @@ def iniciar_mundo(
         burbujas_m3 = crear_sistema_burbujas_m3(ancho_mundo_nivel, cantidad=45)
         tick_m3 = 0
 
-        surf_oscuridad_m3_n4 = pygame.Surface((ancho_mundo_nivel, ALTO), pygame.SRCALPHA)
-        surf_luz_linterna, surf_luz_tenue = obtener_superficies_luz_linterna()
+        surf_oscuridad_m3 = pygame.Surface((ancho_mundo_nivel, ALTO), pygame.SRCALPHA)
+        surf_oscuridad_m3_n4 = surf_oscuridad_m3
+        surf_luz_linterna, surf_luz_tenue = obtener_superficies_luz_linterna(radio_linterna=165, radio_tenue=45)
     elif numero_mundo == 3 and numero_nivel == 5:
         # Mundo 3 — Nivel 5: «El abismo submarino» (Niveles.pdf, páginas 13 y 14)
         # Último nivel del Mundo 3:
@@ -4348,7 +4477,7 @@ def iniciar_mundo(
             {"rect": pygame.Rect(780, 180, 120, 440), "fuerza_x": 0.0, "fuerza_y": -2.6, "direccion": "arriba"},
             {"rect": pygame.Rect(1140, 140, 260, 380), "fuerza_x": 1.4, "fuerza_y": 2.4, "direccion": "abajo"},
             {"rect": pygame.Rect(1620, 360, 360, 280), "fuerza_x": -2.6, "fuerza_y": 0.0, "direccion": "izquierda"},
-            {"rect": pygame.Rect(2180, 220, 240, 320), "fuerza_x": 1.8, "fuerza_y": -1.8, "direccion": "arriba"},
+            {"rect": pygame.Rect(2180, 220, 240, 320), "fuerza_x": 2.4, "fuerza_y": 0.0, "direccion": "derecha"},
         ]
 
         # 3. Formaciones rocosas que definen el gran abismo submarino
@@ -4370,8 +4499,8 @@ def iniciar_mundo(
             {"rect": pygame.Rect(1180, 520, 220, suelo.top - 520)},
 
             # Sector 4: Techo de la Fosa de la Llave
-            {"rect": pygame.Rect(1400, techo_agua.bottom, 220, 380)},
-            {"rect": pygame.Rect(1640, techo_agua.bottom, 340, 240)},
+            {"rect": pygame.Rect(1400, techo_agua.bottom, 220, 260)},
+            {"rect": pygame.Rect(1640, techo_agua.bottom, 240, 230)},
             {"rect": pygame.Rect(1640, 480, 140, suelo.top - 480)},
 
             # Repisa abisal donde reposa la llave dorada
@@ -4379,16 +4508,14 @@ def iniciar_mundo(
 
             # Sector 5: Pared antes del refugio y terraza
             {"rect": pygame.Rect(1980, 270, 110, suelo.top - 270)},
-            {"rect": pygame.Rect(2210, techo_agua.bottom, 180, 200)},
+            {"rect": pygame.Rect(2210, techo_agua.bottom, 180, 170)},
             {"rect": pygame.Rect(2210, 540, 180, suelo.top - 540)},
 
             # Terraza final de llegada con la puerta
             {"rect": pygame.Rect(2390, 440, 210, suelo.top - 440), "coral": True, "color_coral": (255, 140, 80)},
         ]
 
-        barreras_algas = [
-            {"rect": pygame.Rect(1380, 380, 30, suelo.top - 380)},
-        ]
+        barreras_algas = []
 
         # 4. Obstáculos mortales: erizos de mar puntiagudos
         pinchos = [
@@ -4409,7 +4536,7 @@ def iniciar_mundo(
 
             # Sector 5: Desfiladero final hacia la terraza
             crear_pincho(2180, 540 - 24, 120, 24, direccion="arriba"),
-            crear_pincho(2210, techo_agua.bottom + 200, 100, 24, direccion="abajo"),
+            crear_pincho(2210, techo_agua.bottom + 170, 100, 24, direccion="abajo"),
         ]
 
         plataformas_base = [techo_agua] + [r["rect"] for r in rocas_submarinas] + [b["rect"] for b in barreras_algas]
@@ -4452,8 +4579,40 @@ def iniciar_mundo(
             {"x": 2480, "y": suelo.top, "alto": 100, "amplitud": 15, "fase": 1.2, "capa": "frente"},
         ]
 
+        # 5. Flechas indicadoras de navegación en paredes y superficies clave
+        flechas_indicadoras = [
+            # Sector 1: Salida de Cámara 1 hacia la corriente rápida
+            {"x": 200, "y": 320, "direccion": "derecha", "tipo": "ruta"},
+            # Sector 2: Impulso por la corriente marina
+            {"x": 540, "y": 380, "direccion": "derecha", "tipo": "ruta"},
+            # Sector 2/3: Ascenso del géiser hacia Cámara 2 (O2)
+            {"x": 810, "y": 480, "direccion": "arriba", "tipo": "oxigeno"},
+            {"x": 820, "y": 240, "direccion": "arriba", "tipo": "oxigeno"},
+            # Sector 3: Salida de Cámara 2 y avance hacia la fosa
+            {"x": 850, "y": 200, "direccion": "abajo", "tipo": "ruta"},
+            {"x": 850, "y": 520, "direccion": "derecha", "tipo": "ruta"},
+            # Sector 3: Descenso vertical por la corriente de la fosa
+            {"x": 1110, "y": 350, "direccion": "abajo", "tipo": "ruta"},
+            # Sector 4: Desvío hacia Cámara 3 (O2)
+            {"x": 1360, "y": 480, "direccion": "derecha", "tipo": "oxigeno"},
+            # Sector 4: Hacia la profunda repisa de la Llave
+            {"x": 1660, "y": 430, "direccion": "derecha", "tipo": "llave"},
+            {"x": 1810, "y": 500, "direccion": "abajo", "tipo": "llave"},
+            # Sector 5: Chimenea vertical hacia Cámara 4 (Refugio Final O2)
+            {"x": 1910, "y": 500, "direccion": "arriba", "tipo": "oxigeno"},
+            {"x": 1940, "y": 230, "direccion": "derecha", "tipo": "oxigeno"},
+            # Sector 5: Salida de Cámara 4 hacia la puerta
+            {"x": 2180, "y": 250, "direccion": "derecha", "tipo": "salida"},
+            # Terraza final: Conducción directa hacia la puerta de salida
+            {"x": 2320, "y": 340, "direccion": "derecha", "tipo": "salida"},
+            {"x": 2430, "y": 310, "direccion": "derecha", "tipo": "salida"},
+        ]
+
         burbujas_m3 = crear_sistema_burbujas_m3(ancho_mundo_nivel, cantidad=45)
         tick_m3 = 0
+
+        surf_oscuridad_m3 = pygame.Surface((ancho_mundo_nivel, ALTO), pygame.SRCALPHA)
+        surf_luz_linterna, surf_luz_tenue = obtener_superficies_luz_linterna(radio_linterna=165, radio_tenue=45)
     else:
         ancho_mundo_nivel = ANCHO_MUNDO
         suelo = pygame.Rect(0, ALTO - 80, ANCHO_MUNDO, 80)
@@ -4512,6 +4671,8 @@ def iniciar_mundo(
             dibujar_rocas_submarinas_escenario(mundo_inicio, rocas_submarinas)
         if barreras_algas:
             dibujar_barreras_algas_escenario(mundo_inicio, barreras_algas, 0)
+        if flechas_indicadoras:
+            dibujar_flechas_indicadoras_escenario(mundo_inicio, flechas_indicadoras, 0)
         if corales_decorativos:
             dibujar_corales_escenario(mundo_inicio, corales_decorativos, 0)
         if algas_decorativas:
@@ -4643,23 +4804,21 @@ def iniciar_mundo(
                 mundo_inicio.blit(halo_surf, (llave["rect"].centerx - 22, llave["rect"].centery - 30))
             mundo_inicio.blit(llave["sprite"], llave["rect"])
 
-    dibujar_personaje(mundo_inicio, jugador1, ZONA_AGUA if usar_agua else None)
-    dibujar_personaje(mundo_inicio, jugador2, ZONA_AGUA if usar_agua else None)
-
-    if numero_mundo == 3 and numero_nivel == 4 and surf_oscuridad_m3_n4 is not None:
-        dibujar_oscuridad_laberinto(
+    if numero_mundo == 3 and numero_nivel in (4, 5) and surf_oscuridad_m3 is not None:
+        aplicar_oscuridad_submarina(
             mundo_inicio,
             [(jugador1, linterna_p1, False), (jugador2, linterna_p2, False)],
-            surf_oscuridad_m3_n4,
+            surf_oscuridad_m3,
             surf_luz_linterna,
             surf_luz_tenue
         )
-    elif numero_mundo == 3 and numero_nivel == 5:
-        dibujar_linternas_submarinas_m3_n5(
-            mundo_inicio,
-            [(jugador1, linterna_p1, False), (jugador2, linterna_p2, False)],
-            0
-        )
+        dibujar_personaje(mundo_inicio, jugador1, ZONA_AGUA if usar_agua else None)
+        dibujar_linterna_minero(mundo_inicio, jugador1, linterna_p1)
+        dibujar_personaje(mundo_inicio, jugador2, ZONA_AGUA if usar_agua else None)
+        dibujar_linterna_minero(mundo_inicio, jugador2, linterna_p2)
+    else:
+        dibujar_personaje(mundo_inicio, jugador1, ZONA_AGUA if usar_agua else None)
+        dibujar_personaje(mundo_inicio, jugador2, ZONA_AGUA if usar_agua else None)
 
     distancia_ini = abs(jugador1["hitbox"].centerx - jugador2["hitbox"].centerx)
     if distancia_ini <= DISTANCIA_SPLIT:
@@ -4696,7 +4855,7 @@ def iniciar_mundo(
         nonlocal p1_completado, p2_completado, mostrar_tutorial, contador_tutorial
         nonlocal p1_movio, p2_movio, alpha_tut_p1, alpha_tut_p2, p1_soplado, p2_soplado, plataformas
         nonlocal rocas_submarinas, barreras_algas, corales_decorativos, algas_decorativas, plataformas_base, llave, pinchos, linterna_p1, linterna_p2
-        nonlocal oxigeno_p1, oxigeno_p2, camaras_aire, corrientes_marinas
+        nonlocal oxigeno_p1, oxigeno_p2, camaras_aire, corrientes_marinas, flechas_indicadoras
 
         reiniciar_juego(jugador1, jugador2, caja, llave, puerta, estado_soga=estado_soga)
         jugador1["accesorio"] = p1_acc
@@ -4823,6 +4982,7 @@ def iniciar_mundo(
             corales_decorativos = datos_lab["corales"]
             algas_decorativas = datos_lab["algas"]
             pinchos = datos_lab["pinchos"]
+            flechas_indicadoras = datos_lab.get("flechas", [])
             plataformas_base = [techo_agua] + [r["rect"] for r in rocas_submarinas] + [b["rect"] for b in barreras_algas]
             plataformas = list(plataformas_base)
             llave["x_inicial"] = datos_lab["llave_x"]
@@ -5447,14 +5607,15 @@ def iniciar_mundo(
         ]:
             if not comp and not p.get("muerto", False):
                 hb = p["hitbox"]
-                # Solo se detecta muerte si sale completamente de los límites (evitando falsos positivos parciales)
-                caida_abajo = hb.top >= ALTO
-                salida_izq = hb.right <= 0
-                salida_der = hb.left >= ancho_mundo_nivel
-                salida_arriba = hb.bottom <= -50
+                # En Mundo 3 la detección es inmediata al alcanzar los límites del escenario
+                # sin esperar a que el personaje desaparezca por completo de la pantalla.
+                caida_abajo = (hb.bottom >= ALTO if numero_mundo == 3 else hb.top >= ALTO)
+                salida_izq = (hb.left <= 0 if numero_mundo == 3 else hb.right <= 0)
+                salida_der = (hb.right >= ancho_mundo_nivel if numero_mundo == 3 else hb.left >= ancho_mundo_nivel)
+                salida_arriba = (hb.top <= -10 if numero_mundo == 3 else hb.bottom <= -50)
 
                 if caida_abajo or salida_izq or salida_der or salida_arriba:
-                    if caida_abajo:
+                    if caida_abajo and numero_mundo != 3:
                         # Asegurar que inicie el salto de muerte desde el borde para que sea visible en pantalla
                         hb.top = ALTO
                     matar_personaje(p)
@@ -5476,8 +5637,9 @@ def iniciar_mundo(
                         if not comp_otro and not otro.get("muerto", False):
                             matar_personaje(otro)
 
-        actualizar_muerte(jugador1)
-        actualizar_muerte(jugador2)
+        dur_max_muerte = 28 if numero_mundo == 3 else None
+        actualizar_muerte(jugador1, duracion_max=dur_max_muerte)
+        actualizar_muerte(jugador2, duracion_max=dur_max_muerte)
 
         # Limitar horizontalmente y techo para personajes vivos, permitiendo caída libre por el fondo
         for p, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]:
@@ -5544,6 +5706,8 @@ def iniciar_mundo(
                 dibujar_rocas_submarinas_escenario(mundo, rocas_submarinas)
             if barreras_algas:
                 dibujar_barreras_algas_escenario(mundo, barreras_algas, tick_m3)
+            if flechas_indicadoras:
+                dibujar_flechas_indicadoras_escenario(mundo, flechas_indicadoras, tick_m3)
             if corales_decorativos:
                 dibujar_corales_escenario(mundo, corales_decorativos, tick_m3)
             if algas_decorativas:
@@ -5688,27 +5852,27 @@ def iniciar_mundo(
                     mundo.blit(halo_surf, (llave["rect"].centerx - 22, llave["rect"].centery - 30))
                 mundo.blit(llave["sprite"], llave["rect"])
 
-        if not p1_completado: dibujar_personaje(mundo, jugador1, ZONA_AGUA if usar_agua else None)
-        if not p2_completado: dibujar_personaje(mundo, jugador2, ZONA_AGUA if usar_agua else None)
-
-        if numero_mundo == 3 and numero_nivel == 4 and surf_oscuridad_m3_n4 is not None:
-            dibujar_oscuridad_laberinto(
+        if numero_mundo == 3 and numero_nivel in (4, 5) and surf_oscuridad_m3 is not None:
+            aplicar_oscuridad_submarina(
                 mundo,
                 [(jugador1, linterna_p1, p1_completado), (jugador2, linterna_p2, p2_completado)],
-                surf_oscuridad_m3_n4,
+                surf_oscuridad_m3,
                 surf_luz_linterna,
                 surf_luz_tenue
             )
-        elif numero_mundo == 3 and numero_nivel == 5:
-            dibujar_linternas_submarinas_m3_n5(
-                mundo,
-                [(jugador1, linterna_p1, p1_completado), (jugador2, linterna_p2, p2_completado)],
-                tick_m3
-            )
             if not p1_completado:
-                dibujar_alerta_oxigeno_personaje(mundo, jugador1, oxigeno_p1, tick_m3)
+                dibujar_personaje(mundo, jugador1, ZONA_AGUA if usar_agua else None)
+                dibujar_linterna_minero(mundo, jugador1, linterna_p1 and not jugador1.get("muerto", False))
+                if numero_nivel == 5:
+                    dibujar_alerta_oxigeno_personaje(mundo, jugador1, oxigeno_p1, tick_m3)
             if not p2_completado:
-                dibujar_alerta_oxigeno_personaje(mundo, jugador2, oxigeno_p2, tick_m3)
+                dibujar_personaje(mundo, jugador2, ZONA_AGUA if usar_agua else None)
+                dibujar_linterna_minero(mundo, jugador2, linterna_p2 and not jugador2.get("muerto", False))
+                if numero_nivel == 5:
+                    dibujar_alerta_oxigeno_personaje(mundo, jugador2, oxigeno_p2, tick_m3)
+        else:
+            if not p1_completado: dibujar_personaje(mundo, jugador1, ZONA_AGUA if usar_agua else None)
+            if not p2_completado: dibujar_personaje(mundo, jugador2, ZONA_AGUA if usar_agua else None)
 
         # Controles tutorial directamente arriba de cada personaje
         if numero_mundo == 1 and numero_nivel == 1 and mostrar_tutorial:
@@ -5792,12 +5956,14 @@ def iniciar_mundo(
 
         # Gestión de pantalla de muerte y reinicio según las reglas de cada mundo
         debe_mostrar_muerte = False
+        muertos = [p for p in (jugador1, jugador2) if p.get("muerto", False)]
         if numero_mundo == 3:
-            if jugador1["muerto"] and jugador2["muerto"]:
-                if jugador1["muerte_terminada"] and jugador2["muerte_terminada"]:
-                    debe_mostrar_muerte = True
+            # En Mundo 3 la muerte es individual: si uno muere, el otro permanece vivo.
+            # En cuanto cualquier personaje que haya muerto completa su breve animación de muerte,
+            # se gestiona la derrota de inmediato sin quedarse esperando indefinidamente a que el otro personaje muera.
+            if muertos and any(p.get("muerte_terminada", False) for p in muertos):
+                debe_mostrar_muerte = True
         else:
-            muertos = [p for p in (jugador1, jugador2) if p.get("muerto", False)]
             if muertos and all(p.get("muerte_terminada", False) for p in muertos):
                 debe_mostrar_muerte = True
 

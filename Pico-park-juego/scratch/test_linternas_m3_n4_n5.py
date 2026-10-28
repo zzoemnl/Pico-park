@@ -99,65 +99,72 @@ class TestLinternasMundo3Nivel4y5(unittest.TestCase):
         col_100px = surf_mundo.get_at((400 + 100, 300))
         self.assertLess(col_100px[0], 30, "A 100px debe ser oscuro cuando la linterna está apagada")
 
-    def test_03_nivel_3_5_escenario_permanece_visible(self):
-        """Verifica que en 3-5 el escenario permanezca 100% visible sin oscurecerse."""
+    def test_03_nivel_3_5_escenario_esta_oscuro_con_linternas_circulares(self):
+        """Verifica que en 3-5 el escenario esté oscuro y solo se iluminen las áreas de las linternas."""
         surf_mundo = pygame.Surface((self.w, self.h))
         surf_mundo.fill((16, 44, 76))
 
-        # Elementos del escenario distribuidos
-        puntos_prueba = [(100, 100), (450, 200), (800, 350), (1100, 600)]
-        for pt in puntos_prueba:
-            pygame.draw.circle(surf_mundo, (180, 220, 240), pt, 15)
-
-        colores_antes = [surf_mundo.get_at(pt) for pt in puntos_prueba]
+        # Dibujar punto lejano en el escenario (x=1100, y=600)
+        pygame.draw.circle(surf_mundo, (240, 240, 240), (1100, 600), 20)
 
         p1 = movimientos.crear_personaje(200, 400, "Verde")
         p2 = movimientos.crear_personaje(600, 400, "Rosa")
 
-        pantalla.dibujar_personaje(surf_mundo, p1, None)
-        pantalla.dibujar_personaje(surf_mundo, p2, None)
+        surf_oscuridad = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
+        surf_luz, surf_tenue = pantalla.obtener_superficies_luz_linterna(radio_linterna=165, radio_tenue=45)
 
-        # Aplicar linternas submarinas de 3-5 con P1 encendida y P2 apagada
-        pantalla.dibujar_linternas_submarinas_m3_n5(
+        # Aplicar oscuridad con linterna P1 encendida y P2 apagada
+        pantalla.aplicar_oscuridad_submarina(
             surf_mundo,
             [(p1, True, False), (p2, False, False)],
-            tick=15
+            surf_oscuridad,
+            surf_luz,
+            surf_tenue
         )
 
-        colores_despues = [surf_mundo.get_at(pt) for pt in puntos_prueba]
+        # 1. El punto lejano (1100, 600) debe estar completamente oscuro (penumbra marina)
+        col_lejano = surf_mundo.get_at((1100, 600))
+        self.assertLess(col_lejano[0], 25, "El escenario fuera del área de luz debe estar oscuro")
 
-        # Verificar que NINGUNO de los puntos del escenario se haya oscurecido
-        for i, (antes, despues) in enumerate(zip(colores_antes, colores_despues)):
-            self.assertGreaterEqual(despues[0], antes[0], f"El punto {puntos_prueba[i]} no debe oscurecerse")
-            self.assertGreaterEqual(despues[1], antes[1], f"El punto {puntos_prueba[i]} no debe oscurecerse")
+        # 2. El área cercana a P1 (200, 400) debe estar iluminada y visible
+        col_cercano_p1 = surf_mundo.get_at((200 + 40, 400 + 40))
+        self.assertGreater(col_cercano_p1[0] + col_cercano_p1[1], 40, "El área cercana a P1 debe estar iluminada")
 
-    def test_04_la_luz_sigue_al_personaje_y_su_orientacion(self):
-        """Verifica que el haz de luz y la linterna sigan la posición y dirección del personaje."""
+    def test_04_combinacion_de_luces_y_flechas_indicadoras(self):
+        """Verifica que las áreas de luz se combinen y que existan flechas indicadoras en 3-4 y 3-5."""
+        # 1. Combinación de linternas cercanas
         surf_mundo = pygame.Surface((self.w, self.h))
-        surf_mundo.fill((10, 20, 30))
+        surf_mundo.fill((20, 50, 80))
+        surf_oscuridad = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
+        surf_luz, surf_tenue = pantalla.obtener_superficies_luz_linterna(radio_linterna=165, radio_tenue=45)
 
-        # Personaje mirando a la derecha
-        p_der = movimientos.crear_personaje(300, 300, "Verde")
-        p_der["mirando_derecha"] = True
-        pantalla.dibujar_linternas_submarinas_m3_n5(surf_mundo, [(p_der, True, False)], tick=0)
+        p1 = movimientos.crear_personaje(300, 300, "Verde")
+        p2 = movimientos.crear_personaje(400, 300, "Rosa")
 
-        # Punto adelante a la derecha (+80px) debe recibir iluminación del haz
-        col_adelante_der = surf_mundo.get_at((300 + 80, 300 + 10))
-        # Punto atrás a la izquierda (-80px) debe tener solo luz de fondo/mínima
-        col_atras_izq = surf_mundo.get_at((300 - 80, 300 + 10))
-        self.assertGreater(col_adelante_der[0] + col_adelante_der[1], col_atras_izq[0] + col_atras_izq[1],
-                           "El haz de luz debe proyectarse hacia la derecha cuando el personaje mira a la derecha")
+        pantalla.aplicar_oscuridad_submarina(
+            surf_mundo,
+            [(p1, True, False), (p2, True, False)],
+            surf_oscuridad,
+            surf_luz,
+            surf_tenue
+        )
 
-        # Personaje mirando a la izquierda
-        surf_mundo.fill((10, 20, 30))
-        p_izq = movimientos.crear_personaje(300, 300, "Verde")
-        p_izq["mirando_derecha"] = False
-        pantalla.dibujar_linternas_submarinas_m3_n5(surf_mundo, [(p_izq, True, False)], tick=0)
+        # El punto medio (350, 300) entre ambos personajes debe estar completamente iluminado
+        col_medio = surf_mundo.get_at((350, 300))
+        self.assertGreater(col_medio[0] + col_medio[1], 45, "Las áreas de luz combinadas deben iluminar el centro")
 
-        col_adelante_izq = surf_mundo.get_at((300 - 80, 300 + 10))
-        col_atras_der = surf_mundo.get_at((300 + 80, 300 + 10))
-        self.assertGreater(col_adelante_izq[0] + col_adelante_izq[1], col_atras_der[0] + col_atras_der[1],
-                           "El haz de luz debe proyectarse hacia la izquierda cuando el personaje mira a la izquierda")
+        # 2. Flechas indicadoras en Nivel 3-4 (procedurales adaptadas al laberinto)
+        datos_lab = pantalla.generar_laberinto_oscuro_m3_n4(2600, 720, 645, 25, rng_seed=123)
+        self.assertIn("flechas", datos_lab, "El laberinto 3-4 debe generar flechas indicadoras")
+        self.assertGreaterEqual(len(datos_lab["flechas"]), 6, "Debe haber suficientes flechas indicadoras")
+
+        # Verificar que las flechas de 3-4 tengan direcciones válidas
+        for f in datos_lab["flechas"]:
+            self.assertIn(f["direccion"], ("derecha", "izquierda", "arriba", "abajo"))
+            self.assertIn(f["tipo"], ("llave", "salida", "ruta"))
+
+        # 3. Dibujado de flechas indicadoras sin error
+        pantalla.dibujar_flechas_indicadoras_escenario(surf_mundo, datos_lab["flechas"], tick=10)
 
     def test_05_reinicio_y_persistencia_de_reglas(self):
         """Verifica que al reiniciar los niveles 3-4 y 3-5 las linternas se reestablezcan a ON."""

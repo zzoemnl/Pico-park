@@ -39,13 +39,13 @@ def ejecutar_deteccion_limites_escenario(
     ]:
         if not comp and not p.get("muerto", False):
             hb = p["hitbox"]
-            caida_abajo = hb.top >= ALTO
-            salida_izq = hb.right <= 0
-            salida_der = hb.left >= ancho_mundo_nivel
-            salida_arriba = hb.bottom <= -50
+            caida_abajo = (hb.bottom >= ALTO if numero_mundo == 3 else hb.top >= ALTO)
+            salida_izq = (hb.left <= 0 if numero_mundo == 3 else hb.right <= 0)
+            salida_der = (hb.right >= ancho_mundo_nivel if numero_mundo == 3 else hb.left >= ancho_mundo_nivel)
+            salida_arriba = (hb.top <= -10 if numero_mundo == 3 else hb.bottom <= -50)
 
             if caida_abajo or salida_izq or salida_der or salida_arriba:
-                if caida_abajo:
+                if caida_abajo and numero_mundo != 3:
                     hb.top = ALTO
                 matar_personaje(p)
 

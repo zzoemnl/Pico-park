@@ -28,26 +28,26 @@ TIEMPO_DERRUMBE_FRAMES = 60  # 1 segundo a 60 FPS
 class TestPlataformasDerrumbablesM2N4(unittest.TestCase):
 
     def setUp(self):
-        self.ancho_mundo_nivel = 2400
+        self.ancho_mundo_nivel = 2600
         self.ALTO = 720
         self.suelo = pygame.Rect(0, self.ALTO - 80, self.ancho_mundo_nivel, 80)
         self.mundo_rect = pygame.Rect(0, 0, self.ancho_mundo_nivel, self.ALTO)
-        self.plat_inicio = pygame.Rect(0, 460, 240, 26)
-        self.plat_llegada = pygame.Rect(1960, 460, 440, 26)
+        self.plat_inicio = pygame.Rect(0, 460, 200, 26)
+        self.plat_llegada = pygame.Rect(2190, 460, 410, 26)
         self.plataformas_base = [self.plat_inicio, self.plat_llegada]
 
         self.coords_plats = [
-            (310, 460),
-            (510, 430),
-            (720, 460),
-            (930, 420),
-            (1140, 450),
-            (1350, 410),
-            (1560, 440),
-            (1770, 460),
+            (320, 460),
+            (550, 430),
+            (785, 460),
+            (1020, 420),
+            (1255, 450),
+            (1490, 420),
+            (1725, 450),
+            (1960, 460),
         ]
 
-    def _crear_p(self, px, py, pw=120, ph=22):
+    def _crear_p(self, px, py, pw=110, ph=22):
         return {
             "rect": pygame.Rect(px, py, pw, ph),
             "x_inicial": px,
@@ -179,16 +179,16 @@ class TestPlataformasDerrumbablesM2N4(unittest.TestCase):
     def test_05_recorrido_completo_jugable_con_soga_y_llave(self):
         """5. Comprobar que dos personajes coordinados pueden completar el nivel con 1s de margen."""
         plats = [self._crear_p(px, py) for px, py in self.coords_plats]
-        llave = crear_llave(975, 420 - 46)
-        puerta = crear_puerta(2220, 460 - 90)
+        llave = crear_llave(1075, 420 - 46)
+        puerta = crear_puerta(2380, 460 - 90)
 
-        j1 = crear_personaje(180, 460 - ALTO_HITBOX, "Celeste")
-        j2 = crear_personaje(120, 460 - ALTO_HITBOX, "Violeta")
-        estado_soga = {"tirante": False, "distancia": 60, "tension": 0.0, "rota": False}
+        j1 = crear_personaje(140, 460 - ALTO_HITBOX, "Celeste")
+        j2 = crear_personaje(70, 460 - ALTO_HITBOX, "Violeta")
+        estado_soga = {"tirante": False, "distancia": 70, "tension": 0.0, "rota": False}
         todas = [self.plat_inicio, self.plat_llegada] + [p["rect"] for p in plats]
 
         # Simular avance continuo de ambos hacia la derecha
-        for f in range(350):
+        for f in range(400):
             # Activar movimiento continuo a la derecha
             j1["vel_x"] = 6
             j2["vel_x"] = 6
@@ -199,7 +199,7 @@ class TestPlataformasDerrumbablesM2N4(unittest.TestCase):
                     # Si está cerca del borde derecho de su plataforma actual, saltar
                     for r in [self.plat_inicio] + [p["rect"] for p in plats if p["estado"] != "derrumbada"]:
                         if r.collidepoint(pj["hitbox"].centerx, pj["hitbox"].bottom):
-                            if pj["hitbox"].right >= r.right - 15:
+                            if pj["hitbox"].right >= r.right - 10:
                                 pj["vel_y"] = pj["fuerza_salto"]
                                 pj["en_suelo"] = False
                             break
