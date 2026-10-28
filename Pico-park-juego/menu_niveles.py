@@ -8,6 +8,7 @@ from fuentes import (
     TAMANO_TITULO,
     TAMANO_TITULO_MODAL,
     TAMANO_CARD,
+    dibujar_texto_en_rect,
 )
 from configuracion import t
 
@@ -298,7 +299,7 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
             col_pill = (96, 212, 130) if mouse_encima else (82, 194, 114)
             borde_pill = (45, 130, 70)
             txt_pill_col = (255, 255, 255)
-            texto_pill = f"{t('jugar')} ▶"
+            texto_pill = f"{t('jugar')} >"
         else:
             col_pill = (220, 212, 204)
             borde_pill = (180, 170, 160)
@@ -307,9 +308,7 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
 
         pygame.draw.rect(pantalla, col_pill, r_btn_status, border_radius=8)
         pygame.draw.rect(pantalla, borde_pill, r_btn_status, 2, border_radius=8)
-        if fuente_btn_card:
-            t_pill = fuente_btn_card.render(texto_pill, True, txt_pill_col)
-            pantalla.blit(t_pill, t_pill.get_rect(center=r_btn_status.center))
+        dibujar_texto_en_rect(pantalla, texto_pill, r_btn_status, categoria="boton", tamano=TAMANO_CARD, color=txt_pill_col, padding=4)
 
 
 # ==============================================================================

@@ -1,0 +1,24 @@
+==============================================================================
+CARPETA DE FUENTES Y TIPOGRAFÍAS - PICO PARK
+==============================================================================
+
+Coloca aquí tus tipografías personalizadas para el juego.
+Formatos admitidos: .ttf, .otf (o archivos comprimidos .zip)
+
+CONFIGURACIÓN DE TIPOGRAFÍAS EN 'fuentes.py':
+------------------------------------------------------------------------------
+- FUENTE_TITULO   : Títulos principales (ej. "04B_30__.TTF" o "Arial")
+- FUENTE_SUBTITULO: Subtítulos y secciones
+- FUENTE_TEXTO    : Textos generales, descripciones y mensajes
+- FUENTE_BOTONES  : Texto de botones y opciones
+- FUENTE_PEQUENA  : Indicaciones y textos secundarios
+- FUENTE_CONTADOR : Números, porcentajes, temporizadores y contadores
+- FUENTE_DIALOGOS : Mensajes, confirmaciones y ventanas emergentes
+
+NOTAS:
+- Si asignas None a cualquier categoría, el juego utilizará una tipografía
+  del sistema con compatibilidad total para acentos, eñes y signos en español.
+- Si una fuente personalizada no se encuentra, el juego utiliza automáticamente
+  un respaldo seguro sin cerrarse.
+- También se reconoce la carpeta 'Sprites/Fuentes/'.
+==============================================================================

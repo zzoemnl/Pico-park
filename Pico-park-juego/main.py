@@ -17,7 +17,7 @@ from sprites import (
     dibujar_accesorio_en_personaje,
 )
 from pantalla import iniciar_mundo
-from configuracion import t, mostrar_pestana_configuracion
+from configuracion import t, mostrar_pestana_configuracion, reproducir_musica, detener_musica
 from menu_niveles import (
     dibujar_menu_niveles,
     obtener_geometria_menu,
@@ -49,7 +49,10 @@ from fuentes import (
     obtener_fuente_subtitulo,
     obtener_fuente_texto,
     obtener_fuente_boton,
+    obtener_fuente_botones,
     obtener_fuente_pequena,
+    obtener_fuente_contador,
+    obtener_fuente_dialogos,
     TAMANO_TITULO,
     TAMANO_TITULO_GRANDE,
     TAMANO_TITULO_MODAL,
@@ -58,11 +61,19 @@ from fuentes import (
     TAMANO_TEXTO,
     TAMANO_TEXTO_GRANDE,
     TAMANO_BOTON,
+    TAMANO_BOTONES,
     TAMANO_BOTON_GRANDE,
     TAMANO_PEQUENA,
     TAMANO_ITEM_TITULO,
     TAMANO_BADGE,
     TAMANO_CARD,
+    TAMANO_CONTADOR,
+    TAMANO_DIALOGOS,
+    dividir_texto_en_lineas,
+    ajustar_tamano_fuente,
+    renderizar_texto_ajustado,
+    renderizar_texto_multilinea,
+    dibujar_texto_en_rect,
 )
 
 # Estados de la máquina de navegación de menús
@@ -220,16 +231,16 @@ def dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel, pos_mouse, fuente
     ult_comp = obtener_ultimo_nivel_completado(p.get("niveles_desbloqueados", {}))
     txt_ult_comp = f"Mundo {ult_comp[0]}-Nivel {ult_comp[1]}" if ult_comp else "Ninguno aún"
     tiene_pwd = p.get("tiene_password", False)
-    txt_pwd = "🔒 Con contraseña" if tiene_pwd else "🔓 Sin contraseña"
+    txt_pwd = "Con contraseña" if tiene_pwd else "Sin contraseña"
 
-    tit_unido = f"{nombre}   —   Nivel actual: Mundo {mundo_max}-Nivel {nivel_max}   •   {txt_pwd}"
-    det_unido = f"Último completado: {txt_ult_comp}   |   Completados: {cant_comp}/15   |   Guardado: {fecha}"
+    # Línea 1: Nombre del perfil independiente con autoajuste dinámico sin truncar con puntos suspensivos
+    rect_tit_card = pygame.Rect(x_texto, r_card.top + 14, ancho_max_texto, 28)
+    dibujar_texto_en_rect(pantalla, nombre, rect_tit_card, categoria="subtitulo", tamano=18, color=(55, 45, 35), negrita=True, alineacion="izquierda", padding=0)
 
-    t1 = fuente_titulo_card.render(truncar_texto(tit_unido, fuente_titulo_card, ancho_max_texto), True, (55, 45, 35))
-    pantalla.blit(t1, (x_texto, r_card.top + 16))
-
-    t2 = fuente_sub_card.render(truncar_texto(det_unido, fuente_sub_card, ancho_max_texto), True, (115, 100, 85))
-    pantalla.blit(t2, (x_texto, r_card.top + 46))
+    # Línea 2: Metadatos y detalles de guardado
+    det_unido = f"Nivel {mundo_max}-{nivel_max}  •  {txt_pwd}  •  {cant_comp}/15 compl.  •  {fecha}"
+    rect_sub_card = pygame.Rect(x_texto, r_card.top + 46, ancho_max_texto, 22)
+    dibujar_texto_en_rect(pantalla, det_unido, rect_sub_card, categoria="pequena", tamano=14, color=(115, 100, 85), alineacion="izquierda", padding=0)
 
     # 3. Botón «CARGAR»
     if sprites_botones and sprites_botones.get("cargar_normal"):
@@ -241,24 +252,21 @@ def dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel, pos_mouse, fuente
         borde_bc = (255, 255, 255) if hov_cargar else (45, 130, 70)
         pygame.draw.rect(pantalla, col_bc, r_btn_cargar, border_radius=10)
         pygame.draw.rect(pantalla, borde_bc, r_btn_cargar, width=2, border_radius=10)
-        t_bc = fuente_btn_card.render("CARGAR", True, (255, 255, 255))
-        pantalla.blit(t_bc, t_bc.get_rect(center=r_btn_cargar.center))
+        dibujar_texto_en_rect(pantalla, "CARGAR", r_btn_cargar, categoria="boton", tamano=14, color=(255, 255, 255), padding=4)
 
     # 4. Botón «GESTIONAR» (Administrar nombre, contraseña o eliminación)
     col_bg = (255, 255, 255) if hov_gestionar else (245, 238, 226)
     borde_bg = (165, 135, 105) if hov_gestionar else (195, 168, 138)
     pygame.draw.rect(pantalla, col_bg, r_btn_gestionar, border_radius=10)
     pygame.draw.rect(pantalla, borde_bg, r_btn_gestionar, width=2, border_radius=10)
-    t_bg = fuente_btn_card.render("GESTIONAR", True, (60, 45, 35))
-    pantalla.blit(t_bg, t_bg.get_rect(center=r_btn_gestionar.center))
+    dibujar_texto_en_rect(pantalla, "GESTIONAR", r_btn_gestionar, categoria="boton", tamano=13, color=(60, 45, 35), padding=4)
 
     # 5. Botón «BORRAR» (Rojo terracota / coral pastel con fuente pixel art)
     col_bb = (240, 105, 100) if hov_borrar else (220, 85, 80)
     borde_bb = (255, 255, 255) if hov_borrar else (170, 55, 50)
     pygame.draw.rect(pantalla, col_bb, r_btn_borrar, border_radius=10)
     pygame.draw.rect(pantalla, borde_bb, r_btn_borrar, width=2, border_radius=10)
-    t_bb = fuente_btn_card.render("BORRAR", True, (255, 255, 255))
-    pantalla.blit(t_bb, t_bb.get_rect(center=r_btn_borrar.center))
+    dibujar_texto_en_rect(pantalla, "BORRAR", r_btn_borrar, categoria="boton", tamano=14, color=(255, 255, 255), padding=4)
 
     return r_card, r_btn_cargar, r_btn_gestionar, r_btn_borrar
 
@@ -326,18 +334,21 @@ def main():
     pygame.display.set_caption("Pico Park")
     precargar_botones_comunes()
     reloj = pygame.time.Clock()
+    reproducir_musica("menu")
     fuente_pixel_titulo = obtener_fuente_titulo(TAMANO_TITULO, tamano_fallback=55)
-    fuente_pixel_btn_grande = obtener_fuente_boton(TAMANO_BOTON_GRANDE, tamano_fallback=32)
-    fuente_pixel_btn = obtener_fuente_boton(TAMANO_BOTON, tamano_fallback=32)
-    fuente_pixel_sub_btn = obtener_fuente_boton(TAMANO_ITEM_TITULO, tamano_fallback=24)
-    fuente_pixel_card_btn = obtener_fuente_boton(TAMANO_ITEM_TITULO, tamano_fallback=25)
-    fuente_pixel_badge = obtener_fuente_boton(TAMANO_BADGE, tamano_fallback=28)
+    fuente_pixel_btn_grande = obtener_fuente_botones(TAMANO_BOTON_GRANDE, tamano_fallback=32)
+    fuente_pixel_btn = obtener_fuente_botones(TAMANO_BOTON, tamano_fallback=32)
+    fuente_pixel_sub_btn = obtener_fuente_botones(TAMANO_ITEM_TITULO, tamano_fallback=24)
+    fuente_pixel_card_btn = obtener_fuente_botones(TAMANO_ITEM_TITULO, tamano_fallback=25)
+    fuente_pixel_badge = obtener_fuente_botones(TAMANO_BADGE, tamano_fallback=28)
 
     fuente_titulo = obtener_fuente_titulo(TAMANO_TITULO_GRANDE, tamano_fallback=55)
     fuente_subtitulo = obtener_fuente_subtitulo(TAMANO_SUBTITULO_GRANDE)
-    fuente_btn = obtener_fuente_boton(TAMANO_BOTON_GRANDE, tamano_fallback=32)
+    fuente_btn = obtener_fuente_botones(TAMANO_BOTON_GRANDE, tamano_fallback=32)
     fuente_texto = obtener_fuente_texto(TAMANO_TEXTO_GRANDE)
     fuente_sub_btn = obtener_fuente_pequena(TAMANO_PEQUENA)
+    fuente_contador = obtener_fuente_contador(TAMANO_CONTADOR)
+    fuente_dialogos = obtener_fuente_dialogos(TAMANO_DIALOGOS)
     fuentes_menu = {
         "titulo": fuente_pixel_titulo,
         "tab": obtener_fuente_titulo(TAMANO_TITULO_MODAL, tamano_fallback=34),
@@ -671,6 +682,7 @@ def main():
 
     while ejecutando:
         reloj.tick(FPS)
+        reproducir_musica("menu")
 
         # Cargar recursos bajo demanda según el estado actual antes de procesar eventos o dibujar
         if estado_actual == ESTADO_MODO_JUEGO:
@@ -1264,8 +1276,8 @@ def main():
                     t_ant = fuente_texto.render("◀", True, (60, 45, 35) if pagina_partidas > 0 else (175, 160, 145))
                     pantalla.blit(t_ant, t_ant.get_rect(center=btn_pag_ant.center))
 
-                    # Texto de página
-                    t_pag = fuente_texto.render(f"Página {pagina_partidas + 1} de {total_paginas}", True, (60, 45, 35))
+                    # Texto de página con categoría contador
+                    t_pag = fuente_contador.render(f"Página {pagina_partidas + 1} de {total_paginas}", True, (60, 45, 35))
                     pantalla.blit(t_pag, t_pag.get_rect(center=(rect_panel_partidas.centerx, 564)))
 
                     # Botón siguiente
@@ -1351,18 +1363,16 @@ def main():
             c_p1_val = colores_dict.get(color_p1, (124, 231, 255))
             c_p2_val = colores_dict.get(color_p2, (161, 123, 255))
 
-            # Badges de encabezado de jugador
+            # Badges de encabezado de jugador con ajuste automático para nombres extensos de color
             r_badge_p1 = pygame.Rect(cx_p1 - 130, 164, 260, 34)
             pygame.draw.rect(pantalla, c_p1_val, r_badge_p1, border_radius=8)
             pygame.draw.rect(pantalla, (60, 45, 35), r_badge_p1, 2, border_radius=8)
-            t_bp1 = fuente_pixel_badge.render(f"JUGADOR 1  ({color_p1.upper()})", True, (35, 30, 25))
-            pantalla.blit(t_bp1, t_bp1.get_rect(center=r_badge_p1.center))
+            dibujar_texto_en_rect(pantalla, f"JUGADOR 1  ({color_p1.upper()})", r_badge_p1, categoria="boton", tamano=TAMANO_BADGE, color=(35, 30, 25), padding=6)
 
             r_badge_p2 = pygame.Rect(cx_p2 - 130, 164, 260, 34)
             pygame.draw.rect(pantalla, c_p2_val, r_badge_p2, border_radius=8)
             pygame.draw.rect(pantalla, (60, 45, 35), r_badge_p2, 2, border_radius=8)
-            t_bp2 = fuente_pixel_badge.render(f"JUGADOR 2  ({color_p2.upper()})", True, (35, 30, 25))
-            pantalla.blit(t_bp2, t_bp2.get_rect(center=r_badge_p2.center))
+            dibujar_texto_en_rect(pantalla, f"JUGADOR 2  ({color_p2.upper()})", r_badge_p2, categoria="boton", tamano=TAMANO_BADGE, color=(35, 30, 25), padding=6)
 
             # Previews de personajes con pedestal y accesorios
             for cx, col_pj, acc_pj in [
@@ -1481,8 +1491,8 @@ def main():
                                 pantalla.blit(surf_mini_acc, r_mini)
 
                         col_nom = (50, 40, 30) if sel else (95, 80, 70)
-                        t_nom = fuente_pixel_badge.render(acc["nombre"], True, col_nom)
-                        pantalla.blit(t_nom, t_nom.get_rect(center=(r_card_a.centerx, r_card_a.bottom - 16)))
+                        rect_nom_acc = pygame.Rect(r_card_a.left + 4, r_card_a.bottom - 26, r_card_a.width - 8, 20)
+                        dibujar_texto_en_rect(pantalla, acc["nombre"], rect_nom_acc, categoria="boton", tamano=TAMANO_BADGE, color=col_nom, padding=2)
 
             # 7. Botón Volver al Menú
             hov_vpj = btn_volver_personajes.collidepoint(pos_mouse)
@@ -1493,8 +1503,7 @@ def main():
                 col_v = (255, 255, 255) if hov_vpj else (242, 234, 222)
                 pygame.draw.rect(pantalla, col_v, btn_volver_personajes, border_radius=10)
                 pygame.draw.rect(pantalla, (185, 155, 125), btn_volver_personajes, width=2, border_radius=10)
-                t_v = fuente_pixel_btn.render("VOLVER AL MENU", True, (60, 45, 35))
-                pantalla.blit(t_v, t_v.get_rect(center=btn_volver_personajes.center))
+                dibujar_texto_en_rect(pantalla, "VOLVER AL MENU", btn_volver_personajes, categoria="boton", tamano=TAMANO_BOTONES, color=(60, 45, 35), padding=6)
 
         elif estado_actual == ESTADO_CONFIGURACION:
             pos_mouse = pygame.mouse.get_pos()
@@ -1521,8 +1530,8 @@ def main():
             pygame.draw.rect(pantalla, (42, 45, 58), rect_card_p1, border_radius=16)
             pygame.draw.rect(pantalla, (124, 231, 255), rect_card_p1, width=3, border_radius=16)
 
-            t_tit_p1 = fuente_pixel_btn_grande.render(f"JUGADOR 1 ({color_p1.upper()})", True, (124, 231, 255))
-            pantalla.blit(t_tit_p1, t_tit_p1.get_rect(center=(rect_card_p1.centerx, rect_card_p1.top + 30)))
+            rect_tit_cp1 = pygame.Rect(rect_card_p1.left + 16, rect_card_p1.top + 16, rect_card_p1.width - 32, 32)
+            dibujar_texto_en_rect(pantalla, f"JUGADOR 1 ({color_p1.upper()})", rect_tit_cp1, categoria="boton", tamano=TAMANO_BOTON_GRANDE, color=(124, 231, 255), padding=2)
 
             # Teclado WASD centrado con botones oficiales de Controles
             tc_w, tc_gap = TAM_CTRL, 8
@@ -1539,19 +1548,16 @@ def main():
             if spr_ctrl_s: pantalla.blit(spr_ctrl_s, r_s)
             if spr_ctrl_d: pantalla.blit(spr_ctrl_d, r_d)
 
-            lbl_p1_mov = fuente_texto.render("A / D : Moverse", True, (230, 230, 230))
-            lbl_p1_sal = fuente_texto.render("W : Saltar", True, (255, 255, 255))
-            lbl_p1_sub = fuente_texto.render("S : Nadar / Sumergirse (Agua)", True, (190, 210, 225))
-            pantalla.blit(lbl_p1_mov, lbl_p1_mov.get_rect(center=(rect_card_p1.centerx, r_s.bottom + 32)))
-            pantalla.blit(lbl_p1_sal, lbl_p1_sal.get_rect(center=(rect_card_p1.centerx, r_s.bottom + 60)))
-            pantalla.blit(lbl_p1_sub, lbl_p1_sub.get_rect(center=(rect_card_p1.centerx, r_s.bottom + 88)))
+            dibujar_texto_en_rect(pantalla, "A / D : Moverse", pygame.Rect(rect_card_p1.left + 16, r_s.bottom + 20, rect_card_p1.width - 32, 24), categoria="texto", tamano=TAMANO_TEXTO, color=(230, 230, 230), padding=2)
+            dibujar_texto_en_rect(pantalla, "W : Saltar", pygame.Rect(rect_card_p1.left + 16, r_s.bottom + 48, rect_card_p1.width - 32, 24), categoria="texto", tamano=TAMANO_TEXTO, color=(255, 255, 255), padding=2)
+            dibujar_texto_en_rect(pantalla, "S : Nadar / Sumergirse (Agua)", pygame.Rect(rect_card_p1.left + 16, r_s.bottom + 76, rect_card_p1.width - 32, 24), categoria="texto", tamano=TAMANO_TEXTO, color=(190, 210, 225), padding=2)
 
             # --- Panel Jugador 2 ---
             pygame.draw.rect(pantalla, (42, 45, 58), rect_card_p2, border_radius=16)
             pygame.draw.rect(pantalla, (200, 160, 255), rect_card_p2, width=3, border_radius=16)
 
-            t_tit_p2 = fuente_pixel_btn_grande.render(f"JUGADOR 2 ({color_p2.upper()})", True, (200, 160, 255))
-            pantalla.blit(t_tit_p2, t_tit_p2.get_rect(center=(rect_card_p2.centerx, rect_card_p2.top + 30)))
+            rect_tit_cp2 = pygame.Rect(rect_card_p2.left + 16, rect_card_p2.top + 16, rect_card_p2.width - 32, 32)
+            dibujar_texto_en_rect(pantalla, f"JUGADOR 2 ({color_p2.upper()})", rect_tit_cp2, categoria="boton", tamano=TAMANO_BOTON_GRANDE, color=(200, 160, 255), padding=2)
 
             # Teclado Flechas centrado con botones oficiales de Controles
             x_arr_centro = rect_card_p2.centerx
@@ -1567,12 +1573,9 @@ def main():
             if spr_ctrl_aba: pantalla.blit(spr_ctrl_aba, r_aba)
             if spr_ctrl_der: pantalla.blit(spr_ctrl_der, r_der)
 
-            lbl_p2_mov = fuente_texto.render("Flechas Izq / Der : Moverse", True, (230, 230, 230))
-            lbl_p2_sal = fuente_texto.render("Flecha Arriba : Saltar", True, (255, 255, 255))
-            lbl_p2_sub = fuente_texto.render("Flecha Abajo : Nadar / Sumergirse (Agua)", True, (220, 205, 235))
-            pantalla.blit(lbl_p2_mov, lbl_p2_mov.get_rect(center=(rect_card_p2.centerx, r_aba.bottom + 32)))
-            pantalla.blit(lbl_p2_sal, lbl_p2_sal.get_rect(center=(rect_card_p2.centerx, r_aba.bottom + 60)))
-            pantalla.blit(lbl_p2_sub, lbl_p2_sub.get_rect(center=(rect_card_p2.centerx, r_aba.bottom + 88)))
+            dibujar_texto_en_rect(pantalla, "Flechas Izq / Der : Moverse", pygame.Rect(rect_card_p2.left + 16, r_aba.bottom + 20, rect_card_p2.width - 32, 24), categoria="texto", tamano=TAMANO_TEXTO, color=(230, 230, 230), padding=2)
+            dibujar_texto_en_rect(pantalla, "Flecha Arriba : Saltar", pygame.Rect(rect_card_p2.left + 16, r_aba.bottom + 48, rect_card_p2.width - 32, 24), categoria="texto", tamano=TAMANO_TEXTO, color=(255, 255, 255), padding=2)
+            dibujar_texto_en_rect(pantalla, "Flecha Abajo : Nadar / Sumergirse (Agua)", pygame.Rect(rect_card_p2.left + 16, r_aba.bottom + 76, rect_card_p2.width - 32, 24), categoria="texto", tamano=TAMANO_TEXTO, color=(220, 205, 235), padding=2)
 
             # Botón Volver al Menú (mundos/boton-volver)
             hov_vcfg = btn_volver_config.collidepoint(pos_mouse)
@@ -1634,6 +1637,7 @@ def main():
 
         pygame.display.flip()
 
+    detener_musica()
     pygame.quit()
     sys.exit()
 

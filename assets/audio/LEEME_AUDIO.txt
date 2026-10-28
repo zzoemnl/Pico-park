@@ -1,0 +1,26 @@
+==============================================================================
+CARPETA DE AUDIOS Y MÚSICA - PICO PARK
+==============================================================================
+
+Coloca aquí los archivos de música y efectos de sonido del juego.
+Formatos admitidos: .mp3, .ogg, .wav
+
+NOMBRES DE PISTAS PREDETERMINADOS (configurables en configuracion.py):
+------------------------------------------------------------------------------
+- menu.mp3     : Música para el menú principal y pantallas de navegación
+- mundo1.mp3   : Música del Mundo 1
+- mundo2.mp3   : Música del Mundo 2
+- mundo3.mp3   : Música del Mundo 3
+
+Si utilizas nombres diferentes o extensiones .ogg/.wav, solo debes actualizar
+las siguientes variables en 'configuracion.py':
+    AUDIO_MENU = "menu.mp3"
+    AUDIO_MUNDO_1 = "mundo1.mp3"
+    AUDIO_MUNDO_2 = "mundo2.mp3"
+    AUDIO_MUNDO_3 = "mundo3.mp3"
+
+NOTAS:
+- Si falta algún archivo de audio, el juego funciona perfectamente en silencio
+  sin emitir errores ni cerrarse.
+- También se reconoce la carpeta alternativa 'Sprites/Audio/'.
+==============================================================================

@@ -24,7 +24,10 @@ from fuentes import (
     obtener_fuente_subtitulo,
     obtener_fuente_texto,
     obtener_fuente_boton,
+    obtener_fuente_botones,
     obtener_fuente_pequena,
+    obtener_fuente_contador,
+    obtener_fuente_dialogos,
     cargar_fuente_pixel,
     TAMANO_TITULO,
     TAMANO_TITULO_MODAL,
@@ -34,9 +37,17 @@ from fuentes import (
     TAMANO_TEXTO_GRANDE,
     TAMANO_INPUT,
     TAMANO_BOTON,
+    TAMANO_BOTONES,
     TAMANO_BOTON_MODAL,
     TAMANO_PEQUENA,
     TAMANO_ITEM_TITULO,
+    TAMANO_CONTADOR,
+    TAMANO_DIALOGOS,
+    dividir_texto_en_lineas,
+    ajustar_tamano_fuente,
+    renderizar_texto_ajustado,
+    renderizar_texto_multilinea,
+    dibujar_texto_en_rect,
 )
 
 
@@ -542,21 +553,22 @@ def solicitar_texto_modal(pantalla, reloj, titulo, subtitulo, valor_inicial="", 
         pygame.draw.rect(pantalla, (253, 246, 233), rect_card, border_radius=16)
         pygame.draw.rect(pantalla, (195, 168, 138), rect_card, width=3, border_radius=16)
 
-        # Título
-        t_tit = fuente_titulo.render(titulo, True, (60, 45, 35))
-        pantalla.blit(t_tit, t_tit.get_rect(center=(rect_card.centerx, rect_card.top + 38)))
+        # Título centrado seguro
+        rect_tit = pygame.Rect(rect_card.left + 30, rect_card.top + 16, rect_card.width - 60, 32)
+        dibujar_texto_en_rect(pantalla, titulo, rect_tit, categoria="dialogos", tamano=TAMANO_TITULO_MODAL, color=(60, 45, 35))
 
-        # Subtítulo
-        t_sub = fuente_sub.render(subtitulo, True, (115, 95, 80))
-        pantalla.blit(t_sub, t_sub.get_rect(center=(rect_card.centerx, rect_card.top + 78)))
+        # Subtítulo multilínea con autoajuste para nombres largos
+        rect_sub = pygame.Rect(rect_card.left + 24, rect_card.top + 52, rect_card.width - 48, 54)
+        dibujar_texto_en_rect(pantalla, subtitulo, rect_sub, categoria="subtitulo", tamano=15, color=(115, 95, 80), multiline=True, padding=2)
 
         # Caja de texto
         pygame.draw.rect(pantalla, (255, 255, 255), rect_input, border_radius=8)
         pygame.draw.rect(pantalla, (175, 140, 105), rect_input, width=2, border_radius=8)
 
-        # Renderizado del texto introducido
+        # Renderizado del texto introducido con ajuste dinámico dentro del input
         texto_mostrar = texto if mostrar_caracteres else ("•" * len(texto))
-        t_txt = fuente_input.render(texto_mostrar, True, (40, 30, 25))
+        max_w_inp = rect_input.width - (54 if rect_ojo else 24)
+        t_txt, _ = renderizar_texto_ajustado(texto_mostrar, categoria="texto", tamano=TAMANO_INPUT, ancho_max=max_w_inp, color=(40, 30, 25))
         pantalla.blit(t_txt, (rect_input.left + 12, rect_input.centery - (t_txt.get_height() // 2)))
 
         # Cursor parpadeante
@@ -569,13 +581,12 @@ def solicitar_texto_modal(pantalla, reloj, titulo, subtitulo, valor_inicial="", 
             pygame.draw.rect(pantalla, (245, 238, 226) if hov_ojo else (235, 226, 212), rect_ojo, border_radius=6)
             pygame.draw.rect(pantalla, (185, 160, 135), rect_ojo, width=1, border_radius=6)
             simbolo_ojo = "👁" if mostrar_caracteres else "🔒"
-            t_ojo = fuente_sub.render(simbolo_ojo, True, (60, 45, 35))
-            pantalla.blit(t_ojo, t_ojo.get_rect(center=rect_ojo.center))
+            dibujar_texto_en_rect(pantalla, simbolo_ojo, rect_ojo, categoria="subtitulo", tamano=16, color=(60, 45, 35), padding=2)
 
         # Mensaje de error
         if mensaje_error:
-            t_err = fuente_sub.render(mensaje_error, True, (215, 50, 50))
-            pantalla.blit(t_err, t_err.get_rect(center=(rect_card.centerx, rect_input.bottom + 18)))
+            rect_err = pygame.Rect(rect_card.left + 24, rect_input.bottom + 8, rect_card.width - 48, 26)
+            dibujar_texto_en_rect(pantalla, mensaje_error, rect_err, categoria="subtitulo", tamano=14, color=(215, 50, 50), padding=2)
 
         # Botón Cancelar (reutiliza el botón existente oficial de la carpeta de botones)
         if spr_can_norm:
@@ -584,15 +595,13 @@ def solicitar_texto_modal(pantalla, reloj, titulo, subtitulo, valor_inicial="", 
             col_can = (255, 255, 255) if hov_can else (242, 234, 222)
             pygame.draw.rect(pantalla, col_can, btn_cancelar, border_radius=10)
             pygame.draw.rect(pantalla, (185, 155, 125), btn_cancelar, width=2, border_radius=10)
-            t_can = fuente_btn.render("CANCELAR", True, (60, 45, 35))
-            pantalla.blit(t_can, t_can.get_rect(center=btn_cancelar.center))
+            dibujar_texto_en_rect(pantalla, "CANCELAR", btn_cancelar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(60, 45, 35), padding=6)
 
         # Botón Confirmar
         col_con = (82, 194, 114) if hov_con else (68, 172, 98)
         pygame.draw.rect(pantalla, col_con, btn_confirmar, border_radius=10)
         pygame.draw.rect(pantalla, (45, 130, 70), btn_confirmar, width=2, border_radius=10)
-        t_con = fuente_btn.render("CONFIRMAR", True, (255, 255, 255))
-        pantalla.blit(t_con, t_con.get_rect(center=btn_confirmar.center))
+        dibujar_texto_en_rect(pantalla, "CONFIRMAR", btn_confirmar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(255, 255, 255), padding=6)
 
         pygame.display.flip()
 
@@ -630,7 +639,7 @@ def pedir_password_modal(pantalla, reloj, partida):
 
         # Mostrar aviso de contraseña incorrecta
         ancho, alto = pantalla.get_width(), pantalla.get_height()
-        fuente_tit = obtener_fuente_titulo(TAMANO_TITULO_MODAL, tamano_fallback=28)
+        fuente_tit = obtener_fuente_dialogos(TAMANO_TITULO_MODAL, tamano_fallback=28)
         fuente_txt = obtener_fuente_texto(TAMANO_TEXTO)
         fuente_btn = obtener_fuente_boton(TAMANO_BOTON_MODAL, tamano_fallback=22)
 
@@ -719,34 +728,32 @@ def modal_administrar_perfil(pantalla, reloj, partida):
     ancho = pantalla.get_width()
     alto = pantalla.get_height()
 
-    fuente_titulo = obtener_fuente_titulo(TAMANO_TITULO_MODAL, tamano_fallback=30)
-    fuente_sub = obtener_fuente_subtitulo(TAMANO_SUBTITULO)
-    fuente_btn = obtener_fuente_boton(TAMANO_BOTON_MODAL, tamano_fallback=24)
+    fuente_titulo = obtener_fuente_dialogos(TAMANO_TITULO_MODAL, tamano_fallback=30)
+    fuente_sub = obtener_fuente_subtitulo(15, negrita=False)
+    fuente_btn = obtener_fuente_subtitulo(16, negrita=True)
 
-    w_card, h_card = 560, 460
+    # Dimensiones equilibradas del modal sin botón inferior (cerrado mediante la X)
+    w_card, h_card = 560, 335
     rect_card = pygame.Rect((ancho - w_card) // 2, (alto - h_card) // 2, w_card, h_card)
+
+    # Botón X en la esquina superior derecha del modal
+    W_X, H_X = 29, 34
+    rect_btn_x = pygame.Rect(rect_card.right - W_X - 16, rect_card.top + 16, W_X, H_X)
+    spr_x_norm = _cargar_sprite_boton("HUD/boton-x.png", W_X, H_X) or _cargar_sprite_boton("boton-x.png", W_X, H_X)
+    spr_x_semi = _cargar_sprite_boton("HUD/boton-x-semiapretado.png", W_X, H_X) or _cargar_sprite_boton("boton-x-semiapretado.png", W_X, H_X)
+    spr_x_apr = _cargar_sprite_boton("HUD/boton-x-apretado.png", W_X, H_X) or _cargar_sprite_boton("boton-x-apretado.png", W_X, H_X)
+    spr_x_hover = aclarar_boton(spr_x_norm) if spr_x_norm else None
 
     w_b, h_b = 360, 48
     x_b = rect_card.centerx - (w_b // 2)
-    y_base = rect_card.top + 105
+    y_base = rect_card.top + 114
     gap_b = 14
 
     btn_renombrar = pygame.Rect(x_b, y_base, w_b, h_b)
     btn_password = pygame.Rect(x_b, y_base + (h_b + gap_b), w_b, h_b)
     btn_eliminar = pygame.Rect(x_b, y_base + (h_b + gap_b) * 2, w_b, h_b)
 
-    # Botón «VOLVER» oficial reutilizado debajo de las opciones con generosa separación
-    w_v, h_v = 210, 62
-    x_v = rect_card.centerx - (w_v // 2)
-    y_v = rect_card.top + 312
-    btn_volver = pygame.Rect(x_v, y_v, w_v, h_v)
-
-    spr_vol_norm = _cargar_sprite_boton("mundos/boton-volver.png", w_v, h_v) or _cargar_sprite_boton("Menu/boton-volver.png", w_v, h_v) or _cargar_sprite_boton("boton-volver.png", w_v, h_v)
-    spr_vol_semi = _cargar_sprite_boton("mundos/boton-volver-semiapretado.png", w_v, h_v) or _cargar_sprite_boton("Menu/boton-volver-semiapretado.png", w_v, h_v) or _cargar_sprite_boton("boton-volver-semiapretado.png", w_v, h_v)
-    spr_vol_apret = _cargar_sprite_boton("mundos/boton-volver-apretado.png", w_v, h_v) or _cargar_sprite_boton("Menu/boton-volver-apretado.png", w_v, h_v) or _cargar_sprite_boton("boton-volver-apretado.png", w_v, h_v)
-    spr_vol_hover = aclarar_boton(spr_vol_norm) if spr_vol_norm else None
     fondo_tarjeta = (253, 246, 233)
-
     overlay = pygame.Surface((ancho, alto), pygame.SRCALPHA)
     overlay.fill((20, 15, 10, 175))
     captura_previa = pantalla.copy()
@@ -760,14 +767,23 @@ def modal_administrar_perfil(pantalla, reloj, partida):
         hov_ren = btn_renombrar.collidepoint(pos_mouse)
         hov_pwd = btn_password.collidepoint(pos_mouse)
         hov_eli = btn_eliminar.collidepoint(pos_mouse)
-        hov_vol = btn_volver.collidepoint(pos_mouse)
+        hov_x = rect_btn_x.collidepoint(pos_mouse)
 
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT or (evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE):
                 return hubo_cambios
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-                if btn_renombrar.collidepoint(evento.pos):
+                # 1. Clic en botón X de cerrar
+                if rect_btn_x.collidepoint(evento.pos):
+                    pulsado = True
+                    if spr_x_semi and spr_x_apr:
+                        pulsado = animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apr, fondo_tarjeta, spr_x_norm)
+                    if pulsado:
+                        return hubo_cambios
+
+                # 2. Clic en Cambiar Nombre
+                elif btn_renombrar.collidepoint(evento.pos):
                     nuevo_nom = solicitar_texto_modal(
                         pantalla, reloj,
                         titulo="CAMBIAR NOMBRE",
@@ -780,6 +796,7 @@ def modal_administrar_perfil(pantalla, reloj, partida):
                         partida["nombre"] = nuevo_nom
                         hubo_cambios = True
 
+                # 3. Clic en Contraseña
                 elif btn_password.collidepoint(evento.pos):
                     # Si ya tiene contraseña, autenticar primero
                     if partida.get("tiene_password", False):
@@ -811,17 +828,15 @@ def modal_administrar_perfil(pantalla, reloj, partida):
                             partida["tiene_password"] = True
                             hubo_cambios = True
 
+                # 4. Clic en Eliminar
                 elif btn_eliminar.collidepoint(evento.pos):
                     if mostrar_dialogo_confirmar_borrado(pantalla, reloj, partida):
                         eliminar_partida(partida["id"])
                         return True
 
-                elif btn_volver.collidepoint(evento.pos):
-                    pulsado = True
-                    if spr_vol_semi and spr_vol_apret:
-                        pulsado = animar_pulsacion_boton(pantalla, btn_volver, spr_vol_semi, spr_vol_apret, fondo_tarjeta, spr_vol_norm)
-                    if pulsado:
-                        return hubo_cambios
+                # 5. Clic fuera del modal para salir
+                elif not rect_card.collidepoint(evento.pos):
+                    return hubo_cambios
 
         # Dibujar modal
         pantalla.blit(captura_previa, (0, 0))
@@ -830,44 +845,44 @@ def modal_administrar_perfil(pantalla, reloj, partida):
         pygame.draw.rect(pantalla, (253, 246, 233), rect_card, border_radius=16)
         pygame.draw.rect(pantalla, (195, 168, 138), rect_card, width=3, border_radius=16)
 
-        t_tit = fuente_titulo.render("ADMINISTRAR PERFIL", True, (60, 45, 35))
-        pantalla.blit(t_tit, t_tit.get_rect(center=(rect_card.centerx, rect_card.top + 38)))
+        # Botón X de cabecera
+        spr_x_dib = spr_x_hover if (hov_x and spr_x_hover) else spr_x_norm
+        if spr_x_dib:
+            pantalla.blit(spr_x_dib, rect_btn_x)
 
-        txt_p = f"Perfil: {partida.get('nombre', '')}  •  " + ("🔒 Protegido" if partida.get("tiene_password") else "🔓 Sin contraseña")
-        t_sub = fuente_sub.render(txt_p, True, (115, 95, 80))
-        pantalla.blit(t_sub, t_sub.get_rect(center=(rect_card.centerx, rect_card.top + 72)))
+        # Título centrado con margen seguro
+        rect_tit = pygame.Rect(rect_card.left + 50, rect_card.top + 16, rect_card.width - 100, 32)
+        dibujar_texto_en_rect(pantalla, "ADMINISTRAR PERFIL", rect_tit, categoria="dialogos", tamano=TAMANO_TITULO_MODAL, color=(60, 45, 35))
+
+        # Información distribuida en dos líneas con autoajuste para nombres extensos
+        nom_perfil = partida.get("nombre", "")
+        rect_nom = pygame.Rect(rect_card.left + 24, rect_card.top + 52, rect_card.width - 48, 24)
+        dibujar_texto_en_rect(pantalla, f"Perfil: «{nom_perfil}»", rect_nom, categoria="subtitulo", tamano=15, color=(70, 55, 45), negrita=True, padding=4)
+
+        tiene_p = partida.get("tiene_password", False)
+        txt_est = "Estado: Protegido con contraseña" if tiene_p else "Estado: Sin contraseña"
+        col_est = (40, 130, 65) if tiene_p else (125, 105, 90)
+        rect_est = pygame.Rect(rect_card.left + 24, rect_card.top + 78, rect_card.width - 48, 20)
+        dibujar_texto_en_rect(pantalla, txt_est, rect_est, categoria="pequena", tamano=14, color=col_est, padding=4)
 
         # 1. Renombrar
         col_ren = (255, 255, 255) if hov_ren else (245, 238, 226)
         pygame.draw.rect(pantalla, col_ren, btn_renombrar, border_radius=10)
         pygame.draw.rect(pantalla, (185, 155, 125), btn_renombrar, width=2, border_radius=10)
-        t_ren = fuente_btn.render("CAMBIAR NOMBRE", True, (60, 45, 35))
-        pantalla.blit(t_ren, t_ren.get_rect(center=btn_renombrar.center))
+        dibujar_texto_en_rect(pantalla, "CAMBIAR NOMBRE", btn_renombrar, categoria="subtitulo", tamano=16, color=(60, 45, 35), negrita=True, padding=8)
 
-        # 2. Contraseña
-        txt_btn_pwd = "CAMBIAR / QUITAR CONTRASEÑA" if partida.get("tiene_password") else "AGREGAR CONTRASEÑA"
+        # 2. Contraseña (renderiza 'Ñ' perfectamente y autoajusta texto largo)
+        txt_btn_pwd = "CAMBIAR / QUITAR CONTRASEÑA" if tiene_p else "AGREGAR CONTRASEÑA"
         col_pwd = (255, 255, 255) if hov_pwd else (245, 238, 226)
         pygame.draw.rect(pantalla, col_pwd, btn_password, border_radius=10)
         pygame.draw.rect(pantalla, (185, 155, 125), btn_password, width=2, border_radius=10)
-        t_pw = fuente_btn.render(txt_btn_pwd, True, (60, 45, 35))
-        pantalla.blit(t_pw, t_pw.get_rect(center=btn_password.center))
+        dibujar_texto_en_rect(pantalla, txt_btn_pwd, btn_password, categoria="subtitulo", tamano=16, color=(60, 45, 35), negrita=True, padding=8)
 
         # 3. Eliminar
         col_eli = (235, 95, 90) if hov_eli else (215, 80, 75)
         pygame.draw.rect(pantalla, col_eli, btn_eliminar, border_radius=10)
         pygame.draw.rect(pantalla, (170, 50, 45), btn_eliminar, width=2, border_radius=10)
-        t_el = fuente_btn.render("ELIMINAR PERFIL", True, (255, 255, 255))
-        pantalla.blit(t_el, t_el.get_rect(center=btn_eliminar.center))
-
-        # 4. Botón «VOLVER» oficial reutilizado debajo de las opciones con generosa separación
-        if spr_vol_norm:
-            pantalla.blit(spr_vol_hover if (hov_vol and spr_vol_hover) else spr_vol_norm, btn_volver)
-        else:
-            col_vol = (255, 255, 255) if hov_vol else (242, 234, 222)
-            pygame.draw.rect(pantalla, col_vol, btn_volver, border_radius=10)
-            pygame.draw.rect(pantalla, (185, 155, 125), btn_volver, width=2, border_radius=10)
-            t_v = fuente_btn.render("VOLVER", True, (60, 45, 35))
-            pantalla.blit(t_v, t_v.get_rect(center=btn_volver.center))
+        dibujar_texto_en_rect(pantalla, "ELIMINAR PERFIL", btn_eliminar, categoria="subtitulo", tamano=16, color=(255, 255, 255), negrita=True, padding=8)
 
         pygame.display.flip()
 
@@ -941,28 +956,28 @@ def mostrar_dialogo_partida_existente(pantalla, reloj, nombre):
         pygame.draw.rect(pantalla, (253, 246, 233), rect_card, border_radius=16)
         pygame.draw.rect(pantalla, (225, 120, 48), rect_card, width=3, border_radius=16)
 
-        t_tit = fuente_titulo.render("PARTIDA EXISTENTE", True, (205, 80, 40))
-        pantalla.blit(t_tit, t_tit.get_rect(center=(rect_card.centerx, rect_card.top + 36)))
+        # Título centrado seguro
+        rect_tit = pygame.Rect(rect_card.left + 24, rect_card.top + 16, rect_card.width - 48, 32)
+        dibujar_texto_en_rect(pantalla, "PARTIDA EXISTENTE", rect_tit, categoria="dialogos", tamano=TAMANO_TITULO_MODAL, color=(205, 80, 40))
 
-        t_msg = fuente_sub.render(f"Ya existe una partida guardada con el nombre «{nombre}».", True, (60, 45, 35))
-        pantalla.blit(t_msg, t_msg.get_rect(center=(rect_card.centerx, rect_card.top + 80)))
+        # Mensaje de advertencia con soporte de ajuste automático
+        rect_msg = pygame.Rect(rect_card.left + 24, rect_card.top + 54, rect_card.width - 48, 32)
+        dibujar_texto_en_rect(pantalla, f"Ya existe una partida guardada con el nombre «{nombre}».", rect_msg, categoria="subtitulo", tamano=16, color=(60, 45, 35), multiline=True, padding=2)
 
-        t_sub = fuente_sub.render("¿Deseas elegir otro nombre o sobrescribir la partida existente?", True, (115, 95, 80))
-        pantalla.blit(t_sub, t_sub.get_rect(center=(rect_card.centerx, rect_card.top + 112)))
+        rect_sub = pygame.Rect(rect_card.left + 24, rect_card.top + 92, rect_card.width - 48, 44)
+        dibujar_texto_en_rect(pantalla, "¿Deseas elegir otro nombre o sobrescribir la partida existente?", rect_sub, categoria="subtitulo", tamano=15, color=(115, 95, 80), multiline=True, padding=2)
 
         # Botón 1: Cambiar nombre
         col_cam = (255, 255, 255) if hov_cam else (242, 234, 222)
         pygame.draw.rect(pantalla, col_cam, btn_cambiar, border_radius=10)
         pygame.draw.rect(pantalla, (185, 155, 125), btn_cambiar, width=2, border_radius=10)
-        t_c = fuente_btn.render("OTRO NOMBRE", True, (60, 45, 35))
-        pantalla.blit(t_c, t_c.get_rect(center=btn_cambiar.center))
+        dibujar_texto_en_rect(pantalla, "OTRO NOMBRE", btn_cambiar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(60, 45, 35), padding=6)
 
         # Botón 2: Sobrescribir
         col_sob = (235, 95, 90) if hov_sob else (215, 80, 75)
         pygame.draw.rect(pantalla, col_sob, btn_sobrescribir, border_radius=10)
         pygame.draw.rect(pantalla, (170, 50, 45), btn_sobrescribir, width=2, border_radius=10)
-        t_s = fuente_btn.render("SOBRESCRIBIR", True, (255, 255, 255))
-        pantalla.blit(t_s, t_s.get_rect(center=btn_sobrescribir.center))
+        dibujar_texto_en_rect(pantalla, "SOBRESCRIBIR", btn_sobrescribir, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(255, 255, 255), padding=6)
 
         # Botón 3: Cancelar (reutiliza el botón oficial del proyecto)
         if spr_canc_norm:
@@ -971,8 +986,7 @@ def mostrar_dialogo_partida_existente(pantalla, reloj, nombre):
             col_can = (255, 255, 255) if hov_can else (242, 234, 222)
             pygame.draw.rect(pantalla, col_can, btn_cancelar, border_radius=10)
             pygame.draw.rect(pantalla, (185, 155, 125), btn_cancelar, width=2, border_radius=10)
-            t_can = fuente_btn.render("CANCELAR", True, (60, 45, 35))
-            pantalla.blit(t_can, t_can.get_rect(center=btn_cancelar.center))
+            dibujar_texto_en_rect(pantalla, "CANCELAR", btn_cancelar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(60, 45, 35), padding=6)
 
         pygame.display.flip()
 
@@ -1095,7 +1109,7 @@ def modal_flujo_guardar_perfil(
     fuente_item_tit = obtener_fuente_boton(TAMANO_ITEM_TITULO, tamano_fallback=22)
     fuente_item_det = obtener_fuente_pequena(TAMANO_PEQUENA)
     fuente_btn = obtener_fuente_boton(TAMANO_BOTON_MODAL, tamano_fallback=22)
-    fuente_pag = obtener_fuente_pequena(TAMANO_SUBTITULO)
+    fuente_pag = obtener_fuente_contador(TAMANO_SUBTITULO)
 
     w_card, h_card = 640, 570
     rect_card = pygame.Rect((ancho - w_card) // 2, (alto - h_card) // 2, w_card, h_card)
@@ -1375,7 +1389,7 @@ def mostrar_dialogo_guardar_salir(
 
     mundo_max, nivel_max = obtener_maximo_alcanzado(niveles_desbloqueados)
 
-    fuente_titulo = obtener_fuente_titulo(TAMANO_TITULO_MODAL, tamano_fallback=36)
+    fuente_titulo = obtener_fuente_dialogos(TAMANO_TITULO_MODAL, tamano_fallback=36)
     fuente_texto = obtener_fuente_texto(TAMANO_TEXTO_GRANDE)
     fuente_btn = obtener_fuente_boton(TAMANO_BOTON_MODAL, tamano_fallback=28)
 
@@ -1470,35 +1484,35 @@ def mostrar_dialogo_guardar_salir(
         pygame.draw.rect(pantalla, (253, 246, 233), rect_card, border_radius=18)
         pygame.draw.rect(pantalla, (195, 168, 138), rect_card, width=3, border_radius=18)
 
-        t_tit = fuente_titulo.render(t("deseas_guardar"), True, (60, 45, 35))
-        pantalla.blit(t_tit, t_tit.get_rect(center=(rect_card.centerx, rect_card.top + 40)))
+        # Título centrado seguro
+        rect_tit = pygame.Rect(rect_card.left + 24, rect_card.top + 20, rect_card.width - 48, 36)
+        dibujar_texto_en_rect(pantalla, t("deseas_guardar"), rect_tit, categoria="dialogos", tamano=TAMANO_TITULO_MODAL, color=(60, 45, 35))
 
-        t_info = fuente_texto.render(f"{t('mundo')} {mundo_max} - {t('nivel')} {nivel_max}", True, (55, 45, 35))
-        pantalla.blit(t_info, t_info.get_rect(center=(rect_card.centerx, rect_card.top + 80)))
+        # Información de mundo y nivel
+        rect_info = pygame.Rect(rect_card.left + 24, rect_card.top + 64, rect_card.width - 48, 28)
+        dibujar_texto_en_rect(pantalla, f"{t('mundo')} {mundo_max} - {t('nivel')} {nivel_max}", rect_info, categoria="texto", tamano=TAMANO_TEXTO, color=(55, 45, 35))
 
-        t_sub = fuente_texto.render(t("deseas_guardar_sub", default="Puedes guardar tu partida en un perfil antes de salir."), True, (120, 105, 90))
-        pantalla.blit(t_sub, t_sub.get_rect(center=(rect_card.centerx, rect_card.top + 112)))
+        # Subtítulo explicativo con multilínea segura
+        rect_sub = pygame.Rect(rect_card.left + 24, rect_card.top + 96, rect_card.width - 48, 36)
+        dibujar_texto_en_rect(pantalla, t("deseas_guardar_sub", default="Puedes guardar tu partida en un perfil antes de salir."), rect_sub, categoria="texto", tamano=15, color=(120, 105, 90), multiline=True, padding=2)
 
         if spr_g_norm:
             pantalla.blit(spr_g_hover if (hov_g and spr_g_hover) else spr_g_norm, btn_guardar)
         else:
             pygame.draw.rect(pantalla, (82, 194, 114) if hov_g else (68, 172, 98), btn_guardar, border_radius=12)
-            t_g = fuente_btn.render(t("guardar_salir"), True, (255, 255, 255))
-            pantalla.blit(t_g, t_g.get_rect(center=btn_guardar.center))
+            dibujar_texto_en_rect(pantalla, t("guardar_salir"), btn_guardar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(255, 255, 255), padding=8)
 
         if spr_s_norm:
             pantalla.blit(spr_s_hover if (hov_s and spr_s_hover) else spr_s_norm, btn_no_guardar)
         else:
             pygame.draw.rect(pantalla, (235, 95, 90) if hov_s else (215, 80, 75), btn_no_guardar, border_radius=12)
-            t_s = fuente_btn.render(t("salir_sin_guardar"), True, (255, 255, 255))
-            pantalla.blit(t_s, t_s.get_rect(center=btn_no_guardar.center))
+            dibujar_texto_en_rect(pantalla, t("salir_sin_guardar"), btn_no_guardar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(255, 255, 255), padding=8)
 
         if spr_c_norm:
             pantalla.blit(spr_c_hover if (hov_c and spr_c_hover) else spr_c_norm, btn_cancelar)
         else:
             pygame.draw.rect(pantalla, (255, 255, 255) if hov_c else (242, 234, 222), btn_cancelar, border_radius=12)
-            t_c = fuente_btn.render(t("cancelar"), True, (60, 45, 35))
-            pantalla.blit(t_c, t_c.get_rect(center=btn_cancelar.center))
+            dibujar_texto_en_rect(pantalla, t("cancelar"), btn_cancelar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(60, 45, 35), padding=8)
 
         pygame.display.flip()
 
@@ -1512,7 +1526,7 @@ def mostrar_dialogo_confirmar_borrado(pantalla, reloj, partida):
     ancho = pantalla.get_width()
     alto = pantalla.get_height()
 
-    fuente_titulo = obtener_fuente_titulo(TAMANO_TITULO_MODAL, tamano_fallback=34)
+    fuente_titulo = obtener_fuente_dialogos(TAMANO_TITULO_MODAL, tamano_fallback=34)
     fuente_nombre = obtener_fuente_subtitulo(TAMANO_SUBTITULO_GRANDE)
     fuente_texto = obtener_fuente_texto(TAMANO_TEXTO)
     fuente_btn = obtener_fuente_boton(TAMANO_BOTON_MODAL, tamano_fallback=24)
@@ -1573,17 +1587,19 @@ def mostrar_dialogo_confirmar_borrado(pantalla, reloj, partida):
         pygame.draw.rect(pantalla, (253, 246, 233), rect_card, border_radius=18)
         pygame.draw.rect(pantalla, (225, 110, 80), rect_card, width=3, border_radius=18)
 
-        t_tit = fuente_titulo.render("ELIMINAR PERFIL", True, (205, 70, 60))
-        pantalla.blit(t_tit, t_tit.get_rect(center=(rect_card.centerx, rect_card.top + 38)))
+        # Título centrado seguro
+        rect_tit = pygame.Rect(rect_card.left + 24, rect_card.top + 18, rect_card.width - 48, 34)
+        dibujar_texto_en_rect(pantalla, "ELIMINAR PERFIL", rect_tit, categoria="dialogos", tamano=TAMANO_TITULO_MODAL, color=(205, 70, 60))
 
-        t_nom = fuente_nombre.render(f"«{nombre}»  —  Nivel: {mundo_max}-{nivel_max}", True, (60, 45, 35))
-        pantalla.blit(t_nom, t_nom.get_rect(center=(rect_card.centerx, rect_card.top + 82)))
+        # Nombre del perfil con ajuste automático
+        rect_nom = pygame.Rect(rect_card.left + 24, rect_card.top + 60, rect_card.width - 48, 30)
+        dibujar_texto_en_rect(pantalla, f"«{nombre}»  —  Nivel: {mundo_max}-{nivel_max}", rect_nom, categoria="subtitulo", tamano=TAMANO_SUBTITULO_GRANDE, color=(60, 45, 35), padding=4)
 
-        t_preg = fuente_texto.render("¿Seguro que deseas eliminar este perfil y su partida?", True, (80, 65, 55))
-        pantalla.blit(t_preg, t_preg.get_rect(center=(rect_card.centerx, rect_card.top + 126)))
+        rect_preg = pygame.Rect(rect_card.left + 24, rect_card.top + 98, rect_card.width - 48, 36)
+        dibujar_texto_en_rect(pantalla, "¿Seguro que deseas eliminar este perfil y su partida?", rect_preg, categoria="texto", tamano=16, color=(80, 65, 55), multiline=True, padding=2)
 
-        t_aviso = fuente_texto.render("Se borrará todo su progreso y no se podrá recuperar.", True, (195, 75, 65))
-        pantalla.blit(t_aviso, t_aviso.get_rect(center=(rect_card.centerx, rect_card.top + 158)))
+        rect_aviso = pygame.Rect(rect_card.left + 24, rect_card.top + 138, rect_card.width - 48, 32)
+        dibujar_texto_en_rect(pantalla, "Se borrará todo su progreso y no se podrá recuperar.", rect_aviso, categoria="texto", tamano=15, color=(195, 75, 65), multiline=True, padding=2)
 
         if spr_can_norm:
             pantalla.blit(spr_can_hover if (hov_can and spr_can_hover) else spr_can_norm, btn_cancelar)
@@ -1591,14 +1607,12 @@ def mostrar_dialogo_confirmar_borrado(pantalla, reloj, partida):
             col_can = (255, 255, 255) if hov_can else (242, 234, 222)
             pygame.draw.rect(pantalla, col_can, btn_cancelar, border_radius=12)
             pygame.draw.rect(pantalla, (195, 168, 138), btn_cancelar, width=2, border_radius=12)
-            t_btn_can = fuente_btn.render("CANCELAR", True, (60, 45, 35))
-            pantalla.blit(t_btn_can, t_btn_can.get_rect(center=btn_cancelar.center))
+            dibujar_texto_en_rect(pantalla, "CANCELAR", btn_cancelar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(60, 45, 35), padding=6)
 
         col_bor = (235, 95, 90) if hov_bor else (215, 80, 75)
         pygame.draw.rect(pantalla, col_bor, btn_borrar, border_radius=12)
         pygame.draw.rect(pantalla, (170, 50, 45), btn_borrar, width=2, border_radius=12)
-        t_btn_bor = fuente_btn.render("BORRAR PERFIL", True, (255, 255, 255))
-        pantalla.blit(t_btn_bor, t_btn_bor.get_rect(center=btn_borrar.center))
+        dibujar_texto_en_rect(pantalla, "BORRAR PERFIL", btn_borrar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(255, 255, 255), padding=6)
 
         pygame.display.flip()
 
@@ -1642,7 +1656,7 @@ def mostrar_dialogo_confirmar_atuendos(
     ancho = pantalla.get_width()
     alto = pantalla.get_height()
 
-    fuente_titulo = obtener_fuente_titulo(TAMANO_TITULO_MODAL, tamano_fallback=30)
+    fuente_titulo = obtener_fuente_dialogos(TAMANO_TITULO_MODAL, tamano_fallback=30)
     fuente_sub = obtener_fuente_subtitulo(TAMANO_SUBTITULO)
     fuente_box_tit = obtener_fuente_boton(18, tamano_fallback=18)
     fuente_item = obtener_fuente_texto(TAMANO_TEXTO)
@@ -1727,17 +1741,17 @@ def mostrar_dialogo_confirmar_atuendos(
         t_x = fuente_sub.render("X", True, col_x)
         pantalla.blit(t_x, t_x.get_rect(center=btn_cerrar.center))
 
-        # Título
-        t_tit = fuente_titulo.render("CAMBIAR ATUENDOS", True, (60, 45, 35))
-        pantalla.blit(t_tit, t_tit.get_rect(center=(rect_card.centerx, rect_card.top + 38)))
+        # Título centrado seguro
+        rect_tit = pygame.Rect(rect_card.left + 50, rect_card.top + 16, rect_card.width - 100, 34)
+        dibujar_texto_en_rect(pantalla, "CAMBIAR ATUENDOS", rect_tit, categoria="dialogos", tamano=TAMANO_TITULO_MODAL, color=(60, 45, 35))
 
-        # Subtítulo descriptivo
+        # Subtítulo descriptivo con autoajuste para nombres extensos de partida
         sub_txt = f"Modificaste los personajes antes de continuar «{nombre_partida}»."
-        t_sub1 = fuente_sub.render(sub_txt, True, (115, 95, 80))
-        pantalla.blit(t_sub1, t_sub1.get_rect(center=(rect_card.centerx, rect_card.top + 70)))
+        rect_sub1 = pygame.Rect(rect_card.left + 30, rect_card.top + 54, rect_card.width - 60, 26)
+        dibujar_texto_en_rect(pantalla, sub_txt, rect_sub1, categoria="subtitulo", tamano=16, color=(115, 95, 80), padding=2)
 
-        t_sub2 = fuente_sub.render("¿Deseas mantener los atuendos guardados o aplicar los nuevos?", True, (135, 110, 90))
-        pantalla.blit(t_sub2, t_sub2.get_rect(center=(rect_card.centerx, rect_card.top + 94)))
+        rect_sub2 = pygame.Rect(rect_card.left + 30, rect_card.top + 82, rect_card.width - 60, 24)
+        dibujar_texto_en_rect(pantalla, "¿Deseas mantener los atuendos guardados o aplicar los nuevos?", rect_sub2, categoria="subtitulo", tamano=15, color=(135, 110, 90), padding=2)
 
         # ----------------- CAJA IZQUIERDA: ATUENDOS GUARDADOS -----------------
         pygame.draw.rect(pantalla, (246, 238, 224), rect_box_izq, border_radius=12)
@@ -1745,8 +1759,7 @@ def mostrar_dialogo_confirmar_atuendos(
 
         r_cab_izq = pygame.Rect(rect_box_izq.left + 10, rect_box_izq.top + 10, rect_box_izq.width - 20, 32)
         pygame.draw.rect(pantalla, (235, 223, 206), r_cab_izq, border_radius=8)
-        t_cab_izq = fuente_box_tit.render("ATUENDOS GUARDADOS", True, (90, 70, 55))
-        pantalla.blit(t_cab_izq, t_cab_izq.get_rect(center=r_cab_izq.center))
+        dibujar_texto_en_rect(pantalla, "ATUENDOS GUARDADOS", r_cab_izq, categoria="boton", tamano=18, color=(90, 70, 55), padding=4)
 
         # P1 Guardado
         rgb_p1_g = COLORES_RGB_MAP.get(c_p1_g, (124, 231, 255))
@@ -1776,8 +1789,7 @@ def mostrar_dialogo_confirmar_atuendos(
 
         r_cab_der = pygame.Rect(rect_box_der.left + 10, rect_box_der.top + 10, rect_box_der.width - 20, 32)
         pygame.draw.rect(pantalla, (255, 235, 215), r_cab_der, border_radius=8)
-        t_cab_der = fuente_box_tit.render("NUEVOS ATUENDOS", True, (205, 80, 35))
-        pantalla.blit(t_cab_der, t_cab_der.get_rect(center=r_cab_der.center))
+        dibujar_texto_en_rect(pantalla, "NUEVOS ATUENDOS", r_cab_der, categoria="boton", tamano=18, color=(205, 80, 35), padding=4)
 
         # P1 Nuevo
         rgb_p1_n = COLORES_RGB_MAP.get(color_p1_nuevo, (124, 231, 255))
@@ -1806,20 +1818,20 @@ def mostrar_dialogo_confirmar_atuendos(
         borde_m = (165, 135, 105) if hov_mantener else (185, 155, 125)
         pygame.draw.rect(pantalla, col_m, btn_mantener, border_radius=12)
         pygame.draw.rect(pantalla, borde_m, btn_mantener, width=2, border_radius=12)
-        t_m1 = fuente_btn_main.render("MANTENER GUARDADOS", True, (60, 45, 35))
-        pantalla.blit(t_m1, t_m1.get_rect(center=(btn_mantener.centerx, btn_mantener.centery - 10)))
-        t_m2 = fuente_btn_sub.render("Conservar atuendos guardados", True, (125, 105, 90))
-        pantalla.blit(t_m2, t_m2.get_rect(center=(btn_mantener.centerx, btn_mantener.centery + 12)))
+        r_m1 = pygame.Rect(btn_mantener.left + 8, btn_mantener.top + 8, btn_mantener.width - 16, 24)
+        dibujar_texto_en_rect(pantalla, "MANTENER GUARDADOS", r_m1, categoria="boton", tamano=18, color=(60, 45, 35), padding=2)
+        r_m2 = pygame.Rect(btn_mantener.left + 8, btn_mantener.top + 34, btn_mantener.width - 16, 20)
+        dibujar_texto_en_rect(pantalla, "Conservar atuendos guardados", r_m2, categoria="pequena", tamano=13, color=(125, 105, 90), padding=2)
 
         # ----------------- BOTÓN 2: CAMBIAR ATUENDOS -----------------
         col_c = (82, 194, 114) if hov_cambiar else (68, 172, 98)
         borde_c = (35, 115, 55) if hov_cambiar else (45, 130, 70)
         pygame.draw.rect(pantalla, col_c, btn_cambiar, border_radius=12)
         pygame.draw.rect(pantalla, borde_c, btn_cambiar, width=2, border_radius=12)
-        t_c1 = fuente_btn_main.render("CAMBIAR ATUENDOS", True, (255, 255, 255))
-        pantalla.blit(t_c1, t_c1.get_rect(center=(btn_cambiar.centerx, btn_cambiar.centery - 10)))
-        t_c2 = fuente_btn_sub.render("Aplicar y guardar los nuevos", True, (235, 255, 240))
-        pantalla.blit(t_c2, t_c2.get_rect(center=(btn_cambiar.centerx, btn_cambiar.centery + 12)))
+        r_c1 = pygame.Rect(btn_cambiar.left + 8, btn_cambiar.top + 8, btn_cambiar.width - 16, 24)
+        dibujar_texto_en_rect(pantalla, "CAMBIAR ATUENDOS", r_c1, categoria="boton", tamano=18, color=(255, 255, 255), padding=2)
+        r_c2 = pygame.Rect(btn_cambiar.left + 8, btn_cambiar.top + 34, btn_cambiar.width - 16, 20)
+        dibujar_texto_en_rect(pantalla, "Aplicar y guardar los nuevos", r_c2, categoria="pequena", tamano=13, color=(235, 255, 240), padding=2)
 
         pygame.display.flip()
 

@@ -10,7 +10,10 @@ from fuentes import (
     obtener_fuente_subtitulo,
     obtener_fuente_texto,
     obtener_fuente_boton,
+    obtener_fuente_botones,
     obtener_fuente_pequena,
+    obtener_fuente_contador,
+    obtener_fuente_dialogos,
     TAMANO_TITULO,
     TAMANO_TITULO_GRANDE,
     TAMANO_SUBTITULO,
@@ -18,11 +21,16 @@ from fuentes import (
     TAMANO_TEXTO,
     TAMANO_TEXTO_GRANDE,
     TAMANO_BOTON,
+    TAMANO_BOTONES,
     TAMANO_BOTON_GRANDE,
     TAMANO_PEQUENA,
     TAMANO_BADGE,
+    TAMANO_CONTADOR,
+    TAMANO_DIALOGOS,
+    renderizar_texto_ajustado,
+    dibujar_texto_en_rect,
 )
-from configuracion import t, mostrar_pestana_configuracion
+from configuracion import t, mostrar_pestana_configuracion, reproducir_musica
 
 from sprites import (
     ANCHO, ALTO, FPS,
@@ -124,10 +132,10 @@ def pantalla_muerte(pantalla, reloj):
                         return "salir"
 
         pantalla.fill((25, 25, 25))
-        titulo = fuente_titulo.render(t("te_moriste"), True, (255, 80, 80))
-        texto = fuente_texto.render(t("reiniciar_o_salir"), True, (255, 255, 255))
-        pantalla.blit(titulo, titulo.get_rect(center=(ANCHO // 2, 180)))
-        pantalla.blit(texto, texto.get_rect(center=(ANCHO // 2, 250)))
+        rect_tit = pygame.Rect(ANCHO // 2 - 300, 155, 600, 50)
+        dibujar_texto_en_rect(pantalla, t("te_moriste"), rect_tit, categoria="titulo", tamano=TAMANO_TITULO_GRANDE, color=(255, 80, 80), padding=4)
+        rect_sub = pygame.Rect(ANCHO // 2 - 350, 230, 700, 42)
+        dibujar_texto_en_rect(pantalla, t("reiniciar_o_salir"), rect_sub, categoria="texto", tamano=TAMANO_SUBTITULO_GRANDE, color=(255, 255, 255), padding=4)
 
         spr_r = boton_reiniciar_hover if (hov_reinicio and boton_reiniciar_hover) else boton_reiniciar_normal
         spr_m = boton_menu_hover if (hov_menu and boton_menu_hover) else boton_menu_normal
@@ -139,11 +147,6 @@ def pantalla_muerte(pantalla, reloj):
 
 
 def obtener_fuente_elegante(tamanio, negrita=True):
-    for nombre in ["Microsoft YaHei", "SimHei", "SimSun", "Segoe UI", "Arial Rounded MT Bold", "Arial", "Trebuchet MS", "DejaVu Sans"]:
-        try:
-            return pygame.font.SysFont(nombre, tamanio, bold=negrita)
-        except Exception:
-            pass
     return obtener_fuente_subtitulo(tamanio, negrita=negrita, tamano_fallback=int(tamanio * 1.1))
 
 
@@ -655,11 +658,11 @@ def mostrar_pantalla_victoria(
 
         pygame.display.flip()
 
-    # Fuentes estilizadas para la pantalla de victoria (tamaños legibles y nítidos)
-    fuente_titulo = obtener_fuente_elegante(34, negrita=True)
-    fuente_sub = obtener_fuente_elegante(25, negrita=True)
-    fuente_badge = obtener_fuente_elegante(20, negrita=True)
-    fuente_btn = obtener_fuente_elegante(26, negrita=True)
+    # Fuentes estilizadas para la pantalla de victoria (conectadas a las variables centralizadas)
+    fuente_titulo = obtener_fuente_titulo(TAMANO_TITULO_GRANDE)
+    fuente_sub = obtener_fuente_subtitulo(TAMANO_SUBTITULO_GRANDE, negrita=True)
+    fuente_badge = obtener_fuente_contador(20, negrita=True)
+    fuente_btn = obtener_fuente_botones(26, negrita=True)
 
     w_btn = 272
     h_btn = 80
@@ -714,8 +717,7 @@ def mostrar_pantalla_victoria(
             r_badge = pygame.Rect(cx - 150, rect_panel.top + 132, 300, 36)
             pygame.draw.rect(pantalla, (255, 255, 255), r_badge, border_radius=8)
             pygame.draw.rect(pantalla, (210, 195, 160), r_badge, width=2, border_radius=8)
-            t_nb = fuente_badge.render(nom_nivel, True, (50, 45, 40))
-            pantalla.blit(t_nb, t_nb.get_rect(center=r_badge.center))
+            dibujar_texto_en_rect(pantalla, nom_nivel, r_badge, categoria="boton", tamano=TAMANO_BADGE, color=(50, 45, 40), padding=4)
 
         # 2. Botón 1 con desplazamiento y rebote (empieza en f=12)
         if f >= 12:
@@ -732,8 +734,7 @@ def mostrar_pantalla_victoria(
                 pygame.draw.rect(pantalla, (160, 50, 35), (r1_anim.x, r1_anim.y + 4, r1_anim.w, r1_anim.h), border_radius=8)
                 pygame.draw.rect(pantalla, (225, 110, 80), r1_anim, border_radius=8)
                 pygame.draw.rect(pantalla, (150, 45, 30), r1_anim, width=3, border_radius=8)
-                tb1 = fuente_btn.render(txt_btn1, True, (255, 255, 255))
-                pantalla.blit(tb1, tb1.get_rect(center=r1_anim.center))
+                dibujar_texto_en_rect(pantalla, txt_btn1, r1_anim, categoria="boton", tamano=TAMANO_BOTON_GRANDE, color=(255, 255, 255), padding=6)
 
         # 3. Botón 2 con desplazamiento y rebote (empieza en f=20)
         if f >= 20:
@@ -748,8 +749,7 @@ def mostrar_pantalla_victoria(
                 pygame.draw.rect(pantalla, (195, 185, 165), (r2_anim.x, r2_anim.y + 4, r2_anim.w, r2_anim.h), border_radius=8)
                 pygame.draw.rect(pantalla, (245, 235, 215), r2_anim, border_radius=8)
                 pygame.draw.rect(pantalla, (70, 70, 75), r2_anim, width=3, border_radius=8)
-                tb2 = fuente_btn.render(txt_btn2, True, (50, 50, 55))
-                pantalla.blit(tb2, tb2.get_rect(center=r2_anim.center))
+                dibujar_texto_en_rect(pantalla, txt_btn2, r2_anim, categoria="boton", tamano=TAMANO_BOTON_GRANDE, color=(50, 50, 55), padding=6)
 
         pygame.display.flip()
 
@@ -822,8 +822,7 @@ def mostrar_pantalla_victoria(
         r_badge = pygame.Rect(cx - 150, rect_panel.top + 132, 300, 36)
         pygame.draw.rect(pantalla, (255, 255, 255), r_badge, border_radius=8)
         pygame.draw.rect(pantalla, (210, 195, 160), r_badge, width=2, border_radius=8)
-        t_nb = fuente_badge.render(nom_nivel, True, (50, 45, 40))
-        pantalla.blit(t_nb, t_nb.get_rect(center=r_badge.center))
+        dibujar_texto_en_rect(pantalla, nom_nivel, r_badge, categoria="boton", tamano=TAMANO_BADGE, color=(50, 45, 40), padding=4)
 
         # Captura de fondos limpios antes de renderizar los botones
         fondo_limpio_btn1 = pantalla.subsurface(rect_btn1).copy()
@@ -842,21 +841,18 @@ def mostrar_pantalla_victoria(
                 r1_draw = pygame.Rect(rect_btn1.x, rect_btn1.y + 3, rect_btn1.w, rect_btn1.h)
                 pygame.draw.rect(pantalla, (200, 85, 60), r1_draw, border_radius=8)
                 pygame.draw.rect(pantalla, (130, 40, 25), r1_draw, width=3, border_radius=8)
-                tb1 = fuente_btn.render(txt_btn1, True, (245, 245, 245))
-                pantalla.blit(tb1, tb1.get_rect(center=r1_draw.center))
+                dibujar_texto_en_rect(pantalla, txt_btn1, r1_draw, categoria="boton", tamano=TAMANO_BOTON_GRANDE, color=(245, 245, 245), padding=6)
             elif hover1:
                 r1_draw = pygame.Rect(rect_btn1.x, rect_btn1.y - 2, rect_btn1.w, rect_btn1.h)
                 pygame.draw.rect(pantalla, (160, 50, 35), (r1_draw.x, r1_draw.y + 6, r1_draw.w, r1_draw.h), border_radius=8)
                 pygame.draw.rect(pantalla, (240, 125, 95), r1_draw, border_radius=8)
                 pygame.draw.rect(pantalla, (180, 60, 45), r1_draw, width=3, border_radius=8)
-                tb1 = fuente_btn.render(txt_btn1, True, (255, 255, 255))
-                pantalla.blit(tb1, tb1.get_rect(center=r1_draw.center))
+                dibujar_texto_en_rect(pantalla, txt_btn1, r1_draw, categoria="boton", tamano=TAMANO_BOTON_GRANDE, color=(255, 255, 255), padding=6)
             else:
                 pygame.draw.rect(pantalla, (160, 50, 35), (rect_btn1.x, rect_btn1.y + 4, rect_btn1.w, rect_btn1.h), border_radius=8)
                 pygame.draw.rect(pantalla, (225, 110, 80), rect_btn1, border_radius=8)
                 pygame.draw.rect(pantalla, (150, 45, 30), rect_btn1, width=3, border_radius=8)
-                tb1 = fuente_btn.render(txt_btn1, True, (255, 255, 255))
-                pantalla.blit(tb1, tb1.get_rect(center=rect_btn1.center))
+                dibujar_texto_en_rect(pantalla, txt_btn1, rect_btn1, categoria="boton", tamano=TAMANO_BOTON_GRANDE, color=(255, 255, 255), padding=6)
 
         # Renderizado interactivo Botón 2 («VOLVER AL MENÚ»)
         press2 = (boton_presionado == 2 and hover2)
@@ -868,21 +864,18 @@ def mostrar_pantalla_victoria(
                 r2_draw = pygame.Rect(rect_btn2.x, rect_btn2.y + 3, rect_btn2.w, rect_btn2.h)
                 pygame.draw.rect(pantalla, (225, 215, 195), r2_draw, border_radius=8)
                 pygame.draw.rect(pantalla, (35, 35, 40), r2_draw, width=3, border_radius=8)
-                tb2 = fuente_btn.render(txt_btn2, True, (35, 35, 40))
-                pantalla.blit(tb2, tb2.get_rect(center=r2_draw.center))
+                dibujar_texto_en_rect(pantalla, txt_btn2, r2_draw, categoria="boton", tamano=TAMANO_BOTON_GRANDE, color=(35, 35, 40), padding=6)
             elif hover2:
                 r2_draw = pygame.Rect(rect_btn2.x, rect_btn2.y - 2, rect_btn2.w, rect_btn2.h)
                 pygame.draw.rect(pantalla, (195, 185, 165), (r2_draw.x, r2_draw.y + 6, r2_draw.w, r2_draw.h), border_radius=8)
                 pygame.draw.rect(pantalla, (255, 248, 232), r2_draw, border_radius=8)
                 pygame.draw.rect(pantalla, (40, 40, 45), r2_draw, width=3, border_radius=8)
-                tb2 = fuente_btn.render(txt_btn2, True, (40, 40, 45))
-                pantalla.blit(tb2, tb2.get_rect(center=r2_draw.center))
+                dibujar_texto_en_rect(pantalla, txt_btn2, r2_draw, categoria="boton", tamano=TAMANO_BOTON_GRANDE, color=(40, 40, 45), padding=6)
             else:
                 pygame.draw.rect(pantalla, (195, 185, 165), (rect_btn2.x, rect_btn2.y + 4, rect_btn2.w, rect_btn2.h), border_radius=8)
                 pygame.draw.rect(pantalla, (245, 235, 215), rect_btn2, border_radius=8)
                 pygame.draw.rect(pantalla, (70, 70, 75), rect_btn2, width=3, border_radius=8)
-                tb2 = fuente_btn.render(txt_btn2, True, (50, 50, 55))
-                pantalla.blit(tb2, tb2.get_rect(center=rect_btn2.center))
+                dibujar_texto_en_rect(pantalla, txt_btn2, rect_btn2, categoria="boton", tamano=TAMANO_BOTON_GRANDE, color=(50, 50, 55), padding=6)
 
         pygame.display.flip()
 
@@ -2293,7 +2286,7 @@ def _dibujar_hud_linternas_m3_n4(pantalla_surf, linterna_p1, linterna_p2, p1_col
     - P1: [E] ON / OFF
     - P2: [L] ON / OFF
     """
-    fuente_hud = pygame.font.SysFont("Segoe UI, Arial, sans-serif", 13, bold=True)
+    fuente_hud = obtener_fuente_pequena(13, negrita=True)
 
     x1, y1 = 28, y_base
     w_badge = 195 if y_base > 30 else 190
@@ -2735,7 +2728,7 @@ def dibujar_camaras_aire_escenario(superficie, camaras_aire, tick):
     - Microburbujas de oxígeno ascendentes que invitan al jugador a recargar.
     - Rótulo resplandeciente 'AIRE / O2' indicando claramente la zona segura.
     """
-    fuente_aire = pygame.font.SysFont("Segoe UI, Arial, sans-serif", 12, bold=True)
+    fuente_aire = obtener_fuente_pequena(12, negrita=True)
     for cam in camaras_aire:
         r = cam["rect"]
 
@@ -2833,8 +2826,8 @@ def _dibujar_hud_oxigeno_m3_n5(pantalla_surf, oxigeno_p1, oxigeno_p2, p1_color, 
     - Porcentaje numérico exacto de reserva de aire.
     - Alerta visual destacada cuando el oxígeno cae por debajo del 25%.
     """
-    fuente_hud = pygame.font.SysFont("Segoe UI, Arial, sans-serif", 12, bold=True)
-    fuente_pct = pygame.font.SysFont("Segoe UI, Arial, sans-serif", 11, bold=True)
+    fuente_hud = obtener_fuente_pequena(12, negrita=True)
+    fuente_pct = obtener_fuente_contador(11, negrita=True)
 
     w_badge, h_badge = 195, 34
     x_base, y_base = 28, 22
@@ -2899,7 +2892,7 @@ def dibujar_alerta_oxigeno_personaje(superficie, jugador, oxigeno, tick):
         hy = jugador["hitbox"].top - 18
         s_alerta = pygame.Surface((38, 16), pygame.SRCALPHA)
         pygame.draw.rect(s_alerta, (230, 40, 50, 220), (0, 0, 38, 16), border_radius=8)
-        fuente_aviso = pygame.font.SysFont("Segoe UI, Arial, sans-serif", 10, bold=True)
+        fuente_aviso = obtener_fuente_pequena(10, negrita=True)
         lbl = fuente_aviso.render("! O2", True, (255, 255, 255))
         s_alerta.blit(lbl, ((38 - lbl.get_width()) // 2, (16 - lbl.get_height()) // 2))
         superficie.blit(s_alerta, (hx - 19, hy))
@@ -2927,6 +2920,9 @@ def iniciar_mundo(
 
     if niveles_desbloqueados is None:
         niveles_desbloqueados = crear_desbloqueados_inicial()
+
+    # Reproducción centralizada de música del mundo correspondiente (sin reiniciar dentro del mismo mundo)
+    reproducir_musica(f"mundo_{numero_mundo}")
 
     hay_siguiente_nivel = not (numero_mundo >= 3 and numero_nivel >= 5)
 

@@ -8,6 +8,7 @@ Gestiona:
 """
 
 import os
+import json
 import math
 import struct
 import pygame
@@ -18,15 +19,47 @@ from fuentes import (
     obtener_fuente_subtitulo,
     obtener_fuente_texto,
     obtener_fuente_boton,
+    obtener_fuente_botones,
     obtener_fuente_pequena,
+    obtener_fuente_contador,
+    obtener_fuente_dialogos,
     limpiar_cache_fuentes,
+    dibujar_texto_en_rect,
 )
 
 # ==============================================================================
-# ESTADO GLOBAL DE CONFIGURACIÓN
+# VARIABLES CENTRALIZADAS DE AUDIO Y MÚSICA
 # ==============================================================================
-_volumen = 70          # Porcentaje de volumen (0 a 100)
-_idioma = "es"          # Idioma actual: "es" | "en" | "zh"
+# Configura aquí las rutas o nombres de archivo de cada pista de música y el volumen.
+# Puedes colocar los archivos en 'assets/audio/' o 'Sprites/Audio/' (.mp3, .ogg, .wav).
+# ==============================================================================
+AUDIO_MENU = "menu.mp3"          # Música del menú principal y pantallas de navegación
+AUDIO_MUNDO_1 = "mundo1.mp3"     # Música del Mundo 1
+AUDIO_MUNDO_2 = "mundo2.mp3"     # Música del Mundo 2
+AUDIO_MUNDO_3 = "mundo3.mp3"     # Música del Mundo 3
+
+VOLUMEN_MUSICA = 70             # Volumen general de la música (0 a 100)
+VOLUMEN_EFECTOS = 70            # Volumen general de efectos de sonido (0 a 100)
+
+_volumen = 70                   # Volumen maestro (sincronizado con música y efectos)
+_idioma = "es"                  # Idioma actual: "es" | "en" | "zh"
+
+DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
+RUTA_CONFIG_JSON = os.path.join(DIRECTORIO_ACTUAL, "configuracion.json")
+
+CARPETAS_AUDIO = [
+    os.path.join(DIRECTORIO_ACTUAL, "..", "assets", "audio"),
+    os.path.join(DIRECTORIO_ACTUAL, "assets", "audio"),
+    os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Audio"),
+    os.path.join(DIRECTORIO_ACTUAL, "Sprites", "Audio"),
+    os.path.join(DIRECTORIO_ACTUAL, "..", "assets"),
+    os.path.join(DIRECTORIO_ACTUAL, "assets"),
+]
+
+# Estado interno del reproductor de música
+_pista_activa_tipo = None
+_archivo_musica_actual = None
+
 
 # ==============================================================================
 # DICCIONARIO DE TRADUCCIONES
@@ -172,7 +205,7 @@ DICCIONARIO = {
         "zh": "返回",
     },
     "seleccion_nivel": {
-        "es": "SELECCIÓN DE NIVEL",
+        "es": "SELECCION DE NIVEL",
         "en": "LEVEL SELECTION",
         "zh": "选择关卡",
     },
@@ -210,6 +243,7 @@ def cambiar_idioma(nuevo_idioma):
     global _idioma
     if nuevo_idioma in ("es", "en", "zh"):
         _idioma = nuevo_idioma
+        _guardar_configuracion_disco()
         try:
             limpiar_cache_fuentes()
         except Exception:
@@ -217,25 +251,246 @@ def cambiar_idioma(nuevo_idioma):
 
 
 # ==============================================================================
-# GESTIÓN DE AUDIO Y VOLUMEN
+# PERSISTENCIA DE CONFIGURACIÓN
 # ==============================================================================
-def obtener_volumen():
-    """Retorna el volumen actual como entero entre 0 y 100."""
-    return _volumen
+def _guardar_configuracion_disco():
+    """Persiste el volumen y las preferencias para conservarlos entre partidas y sesiones."""
+    try:
+        datos = {
+            "volumen": _volumen,
+            "volumen_musica": VOLUMEN_MUSICA,
+            "volumen_efectos": VOLUMEN_EFECTOS,
+            "idioma": _idioma,
+        }
+        with open(RUTA_CONFIG_JSON, "w", encoding="utf-8") as f:
+            json.dump(datos, f, indent=4)
+    except Exception:
+        pass
 
 
-def _aplicar_volumen_audio():
-    """Aplica el nivel de volumen al subsistema de audio y música de Pygame."""
+def _cargar_configuracion_disco():
+    """Carga los ajustes guardados de volumen e idioma si existen en disco."""
+    global _volumen, VOLUMEN_MUSICA, VOLUMEN_EFECTOS, _idioma
+    if os.path.isfile(RUTA_CONFIG_JSON):
+        try:
+            with open(RUTA_CONFIG_JSON, "r", encoding="utf-8") as f:
+                datos = json.load(f)
+            if "volumen" in datos:
+                _volumen = max(0, min(100, int(datos["volumen"])))
+            if "volumen_musica" in datos:
+                VOLUMEN_MUSICA = max(0, min(100, int(datos["volumen_musica"])))
+            else:
+                VOLUMEN_MUSICA = _volumen
+            if "volumen_efectos" in datos:
+                VOLUMEN_EFECTOS = max(0, min(100, int(datos["volumen_efectos"])))
+            else:
+                VOLUMEN_EFECTOS = _volumen
+            if "idioma" in datos and datos["idioma"] in ("es", "en", "zh"):
+                _idioma = datos["idioma"]
+        except Exception:
+            pass
+
+
+# Carga inicial de ajustes al importar el módulo
+_cargar_configuracion_disco()
+
+
+# ==============================================================================
+# GESTIÓN Y REPRODUCCIÓN DE MÚSICA Y AUDIO
+# ==============================================================================
+def _resolver_ruta_audio(pista_o_nombre):
+    """
+    Localiza el archivo de audio comprobando rutas absolutas, relativas y carpetas
+    assets/audio y Sprites/Audio. Soporta extensiones .mp3, .ogg, .wav.
+    """
+    if not pista_o_nombre:
+        return None
+
+    if os.path.isabs(pista_o_nombre) and os.path.isfile(pista_o_nombre):
+        return os.path.normpath(pista_o_nombre)
+
+    base = os.path.basename(pista_o_nombre)
+    nombres_a_buscar = [base]
+    nombre_raiz, ext = os.path.splitext(base)
+    if not ext:
+        for posible_ext in [".mp3", ".ogg", ".wav"]:
+            nombres_a_buscar.append(nombre_raiz + posible_ext)
+
+    for carpeta in CARPETAS_AUDIO:
+        for nom in nombres_a_buscar:
+            ruta_candidata = os.path.join(carpeta, nom)
+            if os.path.isfile(ruta_candidata):
+                return os.path.normpath(ruta_candidata)
+
+    # Buscar también en el directorio del script
+    for nom in nombres_a_buscar:
+        ruta_directa = os.path.join(DIRECTORIO_ACTUAL, nom)
+        if os.path.isfile(ruta_directa):
+            return os.path.normpath(ruta_directa)
+
+    return None
+
+
+def reproducir_musica(tipo="menu", forzar=False):
+    """
+    Reproduce la pista musical indicada ('menu', 'mundo_1', 'mundo_2', 'mundo_3') en bucle continuo.
+    - Si la misma pista ya está sonando, NO se reinicia (conserva la continuidad).
+    - Navegar entre pantallas de menú o cambiar de nivel dentro del mismo mundo no corta la música.
+    - Si el archivo de audio aún no existe, el juego continúa normalmente sin música ni errores repetidos.
+    - Garantiza que nunca se reproduzcan dos pistas simultáneas.
+    """
+    global _pista_activa_tipo, _archivo_musica_actual
+
     try:
         if not pygame.mixer.get_init():
             pygame.mixer.init()
-        vol_float = max(0.0, min(1.0, _volumen / 100.0))
+    except Exception:
+        return
+
+    # Normalizar identificador del tipo de pista
+    tipo_str = str(tipo).lower().strip()
+    if tipo_str in ("menu", "principal", "navegacion"):
+        tipo_normalizado = "menu"
+        pista_config = AUDIO_MENU
+    elif tipo_str in ("mundo_1", "mundo1", "1"):
+        tipo_normalizado = "mundo_1"
+        pista_config = AUDIO_MUNDO_1
+    elif tipo_str in ("mundo_2", "mundo2", "2"):
+        tipo_normalizado = "mundo_2"
+        pista_config = AUDIO_MUNDO_2
+    elif tipo_str in ("mundo_3", "mundo3", "3"):
+        tipo_normalizado = "mundo_3"
+        pista_config = AUDIO_MUNDO_3
+    else:
+        tipo_normalizado = tipo_str
+        pista_config = tipo
+
+    # Si ya está sonando esta misma pista y no se solicita forzar reinicio, conservar reproducción
+    if tipo_normalizado == _pista_activa_tipo and not forzar:
+        return
+
+    ruta_audio = _resolver_ruta_audio(pista_config)
+    _pista_activa_tipo = tipo_normalizado
+
+    if not ruta_audio:
+        # Si no existe archivo para esta pista, detener cualquier música previa y continuar en silencio
+        try:
+            pygame.mixer.music.stop()
+        except Exception:
+            pass
+        _archivo_musica_actual = None
+        return
+
+    try:
+        pygame.mixer.music.stop()
+        pygame.mixer.music.load(ruta_audio)
+        vol_float = max(0.0, min(1.0, VOLUMEN_MUSICA / 100.0))
         pygame.mixer.music.set_volume(vol_float)
-        num_canales = pygame.mixer.get_num_channels()
-        for i in range(num_canales):
-            pygame.mixer.Channel(i).set_volume(vol_float)
+        pygame.mixer.music.play(-1)
+        _archivo_musica_actual = ruta_audio
+    except Exception:
+        _archivo_musica_actual = None
+
+
+def detener_musica():
+    """Detiene la música actual de forma segura."""
+    global _pista_activa_tipo, _archivo_musica_actual
+    _pista_activa_tipo = None
+    _archivo_musica_actual = None
+    try:
+        if pygame.mixer.get_init():
+            pygame.mixer.music.stop()
     except Exception:
         pass
+
+
+def pausar_musica():
+    """Pausa temporalmente la música actual."""
+    try:
+        if pygame.mixer.get_init():
+            pygame.mixer.music.pause()
+    except Exception:
+        pass
+
+
+def reanudar_musica():
+    """Reanuda la música que fue pausada."""
+    try:
+        if pygame.mixer.get_init():
+            pygame.mixer.music.unpause()
+    except Exception:
+        pass
+
+
+def obtener_musica_actual():
+    """Retorna una tupla (tipo_pista, ruta_archivo) de la música activa."""
+    return _pista_activa_tipo, _archivo_musica_actual
+
+
+# ==============================================================================
+# GESTIÓN Y CONTROL DE VOLUMEN
+# ==============================================================================
+def obtener_volumen():
+    """Retorna el volumen maestro actual como entero entre 0 y 100."""
+    return _volumen
+
+
+def obtener_volumen_musica():
+    """Retorna el volumen de la música (0 a 100)."""
+    return VOLUMEN_MUSICA
+
+
+def obtener_volumen_efectos():
+    """Retorna el volumen de efectos de sonido (0 a 100)."""
+    return VOLUMEN_EFECTOS
+
+
+def _aplicar_volumen_audio():
+    """Aplica el nivel de volumen al subsistema de música y canales de Pygame."""
+    try:
+        if not pygame.mixer.get_init():
+            pygame.mixer.init()
+        vol_m = max(0.0, min(1.0, VOLUMEN_MUSICA / 100.0))
+        pygame.mixer.music.set_volume(vol_m)
+
+        vol_e = max(0.0, min(1.0, VOLUMEN_EFECTOS / 100.0))
+        num_canales = pygame.mixer.get_num_channels()
+        for i in range(num_canales):
+            pygame.mixer.Channel(i).set_volume(vol_e)
+    except Exception:
+        pass
+
+
+def fijar_volumen_musica(nuevo_volumen):
+    """Establece el volumen de la música (0 a 100) y lo persiste."""
+    global VOLUMEN_MUSICA
+    VOLUMEN_MUSICA = max(0, min(100, int(nuevo_volumen)))
+    _aplicar_volumen_audio()
+    _guardar_configuracion_disco()
+
+
+def fijar_volumen_efectos(nuevo_volumen):
+    """Establece el volumen de los efectos de sonido (0 a 100) y lo persiste."""
+    global VOLUMEN_EFECTOS
+    VOLUMEN_EFECTOS = max(0, min(100, int(nuevo_volumen)))
+    _aplicar_volumen_audio()
+    _guardar_configuracion_disco()
+
+
+def fijar_volumen(nuevo_volumen):
+    """Establece el volumen maestro (0 a 100), sincroniza música y efectos, y persiste el ajuste."""
+    global _volumen, VOLUMEN_MUSICA, VOLUMEN_EFECTOS
+    _volumen = max(0, min(100, int(nuevo_volumen)))
+    VOLUMEN_MUSICA = _volumen
+    VOLUMEN_EFECTOS = _volumen
+    _aplicar_volumen_audio()
+    _guardar_configuracion_disco()
+
+
+def cambiar_volumen(delta):
+    """Incrementa o decrementa el volumen por un valor delta y emite retroalimentación sonora."""
+    fijar_volumen(_volumen + delta)
+    reproducir_beep_volumen()
 
 
 def reproducir_beep_volumen():
@@ -243,7 +498,7 @@ def reproducir_beep_volumen():
     try:
         if not pygame.mixer.get_init():
             pygame.mixer.init()
-        vol_float = max(0.0, min(1.0, _volumen / 100.0))
+        vol_float = max(0.0, min(1.0, VOLUMEN_EFECTOS / 100.0))
         if vol_float <= 0.001:
             return
 
@@ -261,18 +516,6 @@ def reproducir_beep_volumen():
     except Exception:
         pass
 
-
-def fijar_volumen(nuevo_volumen):
-    """Establece el volumen a un porcentaje exacto (0 a 100)."""
-    global _volumen
-    _volumen = max(0, min(100, int(nuevo_volumen)))
-    _aplicar_volumen_audio()
-
-
-def cambiar_volumen(delta):
-    """Incrementa o decrementa el volumen por un valor delta y emite retroalimentación sonora."""
-    fijar_volumen(_volumen + delta)
-    reproducir_beep_volumen()
 
 
 # ==============================================================================
@@ -295,9 +538,9 @@ def mostrar_pestana_configuracion(pantalla, reloj):
     capa_oscura = pygame.Surface((ancho_p, alto_p), pygame.SRCALPHA)
     capa_oscura.fill((0, 0, 0, 150))
 
-    # Dimensiones y posición del panel central
+    # Dimensiones y posición del panel central (compacto y elegante, cerrado únicamente mediante la X)
     W_MODAL = 520
-    H_MODAL = 400
+    H_MODAL = 310
     rect_modal = pygame.Rect((ancho_p - W_MODAL) // 2, (alto_p - H_MODAL) // 2, W_MODAL, H_MODAL)
 
     # Botón de cerrar (X) en la esquina superior derecha del panel (con proporción nativa 0.8496 y centrado en cabecera)
@@ -337,8 +580,8 @@ def mostrar_pestana_configuracion(pantalla, reloj):
     w_barra = total_w_content - (2 * W_BTN_VOL + 2 * gap_vol)  # 324 px
     h_barra = 28
 
-    y_seccion_vol = rect_modal.top + 78
-    cy_vol_fila = rect_modal.top + 130  # Centro vertical compartido de la fila de volumen
+    y_seccion_vol = rect_modal.top + 72
+    cy_vol_fila = rect_modal.top + 122  # Centro vertical compartido de la fila de volumen
 
     rect_btn_menos = pygame.Rect(x_margen_contenido, 0, W_BTN_VOL, H_BTN_VOL)
     rect_btn_menos.centery = cy_vol_fila
@@ -350,13 +593,11 @@ def mostrar_pestana_configuracion(pantalla, reloj):
     rect_btn_mas.centery = cy_vol_fila
 
     # Sección 2: Idioma
-    y_seccion_idioma = rect_modal.top + 188
+    y_seccion_idioma = rect_modal.top + 172
     y_btns_lang = y_seccion_idioma + 30
     rect_lang_es = pygame.Rect(x_margen_contenido, y_btns_lang, w_btn_lang, h_btn_lang)
     rect_lang_en = pygame.Rect(rect_lang_es.right + gap_lang, y_btns_lang, w_btn_lang, h_btn_lang)
     rect_lang_zh = pygame.Rect(rect_lang_en.right + gap_lang, y_btns_lang, w_btn_lang, h_btn_lang)
-
-    rect_btn_cerrar = pygame.Rect(rect_modal.centerx - 100, rect_modal.bottom - 58, 200, 42)
 
     modal_activo = True
     while modal_activo:
@@ -413,12 +654,7 @@ def mostrar_pestana_configuracion(pantalla, reloj):
                 elif rect_lang_zh.collidepoint(evento.pos):
                     cambiar_idioma("zh")
 
-                # 6. Clic en botón inferior CERRAR
-                elif rect_btn_cerrar.collidepoint(evento.pos):
-                    modal_activo = False
-                    break
-
-                # 7. Si hace clic fuera del modal, también cerramos elegantemente
+                # 6. Si hace clic fuera del modal, cerramos mediante la X/fondo
                 elif not rect_modal.collidepoint(evento.pos):
                     modal_activo = False
                     break
@@ -445,10 +681,9 @@ def mostrar_pestana_configuracion(pantalla, reloj):
         pygame.draw.rect(pantalla, (46, 52, 68), rect_header, border_top_left_radius=18, border_top_right_radius=18)
         pygame.draw.line(pantalla, (70, 78, 100), (rect_modal.left, rect_header.bottom), (rect_modal.right, rect_header.bottom), 2)
 
-        # Título de Cabecera
-        fuente_titulo = obtener_fuente_titulo(22, tamano_fallback=20)
-        t_tit = fuente_titulo.render(t("configuracion"), True, (255, 235, 195))
-        pantalla.blit(t_tit, t_tit.get_rect(center=(rect_modal.centerx, rect_header.centery)))
+        # Título de Cabecera (con soporte tipográfico completo para acentos y ajuste seguro)
+        rect_tit_h = pygame.Rect(rect_modal.left + 50, rect_header.top + 8, rect_modal.width - 100, 38)
+        dibujar_texto_en_rect(pantalla, t("configuracion"), rect_tit_h, categoria="subtitulo", tamano=22, color=(255, 235, 195), negrita=True, padding=4)
 
         mouse_down = pygame.mouse.get_pressed()[0]
 
@@ -477,8 +712,8 @@ def mostrar_pestana_configuracion(pantalla, reloj):
             pygame.draw.rect(pantalla, (255, 160, 100), rect_relleno, border_radius=6)
         pygame.draw.rect(pantalla, (80, 88, 110), rect_barra_bg, width=2, border_radius=8)
 
-        # Texto de porcentaje centrado sobre la barra
-        fuente_pct = obtener_fuente_boton(16, negrita=True, tamano_fallback=16)
+        # Texto de porcentaje centrado sobre la barra (categoría contador)
+        fuente_pct = obtener_fuente_contador(16, negrita=True, tamano_fallback=16)
         t_pct = fuente_pct.render(f"{_volumen} %", True, (255, 255, 255))
         rect_pct = t_pct.get_rect(center=rect_barra_bg.center)
         # Sombra de texto para alta legibilidad sobre la barra
@@ -502,7 +737,7 @@ def mostrar_pestana_configuracion(pantalla, reloj):
             ("zh", "简体中文", rect_lang_zh),
         ]
 
-        fuente_btn_lang = obtener_fuente_boton(16, negrita=True, tamano_fallback=16)
+        fuente_btn_lang = obtener_fuente_subtitulo(16, negrita=True, tamano_fallback=16)
         for cod, etiqueta, rect_btn in opciones_idioma:
             es_activo = (_idioma == cod)
             hov_btn = rect_btn.collidepoint(pos_mouse)
@@ -526,20 +761,10 @@ def mostrar_pestana_configuracion(pantalla, reloj):
             pygame.draw.rect(pantalla, col_bg, rect_btn, border_radius=10)
             pygame.draw.rect(pantalla, col_borde, rect_btn, width=grosor_borde, border_radius=10)
 
-            texto_render = f"✓ {etiqueta}" if es_activo else etiqueta
-            t_lbl = fuente_btn_lang.render(texto_render, True, col_txt)
+            # Usar tipografía con soporte CJK para chino y evitar caracteres no soportados
+            f_actual = pygame.font.SysFont("Microsoft YaHei", 16, bold=True) if cod == "zh" else fuente_btn_lang
+            t_lbl = f_actual.render(etiqueta, True, col_txt)
             pantalla.blit(t_lbl, t_lbl.get_rect(center=rect_btn.center))
-
-        # --- BOTÓN INFERIOR: CERRAR / VOLVER AL JUEGO ---
-        hov_cerrar = rect_btn_cerrar.collidepoint(pos_mouse)
-        col_c_bg = (182, 88, 43) if hov_cerrar else (150, 70, 32)
-        col_c_bd = (255, 195, 140) if hov_cerrar else (210, 140, 95)
-        pygame.draw.rect(pantalla, col_c_bg, rect_btn_cerrar, border_radius=12)
-        pygame.draw.rect(pantalla, col_c_bd, rect_btn_cerrar, width=2, border_radius=12)
-
-        fuente_btn_cerrar = obtener_fuente_boton(18, negrita=True, tamano_fallback=18)
-        t_btn_c = fuente_btn_cerrar.render(t("cerrar"), True, (255, 255, 255))
-        pantalla.blit(t_btn_c, t_btn_c.get_rect(center=rect_btn_cerrar.center))
 
         pygame.display.flip()
         reloj.tick(60)
