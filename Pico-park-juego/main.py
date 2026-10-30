@@ -27,6 +27,7 @@ from menu_niveles import (
     COL_PANEL,
     COL_BORDE_PANEL,
 )
+from personajes_menu import GestorPersonajesMenu
 from guardado import (
     crear_desbloqueados_inicial,
     cargar_partidas,
@@ -624,20 +625,33 @@ def main():
     _cargar_recursos_niveles()
     _cargar_recursos_controles()
 
+    # Instanciar el gestor del escenario interactivo y personajes autónomos del Menú Principal
+    gestor_personajes_menu = GestorPersonajesMenu(
+        ancho=ANCHO_MENU,
+        alto=ALTO_MENU,
+        color_p1=color_p1,
+        accesorio_p1=accesorio_p1,
+        color_p2=color_p2,
+        accesorio_p2=accesorio_p2,
+    )
+
     # Renderizar el primer fotograma del Menú Principal con todos los botones e interfaz completamente listos
     pantalla.fill((30, 30, 30))
-    t_primer_frame = fuente_pixel_titulo.render("PICO PARK", True, (255, 255, 255))
-    pantalla.blit(t_primer_frame, t_primer_frame.get_rect(center=(ANCHO_MENU // 2, 70)))
-    if spr_x_normal:
-        pantalla.blit(spr_x_normal, rect_btn_x)
-    for b_r, b_s in [
-        (btn_jugar, spr_jugar_normal),
-        (btn_personajes, spr_personajes_normal),
-        (btn_config, spr_opciones_normal),
-        (btn_salir, spr_salir_normal),
-    ]:
-        if b_s:
-            pantalla.blit(b_s, b_r)
+    pos_mouse_inicial = pygame.mouse.get_pos()
+    botones_menu_datos_ini = [
+        (btn_jugar, spr_jugar_normal, spr_jugar_hover),
+        (btn_personajes, spr_personajes_normal, spr_personajes_hover),
+        (btn_config, spr_opciones_normal, spr_opciones_hover),
+        (btn_salir, spr_salir_normal, spr_salir_hover),
+    ]
+    gestor_personajes_menu.dibujar_menu_completo(
+        pantalla,
+        botones_menu_datos=botones_menu_datos_ini,
+        pos_mouse=pos_mouse_inicial,
+        spr_x=spr_x_normal,
+        rect_x=rect_btn_x,
+        fuente_titulo=fuente_pixel_titulo,
+    )
     pygame.display.flip()
 
     # Geometría y variables para la Lista de Partidas Guardadas
@@ -714,16 +728,20 @@ def main():
                 if estado_actual == ESTADO_MENU_PRINCIPAL:
                     _asegurar_semi_apretados_menu()
                     if btn_jugar.collidepoint(evento.pos):
-                        if animar_pulsacion_boton(pantalla, btn_jugar, spr_jugar_semi, spr_jugar_apretado, fondo_limpio_btn, spr_jugar_normal):
+                        f_limp = gestor_personajes_menu.fondo_estatico.subsurface(btn_jugar)
+                        if animar_pulsacion_boton(pantalla, btn_jugar, spr_jugar_semi, spr_jugar_apretado, f_limp, spr_jugar_normal):
                             estado_actual = ESTADO_MODO_JUEGO
                     elif btn_personajes.collidepoint(evento.pos):
-                        if animar_pulsacion_boton(pantalla, btn_personajes, spr_personajes_semi, spr_personajes_apretado, fondo_limpio_btn, spr_personajes_normal):
+                        f_limp = gestor_personajes_menu.fondo_estatico.subsurface(btn_personajes)
+                        if animar_pulsacion_boton(pantalla, btn_personajes, spr_personajes_semi, spr_personajes_apretado, f_limp, spr_personajes_normal):
                             estado_actual = ESTADO_PERSONAJES
                     elif btn_config.collidepoint(evento.pos):
-                        if animar_pulsacion_boton(pantalla, btn_config, spr_opciones_semi, spr_opciones_apretado, fondo_limpio_btn, spr_opciones_normal):
+                        f_limp = gestor_personajes_menu.fondo_estatico.subsurface(btn_config)
+                        if animar_pulsacion_boton(pantalla, btn_config, spr_opciones_semi, spr_opciones_apretado, f_limp, spr_opciones_normal):
                             estado_actual = ESTADO_CONFIGURACION
                     elif btn_salir.collidepoint(evento.pos):
-                        if animar_pulsacion_boton(pantalla, btn_salir, spr_salir_semi, spr_salir_apretado, fondo_limpio_btn, spr_salir_normal):
+                        f_limp = gestor_personajes_menu.fondo_estatico.subsurface(btn_salir)
+                        if animar_pulsacion_boton(pantalla, btn_salir, spr_salir_semi, spr_salir_apretado, f_limp, spr_salir_normal):
                             intentar_salir()
 
                 elif estado_actual == ESTADO_MODO_JUEGO:
@@ -1135,8 +1153,8 @@ def main():
         pantalla.fill((30, 30, 30))
 
         if estado_actual == ESTADO_MENU_PRINCIPAL:
-            titulo = fuente_pixel_titulo.render("PICO PARK", True, (255, 255, 255))
-            pantalla.blit(titulo, titulo.get_rect(center=(ANCHO_MENU // 2, 70)))
+            gestor_personajes_menu.sincronizar_personalizacion(color_p1, accesorio_p1, color_p2, accesorio_p2)
+            gestor_personajes_menu.actualizar()
 
             pos_mouse = pygame.mouse.get_pos()
             botones_menu_datos = [
@@ -1145,10 +1163,15 @@ def main():
                 (btn_config, spr_opciones_normal, spr_opciones_hover),
                 (btn_salir, spr_salir_normal, spr_salir_hover),
             ]
-            for btn, spr_n, spr_h in botones_menu_datos:
-                spr_dib = spr_h if (btn.collidepoint(pos_mouse) and spr_h) else spr_n
-                if spr_dib:
-                    pantalla.blit(spr_dib, btn)
+            spr_x_dib = spr_x_hover if (spr_x_hover and rect_btn_x.collidepoint(pos_mouse)) else spr_x_normal
+            gestor_personajes_menu.dibujar_menu_completo(
+                pantalla,
+                botones_menu_datos=botones_menu_datos,
+                pos_mouse=pos_mouse,
+                spr_x=spr_x_dib,
+                rect_x=rect_btn_x,
+                fuente_titulo=fuente_pixel_titulo,
+            )
 
         elif estado_actual == ESTADO_MODO_JUEGO:
             # Fondo crema cálido similar a los niveles

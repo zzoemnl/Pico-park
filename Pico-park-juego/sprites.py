@@ -377,7 +377,11 @@ def cargar_sprites(nombre_color="Celeste"):
         for r in posibles_rutas:
             if os.path.isfile(r):
                 try:
-                    img_cargada = pygame.image.load(r).convert_alpha()
+                    img_cargada = pygame.image.load(r)
+                    try:
+                        img_cargada = img_cargada.convert_alpha()
+                    except pygame.error:
+                        pass
                     break
                 except pygame.error:
                     pass
@@ -595,20 +599,43 @@ def obtener_accesorios_disponibles():
 _CACHE_ACCESORIOS = {}
 
 
+CARPETA_ACCESORIOS = os.path.normpath(os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Accesorios"))
+
+# Mapeo centralizado de archivos para reemplazo futuro transparente
+NOMBRES_ARCHIVOS_ACCESORIOS = {
+    "Corona": ["corona.png", "crown.png"],
+    "Gorro": ["gorro.png", "gorra.png", "cap.png", "beanie.png"],
+    "Anteojos": ["anteojos.png", "gafas.png", "lentes.png", "glasses.png"],
+    "Moño": ["moño.png", "mono.png", "corbatin.png", "bow.png", "bowtie.png"],
+    "Sombrero": ["sombrero.png", "hat.png", "tophat.png"],
+}
+
+
+def recargar_accesorios():
+    """Limpia la caché de accesorios para recargar imágenes del disco inmediatamente."""
+    _CACHE_ACCESORIOS.clear()
+
+
 def cargar_accesorio(id_accesorio):
     if not id_accesorio or id_accesorio == "Ninguno":
         return None
     if id_accesorio in _CACHE_ACCESORIOS:
         return _CACHE_ACCESORIOS[id_accesorio]
 
-    ruta = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Accesorios", f"{id_accesorio.lower()}.png")
-    if os.path.isfile(ruta):
-        try:
-            surf = pygame.image.load(ruta).convert_alpha()
-            _CACHE_ACCESORIOS[id_accesorio] = surf
-            return surf
-        except Exception:
-            pass
+    # 1. Búsqueda prioritaria en la carpeta centralizada Sprites/Accesorios
+    nombres_candidatos = NOMBRES_ARCHIVOS_ACCESORIOS.get(
+        id_accesorio,
+        [f"{id_accesorio.lower()}.png", f"{id_accesorio}.png"]
+    )
+    for nombre_archivo in nombres_candidatos:
+        ruta = os.path.join(CARPETA_ACCESORIOS, nombre_archivo)
+        if os.path.isfile(ruta):
+            try:
+                surf = pygame.image.load(ruta).convert_alpha()
+                _CACHE_ACCESORIOS[id_accesorio] = surf
+                return surf
+            except Exception:
+                pass
 
     surf = pygame.Surface((36, 28), pygame.SRCALPHA)
     if id_accesorio == "Corona":
