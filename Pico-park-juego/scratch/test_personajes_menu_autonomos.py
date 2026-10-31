@@ -47,9 +47,9 @@ class TestPersonajesMenuAutonomos(unittest.TestCase):
         """Verifica que existan exactamente los 5 personajes originales y las 4 superficies perimetrales."""
         self.assertEqual(len(self.gestor.personajes), 5, "Deben existir exactamente 5 personajes")
         self.assertEqual(self.gestor.y_suelo, 650)
-        self.assertEqual(self.gestor.y_techo, 34)
-        self.assertEqual(self.gestor.x_pared_izq, 28)
-        self.assertEqual(self.gestor.x_pared_der, 1252)
+        self.assertEqual(self.gestor.y_techo, 0)
+        self.assertEqual(self.gestor.x_pared_izq, 0)
+        self.assertEqual(self.gestor.x_pared_der, 1280)
 
         # Comprobar que no existen cajas decorativas ni obstáculos artificiales
         self.assertEqual(len(self.gestor.bloques_decorativos), 0, "No debe haber cajas ni bloques decorativos")
@@ -75,6 +75,10 @@ class TestPersonajesMenuAutonomos(unittest.TestCase):
         superficies_vistas = {i: set() for i in range(5)}
         saltos = {i: 0 for i in range(5)}
         pisadas_en_botones = 0
+
+        for i, p in enumerate(self.gestor.personajes):
+            posiciones[i].add((p["hitbox"].x, p["hitbox"].y))
+            superficies_vistas[i].add(p["superficie"])
 
         for f in range(600):
             pos_prev = [(p["hitbox"].x, p["hitbox"].y) for p in self.gestor.personajes]

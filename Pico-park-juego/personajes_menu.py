@@ -80,42 +80,52 @@ COLOR_POOL = ["Celeste", "Violeta", "Amarillo", "Verde", "Rojo", "Naranja", "Ros
 # Perfiles de personalidad variados para los 5 personajes
 CONFIG_PERSONALIDADES = [
     {
-        "tipo": "explorador", "vel": 3.8, "trepar_prob": 0.35, "plat_prob": 0.50, "salto_prob": 0.020, "pausa_prob": 0.20,
-        "borde_parar": 0.15, "borde_girar": 0.30, "borde_saltar": 0.30, "borde_bajar": 0.25,
+        "tipo": "explorador", "vel": 3.8, "trepar_prob": 0.40, "plat_prob": 0.50, "salto_prob": 0.025, "pausa_prob": 0.15,
+        "prob_trepar": 0.40, "prob_salto_plat": 0.25, "prob_pausa": 0.15, "prob_bajar": 0.20,
+        "prob_pared_a_plat": 0.55, "prob_descolgar_techo": 0.35,
+        "borde_parar": 0.15, "borde_girar": 0.25, "borde_saltar": 0.35, "borde_bajar": 0.25,
     },
     {
-        "tipo": "curioso",    "vel": 3.6, "trepar_prob": 0.30, "plat_prob": 0.45, "salto_prob": 0.025, "pausa_prob": 0.28,
-        "borde_parar": 0.30, "borde_girar": 0.35, "borde_saltar": 0.15, "borde_bajar": 0.20,
+        "tipo": "saltarin",   "vel": 4.1, "trepar_prob": 0.28, "plat_prob": 0.65, "salto_prob": 0.055, "pausa_prob": 0.12,
+        "prob_trepar": 0.28, "prob_salto_plat": 0.35, "prob_pausa": 0.12, "prob_bajar": 0.25,
+        "prob_pared_a_plat": 0.45, "prob_descolgar_techo": 0.45,
+        "borde_parar": 0.10, "borde_girar": 0.20, "borde_saltar": 0.50, "borde_bajar": 0.20,
     },
     {
-        "tipo": "saltarin",   "vel": 4.1, "trepar_prob": 0.25, "plat_prob": 0.65, "salto_prob": 0.055, "pausa_prob": 0.15,
-        "borde_parar": 0.15, "borde_girar": 0.25, "borde_saltar": 0.50, "borde_bajar": 0.10,
+        "tipo": "curioso",    "vel": 3.5, "trepar_prob": 0.38, "plat_prob": 0.45, "salto_prob": 0.025, "pausa_prob": 0.25,
+        "prob_trepar": 0.38, "prob_salto_plat": 0.20, "prob_pausa": 0.25, "prob_bajar": 0.17,
+        "prob_pared_a_plat": 0.65, "prob_descolgar_techo": 0.25,
+        "borde_parar": 0.30, "borde_girar": 0.30, "borde_saltar": 0.20, "borde_bajar": 0.20,
     },
     {
-        "tipo": "tranquilo",  "vel": 3.2, "trepar_prob": 0.15, "plat_prob": 0.35, "salto_prob": 0.012, "pausa_prob": 0.40,
-        "borde_parar": 0.45, "borde_girar": 0.40, "borde_saltar": 0.05, "borde_bajar": 0.10,
+        "tipo": "tranquilo",  "vel": 3.2, "trepar_prob": 0.22, "plat_prob": 0.35, "salto_prob": 0.015, "pausa_prob": 0.35,
+        "prob_trepar": 0.22, "prob_salto_plat": 0.15, "prob_pausa": 0.35, "prob_bajar": 0.25,
+        "prob_pared_a_plat": 0.70, "prob_descolgar_techo": 0.20,
+        "borde_parar": 0.35, "borde_girar": 0.35, "borde_saltar": 0.15, "borde_bajar": 0.15,
     },
     {
-        "tipo": "jugueton",   "vel": 3.9, "trepar_prob": 0.30, "plat_prob": 0.55, "salto_prob": 0.040, "pausa_prob": 0.22,
-        "borde_parar": 0.20, "borde_girar": 0.25, "borde_saltar": 0.35, "borde_bajar": 0.20,
+        "tipo": "jugueton",   "vel": 3.9, "trepar_prob": 0.34, "plat_prob": 0.55, "salto_prob": 0.040, "pausa_prob": 0.18,
+        "prob_trepar": 0.34, "prob_salto_plat": 0.25, "prob_pausa": 0.18, "prob_bajar": 0.23,
+        "prob_pared_a_plat": 0.50, "prob_descolgar_techo": 0.40,
+        "borde_parar": 0.15, "borde_girar": 0.25, "borde_saltar": 0.35, "borde_bajar": 0.25,
     },
 ]
 
-# Límites del perímetro de desplazamiento
+# Límites del perímetro de desplazamiento (los 4 bordes de la pantalla)
 Y_SUELO = 650
-Y_TECHO = 34
-X_PARED_IZQ = 28
-X_PARED_DER = 1252
+Y_TECHO = 0
+X_PARED_IZQ = 0
+X_PARED_DER = 1280
 
 # Plataformas del escenario a distintas alturas (ordenadas, atractivas y sin colisión con los botones)
 # Los botones están centrados en X in [504, 776]. Las plataformas quedan en los laterales libres.
 PLATAFORMAS_ESCENARIO = [
     pygame.Rect(130, 520, 150, 18),   # P1: Izquierda baja (accesible desde el suelo)
-    pygame.Rect(44, 380, 130, 18),    # P2: Izquierda media (cerca de pared izquierda)
-    pygame.Rect(260, 260, 130, 18),   # P3: Izquierda alta (hacia el centro-izq)
+    pygame.Rect(0, 380, 160, 18),     # P2: Izquierda media (conectada al borde izquierdo de la pantalla)
+    pygame.Rect(240, 250, 140, 18),   # P3: Izquierda alta (hacia el centro-izq)
     pygame.Rect(1000, 520, 150, 18),  # P4: Derecha baja (accesible desde el suelo)
-    pygame.Rect(1106, 380, 130, 18),  # P5: Derecha media (cerca de pared derecha)
-    pygame.Rect(890, 260, 130, 18),   # P6: Derecha alta (hacia el centro-der)
+    pygame.Rect(1120, 380, 160, 18),  # P5: Derecha media (conectada al borde derecho de la pantalla)
+    pygame.Rect(900, 250, 140, 18),   # P6: Derecha alta (hacia el centro-der)
 ]
 
 # Geometría exacta de los botones principales del Menú (interfaz limpia)
@@ -184,6 +194,31 @@ def dibujar_personaje_rotado(pantalla, p):
 
     rot_surf = pygame.transform.rotate(comp, angulo)
     rect_rot = rot_surf.get_rect(center=p["hitbox"].center)
+
+    # Mantener al personaje adherido a los bordes de la pantalla sin salirse ni desaparecer
+    sup = p.get("superficie")
+    w_pantalla = pantalla.get_width()
+    h_pantalla = pantalla.get_height()
+
+    if sup == "pared_izq":
+        rect_rot.left = 0
+    elif sup == "pared_der":
+        rect_rot.right = w_pantalla
+    elif sup == "techo":
+        rect_rot.top = 0
+    elif sup == "suelo":
+        rect_rot.bottom = min(h_pantalla, p["hitbox"].bottom)
+
+    # Confinamiento estricto a los 4 límites de la pantalla
+    if rect_rot.left < 0:
+        rect_rot.left = 0
+    elif rect_rot.right > w_pantalla:
+        rect_rot.right = w_pantalla
+    if rect_rot.top < 0:
+        rect_rot.top = 0
+    elif rect_rot.bottom > h_pantalla:
+        rect_rot.bottom = h_pantalla
+
     pantalla.blit(rot_surf, rect_rot)
 
 
@@ -236,25 +271,25 @@ class GestorPersonajesMenu:
         self.colores = colores
         self.accesorios = accesorios
 
-        # Posiciones y modos iniciales vivos, variados y naturales:
+        # Posiciones y modos iniciales vivos, variados y naturales sobre los bordes y plataformas:
         # P0: Suelo izquierdo caminando
-        # P1: En plataforma izquierda media
-        # P2: Trepando pared izquierda
-        # P3: En el techo boca abajo
+        # P1: En plataforma izquierda media P2
+        # P2: Trepando borde izquierdo de la pantalla
+        # P3: En el borde superior de la pantalla boca abajo
         # P4: Descansando en suelo derecho
         posiciones_iniciales = [
             (210, self.y_suelo - ALTO_HITBOX, "suelo", 0.0, None),
             (PLATAFORMAS_ESCENARIO[1].centerx - 23, PLATAFORMAS_ESCENARIO[1].top - ALTO_HITBOX, "plataforma", 0.0, PLATAFORMAS_ESCENARIO[1]),
-            (self.x_pared_izq, 290, "pared_izq", -90.0, None),
+            (self.x_pared_izq, 220, "pared_izq", -90.0, None),
             (730, self.y_techo, "techo", 180.0, None),
-            (980, self.y_suelo - ALTO_HITBOX, "suelo", 0.0, None),
+            (self.x_pared_der - ANCHO_HITBOX, 200, "pared_der", 90.0, None),
         ]
 
         self.personajes = []
         self.ai_estados = []
 
         # Tiempos de decisión deliberadamente desfasados para evitar cambios simultáneos
-        tiempos_desfasados = [45, 75, 30, 95, 60]
+        tiempos_desfasados = [45, 75, 110, 95, 60]
 
         for i in range(5):
             x, y, sup_ini, ang_ini, plat_ini = posiciones_iniciales[i]
@@ -278,15 +313,18 @@ class GestorPersonajesMenu:
                 "idx": i,
                 "estado": "trepar" if sup_ini in ("pared_izq", "pared_der") else ("caminar_techo" if sup_ini == "techo" else ("quieto" if i == 4 else "caminar")),
                 "tiempo": tiempos_desfasados[i],
-                "direccion": 1 if i in (0, 3) else (-1 if i in (1, 2) else 0),
+                "direccion": 1 if i in (0, 3, 4) else (-1 if i in (1, 2) else 0),
                 "frames_bloqueado": 0,
                 "pos_x_anterior": x,
                 "pos_y_anterior": y,
                 "personalidad": conf["tipo"],
                 "datos_pers": conf,
                 "intentar_salto": False,
+                "salto_datos": None,
                 "cooldown_cambio_dir": 0,
                 "en_borde": False,
+                "contacto_pared": None,
+                "historial_acciones": [],
             }
             self.ai_estados.append(ai)
 
@@ -687,31 +725,6 @@ class GestorPersonajesMenu:
         for p in PLATAFORMAS_ESCENARIO:
             _dibujar_plat_pixel(p.x // 2, p.y // 2, p.width // 2, p.height // 2)
 
-        # 7. Viga del techo y guirnalda pixel art
-        pygame.draw.rect(surf, COLOR_MADERA_OSCURA, (0, 0, w, 12))
-        pygame.draw.line(surf, COLOR_MADERA_MEDIA, (0, 1), (w, 1), 1)
-        pygame.draw.line(surf, (26, 14, 8), (0, 11), (w, 11), 1)
-        for gx in range(0, w, 12):
-            pts_g = [(gx, 8), (gx + 6, 15), (gx + 12, 8)]
-            pygame.draw.polygon(surf, COLOR_PINO_OSCURO, pts_g)
-            surf.set_at((gx + 6, 13), COLOR_PINO_MEDIO)
-            surf.set_at((gx + 6, 14), COLOR_PINO_CLARO)
-        pygame.draw.rect(surf, COLOR_NIEVE_PURA, (0, 15, w, 2))
-
-        # Pilares en paredes laterales
-        pygame.draw.rect(surf, COLOR_MADERA_OSCURA, (0, 0, 14, y_suelo))
-        pygame.draw.line(surf, COLOR_MADERA_MEDIA, (1, 0), (1, y_suelo), 1)
-        pygame.draw.rect(surf, COLOR_NIEVE_PURA, (12, 0, 2, y_suelo))
-
-        pygame.draw.rect(surf, COLOR_MADERA_OSCURA, (w - 14, 0, 14, y_suelo))
-        pygame.draw.line(surf, COLOR_MADERA_MEDIA, (w - 2, 0), (w - 2, y_suelo), 1)
-        pygame.draw.rect(surf, COLOR_NIEVE_PURA, (w - 14, 0, 2, y_suelo))
-
-        # Moños festivos en las esquinas
-        for cx_m in (14, w - 14):
-            pygame.draw.circle(surf, (225, 45, 50), (cx_m, 14), 4)
-            surf.set_at((cx_m, 14), COLOR_ESTRELLA_ORO)
-
         # Escalar 2x mediante algoritmo de vecino más próximo (nearest-neighbor)
         return pygame.transform.scale(surf, (self.ancho, self.alto))
 
@@ -723,12 +736,242 @@ class GestorPersonajesMenu:
         dir_actual = ai.get("direccion", 0)
         if nueva_dir == dir_actual:
             return
-        if not forzar and dir_actual != 0 and nueva_dir != 0 and nueva_dir == -dir_actual:
-            if ai.get("cooldown_cambio_dir", 0) > 0:
+        if dir_actual != 0 and nueva_dir != 0 and nueva_dir == -dir_actual:
+            if not forzar and ai.get("cooldown_cambio_dir", 0) > 0:
+                return
+            if forzar and ai.get("cooldown_cambio_dir", 0) > 18:
                 return
         ai["direccion"] = nueva_dir
         if nueva_dir != 0:
             ai["cooldown_cambio_dir"] = max(ai.get("cooldown_cambio_dir", 0), cooldown)
+
+    def _registrar_accion(self, ai, accion):
+        """Registra la acción reciente en el historial para evitar bucles repetitivos."""
+        historial = ai.setdefault("historial_acciones", [])
+        historial.append(accion)
+        if len(historial) > 6:
+            historial.pop(0)
+
+    def _conteo_accion_reciente(self, ai, accion):
+        """Retorna cuántas veces se ejecutó la acción en el historial reciente."""
+        return ai.get("historial_acciones", []).count(accion)
+
+    def _iniciar_bajada_plataforma(self, idx, dir_bajada=None):
+        """
+        Inicia un descenso limpio y controlado desde una plataforma hacia el nivel inferior o suelo.
+        """
+        p = self.personajes[idx]
+        ai = self.ai_estados[idx]
+        plat = p.get("plat_actual")
+        if not plat:
+            return
+        if dir_bajada is None:
+            dir_bajada = ai.get("direccion", 1)
+            if dir_bajada == 0:
+                dir_bajada = 1 if random.random() < 0.5 else -1
+
+        p["superficie"] = "aire"
+        p["plat_actual"] = None
+        p["ignorar_plat"] = plat
+        p["cooldown_ignorar_plat"] = 35
+        p["vel_x"] = dir_bajada * (p["velocidad_mov"] * 0.8)
+        p["vel_y"] = 2.0
+        p["en_suelo"] = False
+        p["angulo_objetivo"] = 0.0
+        ai["estado"] = "caminar"
+        self._fijar_direccion_ai(ai, dir_bajada, cooldown=30, forzar=True)
+        p["mirando_derecha"] = (dir_bajada > 0)
+        ai["tiempo"] = random.randint(35, 70)
+        ai["en_borde"] = False
+        self._registrar_accion(ai, "bajar_plataforma")
+
+    def _al_tocar_pared(self, idx, lado):
+        """
+        Decisión autónoma inteligente cuando un personaje llega a una pared perimetral.
+        Tocar una pared NO activa automáticamente la trepada.
+        El personaje evalúa sus opciones según su personalidad y su historial de acciones:
+        - Darse vuelta y continuar caminando
+        - Detenerse un momento a observar
+        - Saltar alejándose de la pared o hacia una plataforma
+        - Subir por la pared
+        - Bajar por la pared (si está en plataforma elevada P2 o P5)
+        - Descolgarse hacia el nivel inferior
+        """
+        p = self.personajes[idx]
+        ai = self.ai_estados[idx]
+        conf = ai["datos_pers"]
+        sup = p["superficie"]
+        dir_alejarse = 1 if lado == "izq" else -1
+
+        # Factor anti-repetición suave: asegurar variedad sin anular la trepada
+        veces_trepo = self._conteo_accion_reciente(ai, "trepar_subir") + self._conteo_accion_reciente(ai, "trepar_bajar")
+        factor_trepar = 0.70 if veces_trepo >= 3 else (0.85 if veces_trepo == 2 else 1.0)
+        prob_trepar_base = max(conf.get("prob_trepar", 0.0), conf.get("trepar_prob", 0.0))
+        if prob_trepar_base <= 0.0:
+            prob_trepar_base = 0.35
+        prob_trepar = prob_trepar_base * factor_trepar
+
+        # Si trepar está forzado a nivel máximo (por ejemplo, en pruebas unitarias directas)
+        if prob_trepar_base >= 0.95:
+            p["superficie"] = "pared_izq" if lado == "izq" else "pared_der"
+            p["plat_actual"] = None
+            p["angulo_objetivo"] = -90.0 if lado == "izq" else 90.0
+            hb = p["hitbox"]
+            if lado == "izq":
+                hb.left = self.x_pared_izq
+            else:
+                hb.right = self.x_pared_der
+            if sup == "suelo":
+                hb.bottom = self.y_suelo - 4
+            p["vel_x"] = 0
+            p["vel_y"] = -p["velocidad_mov"]
+            p["en_suelo"] = False
+            ai["estado"] = "trepar"
+            self._fijar_direccion_ai(ai, -1, cooldown=35, forzar=True)
+            ai["tiempo"] = random.randint(180, 260)
+            ai["evaluo_plat_pared"] = False
+            self._registrar_accion(ai, "trepar_subir")
+            return
+
+        if sup == "suelo":
+            # Ponderación proporcional en suelo: Trepar (~35%), Girar (~30%), Pausa (~18%), Salto (~17%)
+            w_trepar = prob_trepar
+            w_girar = conf.get("borde_girar", 0.30)
+            w_pausa = conf.get("prob_pausa", 0.18)
+            w_salto = conf.get("prob_salto_plat", 0.17)
+            total = w_trepar + w_girar + w_pausa + w_salto
+            r = random.uniform(0, total)
+
+            if r < w_trepar:
+                # 1. DECISIÓN AUTÓNOMA: TREPAR POR LA PARED HACIA ARRIBA
+                p["superficie"] = "pared_izq" if lado == "izq" else "pared_der"
+                p["angulo_objetivo"] = -90.0 if lado == "izq" else 90.0
+                hb = p["hitbox"]
+                if lado == "izq":
+                    hb.left = self.x_pared_izq
+                else:
+                    hb.right = self.x_pared_der
+                hb.bottom = self.y_suelo - 4
+                p["vel_x"] = 0
+                p["vel_y"] = -p["velocidad_mov"]
+                p["en_suelo"] = False
+                ai["estado"] = "trepar"
+                self._fijar_direccion_ai(ai, -1, cooldown=35, forzar=True)
+                ai["tiempo"] = random.randint(180, 260)
+                ai["evaluo_plat_pared"] = False
+                self._registrar_accion(ai, "trepar_subir")
+
+            elif r < w_trepar + w_girar:
+                # 2. DECISIÓN AUTÓNOMA: DARSE VUELTA Y CAMINAR ALEJÁNDOSE
+                ai["estado"] = "caminar"
+                self._fijar_direccion_ai(ai, dir_alejarse, cooldown=30, forzar=True)
+                p["mirando_derecha"] = (dir_alejarse > 0)
+                ai["tiempo"] = random.randint(45, 100)
+                self._registrar_accion(ai, "girar_pared")
+
+            elif r < w_trepar + w_girar + w_pausa:
+                # 3. DECISIÓN AUTÓNOMA: DETENERSE UN MOMENTO A OBSERVAR
+                ai["estado"] = "quieto"
+                self._fijar_direccion_ai(ai, 0, cooldown=30)
+                p["vel_x"] = 0
+                ai["tiempo"] = random.randint(40, 90)
+                p["mirando_derecha"] = (lado == "der") if random.random() < 0.6 else (dir_alejarse > 0)
+                self._registrar_accion(ai, "quieto_pared")
+
+            else:
+                # 4. DECISIÓN AUTÓNOMA: SALTO HACIA EL INTERIOR / PLATAFORMA
+                ai["salto_datos"] = {
+                    "vel_x": 4.0 if lado == "izq" else -4.0,
+                    "vel_y": -15.8
+                }
+                ai["intentar_salto"] = True
+                ai["estado"] = "caminar"
+                self._fijar_direccion_ai(ai, dir_alejarse, cooldown=30, forzar=True)
+                ai["tiempo"] = random.randint(35, 65)
+                self._registrar_accion(ai, "salto_pared")
+
+        elif sup == "plataforma":
+            plat = p.get("plat_actual")
+            # Ponderación proporcional en plataforma contigua a pared (P2 o P5)
+            w_subir = (prob_trepar * 0.55)
+            w_bajar_pared = (prob_trepar * 0.45)
+            w_girar = conf.get("borde_girar", 0.28)
+            w_pausa = conf.get("prob_pausa", 0.16)
+            w_salto = conf.get("prob_salto_plat", 0.20)
+            w_bajar_plat = conf.get("prob_bajar", 0.16)
+            total = w_subir + w_bajar_pared + w_girar + w_pausa + w_salto + w_bajar_plat
+            r = random.uniform(0, total)
+
+            if r < w_subir:
+                # Trepar pared hacia arriba hacia el techo
+                p["superficie"] = "pared_izq" if lado == "izq" else "pared_der"
+                p["plat_actual"] = None
+                p["en_suelo"] = False
+                p["angulo_objetivo"] = -90.0 if lado == "izq" else 90.0
+                hb = p["hitbox"]
+                if lado == "izq":
+                    hb.left = self.x_pared_izq
+                else:
+                    hb.right = self.x_pared_der
+                p["vel_x"] = 0
+                p["vel_y"] = -p["velocidad_mov"]
+                ai["estado"] = "trepar"
+                self._fijar_direccion_ai(ai, -1, cooldown=35, forzar=True)
+                ai["tiempo"] = random.randint(180, 260)
+                ai["evaluo_plat_pared"] = True
+                self._registrar_accion(ai, "trepar_subir")
+
+            elif r < w_subir + w_bajar_pared:
+                # Trepar pared hacia abajo hacia el suelo
+                p["superficie"] = "pared_izq" if lado == "izq" else "pared_der"
+                p["plat_actual"] = None
+                p["en_suelo"] = False
+                p["angulo_objetivo"] = -90.0 if lado == "izq" else 90.0
+                hb = p["hitbox"]
+                if lado == "izq":
+                    hb.left = self.x_pared_izq
+                else:
+                    hb.right = self.x_pared_der
+                p["vel_x"] = 0
+                p["vel_y"] = p["velocidad_mov"]
+                ai["estado"] = "trepar"
+                self._fijar_direccion_ai(ai, 1, cooldown=35, forzar=True)
+                ai["tiempo"] = random.randint(180, 260)
+                ai["evaluo_plat_pared"] = True
+                self._registrar_accion(ai, "trepar_bajar")
+
+            elif r < w_subir + w_bajar_pared + w_girar:
+                # Darse vuelta y caminar por la plataforma
+                ai["estado"] = "caminar"
+                self._fijar_direccion_ai(ai, dir_alejarse, cooldown=30, forzar=True)
+                p["mirando_derecha"] = (dir_alejarse > 0)
+                ai["tiempo"] = random.randint(45, 95)
+                self._registrar_accion(ai, "girar_plat_pared")
+
+            elif r < w_subir + w_bajar_pared + w_girar + w_pausa:
+                # Pausar en el borde/pared
+                ai["estado"] = "quieto"
+                self._fijar_direccion_ai(ai, 0, cooldown=35)
+                p["vel_x"] = 0
+                ai["tiempo"] = random.randint(40, 90)
+                p["mirando_derecha"] = (lado == "der") if random.random() < 0.6 else (dir_alejarse > 0)
+                self._registrar_accion(ai, "quieto_plat_pared")
+
+            elif r < w_subir + w_bajar_pared + w_girar + w_pausa + w_salto:
+                # Saltar hacia la plataforma central (P3 o P6)
+                ai["salto_datos"] = {
+                    "vel_x": 5.2 if lado == "izq" else -5.2,
+                    "vel_y": -16.2
+                }
+                ai["intentar_salto"] = True
+                ai["estado"] = "caminar"
+                self._fijar_direccion_ai(ai, dir_alejarse, cooldown=30, forzar=True)
+                ai["tiempo"] = random.randint(35, 65)
+                self._registrar_accion(ai, "salto_plat_a_plat")
+
+            else:
+                # Descolgarse hacia abajo
+                self._iniciar_bajada_plataforma(idx, dir_alejarse)
 
     def _anticipar_borde_plataforma(self, idx):
         """
@@ -767,7 +1010,6 @@ class GestorPersonajesMenu:
                 lado_borde = "izq"
 
         if not cerca_borde:
-            # Si no está en el borde o se está alejando, resetear flag
             if dir_act > 0 and hb.left > plat.left + 16:
                 ai["en_borde"] = False
             elif dir_act < 0 and hb.right < plat.right - 16:
@@ -778,38 +1020,16 @@ class GestorPersonajesMenu:
         if ai.get("en_borde", False) and ai.get("cooldown_cambio_dir", 0) > 0:
             return
 
-        # Transición natural si la plataforma está adyacente a una pared perimetral
-        if plat.right >= 1230 and lado_borde == "der":
-            if random.random() < conf.get("trepar_prob", 0.35) + 0.35:
-                p["superficie"] = "pared_der"
-                p["plat_actual"] = None
-                p["angulo_objetivo"] = 90.0
-                hb.right = self.x_pared_der
-                p["vel_x"] = 0
-                p["vel_y"] = -p["velocidad_mov"]
-                p["en_suelo"] = False
-                ai["estado"] = "trepar"
-                ai["direccion"] = -1 if random.random() < 0.6 else 1
-                ai["tiempo"] = random.randint(45, 95)
-                ai["cooldown_cambio_dir"] = 30
-                ai["en_borde"] = False
-                return
+        # Transición inteligente si la plataforma está adyacente a un borde lateral de la pantalla
+        if plat.right >= self.x_pared_der - 10 and lado_borde == "der":
+            self._al_tocar_pared(idx, "der")
+            ai["en_borde"] = False
+            return
 
-        if plat.left <= 50 and lado_borde == "izq":
-            if random.random() < conf.get("trepar_prob", 0.35) + 0.35:
-                p["superficie"] = "pared_izq"
-                p["plat_actual"] = None
-                p["angulo_objetivo"] = -90.0
-                hb.left = self.x_pared_izq
-                p["vel_x"] = 0
-                p["vel_y"] = -p["velocidad_mov"]
-                p["en_suelo"] = False
-                ai["estado"] = "trepar"
-                ai["direccion"] = -1 if random.random() < 0.6 else 1
-                ai["tiempo"] = random.randint(45, 95)
-                ai["cooldown_cambio_dir"] = 30
-                ai["en_borde"] = False
-                return
+        if plat.left <= self.x_pared_izq + 10 and lado_borde == "izq":
+            self._al_tocar_pared(idx, "izq")
+            ai["en_borde"] = False
+            return
 
         ai["en_borde"] = True
         rnd = random.random()
@@ -824,12 +1044,12 @@ class GestorPersonajesMenu:
             p["vel_x"] = 0
             p["moviendo"] = False
             ai["tiempo"] = random.randint(40, 90)
-            # Mira hacia el borde
             p["mirando_derecha"] = (lado_borde == "der")
             if lado_borde == "der":
                 hb.right = min(hb.right, plat.right - 2)
             else:
                 hb.left = max(hb.left, plat.left + 2)
+            self._registrar_accion(ai, "borde_quieto")
 
         # 2. DARSE VUELTA Y CAMINAR HACIA EL INTERIOR
         elif rnd < p_girar:
@@ -842,35 +1062,43 @@ class GestorPersonajesMenu:
                 hb.right = min(hb.right, plat.right - 4)
             else:
                 hb.left = max(hb.left, plat.left + 4)
+            self._registrar_accion(ai, "borde_girar")
 
         # 3. SALTAR HACIA OTRA PLATAFORMA O ADELANTE
         elif rnd < p_saltar:
             salto_dir = 1 if lado_borde == "der" else -1
             self._fijar_direccion_ai(ai, salto_dir, cooldown=30, forzar=True)
+            # Salto dirigido hacia la plataforma objetivo
+            if plat == self.plataformas[0] and lado_borde == "izq":
+                ai["salto_datos"] = {"vel_x": -3.8, "vel_y": -16.5}
+            elif plat == self.plataformas[1] and lado_borde == "der":
+                ai["salto_datos"] = {"vel_x": 5.2, "vel_y": -16.2}
+            elif plat == self.plataformas[3] and lado_borde == "der":
+                ai["salto_datos"] = {"vel_x": 3.8, "vel_y": -16.5}
+            elif plat == self.plataformas[4] and lado_borde == "izq":
+                ai["salto_datos"] = {"vel_x": -5.2, "vel_y": -16.2}
+            else:
+                ai["salto_datos"] = {"vel_x": salto_dir * 4.2, "vel_y": -14.0}
+
             ai["intentar_salto"] = True
             ai["tiempo"] = random.randint(30, 60)
             p["mirando_derecha"] = (salto_dir > 0)
+            self._registrar_accion(ai, "borde_salto")
 
         # 4. BAJAR / DESCOLGARSE DE LA PLATAFORMA
         else:
             bajar_dir = 1 if lado_borde == "der" else -1
-            p["superficie"] = "aire"
-            p["plat_actual"] = None
-            p["ignorar_plat"] = plat
-            p["cooldown_ignorar_plat"] = 35
-            p["vel_x"] = bajar_dir * (p["velocidad_mov"] * 0.75)
-            p["vel_y"] = 2.0
-            p["en_suelo"] = False
-            ai["estado"] = "caminar"
-            self._fijar_direccion_ai(ai, bajar_dir, cooldown=30, forzar=True)
-            p["mirando_derecha"] = (bajar_dir > 0)
-            ai["tiempo"] = random.randint(35, 70)
-            ai["en_borde"] = False
+            if plat == self.plataformas[2] and lado_borde == "izq":
+                self._iniciar_bajada_plataforma(idx, dir_bajada=-1)
+            elif plat == self.plataformas[5] and lado_borde == "der":
+                self._iniciar_bajada_plataforma(idx, dir_bajada=1)
+            else:
+                self._iniciar_bajada_plataforma(idx, dir_bajada=bajar_dir)
 
     def _decidir_proxima_accion(self, idx):
         """
-        Genera decisiones autónomas, independientes y variadas para cada personaje.
-        Equilibra el uso del suelo, plataformas, paredes y techo de forma orgánica.
+        Genera decisiones autónomas, inteligentes e independientes para cada personaje.
+        Evalúa su superficie actual, altura, plataformas cercanas y su historial de acciones.
         """
         p = self.personajes[idx]
         ai = self.ai_estados[idx]
@@ -880,164 +1108,276 @@ class GestorPersonajesMenu:
 
         # 1. SI ESTÁ EN EL SUELO
         if sup == "suelo":
-            if rnd < conf["pausa_prob"]:
+            hb = p["hitbox"]
+            p_pausa = conf.get("prob_pausa", 0.20)
+            p_salto_p1 = (140 <= hb.centerx <= 340) and (self._conteo_accion_reciente(ai, "salto_a_p1") < 2)
+            p_salto_p4 = (940 <= hb.centerx <= 1140) and (self._conteo_accion_reciente(ai, "salto_a_p4") < 2)
+
+            # Si ya se encuentra pegado a una pared lateral, evaluar decisiones en la pared
+            if hb.left <= self.x_pared_izq + 10:
+                self._al_tocar_pared(idx, "izq")
+                return
+            elif hb.right >= self.x_pared_der - 10:
+                self._al_tocar_pared(idx, "der")
+                return
+
+            if rnd < p_pausa:
                 ai["estado"] = "quieto"
                 self._fijar_direccion_ai(ai, 0, cooldown=25)
-                ai["tiempo"] = random.randint(40, 120)
+                ai["tiempo"] = random.randint(40, 110)
                 if random.random() < 0.4:
                     p["mirando_derecha"] = not p.get("mirando_derecha", True)
-            elif rnd < 0.65:
-                ai["estado"] = "caminar"
-                # Dirección de exploración amplia para recorrer todo el escenario
-                if p["hitbox"].centerx < 120:
-                    d_exp = 1 if random.random() < 0.60 else -1
-                elif p["hitbox"].centerx > 1160:
-                    d_exp = -1 if random.random() < 0.60 else 1
-                else:
-                    d_exp = 1 if random.random() < 0.50 else -1
-                self._fijar_direccion_ai(ai, d_exp, cooldown=25)
-                ai["tiempo"] = random.randint(50, 140)
-                if random.random() < conf["salto_prob"] * 12:
-                    ai["intentar_salto"] = True
-            elif rnd < 0.85:
-                # Intentar saltar hacia una plataforma baja cercana
-                ai["estado"] = "caminar"
-                if p["hitbox"].centerx < 500:
-                    d_salto = 1 if p["hitbox"].centerx < PLATAFORMAS_ESCENARIO[0].centerx else -1
-                else:
-                    d_salto = 1 if p["hitbox"].centerx < PLATAFORMAS_ESCENARIO[3].centerx else -1
-                self._fijar_direccion_ai(ai, d_salto, cooldown=25)
+                self._registrar_accion(ai, "suelo_quieto")
+
+            elif p_salto_p1 and rnd < p_pausa + conf.get("prob_salto_plat", 0.35):
+                plat_p1 = self.plataformas[0]
+                dx = plat_p1.centerx - hb.centerx
+                vx = max(2.5, min(5.0, dx / 22.0))
+                ai["salto_datos"] = {"vel_x": vx, "vel_y": -16.0}
                 ai["intentar_salto"] = True
-                ai["tiempo"] = random.randint(35, 75)
+                ai["estado"] = "caminar"
+                self._fijar_direccion_ai(ai, 1, cooldown=30, forzar=True)
+                ai["tiempo"] = random.randint(40, 75)
+                self._registrar_accion(ai, "salto_a_p1")
+
+            elif p_salto_p4 and rnd < p_pausa + conf.get("prob_salto_plat", 0.35):
+                plat_p4 = self.plataformas[3]
+                dx = plat_p4.centerx - hb.centerx
+                vx = max(-5.0, min(-2.5, dx / 22.0))
+                ai["salto_datos"] = {"vel_x": vx, "vel_y": -16.0}
+                ai["intentar_salto"] = True
+                ai["estado"] = "caminar"
+                self._fijar_direccion_ai(ai, -1, cooldown=30, forzar=True)
+                ai["tiempo"] = random.randint(40, 75)
+                self._registrar_accion(ai, "salto_a_p4")
+
+            elif rnd < 0.82:
+                ai["estado"] = "caminar"
+                d_exp = 1 if random.random() < 0.50 else -1
+                self._fijar_direccion_ai(ai, d_exp, cooldown=25)
+                ai["tiempo"] = random.randint(50, 130)
+                if random.random() < conf.get("salto_prob", 0.03) * 10:
+                    ai["intentar_salto"] = True
+                self._registrar_accion(ai, "suelo_caminar")
+
             else:
-                # Socializar con compañeros en el suelo
                 amigos_suelo = [j for j in range(5) if j != idx and self.personajes[j]["superficie"] == "suelo"]
                 if amigos_suelo:
                     target = random.choice(amigos_suelo)
                     p_target = self.personajes[target]
-                    dist_x = p_target["hitbox"].centerx - p["hitbox"].centerx
+                    dist_x = p_target["hitbox"].centerx - hb.centerx
                     ai["estado"] = "caminar"
-                    self._fijar_direccion_ai(ai, 1 if dist_x > 0 else -1, cooldown=25)
+                    dir_comp = 1 if dist_x > 0 else -1
+                    self._fijar_direccion_ai(ai, dir_comp, cooldown=25)
                     ai["tiempo"] = random.randint(40, 80)
-                    if abs(dist_x) < 70 and random.random() < 0.4:
+                    if abs(dist_x) < 70 and random.random() < 0.35:
                         ai["intentar_salto"] = True
+                    self._registrar_accion(ai, "suelo_socializar")
                 else:
                     ai["estado"] = "caminar"
                     self._fijar_direccion_ai(ai, 1 if random.random() < 0.5 else -1, cooldown=25)
                     ai["tiempo"] = random.randint(40, 90)
+                    self._registrar_accion(ai, "suelo_caminar")
 
-        # 2. SI ESTÁ EN UNA PLATAFORMA
+        # 2. SI ESTÁ EN UNA PLATAFORMA (P1..P6)
         elif sup == "plataforma":
             plat = p.get("plat_actual")
-            if plat:
-                dist_izq = p["hitbox"].centerx - plat.left
-                dist_der = plat.right - p["hitbox"].centerx
-                # Favorecer dirección hacia el interior si está en los laterales
-                if dist_izq < 24:
-                    dir_favorita = 1
-                elif dist_der < 24:
-                    dir_favorita = -1
-                else:
-                    dir_favorita = 1 if random.random() < 0.5 else -1
-            else:
-                dir_favorita = 1 if random.random() < 0.5 else -1
+            if not plat:
+                p["superficie"] = "suelo"
+                return
 
-            if rnd < 0.30:
+            hb = p["hitbox"]
+            dist_izq = hb.centerx - plat.left
+            dist_der = plat.right - hb.centerx
+            dir_favorita = 1 if dist_izq < 24 else (-1 if dist_der < 24 else (1 if random.random() < 0.5 else -1))
+
+            plat_idx = -1
+            for p_i, pl_item in enumerate(self.plataformas):
+                if pl_item == plat:
+                    plat_idx = p_i
+                    break
+
+            p_pausa = conf.get("prob_pausa", 0.25)
+            p_salto = p_pausa + conf.get("prob_salto_plat", 0.40)
+            p_bajar = p_salto + conf.get("prob_bajar", 0.25)
+
+            if rnd < p_pausa:
                 ai["estado"] = "quieto"
                 self._fijar_direccion_ai(ai, 0, cooldown=25)
                 ai["tiempo"] = random.randint(35, 90)
                 if random.random() < 0.4:
                     p["mirando_derecha"] = not p.get("mirando_derecha", True)
-            elif rnd < 0.70:
-                # Caminar por la plataforma
-                ai["estado"] = "caminar"
-                self._fijar_direccion_ai(ai, dir_favorita, cooldown=25)
-                ai["tiempo"] = random.randint(45, 110)
-            elif rnd < 0.88:
-                # Saltar hacia una plataforma superior o pared
-                ai["estado"] = "caminar"
-                self._fijar_direccion_ai(ai, dir_favorita, cooldown=25)
-                ai["intentar_salto"] = True
-                ai["tiempo"] = random.randint(30, 60)
-            else:
-                # Bajar/descolgarse de la plataforma hacia el suelo limpiamente
-                bajar_dir = dir_favorita
-                p["superficie"] = "aire"
-                p["plat_actual"] = None
-                p["ignorar_plat"] = plat
-                p["cooldown_ignorar_plat"] = 35
-                p["vel_x"] = bajar_dir * (p["velocidad_mov"] * 0.75)
-                p["vel_y"] = 2.0
-                p["en_suelo"] = False
-                ai["estado"] = "caminar"
-                self._fijar_direccion_ai(ai, bajar_dir, cooldown=30, forzar=True)
-                ai["tiempo"] = random.randint(35, 70)
-                ai["en_borde"] = False
+                self._registrar_accion(ai, "plat_quieto")
 
-        # 3. SI ESTÁ EN UNA PARED
-        elif sup in ("pared_izq", "pared_der"):
-            lado = sup
-            if rnd < 0.20:
-                ai["estado"] = "quieto"
-                ai["direccion"] = 0
-                ai["tiempo"] = random.randint(25, 60)
-                ai["cooldown_cambio_dir"] = 20
-            elif rnd < 0.50:
-                # Trepar hacia arriba
-                ai["estado"] = "trepar"
-                ai["direccion"] = -1
-                ai["tiempo"] = random.randint(40, 90)
-                ai["cooldown_cambio_dir"] = 20
-            elif rnd < 0.75:
-                # Bajar hacia el suelo
-                ai["estado"] = "trepar"
-                ai["direccion"] = 1
-                ai["tiempo"] = random.randint(40, 90)
-                ai["cooldown_cambio_dir"] = 20
-            else:
-                # Salto acrobático impulsándose hacia plataformas o centro
-                p["superficie"] = "aire"
-                p["plat_actual"] = None
-                p["ignorar_plat"] = None
-                p["cooldown_ignorar_plat"] = 0
-                p["vel_x"] = 4.8 if lado == "pared_izq" else -4.8
-                p["vel_y"] = -8.5
-                p["angulo_objetivo"] = 0.0
+            elif rnd < p_salto:
+                # Salto dirigido según la plataforma:
+                # P1 -> Salto a P2
+                if plat_idx == 0:
+                    ai["salto_datos"] = {"vel_x": -3.8, "vel_y": -16.5}
+                    self._fijar_direccion_ai(ai, -1, cooldown=25, forzar=True)
+                # P2 -> Salto a P3
+                elif plat_idx == 1:
+                    ai["salto_datos"] = {"vel_x": 5.2, "vel_y": -16.2}
+                    self._fijar_direccion_ai(ai, 1, cooldown=25, forzar=True)
+                # P4 -> Salto a P5
+                elif plat_idx == 3:
+                    ai["salto_datos"] = {"vel_x": 3.8, "vel_y": -16.5}
+                    self._fijar_direccion_ai(ai, 1, cooldown=25, forzar=True)
+                # P5 -> Salto a P6
+                elif plat_idx == 4:
+                    ai["salto_datos"] = {"vel_x": -5.2, "vel_y": -16.2}
+                    self._fijar_direccion_ai(ai, -1, cooldown=25, forzar=True)
+                # P3 o P6 -> Salto alto hacia techo o pared
+                elif plat_idx == 2:
+                    ai["salto_datos"] = {"vel_x": -3.5, "vel_y": -15.5}
+                    self._fijar_direccion_ai(ai, -1, cooldown=25, forzar=True)
+                elif plat_idx == 5:
+                    ai["salto_datos"] = {"vel_x": 3.5, "vel_y": -15.5}
+                    self._fijar_direccion_ai(ai, 1, cooldown=25, forzar=True)
+                else:
+                    ai["salto_datos"] = {"vel_x": dir_favorita * 4.0, "vel_y": -14.5}
+                    self._fijar_direccion_ai(ai, dir_favorita, cooldown=25, forzar=True)
+
+                ai["intentar_salto"] = True
                 ai["estado"] = "caminar"
                 ai["tiempo"] = random.randint(35, 65)
-                ai["cooldown_cambio_dir"] = 30
+                self._registrar_accion(ai, "plat_salto")
 
-        # 4. SI ESTÁ EN EL TECHO
+            elif rnd < p_bajar:
+                # Descender hacia el nivel inferior:
+                # P3 -> Baja a P2
+                if plat_idx == 2:
+                    self._iniciar_bajada_plataforma(idx, dir_bajada=-1)
+                # P2 -> Baja a P1
+                elif plat_idx == 1:
+                    self._iniciar_bajada_plataforma(idx, dir_bajada=1)
+                # P6 -> Baja a P5
+                elif plat_idx == 5:
+                    self._iniciar_bajada_plataforma(idx, dir_bajada=1)
+                # P5 -> Baja a P4
+                elif plat_idx == 4:
+                    self._iniciar_bajada_plataforma(idx, dir_bajada=-1)
+                # P1 o P4 -> Baja al suelo
+                else:
+                    self._iniciar_bajada_plataforma(idx, dir_bajada=dir_favorita)
+
+            else:
+                ai["estado"] = "caminar"
+                self._fijar_direccion_ai(ai, dir_favorita, cooldown=25)
+                ai["tiempo"] = random.randint(45, 100)
+                self._registrar_accion(ai, "plat_caminar")
+
+        # 3. SI ESTÁ EN UNA PARED (pared_izq o pared_der)
+        elif sup in ("pared_izq", "pared_der"):
+            lado = sup
+            hb = p["hitbox"]
+
+            cerca_p2 = (lado == "pared_izq" and abs(hb.bottom - self.plataformas[1].top) <= 16)
+            cerca_p5 = (lado == "pared_der" and abs(hb.bottom - self.plataformas[4].top) <= 16)
+
+            if (cerca_p2 or cerca_p5) and rnd < conf.get("prob_pared_a_plat", 0.45):
+                plat_dest = self.plataformas[1] if cerca_p2 else self.plataformas[4]
+                p["superficie"] = "plataforma"
+                p["plat_actual"] = plat_dest
+                p["angulo_objetivo"] = 0.0
+                hb.bottom = plat_dest.top
+                if cerca_p2:
+                    hb.left = plat_dest.left + 4
+                    dir_p = 1
+                else:
+                    hb.right = plat_dest.right - 4
+                    dir_p = -1
+                p["vel_y"] = 0
+                p["vel_x"] = dir_p * p["velocidad_mov"]
+                p["en_suelo"] = True
+                ai["estado"] = "caminar"
+                self._fijar_direccion_ai(ai, dir_p, cooldown=35, forzar=True)
+                ai["tiempo"] = random.randint(45, 95)
+                ai["evaluo_plat_pared"] = False
+                self._registrar_accion(ai, "pared_a_plat")
+                return
+
+            # Mantener la dirección de avance activa: no abandonar la trepada a mitad de camino
+            dir_actual = ai.get("direccion", -1)
+            if dir_actual == 0:
+                dir_actual = -1 if hb.centery > (self.y_techo + 80) else 1
+
+            p_pausa = 0.15
+            p_salto = 0.05
+
+            if rnd < p_pausa:
+                # Pausa breve en la pared para descansar y mirar alrededor
+                ai["estado"] = "quieto"
+                self._fijar_direccion_ai(ai, 0, cooldown=20)
+                ai["tiempo"] = random.randint(20, 35)
+                self._registrar_accion(ai, "pared_quieto")
+            elif rnd < p_pausa + p_salto:
+                # Salto acrobático alejándose de la pared
+                if lado == "pared_izq":
+                    vx = 5.2
+                    vy = -11.0 if hb.centery < 400 else -9.0
+                    self._fijar_direccion_ai(ai, 1, cooldown=30, forzar=True)
+                else:
+                    vx = -5.2
+                    vy = -11.0 if hb.centery < 400 else -9.0
+                    self._fijar_direccion_ai(ai, -1, cooldown=30, forzar=True)
+
+                ai["salto_datos"] = {"vel_x": vx, "vel_y": vy}
+                ai["intentar_salto"] = True
+                ai["estado"] = "caminar"
+                ai["tiempo"] = random.randint(35, 65)
+                ai["evaluo_plat_pared"] = False
+                self._registrar_accion(ai, "pared_salto_acrobatico")
+            else:
+                # Continuar avanzando con firmeza en la pared hasta llegar a la siguiente superficie
+                ai["estado"] = "trepar"
+                self._fijar_direccion_ai(ai, dir_actual, cooldown=20, forzar=True)
+                ai["tiempo"] = random.randint(90, 160)
+                self._registrar_accion(ai, "trepar_subir" if dir_actual < 0 else "trepar_bajar")
+
+        # 4. SI ESTÁ EN EL TECHO (techo)
         elif sup == "techo":
-            if rnd < 0.22:
-                # Descolgarse y flotar suavemente hacia una plataforma o suelo
+            hb = p["hitbox"]
+            prob_desc = conf.get("prob_descolgar_techo", 0.30)
+
+            if rnd < prob_desc:
                 p["superficie"] = "aire"
                 p["plat_actual"] = None
                 p["ignorar_plat"] = None
                 p["cooldown_ignorar_plat"] = 0
-                p["vel_x"] = random.uniform(-1.5, 1.5)
-                p["vel_y"] = 2.5
+                if 250 <= hb.centerx <= 400:
+                    vx = random.uniform(-0.5, 0.5)
+                elif 880 <= hb.centerx <= 1030:
+                    vx = random.uniform(-0.5, 0.5)
+                else:
+                    vx = random.uniform(-2.0, 2.0)
+                p["vel_x"] = vx
+                p["vel_y"] = 2.0
                 p["angulo_objetivo"] = 0.0
                 ai["estado"] = "caminar"
                 ai["tiempo"] = random.randint(35, 70)
                 ai["cooldown_cambio_dir"] = 25
-            elif rnd < 0.55:
-                # Caminar por el techo
+                self._registrar_accion(ai, "techo_descolgarse")
+
+            elif rnd < prob_desc + 0.45:
                 ai["estado"] = "caminar_techo"
-                ai["direccion"] = 1 if random.random() < 0.5 else -1
-                ai["tiempo"] = random.randint(40, 100)
-                ai["cooldown_cambio_dir"] = 25
-            elif rnd < 0.88:
-                # Dirigirse hacia una de las paredes laterales para trepar hacia abajo
+                dir_t = 1 if random.random() < 0.5 else -1
+                self._fijar_direccion_ai(ai, dir_t, cooldown=25)
+                ai["tiempo"] = random.randint(50, 110)
+                self._registrar_accion(ai, "techo_caminar")
+
+            elif rnd < prob_desc + 0.75:
                 ai["estado"] = "caminar_techo"
-                ai["direccion"] = -1 if p["hitbox"].centerx < 640 else 1
+                dir_t = -1 if hb.centerx < 640 else 1
+                self._fijar_direccion_ai(ai, dir_t, cooldown=25)
                 ai["tiempo"] = random.randint(50, 120)
-                ai["cooldown_cambio_dir"] = 25
+                self._registrar_accion(ai, "techo_hacia_pared")
+
             else:
                 ai["estado"] = "quieto"
-                ai["direccion"] = 0
+                self._fijar_direccion_ai(ai, 0, cooldown=20)
                 ai["tiempo"] = random.randint(25, 60)
-                ai["cooldown_cambio_dir"] = 20
+                self._registrar_accion(ai, "techo_quieto")
 
     def _actualizar_ai(self, idx):
         """Actualiza intenciones, temporizadores y comandos de movimiento para un personaje."""
@@ -1091,13 +1431,21 @@ class GestorPersonajesMenu:
             if ai["intentar_salto"]:
                 ai["intentar_salto"] = False
                 if p.get("en_suelo", False):
-                    p["vel_y"] = p["fuerza_salto"]
+                    datos_s = ai.get("salto_datos")
+                    if datos_s:
+                        p["vel_x"] = datos_s["vel_x"]
+                        p["vel_y"] = datos_s["vel_y"]
+                        ai["salto_datos"] = None
+                    else:
+                        p["vel_y"] = p["fuerza_salto"]
+                        p["vel_x"] = dir_act * vel
                     p["en_suelo"] = False
                     p["superficie"] = "aire"
                     if p.get("plat_actual"):
                         p["ignorar_plat"] = p["plat_actual"]
                         p["cooldown_ignorar_plat"] = 25
                     p["plat_actual"] = None
+                    p["mirando_derecha"] = (p["vel_x"] >= 0)
 
         elif sup == "techo":
             p["vel_x"] = dir_act * vel
@@ -1114,8 +1462,20 @@ class GestorPersonajesMenu:
             p["moviendo"] = (dir_act != 0)
             p["mirando_derecha"] = (dir_act <= 0)
 
-        elif sup == "aire":
-            p["moviendo"] = False
+            if ai["intentar_salto"]:
+                ai["intentar_salto"] = False
+                datos_s = ai.get("salto_datos")
+                if datos_s:
+                    p["vel_x"] = datos_s["vel_x"]
+                    p["vel_y"] = datos_s["vel_y"]
+                    ai["salto_datos"] = None
+                else:
+                    p["vel_x"] = 5.2 if sup == "pared_izq" else -5.2
+                    p["vel_y"] = -11.0
+                p["superficie"] = "aire"
+                p["en_suelo"] = False
+                p["plat_actual"] = None
+                p["mirando_derecha"] = (p["vel_x"] >= 0)
 
     def actualizar_fisica(self):
         """
@@ -1155,42 +1515,16 @@ class GestorPersonajesMenu:
                 # Llegó a la pared izquierda
                 if hb.left <= self.x_pared_izq:
                     hb.left = self.x_pared_izq
-                    if random.random() < ai["datos_pers"]["trepar_prob"]:
-                        p["superficie"] = "pared_izq"
-                        p["angulo_objetivo"] = -90.0
-                        hb.bottom = self.y_suelo - 4
-                        p["vel_x"] = 0
-                        p["vel_y"] = -p["velocidad_mov"]
-                        p["en_suelo"] = False
-                        ai["estado"] = "trepar"
-                        ai["direccion"] = -1
-                        ai["tiempo"] = random.randint(45, 95)
-                        ai["cooldown_cambio_dir"] = 30
-                    else:
-                        ai["direccion"] = 1
-                        ai["estado"] = "caminar"
-                        ai["tiempo"] = random.randint(45, 95)
-                        ai["cooldown_cambio_dir"] = 30
+                    p["vel_x"] = 0
+                    if ai["direccion"] < 0:
+                        self._al_tocar_pared(i, "izq")
 
                 # Llegó a la pared derecha
                 elif hb.right >= self.x_pared_der:
                     hb.right = self.x_pared_der
-                    if random.random() < ai["datos_pers"]["trepar_prob"]:
-                        p["superficie"] = "pared_der"
-                        p["angulo_objetivo"] = 90.0
-                        hb.bottom = self.y_suelo - 4
-                        p["vel_x"] = 0
-                        p["vel_y"] = -p["velocidad_mov"]
-                        p["en_suelo"] = False
-                        ai["estado"] = "trepar"
-                        ai["direccion"] = -1
-                        ai["tiempo"] = random.randint(45, 95)
-                        ai["cooldown_cambio_dir"] = 30
-                    else:
-                        ai["direccion"] = -1
-                        ai["estado"] = "caminar"
-                        ai["tiempo"] = random.randint(45, 95)
-                        ai["cooldown_cambio_dir"] = 30
+                    p["vel_x"] = 0
+                    if ai["direccion"] > 0:
+                        self._al_tocar_pared(i, "der")
 
             # --- CASO 2: PLATAFORMA ---
             elif sup == "plataforma":
@@ -1205,38 +1539,14 @@ class GestorPersonajesMenu:
                     # Contención en paredes perimetrales
                     if hb.left <= self.x_pared_izq:
                         hb.left = self.x_pared_izq
-                        if random.random() < ai["datos_pers"]["trepar_prob"]:
-                            p["superficie"] = "pared_izq"
-                            p["plat_actual"] = None
-                            p["angulo_objetivo"] = -90.0
-                            p["vel_x"] = 0
-                            p["vel_y"] = -p["velocidad_mov"]
-                            p["en_suelo"] = False
-                            ai["estado"] = "trepar"
-                            ai["direccion"] = -1
-                            ai["tiempo"] = random.randint(45, 90)
-                            ai["cooldown_cambio_dir"] = 30
-                        else:
-                            ai["direccion"] = 1
-                            ai["tiempo"] = random.randint(40, 80)
-                            ai["cooldown_cambio_dir"] = 30
+                        p["vel_x"] = 0
+                        if ai["direccion"] < 0:
+                            self._al_tocar_pared(i, "izq")
                     elif hb.right >= self.x_pared_der:
                         hb.right = self.x_pared_der
-                        if random.random() < ai["datos_pers"]["trepar_prob"]:
-                            p["superficie"] = "pared_der"
-                            p["plat_actual"] = None
-                            p["angulo_objetivo"] = 90.0
-                            p["vel_x"] = 0
-                            p["vel_y"] = -p["velocidad_mov"]
-                            p["en_suelo"] = False
-                            ai["estado"] = "trepar"
-                            ai["direccion"] = -1
-                            ai["tiempo"] = random.randint(45, 90)
-                            ai["cooldown_cambio_dir"] = 30
-                        else:
-                            ai["direccion"] = -1
-                            ai["tiempo"] = random.randint(40, 80)
-                            ai["cooldown_cambio_dir"] = 30
+                        p["vel_x"] = 0
+                        if ai["direccion"] > 0:
+                            self._al_tocar_pared(i, "der")
 
                     # Soporte sólido: el personaje no se desliza accidentalmente al vacío
                     # a menos que haya decidido bajar o saltar conscientemente
@@ -1264,27 +1574,54 @@ class GestorPersonajesMenu:
                     p["superficie"] = "techo"
                     p["angulo_objetivo"] = 180.0
                     hb.top = self.y_techo
-                    hb.left = self.x_pared_izq + 2
+                    hb.left = self.x_pared_izq
                     p["vel_y"] = 0
                     p["vel_x"] = p["velocidad_mov"]
                     ai["estado"] = "caminar_techo"
-                    ai["direccion"] = 1
-                    ai["tiempo"] = random.randint(50, 110)
-                    ai["cooldown_cambio_dir"] = 30
+                    self._fijar_direccion_ai(ai, 1, cooldown=30, forzar=True)
+                    ai["tiempo"] = random.randint(70, 140)
+                    ai["evaluo_plat_pared"] = False
+                    self._registrar_accion(ai, "pared_a_techo")
 
                 # Regresar de la pared al suelo
                 elif hb.bottom >= self.y_suelo:
                     p["superficie"] = "suelo"
                     p["angulo_objetivo"] = 0.0
                     hb.bottom = self.y_suelo
-                    hb.left = self.x_pared_izq + 4
+                    hb.left = self.x_pared_izq
                     p["vel_y"] = 0
                     p["vel_x"] = p["velocidad_mov"]
                     p["en_suelo"] = True
                     ai["estado"] = "caminar"
-                    ai["direccion"] = 1
+                    self._fijar_direccion_ai(ai, 1, cooldown=30, forzar=True)
                     ai["tiempo"] = random.randint(45, 100)
-                    ai["cooldown_cambio_dir"] = 30
+                    ai["evaluo_plat_pared"] = False
+                    self._registrar_accion(ai, "pared_a_suelo")
+
+                # Conexión fluida con Plataforma P2 (Izquierda Media, top=380)
+                else:
+                    plat_p2 = self.plataformas[1]
+                    dist_p2 = abs(hb.bottom - plat_p2.top)
+                    if dist_p2 <= 10:
+                        if not ai.get("evaluo_plat_pared", False):
+                            ai["evaluo_plat_pared"] = True
+                            conf = ai["datos_pers"]
+                            if random.random() < conf.get("prob_pared_a_plat", 0.45):
+                                p["superficie"] = "plataforma"
+                                p["plat_actual"] = plat_p2
+                                p["angulo_objetivo"] = 0.0
+                                hb.bottom = plat_p2.top
+                                hb.left = plat_p2.left
+                                p["vel_y"] = 0
+                                p["vel_x"] = p["velocidad_mov"]
+                                p["en_suelo"] = True
+                                ai["estado"] = "caminar"
+                                self._fijar_direccion_ai(ai, 1, cooldown=35, forzar=True)
+                                p["mirando_derecha"] = True
+                                ai["tiempo"] = random.randint(45, 95)
+                                self._registrar_accion(ai, "pared_a_plat")
+                    elif dist_p2 > 24:
+                        ai["evaluo_plat_pared"] = False
 
             # --- CASO 4: PARED DERECHA ---
             elif sup == "pared_der":
@@ -1299,27 +1636,54 @@ class GestorPersonajesMenu:
                     p["superficie"] = "techo"
                     p["angulo_objetivo"] = 180.0
                     hb.top = self.y_techo
-                    hb.right = self.x_pared_der - 2
+                    hb.right = self.x_pared_der
                     p["vel_y"] = 0
                     p["vel_x"] = -p["velocidad_mov"]
                     ai["estado"] = "caminar_techo"
-                    ai["direccion"] = -1
-                    ai["tiempo"] = random.randint(50, 110)
-                    ai["cooldown_cambio_dir"] = 30
+                    self._fijar_direccion_ai(ai, -1, cooldown=30, forzar=True)
+                    ai["tiempo"] = random.randint(70, 140)
+                    ai["evaluo_plat_pared"] = False
+                    self._registrar_accion(ai, "pared_a_techo")
 
                 # Regresar de la pared al suelo
                 elif hb.bottom >= self.y_suelo:
                     p["superficie"] = "suelo"
                     p["angulo_objetivo"] = 0.0
                     hb.bottom = self.y_suelo
-                    hb.right = self.x_pared_der - 4
+                    hb.right = self.x_pared_der
                     p["vel_y"] = 0
                     p["vel_x"] = -p["velocidad_mov"]
                     p["en_suelo"] = True
                     ai["estado"] = "caminar"
-                    ai["direccion"] = -1
+                    self._fijar_direccion_ai(ai, -1, cooldown=30, forzar=True)
                     ai["tiempo"] = random.randint(45, 100)
-                    ai["cooldown_cambio_dir"] = 30
+                    ai["evaluo_plat_pared"] = False
+                    self._registrar_accion(ai, "pared_a_suelo")
+
+                # Conexión fluida con Plataforma P5 (Derecha Media, top=380)
+                else:
+                    plat_p5 = self.plataformas[4]
+                    dist_p5 = abs(hb.bottom - plat_p5.top)
+                    if dist_p5 <= 10:
+                        if not ai.get("evaluo_plat_pared", False):
+                            ai["evaluo_plat_pared"] = True
+                            conf = ai["datos_pers"]
+                            if random.random() < conf.get("prob_pared_a_plat", 0.45):
+                                p["superficie"] = "plataforma"
+                                p["plat_actual"] = plat_p5
+                                p["angulo_objetivo"] = 0.0
+                                hb.bottom = plat_p5.top
+                                hb.right = plat_p5.right
+                                p["vel_y"] = 0
+                                p["vel_x"] = -p["velocidad_mov"]
+                                p["en_suelo"] = True
+                                ai["estado"] = "caminar"
+                                self._fijar_direccion_ai(ai, -1, cooldown=35, forzar=True)
+                                p["mirando_derecha"] = False
+                                ai["tiempo"] = random.randint(45, 95)
+                                self._registrar_accion(ai, "pared_a_plat")
+                    elif dist_p5 > 24:
+                        ai["evaluo_plat_pared"] = False
 
             # --- CASO 5: TECHO (BOCA ABAJO) ---
             elif sup == "techo":
@@ -1329,31 +1693,33 @@ class GestorPersonajesMenu:
                 p["en_suelo"] = False
                 p["angulo_objetivo"] = 180.0
 
-                # Pasar a la pared derecha
+                # Pasar al borde derecho de la pantalla
                 if hb.right >= self.x_pared_der:
                     p["superficie"] = "pared_der"
                     p["angulo_objetivo"] = 90.0
                     hb.right = self.x_pared_der
-                    hb.top = self.y_techo + 2
+                    hb.top = self.y_techo
                     p["vel_x"] = 0
                     p["vel_y"] = p["velocidad_mov"]
                     ai["estado"] = "trepar"
-                    ai["direccion"] = 1
-                    ai["tiempo"] = random.randint(45, 90)
-                    ai["cooldown_cambio_dir"] = 30
+                    self._fijar_direccion_ai(ai, 1, cooldown=30, forzar=True)
+                    ai["tiempo"] = random.randint(180, 260)
+                    ai["evaluo_plat_pared"] = False
+                    self._registrar_accion(ai, "techo_a_pared")
 
-                # Pasar a la pared izquierda
+                # Pasar al borde izquierdo de la pantalla
                 elif hb.left <= self.x_pared_izq:
                     p["superficie"] = "pared_izq"
                     p["angulo_objetivo"] = -90.0
                     hb.left = self.x_pared_izq
-                    hb.top = self.y_techo + 2
+                    hb.top = self.y_techo
                     p["vel_x"] = 0
                     p["vel_y"] = p["velocidad_mov"]
                     ai["estado"] = "trepar"
-                    ai["direccion"] = 1
-                    ai["tiempo"] = random.randint(45, 90)
-                    ai["cooldown_cambio_dir"] = 30
+                    self._fijar_direccion_ai(ai, 1, cooldown=30, forzar=True)
+                    ai["tiempo"] = random.randint(180, 260)
+                    ai["evaluo_plat_pared"] = False
+                    self._registrar_accion(ai, "techo_a_pared")
 
             # --- CASO 6: AIRE (SALTO O CAÍDA LIBRE) ---
             elif sup == "aire":
@@ -1458,25 +1824,33 @@ class GestorPersonajesMenu:
                                 hb_a.x += sep_step
 
                             if plat:
-                                hb_a.left = max(plat.left + 2, hb_a.left)
-                                hb_a.right = min(plat.right - 2, hb_a.right)
-                                hb_b.left = max(plat.left + 2, hb_b.left)
-                                hb_b.right = min(plat.right - 2, hb_b.right)
+                                if hb_a.left < plat.left:
+                                    hb_a.x += min(6, plat.left - hb_a.left)
+                                elif hb_a.right > plat.right:
+                                    hb_a.x -= min(6, hb_a.right - plat.right)
+                                if hb_b.left < plat.left:
+                                    hb_b.x += min(6, plat.left - hb_b.left)
+                                elif hb_b.right > plat.right:
+                                    hb_b.x -= min(6, hb_b.right - plat.right)
                             else:
-                                hb_a.left = max(self.x_pared_izq, hb_a.left)
-                                hb_a.right = min(self.x_pared_der, hb_a.right)
-                                hb_b.left = max(self.x_pared_izq, hb_b.left)
-                                hb_b.right = min(self.x_pared_der, hb_b.right)
+                                if hb_a.left < self.x_pared_izq:
+                                    hb_a.x += min(6, self.x_pared_izq - hb_a.left)
+                                elif hb_a.right > self.x_pared_der:
+                                    hb_a.x -= min(6, hb_a.right - self.x_pared_der)
+                                if hb_b.left < self.x_pared_izq:
+                                    hb_b.x += min(6, self.x_pared_izq - hb_b.left)
+                                elif hb_b.right > self.x_pared_der:
+                                    hb_b.x -= min(6, hb_b.right - self.x_pared_der)
 
     def actualizar(self):
         """Actualiza un fotograma completo de la simulación autónoma y elementos del fondo."""
         self.contador_frames += 1
 
-        # 1. Movimiento lento y sutil de nubes pixel art (profundidad con distintas velocidades)
+        # 1. Movimiento libre y continuo de nubes pixel art por todo el cielo
         for nube in self.nubes:
             nube["x"] += nube["vel"]
-            if nube["x"] > self.ancho + 40:
-                nube["x"] = -nube["w"] - 20
+            if nube["x"] >= self.ancho:
+                nube["x"] -= self.ancho
 
         # 2. Partículas de humo animadas de la chimenea de la cabaña
         for p_humo in self.particulas_humo:
@@ -1502,9 +1876,16 @@ class GestorPersonajesMenu:
         self.actualizar_fisica()
 
     def _dibujar_nubes(self, superficie):
-        """Dibuja las nubes pixel art desplazándose suavemente por el cielo crepuscular."""
+        """Dibuja las nubes pixel art desplazándose libremente por todo el cielo con reaparición gradual desde el lado contrario."""
         for nube in self.nubes:
-            superficie.blit(nube["surf"], (int(nube["x"]), int(nube["y"])))
+            x = int(nube["x"])
+            y = int(nube["y"])
+            superficie.blit(nube["surf"], (x, y))
+            # Continuidad natural al cruzar los bordes de la pantalla
+            if x + nube["w"] > self.ancho:
+                superficie.blit(nube["surf"], (x - self.ancho, y))
+            elif x < 0:
+                superficie.blit(nube["surf"], (x + self.ancho, y))
 
     def _dibujar_humo_chimenea(self, superficie):
         """Dibuja el humo animado de la chimenea con bocanadas sutiles pixel art."""
