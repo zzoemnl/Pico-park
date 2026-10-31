@@ -13,7 +13,14 @@ import math
 import struct
 import pygame
 
-from sprites import cargar_boton, cargar_boton_escalado, animar_pulsacion_boton, aclarar_boton
+from sprites import (
+    cargar_boton,
+    cargar_boton_escalado,
+    animar_pulsacion_boton,
+    aclarar_boton,
+    generar_boton_con_texto,
+    generar_marco_boton,
+)
 from fuentes import (
     obtener_fuente_titulo,
     obtener_fuente_subtitulo,
@@ -549,19 +556,31 @@ def mostrar_pestana_configuracion(pantalla, reloj):
 
     # Cargar sprites para los botones de volumen con proporción nativa 0.8496 (870x1024 -> 42x50)
     W_BTN_VOL, H_BTN_VOL = 42, 50
+    def _asegurar_orientacion_derecha(surf):
+        if surf is None:
+            return None
+        w, h = surf.get_size()
+        # Muestrear densidad de píxeles del dibujo del icono (marrón oscuro sobre botón naranja)
+        px_izq = sum(1 for y in range(h) for x in range(0, w // 2) if surf.get_at((x, y))[0] < 200 and surf.get_at((x, y))[1] < 120 and surf.get_at((x, y))[3] > 0)
+        px_der = sum(1 for y in range(h) for x in range(w // 2, w) if surf.get_at((x, y))[0] < 200 and surf.get_at((x, y))[1] < 120 and surf.get_at((x, y))[3] > 0)
+        # Si la mayor concentración está en la derecha (parlante mirando a la izquierda), invertir horizontalmente
+        if px_der > px_izq:
+            return pygame.transform.flip(surf, True, False)
+        return surf
+
     def _cargar_scaled(nombre, w, h):
         return cargar_boton_escalado(nombre, w, h)
 
-    # Botón Bajar Volumen (Parlante con X / Silencio)
-    spr_menos_norm = _cargar_scaled("HUD/boton-bajar-volumen.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-bajar-volumen.png", W_BTN_VOL, H_BTN_VOL)
-    spr_menos_semi = _cargar_scaled("HUD/boton-bajar-volumen-semiapretado.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-bajar-volumen-semiapretado.png", W_BTN_VOL, H_BTN_VOL)
-    spr_menos_apr = _cargar_scaled("HUD/boton-bajar-volumen-apretado.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-bajar-volumen-apretado.png", W_BTN_VOL, H_BTN_VOL)
+    # Botón Bajar Volumen (Parlante con X / Silencio orientado a la derecha)
+    spr_menos_norm = _asegurar_orientacion_derecha(_cargar_scaled("HUD/boton-bajar-volumen.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-bajar-volumen.png", W_BTN_VOL, H_BTN_VOL))
+    spr_menos_semi = _asegurar_orientacion_derecha(_cargar_scaled("HUD/boton-bajar-volumen-semiapretado.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-bajar-volumen-semiapretado.png", W_BTN_VOL, H_BTN_VOL))
+    spr_menos_apr = _asegurar_orientacion_derecha(_cargar_scaled("HUD/boton-bajar-volumen-apretado.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-bajar-volumen-apretado.png", W_BTN_VOL, H_BTN_VOL))
     spr_menos_hov = aclarar_boton(spr_menos_norm)
 
-    # Botón Subir Volumen (Parlante con ondas sonoras)
-    spr_mas_norm = _cargar_scaled("HUD/boton-subir-volumen.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-subir-volumen.png", W_BTN_VOL, H_BTN_VOL)
-    spr_mas_semi = _cargar_scaled("HUD/boton-subir-volumen-semiapretado.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-subir-volumen-semiapretado.png", W_BTN_VOL, H_BTN_VOL)
-    spr_mas_apr = _cargar_scaled("HUD/boton-subir-volumen-apretado.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-subir-volumen-apretado.png", W_BTN_VOL, H_BTN_VOL)
+    # Botón Subir Volumen (Parlante con ondas sonoras orientado a la derecha)
+    spr_mas_norm = _asegurar_orientacion_derecha(_cargar_scaled("HUD/boton-subir-volumen.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-subir-volumen.png", W_BTN_VOL, H_BTN_VOL))
+    spr_mas_semi = _asegurar_orientacion_derecha(_cargar_scaled("HUD/boton-subir-volumen-semiapretado.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-subir-volumen-semiapretado.png", W_BTN_VOL, H_BTN_VOL))
+    spr_mas_apr = _asegurar_orientacion_derecha(_cargar_scaled("HUD/boton-subir-volumen-apretado.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-subir-volumen-apretado.png", W_BTN_VOL, H_BTN_VOL))
     spr_mas_hov = aclarar_boton(spr_mas_norm)
 
     # Botón X de cabecera
@@ -742,29 +761,23 @@ def mostrar_pestana_configuracion(pantalla, reloj):
             es_activo = (_idioma == cod)
             hov_btn = rect_btn.collidepoint(pos_mouse)
 
-            if es_activo:
-                col_bg = (210, 115, 60)
-                col_borde = (255, 220, 150)
-                col_txt = (255, 255, 255)
-                grosor_borde = 3
-            elif hov_btn:
-                col_bg = (64, 70, 90)
-                col_borde = (120, 130, 160)
-                col_txt = (240, 240, 240)
-                grosor_borde = 2
+            base_sprite = "mundos/boton-cargar.png" if es_activo else "mundos/boton-volver.png"
+            col_txt = (26, 83, 29) if es_activo else (60, 45, 30)
+
+            if cod == "zh":
+                marco = generar_marco_boton(base_sprite, rect_btn.w, rect_btn.h)
+                btn_surf = marco.copy() if marco else pygame.Surface((rect_btn.w, rect_btn.h))
+                f_zh = pygame.font.SysFont("Microsoft YaHei", 16, bold=True)
+                t_lbl = f_zh.render(etiqueta, True, col_txt)
+                btn_surf.blit(t_lbl, t_lbl.get_rect(center=(rect_btn.w // 2, rect_btn.h // 2)))
             else:
-                col_bg = (46, 52, 68)
-                col_borde = (75, 82, 104)
-                col_txt = (195, 200, 215)
-                grosor_borde = 2
+                btn_surf = generar_boton_con_texto(base_sprite, rect_btn.w, rect_btn.h, etiqueta, col_txt, 16)
 
-            pygame.draw.rect(pantalla, col_bg, rect_btn, border_radius=10)
-            pygame.draw.rect(pantalla, col_borde, rect_btn, width=grosor_borde, border_radius=10)
+            if hov_btn and btn_surf:
+                btn_surf = aclarar_boton(btn_surf)
 
-            # Usar tipografía con soporte CJK para chino y evitar caracteres no soportados
-            f_actual = pygame.font.SysFont("Microsoft YaHei", 16, bold=True) if cod == "zh" else fuente_btn_lang
-            t_lbl = f_actual.render(etiqueta, True, col_txt)
-            pantalla.blit(t_lbl, t_lbl.get_rect(center=rect_btn.center))
+            if btn_surf:
+                pantalla.blit(btn_surf, rect_btn)
 
         pygame.display.flip()
         reloj.tick(60)

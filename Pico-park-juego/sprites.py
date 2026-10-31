@@ -29,6 +29,8 @@ ESTADOS_PERSONAJE = [
 _CACHE_BOTONES = {}
 _CACHE_BOTONES_ESCALADOS = {}
 _CACHE_BOTONES_ACLARADOS = {}
+_CACHE_MARCOS_BOTONES = {}
+_CACHE_BOTONES_PERSONALIZADOS = {}
 _MAPA_BOTONES = None
 
 
@@ -119,6 +121,101 @@ def aclarar_boton(surf, factor=45):
     brillante.blit(capa, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
     _CACHE_BOTONES_ACLARADOS[clave] = brillante
     return brillante
+
+
+def generar_marco_boton(sprite_nombre, w_target, h_target):
+    """
+    Genera una base o marco de botón perfectamente escalado a partir de un sprite oficial
+    (ej. 'mundos/boton-volver.png', 'Menu/salir.png', 'mundos/boton-cargar.png'),
+    conservando bordes pixel art redondeados, biselados y relieves 3D sin el texto central.
+    """
+    clave = (sprite_nombre, w_target, h_target)
+    if clave in _CACHE_MARCOS_BOTONES:
+        return _CACHE_MARCOS_BOTONES[clave]
+
+    base = cargar_boton(sprite_nombre)
+    if not base:
+        return None
+
+    bw, bh = base.get_size()
+    cap_w = 900
+    if cap_w >= bw // 2:
+        cap_w = bw // 4
+
+    left_cap = base.subsurface((0, 0, cap_w, bh))
+    right_cap = base.subsurface((bw - cap_w, 0, cap_w, bh))
+    mid_sample = base.subsurface((cap_w - 50, 0, 20, bh))
+
+    native_mid_w = int((w_target / h_target) * bh) - 2 * cap_w
+    if native_mid_w < 20:
+        native_mid_w = 20
+
+    native_total_w = 2 * cap_w + native_mid_w
+    native_surf = pygame.Surface((native_total_w, bh), pygame.SRCALPHA)
+    native_surf.blit(left_cap, (0, 0))
+    mid_stretched = pygame.transform.scale(mid_sample, (native_mid_w, bh))
+    native_surf.blit(mid_stretched, (cap_w, 0))
+    native_surf.blit(right_cap, (cap_w + native_mid_w, 0))
+
+    scaled = pygame.transform.smoothscale(native_surf, (w_target, h_target))
+    _CACHE_MARCOS_BOTONES[clave] = scaled
+    return scaled
+
+
+def generar_boton_con_texto(sprite_base, w, h, texto=None, color_texto=(60, 45, 30), tamano_fuente=14, offset_y=0):
+    """
+    Construye un botón temático de alta fidelidad basado en los recursos de Sprites/Botones,
+    con el texto especificado centrado y nítido.
+    Soporta caracteres especiales como Ñ/ñ con tildes pixel art y CJK/Unicode.
+    """
+    clave = (sprite_base, w, h, texto, color_texto, tamano_fuente, offset_y)
+    if clave in _CACHE_BOTONES_PERSONALIZADOS:
+        return _CACHE_BOTONES_PERSONALIZADOS[clave]
+
+    marco = generar_marco_boton(sprite_base, w, h)
+    if not marco:
+        return None
+
+    surf = marco.copy()
+    if texto:
+        # 1. Si contiene caracteres CJK / asiáticos, usar tipografía con soporte Unicode
+        if any(ord(ch) > 255 for ch in texto):
+            f_sys = pygame.font.SysFont(["Microsoft YaHei", "SimHei", "Arial"], tamano_fuente, bold=True)
+            txt_surf = f_sys.render(texto, True, color_texto)
+        else:
+            from pantalla import obtener_fuente_boton
+            f = obtener_fuente_boton(tamano_fuente, tamano_fallback=tamano_fuente)
+            # 2. Si contiene Ñ o acentos, componer de forma nítida para la fuente pixel art
+            if any(ch in "ÑñÁÉÍÓÚáéíóú" for ch in texto):
+                txt_limpio = (
+                    texto.replace("Á", "A").replace("É", "E").replace("Í", "I").replace("Ó", "O").replace("Ú", "U")
+                         .replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
+                )
+                ancho_t, alto_t = f.size(txt_limpio.replace("Ñ", "N").replace("ñ", "n"))
+                txt_surf = pygame.Surface((ancho_t, alto_t + 4), pygame.SRCALPHA)
+                curr_x = 0
+                for ch in txt_limpio:
+                    if ch in ("Ñ", "ñ"):
+                        letra = f.render("N" if ch == "Ñ" else "n", True, color_texto)
+                        txt_surf.blit(letra, (curr_x, 3))
+                        lw = letra.get_width()
+                        # Dibujar virgulilla pixel art decorativa sobre la N
+                        pygame.draw.rect(txt_surf, color_texto, (curr_x + 2, 0, 3, 2))
+                        pygame.draw.rect(txt_surf, color_texto, (curr_x + 5, 1, 3, 2))
+                        curr_x += lw
+                    else:
+                        letra = f.render(ch, True, color_texto)
+                        txt_surf.blit(letra, (curr_x, 3))
+                        curr_x += letra.get_width()
+            else:
+                txt_surf = f.render(texto, True, color_texto)
+
+        rect_txt = txt_surf.get_rect(center=(w // 2, h // 2 + offset_y))
+        surf.blit(txt_surf, rect_txt)
+
+    _CACHE_BOTONES_PERSONALIZADOS[clave] = surf
+    return surf
+
 
 
 def precargar_botones_comunes():
