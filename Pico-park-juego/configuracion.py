@@ -269,7 +269,7 @@ DICCIONARIO = {
     "partida": {
         "es": "Partida",
         "en": "Game",
-        "zh": "存档",
+        "zh": "游戏",
     },
     "sub_partidas": {
         "es": "Registro de expediciones y progreso de aventura",
@@ -525,6 +525,58 @@ DICCIONARIO = {
     "anteojos": {"es": "Anteojos", "en": "Glasses", "zh": "眼镜"},
     "moño": {"es": "Moño", "en": "Bowtie", "zh": "蝴蝶结"},
     "sombrero": {"es": "Sombrero", "en": "Hat", "zh": "礼帽"},
+    "marrón": {"es": "Marrón", "en": "Brown", "zh": "棕色"},
+    "mono": {"es": "Moño", "en": "Bowtie", "zh": "蝴蝶结"},
+    "cambiar_atuendos": {
+        "es": "CAMBIAR ATUENDOS",
+        "en": "CHANGE OUTFITS",
+        "zh": "更换装扮",
+    },
+    "sub_modificaste_personajes": {
+        "es": "Modificaste los personajes antes de continuar «{0}».",
+        "en": "You modified characters before continuing «{0}».",
+        "zh": "继续«{0}»前你修改了角色装扮。",
+    },
+    "pregunta_mantener_o_cambiar": {
+        "es": "¿Deseas mantener los atuendos guardados o aplicar los nuevos?",
+        "en": "Do you want to keep saved outfits or apply new ones?",
+        "zh": "你想保留已保存的装扮还是应用新装扮？",
+    },
+    "atuendos_guardados": {
+        "es": "ATUENDOS GUARDADOS",
+        "en": "SAVED OUTFITS",
+        "zh": "已保存装扮",
+    },
+    "nuevos_atuendos": {
+        "es": "NUEVOS ATUENDOS",
+        "en": "NEW OUTFITS",
+        "zh": "新装扮",
+    },
+    "mantener_guardados": {
+        "es": "MANTENER GUARDADOS",
+        "en": "KEEP SAVED",
+        "zh": "保留已保存",
+    },
+    "jugador_1": {
+        "es": "Jugador 1",
+        "en": "Player 1",
+        "zh": "玩家 1",
+    },
+    "jugador_2": {
+        "es": "Jugador 2",
+        "en": "Player 2",
+        "zh": "玩家 2",
+    },
+    "accesorio_label": {
+        "es": "Accesorio",
+        "en": "Accessory",
+        "zh": "配饰",
+    },
+    "sin_accesorio": {
+        "es": "Sin accesorio",
+        "en": "No accessory",
+        "zh": "无配饰",
+    },
 }
 
 
@@ -536,6 +588,11 @@ def t(clave, default=None):
     info = DICCIONARIO.get(clave)
     if isinstance(info, dict):
         return info.get(_idioma, info.get("es", default or clave))
+    if isinstance(clave, str):
+        c_low = clave.lower().strip()
+        info = DICCIONARIO.get(c_low)
+        if isinstance(info, dict):
+            return info.get(_idioma, info.get("es", default or clave))
     return default if default is not None else clave
 
 

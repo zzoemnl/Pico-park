@@ -45,6 +45,7 @@ from guardado import (
     pedir_password_modal,
     modal_administrar_perfil,
     flujo_crear_nueva_partida,
+    obtener_nombre_partida_visible,
 )
 from fuentes import (
     contiene_caracteres_cjk,
@@ -1325,12 +1326,7 @@ def dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel, pos_mouse, fuente
     pantalla.blit(t_badge, t_badge.get_rect(center=r_badge.center))
 
     # 3. Metadatos de la aventura
-    nombre = p.get("nombre", f"{t('partida')} {p.get('id', 1)}")
-    if nombre in ("Todos los niveles desbloqueados", "All levels unlocked", "所有关卡已解锁"):
-        nombre = t("todos_desbloqueados")
-    elif str(nombre).startswith("Partida ") or str(nombre).startswith("Game ") or str(nombre).startswith("存档 "):
-        pid = p.get("id", 1)
-        nombre = f"{t('partida')} {pid}"
+    nombre = obtener_nombre_partida_visible(p)
     mundo_max = p.get("mundo_max", 1)
     nivel_max = p.get("nivel_max", 1)
     fecha = p.get("fecha", "")

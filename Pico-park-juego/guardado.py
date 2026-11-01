@@ -19,6 +19,35 @@ from configuracion import t, obtener_idioma
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 RUTA_PARTIDAS = os.path.join(DIRECTORIO_ACTUAL, "partidas.txt")
 
+import re
+
+def obtener_nombre_partida_visible(partida_o_nombre, id_partida=None):
+    """
+    Retorna el nombre visible de una partida respetando el idioma actual.
+    Si la partida tiene un nombre automático («Partida X», «Game X», «游戏 X», «存档 X»),
+    adapta el prefijo automáticamente al idioma seleccionado conservando su número.
+    También traduce el perfil especial «Todos los niveles desbloqueados».
+    """
+    if isinstance(partida_o_nombre, dict):
+        nombre = str(partida_o_nombre.get("nombre", "")).strip()
+        pid = partida_o_nombre.get("id", id_partida or 1)
+    else:
+        nombre = str(partida_o_nombre or "").strip()
+        pid = id_partida or 1
+
+    if not nombre:
+        return f"{t('partida')} {pid}"
+
+    if nombre in ("Todos los niveles desbloqueados", "All levels unlocked", "所有关卡已解锁"):
+        return t("todos_desbloqueados")
+
+    m = re.match(r"^(?:Partida|Game|游戏|存档)\s+(\d+)$", nombre, re.IGNORECASE)
+    if m:
+        num = m.group(1)
+        return f"{t('partida')} {num}"
+
+    return nombre
+
 
 def _cargar_sprite_boton(nombre, w, h):
     """Carga y escala suavemente un botón oficial del proyecto con proporciones exactas usando caché."""
@@ -377,7 +406,7 @@ def guardar_partida(
         nuevo_id = 1
         if partidas:
             nuevo_id = max(p["id"] for p in partidas) + 1
-        nuevo_nombre = nombre_partida.replace("|", "-").strip() if nombre_partida else f"Partida {nuevo_id}"
+        nuevo_nombre = nombre_partida.replace("|", "-").strip() if nombre_partida else f"{t('partida')} {nuevo_id}"
         nueva = {
             "id": nuevo_id,
             "nombre": nuevo_nombre,
@@ -618,7 +647,7 @@ def pedir_password_modal(pantalla, reloj, partida):
     Permite reintentar si es errónea o cancelar.
     Retorna True si la autenticación fue exitosa, o False si se canceló.
     """
-    nombre = partida.get("nombre", f"Partida {partida.get('id', 1)}")
+    nombre = obtener_nombre_partida_visible(partida)
     p_hash = partida.get("password_hash", "")
     p_salt = partida.get("password_salt", "")
 
@@ -862,7 +891,7 @@ def modal_administrar_perfil(pantalla, reloj, partida):
         dibujar_texto_en_rect(pantalla, t("administrar_perfil"), rect_tit, categoria="dialogos", tamano=TAMANO_TITULO_MODAL, color=(60, 45, 35))
 
         # Información distribuida en dos líneas con autoajuste para nombres extensos
-        nom_perfil = partida.get("nombre", "")
+        nom_perfil = obtener_nombre_partida_visible(partida)
         rect_nom = pygame.Rect(rect_card.left + 24, rect_card.top + 52, rect_card.width - 48, 24)
         dibujar_texto_en_rect(pantalla, f"{t('perfil')}: «{nom_perfil}»", rect_nom, categoria="subtitulo", tamano=15, color=(70, 55, 45), negrita=True, padding=4)
 
@@ -1012,7 +1041,7 @@ def flujo_crear_nueva_partida(
     """
     partidas = cargar_partidas()
     nuevo_id = max([p["id"] for p in partidas], default=0) + 1
-    nombre_sugerido = f"Partida {nuevo_id}"
+    nombre_sugerido = f"{t('partida')} {nuevo_id}"
 
     nombre_final = None
     id_sobrescribir = None
@@ -1032,7 +1061,7 @@ def flujo_crear_nueva_partida(
 
         nom = nom.strip()
         partidas = cargar_partidas()
-        existente = next((p for p in partidas if p["nombre"].strip().lower() == nom.lower()), None)
+        existente = next((p for p in partidas if p["nombre"].strip().lower() == nom.lower() or obtener_nombre_partida_visible(p).lower() == nom.lower()), None)
 
         if existente:
             decision = mostrar_dialogo_partida_existente(pantalla, reloj, existente["nombre"])
@@ -1136,7 +1165,8 @@ def modal_flujo_guardar_perfil(
 
     # Identificar si la partida actual está en memoria o registrada
     es_provisional = bool(nombre_partida_actual and not any(p.get("id") == id_partida_actual for p in partidas))
-    texto_btn_crear = f"+ {t('guardar_en')} «{nombre_partida_actual}»" if nombre_partida_actual else f"+ {t('crear_nueva_partida')}"
+    nom_actual_vis = obtener_nombre_partida_visible(nombre_partida_actual) if nombre_partida_actual else ""
+    texto_btn_crear = f"+ {t('guardar_en')} «{nom_actual_vis}»" if nom_actual_vis else f"+ {t('crear_nueva_partida')}"
 
     while True:
         reloj.tick(60)
@@ -1205,7 +1235,7 @@ def modal_flujo_guardar_perfil(
                         # Pedir nombre de partida
                         partidas_actuales = cargar_partidas()
                         nuevo_id = max([p["id"] for p in partidas_actuales], default=0) + 1
-                        sug_nom = f"Partida {nuevo_id}"
+                        sug_nom = f"{t('partida')} {nuevo_id}"
 
                         nom_final = None
                         id_sobrescribir = None
@@ -1213,8 +1243,8 @@ def modal_flujo_guardar_perfil(
                         while True:
                             nom = solicitar_texto_modal(
                                 pantalla, reloj,
-                                titulo="NUEVA PARTIDA",
-                                subtitulo="Escribe un nombre para identificar tu partida:",
+                                titulo=t("nueva_partida"),
+                                subtitulo=t("ingresa_nombre_partida"),
                                 valor_inicial=sug_nom,
                                 permitir_vacio=False,
                             )
@@ -1223,7 +1253,7 @@ def modal_flujo_guardar_perfil(
 
                             nom = nom.strip()
                             partidas_actuales = cargar_partidas()
-                            existente = next((p for p in partidas_actuales if p["nombre"].strip().lower() == nom.lower()), None)
+                            existente = next((p for p in partidas_actuales if p["nombre"].strip().lower() == nom.lower() or obtener_nombre_partida_visible(p).lower() == nom.lower()), None)
                             if existente:
                                 decision = mostrar_dialogo_partida_existente(pantalla, reloj, existente["nombre"])
                                 if decision == "cambiar":
@@ -1323,16 +1353,17 @@ def modal_flujo_guardar_perfil(
                 pygame.draw.rect(pantalla, col_s, r_s, border_radius=8)
                 pygame.draw.rect(pantalla, borde_s, r_s, width=2 if (hov_s or es_actual) else 1, border_radius=8)
 
-                txt_nom = f"{p['nombre']} ({t('mundo')} {p['mundo_max']}-{p['nivel_max']})"
+                nom_s_vis = obtener_nombre_partida_visible(p)
+                txt_nom = f"{nom_s_vis} ({t('mundo')} {p['mundo_max']}-{p['nivel_max']})"
                 if es_actual:
                     txt_nom += f"  [{t('partida_actual')}]"
-                t_n = fuente_item_tit.render(txt_nom, True, (40, 115, 60) if es_actual else (55, 45, 35))
-                pantalla.blit(t_n, (r_s.left + 16, r_s.top + 10))
+                r_nom_s = pygame.Rect(r_s.left + 16, r_s.top + 8, r_s.width - 55, 22)
+                dibujar_texto_en_rect(pantalla, txt_nom, r_nom_s, categoria="subtitulo", tamano=16, color=(40, 115, 60) if es_actual else (55, 45, 35), alineacion="izquierda", padding=0)
 
                 cant_comp = calcular_niveles_completados(p.get("niveles_desbloqueados", {}))
                 det = f"{t('niveles_completados')}: {cant_comp}/15  •  {t('guardado')}: {p.get('fecha', '')}"
-                t_d = fuente_item_det.render(det, True, (115, 100, 85))
-                pantalla.blit(t_d, (r_s.left + 16, r_s.top + 34))
+                r_det_s = pygame.Rect(r_s.left + 16, r_s.top + 32, r_s.width - 55, 20)
+                dibujar_texto_en_rect(pantalla, det, r_det_s, categoria="pequena", tamano=13, color=(115, 100, 85), alineacion="izquierda", padding=0)
 
                 candado = "🔒" if p.get("tiene_password") else "🔓"
                 t_cand = fuente_sub.render(candado, True, (60, 45, 35))
@@ -1576,7 +1607,7 @@ def mostrar_dialogo_confirmar_borrado(pantalla, reloj, partida):
     overlay.fill((45, 35, 25, 140))
     captura_previa = pantalla.copy()
 
-    nombre = partida.get("nombre", f"Partida {partida.get('id', 1)}")
+    nombre = obtener_nombre_partida_visible(partida)
     mundo_max = partida.get("mundo_max", 1)
     nivel_max = partida.get("nivel_max", 1)
 
@@ -1660,6 +1691,38 @@ COLORES_RGB_MAP = {
 }
 
 
+def _obtener_rgb_color(nombre_color, fallback=(124, 231, 255)):
+    if not nombre_color:
+        return fallback
+    if nombre_color in COLORES_RGB_MAP:
+        return COLORES_RGB_MAP[nombre_color]
+    norm = str(nombre_color).strip().capitalize()
+    if norm in COLORES_RGB_MAP:
+        return COLORES_RGB_MAP[norm]
+    for k, v in COLORES_RGB_MAP.items():
+        if k.lower() == str(nombre_color).strip().lower():
+            return v
+    return fallback
+
+
+def _traducir_color(nombre_color):
+    if not nombre_color:
+        return ""
+    norm = str(nombre_color).strip().lower()
+    if norm == "marrón":
+        norm = "marron"
+    return t(norm, default=str(nombre_color))
+
+
+def _traducir_accesorio(nombre_acc):
+    if not nombre_acc or str(nombre_acc).strip().lower() in ("ninguno", "none", "无", ""):
+        return t("sin_accesorio")
+    norm = str(nombre_acc).strip().lower()
+    if norm in ("mono", "moño"):
+        norm = "moño"
+    return t(norm, default=str(nombre_acc))
+
+
 def mostrar_dialogo_confirmar_atuendos(
     pantalla,
     reloj,
@@ -1714,7 +1777,7 @@ def mostrar_dialogo_confirmar_atuendos(
     a_p1_g = partida.get("accesorio_p1", "Ninguno")
     a_p2_g = partida.get("accesorio_p2", "Ninguno")
 
-    nombre_partida = partida.get("nombre", f"Partida {partida.get('id', 1)}")
+    nombre_partida = obtener_nombre_partida_visible(partida)
 
     overlay = pygame.Surface((ancho, alto), pygame.SRCALPHA)
     overlay.fill((20, 15, 10, 185))
@@ -1743,6 +1806,7 @@ def mostrar_dialogo_confirmar_atuendos(
                 elif btn_mantener.collidepoint(evento.pos):
                     pygame.draw.rect(pantalla, (230, 220, 205), btn_mantener, border_radius=12)
                     pygame.draw.rect(pantalla, (160, 130, 100), btn_mantener, width=2, border_radius=12)
+                    dibujar_texto_en_rect(pantalla, t("mantener_guardados"), btn_mantener, categoria="boton", tamano=16, color=(60, 45, 35))
                     pygame.display.flip()
                     pygame.time.delay(60)
                     pygame.event.clear()
@@ -1751,6 +1815,7 @@ def mostrar_dialogo_confirmar_atuendos(
                 elif btn_cambiar.collidepoint(evento.pos):
                     pygame.draw.rect(pantalla, (45, 130, 70), btn_cambiar, border_radius=12)
                     pygame.draw.rect(pantalla, (30, 95, 50), btn_cambiar, width=2, border_radius=12)
+                    dibujar_texto_en_rect(pantalla, t("cambiar_atuendos"), btn_cambiar, categoria="boton", tamano=16, color=(255, 255, 255))
                     pygame.display.flip()
                     pygame.time.delay(60)
                     pygame.event.clear()
@@ -1775,15 +1840,19 @@ def mostrar_dialogo_confirmar_atuendos(
 
         # Título centrado seguro
         rect_tit = pygame.Rect(rect_card.left + 50, rect_card.top + 16, rect_card.width - 100, 34)
-        dibujar_texto_en_rect(pantalla, "CAMBIAR ATUENDOS", rect_tit, categoria="dialogos", tamano=TAMANO_TITULO_MODAL, color=(60, 45, 35))
+        dibujar_texto_en_rect(pantalla, t("cambiar_atuendos"), rect_tit, categoria="dialogos", tamano=TAMANO_TITULO_MODAL, color=(60, 45, 35))
 
         # Subtítulo descriptivo con autoajuste para nombres extensos de partida
-        sub_txt = f"Modificaste los personajes antes de continuar «{nombre_partida}»."
+        plantilla_sub = t("sub_modificaste_personajes")
+        if "{0}" in plantilla_sub:
+            sub_txt = plantilla_sub.format(nombre_partida)
+        else:
+            sub_txt = f"{plantilla_sub} «{nombre_partida}»."
         rect_sub1 = pygame.Rect(rect_card.left + 30, rect_card.top + 54, rect_card.width - 60, 26)
         dibujar_texto_en_rect(pantalla, sub_txt, rect_sub1, categoria="subtitulo", tamano=16, color=(115, 95, 80), padding=2)
 
         rect_sub2 = pygame.Rect(rect_card.left + 30, rect_card.top + 82, rect_card.width - 60, 24)
-        dibujar_texto_en_rect(pantalla, "¿Deseas mantener los atuendos guardados o aplicar los nuevos?", rect_sub2, categoria="subtitulo", tamano=15, color=(135, 110, 90), padding=2)
+        dibujar_texto_en_rect(pantalla, t("pregunta_mantener_o_cambiar"), rect_sub2, categoria="subtitulo", tamano=15, color=(135, 110, 90), padding=2)
 
         # ----------------- CAJA IZQUIERDA: ATUENDOS GUARDADOS -----------------
         pygame.draw.rect(pantalla, (246, 238, 224), rect_box_izq, border_radius=12)
@@ -1791,29 +1860,33 @@ def mostrar_dialogo_confirmar_atuendos(
 
         r_cab_izq = pygame.Rect(rect_box_izq.left + 10, rect_box_izq.top + 10, rect_box_izq.width - 20, 32)
         pygame.draw.rect(pantalla, (235, 223, 206), r_cab_izq, border_radius=8)
-        dibujar_texto_en_rect(pantalla, "ATUENDOS GUARDADOS", r_cab_izq, categoria="boton", tamano=18, color=(90, 70, 55), padding=4)
+        dibujar_texto_en_rect(pantalla, t("atuendos_guardados"), r_cab_izq, categoria="boton", tamano=18, color=(90, 70, 55), padding=4)
 
         # P1 Guardado
-        rgb_p1_g = COLORES_RGB_MAP.get(c_p1_g, (124, 231, 255))
+        rgb_p1_g = _obtener_rgb_color(c_p1_g, (124, 231, 255))
         y_p1_g = rect_box_izq.top + 58
         pygame.draw.circle(pantalla, rgb_p1_g, (rect_box_izq.left + 38, y_p1_g + 20), 17)
         pygame.draw.circle(pantalla, (70, 55, 45), (rect_box_izq.left + 38, y_p1_g + 20), 17, 2)
-        t_p1_nom_g = fuente_item.render(f"Jugador 1: {c_p1_g}", True, (55, 45, 35))
-        pantalla.blit(t_p1_nom_g, (rect_box_izq.left + 66, y_p1_g + 6))
-        acc_txt_p1_g = f"Accesorio: {a_p1_g}" if a_p1_g != "Ninguno" else "Sin accesorio"
-        t_p1_acc_g = fuente_item_acc.render(acc_txt_p1_g, True, (120, 100, 85))
-        pantalla.blit(t_p1_acc_g, (rect_box_izq.left + 66, y_p1_g + 26))
+        txt_p1_nom_g = f"{t('jugador_1')}: {_traducir_color(c_p1_g)}"
+        rect_p1_nom_g = pygame.Rect(rect_box_izq.left + 66, y_p1_g + 4, rect_box_izq.width - 76, 22)
+        dibujar_texto_en_rect(pantalla, txt_p1_nom_g, rect_p1_nom_g, categoria="texto", tamano=16, color=(55, 45, 35), alineacion="izquierda", padding=0)
+
+        acc_txt_p1_g = f"{t('accesorio_label')}: {_traducir_accesorio(a_p1_g)}" if a_p1_g not in ("Ninguno", "None", "无", "") else t("sin_accesorio")
+        rect_p1_acc_g = pygame.Rect(rect_box_izq.left + 66, y_p1_g + 26, rect_box_izq.width - 76, 20)
+        dibujar_texto_en_rect(pantalla, acc_txt_p1_g, rect_p1_acc_g, categoria="pequena", tamano=14, color=(120, 100, 85), alineacion="izquierda", padding=0)
 
         # P2 Guardado
-        rgb_p2_g = COLORES_RGB_MAP.get(c_p2_g, (161, 123, 255))
+        rgb_p2_g = _obtener_rgb_color(c_p2_g, (161, 123, 255))
         y_p2_g = rect_box_izq.top + 126
         pygame.draw.circle(pantalla, rgb_p2_g, (rect_box_izq.left + 38, y_p2_g + 20), 17)
         pygame.draw.circle(pantalla, (70, 55, 45), (rect_box_izq.left + 38, y_p2_g + 20), 17, 2)
-        t_p2_nom_g = fuente_item.render(f"Jugador 2: {c_p2_g}", True, (55, 45, 35))
-        pantalla.blit(t_p2_nom_g, (rect_box_izq.left + 66, y_p2_g + 6))
-        acc_txt_p2_g = f"Accesorio: {a_p2_g}" if a_p2_g != "Ninguno" else "Sin accesorio"
-        t_p2_acc_g = fuente_item_acc.render(acc_txt_p2_g, True, (120, 100, 85))
-        pantalla.blit(t_p2_acc_g, (rect_box_izq.left + 66, y_p2_g + 26))
+        txt_p2_nom_g = f"{t('jugador_2')}: {_traducir_color(c_p2_g)}"
+        rect_p2_nom_g = pygame.Rect(rect_box_izq.left + 66, y_p2_g + 4, rect_box_izq.width - 76, 22)
+        dibujar_texto_en_rect(pantalla, txt_p2_nom_g, rect_p2_nom_g, categoria="texto", tamano=16, color=(55, 45, 35), alineacion="izquierda", padding=0)
+
+        acc_txt_p2_g = f"{t('accesorio_label')}: {_traducir_accesorio(a_p2_g)}" if a_p2_g not in ("Ninguno", "None", "无", "") else t("sin_accesorio")
+        rect_p2_acc_g = pygame.Rect(rect_box_izq.left + 66, y_p2_g + 26, rect_box_izq.width - 76, 20)
+        dibujar_texto_en_rect(pantalla, acc_txt_p2_g, rect_p2_acc_g, categoria="pequena", tamano=14, color=(120, 100, 85), alineacion="izquierda", padding=0)
 
         # ----------------- CAJA DERECHA: NUEVOS ATUENDOS -----------------
         pygame.draw.rect(pantalla, (255, 250, 242), rect_box_der, border_radius=12)
@@ -1821,32 +1894,37 @@ def mostrar_dialogo_confirmar_atuendos(
 
         r_cab_der = pygame.Rect(rect_box_der.left + 10, rect_box_der.top + 10, rect_box_der.width - 20, 32)
         pygame.draw.rect(pantalla, (255, 235, 215), r_cab_der, border_radius=8)
-        dibujar_texto_en_rect(pantalla, "NUEVOS ATUENDOS", r_cab_der, categoria="boton", tamano=18, color=(205, 80, 35), padding=4)
+        dibujar_texto_en_rect(pantalla, t("nuevos_atuendos"), r_cab_der, categoria="boton", tamano=18, color=(205, 80, 35), padding=4)
 
         # P1 Nuevo
-        rgb_p1_n = COLORES_RGB_MAP.get(color_p1_nuevo, (124, 231, 255))
+        rgb_p1_n = _obtener_rgb_color(color_p1_nuevo, (124, 231, 255))
         y_p1_n = rect_box_der.top + 58
         pygame.draw.circle(pantalla, rgb_p1_n, (rect_box_der.left + 38, y_p1_n + 20), 17)
         pygame.draw.circle(pantalla, (70, 55, 45), (rect_box_der.left + 38, y_p1_n + 20), 17, 2)
-        t_p1_nom_n = fuente_item.render(f"Jugador 1: {color_p1_nuevo}", True, (55, 45, 35))
-        pantalla.blit(t_p1_nom_n, (rect_box_der.left + 66, y_p1_n + 6))
-        acc_txt_p1_n = f"Accesorio: {acc_p1_nuevo}" if acc_p1_nuevo != "Ninguno" else "Sin accesorio"
-        t_p1_acc_n = fuente_item_acc.render(acc_txt_p1_n, True, (120, 100, 85))
-        pantalla.blit(t_p1_acc_n, (rect_box_der.left + 66, y_p1_n + 26))
+        txt_p1_nom_n = f"{t('jugador_1')}: {_traducir_color(color_p1_nuevo)}"
+        rect_p1_nom_n = pygame.Rect(rect_box_der.left + 66, y_p1_n + 4, rect_box_der.width - 76, 22)
+        dibujar_texto_en_rect(pantalla, txt_p1_nom_n, rect_p1_nom_n, categoria="texto", tamano=16, color=(55, 45, 35), alineacion="izquierda", padding=0)
+
+        acc_txt_p1_n = f"{t('accesorio_label')}: {_traducir_accesorio(acc_p1_nuevo)}" if acc_p1_nuevo not in ("Ninguno", "None", "无", "") else t("sin_accesorio")
+        rect_p1_acc_n = pygame.Rect(rect_box_der.left + 66, y_p1_n + 26, rect_box_der.width - 76, 20)
+        dibujar_texto_en_rect(pantalla, acc_txt_p1_n, rect_p1_acc_n, categoria="pequena", tamano=14, color=(120, 100, 85), alineacion="izquierda", padding=0)
 
         # P2 Nuevo
-        rgb_p2_n = COLORES_RGB_MAP.get(color_p2_nuevo, (161, 123, 255))
+        rgb_p2_n = _obtener_rgb_color(color_p2_nuevo, (161, 123, 255))
         y_p2_n = rect_box_der.top + 126
         pygame.draw.circle(pantalla, rgb_p2_n, (rect_box_der.left + 38, y_p2_n + 20), 17)
         pygame.draw.circle(pantalla, (70, 55, 45), (rect_box_der.left + 38, y_p2_n + 20), 17, 2)
-        t_p2_nom_n = fuente_item.render(f"Jugador 2: {color_p2_nuevo}", True, (55, 45, 35))
-        pantalla.blit(t_p2_nom_n, (rect_box_der.left + 66, y_p2_n + 6))
-        acc_txt_p2_n = f"Accesorio: {acc_p2_nuevo}" if acc_p2_nuevo != "Ninguno" else "Sin accesorio"
-        t_p2_acc_n = fuente_item_acc.render(acc_txt_p2_n, True, (120, 100, 85))
-        pantalla.blit(t_p2_acc_n, (rect_box_der.left + 66, y_p2_n + 26))
+        txt_p2_nom_n = f"{t('jugador_2')}: {_traducir_color(color_p2_nuevo)}"
+        rect_p2_nom_n = pygame.Rect(rect_box_der.left + 66, y_p2_n + 4, rect_box_der.width - 76, 22)
+        dibujar_texto_en_rect(pantalla, txt_p2_nom_n, rect_p2_nom_n, categoria="texto", tamano=16, color=(55, 45, 35), alineacion="izquierda", padding=0)
 
+        acc_txt_p2_n = f"{t('accesorio_label')}: {_traducir_accesorio(acc_p2_nuevo)}" if acc_p2_nuevo not in ("Ninguno", "None", "无", "") else t("sin_accesorio")
+        rect_p2_acc_n = pygame.Rect(rect_box_der.left + 66, y_p2_n + 26, rect_box_der.width - 76, 20)
+        dibujar_texto_en_rect(pantalla, acc_txt_p2_n, rect_p2_acc_n, categoria="pequena", tamano=14, color=(120, 100, 85), alineacion="izquierda", padding=0)
+
+        idm_g = obtener_idioma()
         # ----------------- BOTÓN 1: MANTENER ATUENDOS GUARDADOS -----------------
-        spr_m_norm = generar_boton_con_texto("mundos/boton-volver.png", btn_mantener.w, btn_mantener.h, "MANTENER GUARDADOS", (60, 45, 30), 16)
+        spr_m_norm = generar_boton_con_texto("mundos/boton-volver.png", btn_mantener.w, btn_mantener.h, t("mantener_guardados"), (60, 45, 30), 16, 0, idm_g)
         if hov_mantener and spr_m_norm: spr_m_norm = aclarar_boton(spr_m_norm)
         if spr_m_norm:
             pantalla.blit(spr_m_norm, btn_mantener)
@@ -1854,10 +1932,10 @@ def mostrar_dialogo_confirmar_atuendos(
             col_m = (255, 255, 255) if hov_mantener else (242, 234, 222)
             pygame.draw.rect(pantalla, col_m, btn_mantener, border_radius=12)
             pygame.draw.rect(pantalla, (185, 155, 125), btn_mantener, width=2, border_radius=12)
-            dibujar_texto_en_rect(pantalla, "MANTENER GUARDADOS", btn_mantener, categoria="boton", tamano=16, color=(60, 45, 35))
+            dibujar_texto_en_rect(pantalla, t("mantener_guardados"), btn_mantener, categoria="boton", tamano=16, color=(60, 45, 35))
 
         # ----------------- BOTÓN 2: CAMBIAR ATUENDOS -----------------
-        spr_c_norm = generar_boton_con_texto("mundos/boton-cargar.png", btn_cambiar.w, btn_cambiar.h, "CAMBIAR ATUENDOS", (26, 83, 29), 16)
+        spr_c_norm = generar_boton_con_texto("mundos/boton-cargar.png", btn_cambiar.w, btn_cambiar.h, t("cambiar_atuendos"), (26, 83, 29), 16, 0, idm_g)
         if hov_cambiar and spr_c_norm: spr_c_norm = aclarar_boton(spr_c_norm)
         if spr_c_norm:
             pantalla.blit(spr_c_norm, btn_cambiar)
@@ -1865,7 +1943,7 @@ def mostrar_dialogo_confirmar_atuendos(
             col_c = (82, 194, 114) if hov_cambiar else (68, 172, 98)
             pygame.draw.rect(pantalla, col_c, btn_cambiar, border_radius=12)
             pygame.draw.rect(pantalla, (45, 130, 70), btn_cambiar, width=2, border_radius=12)
-            dibujar_texto_en_rect(pantalla, "CAMBIAR ATUENDOS", btn_cambiar, categoria="boton", tamano=16, color=(255, 255, 255))
+            dibujar_texto_en_rect(pantalla, t("cambiar_atuendos"), btn_cambiar, categoria="boton", tamano=16, color=(255, 255, 255))
 
         pygame.display.flip()
 
