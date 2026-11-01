@@ -204,12 +204,12 @@ COLORES_INTERIORES_BOTONES = {
     "Menu/opciones-apretado.png": (220, 200, 97),
     "opciones-apretado.png": (220, 200, 97),
 
-    "Menu/salir.png": (255, 159, 99),
-    "salir.png": (255, 159, 99),
-    "Menu/salir-preapretado.png": (242, 148, 91),
-    "salir-preapretado.png": (242, 148, 91),
-    "Menu/salir-apretado.png": (223, 132, 79),
-    "salir-apretado.png": (223, 132, 79),
+    "Menu/salir.png": (253, 158, 98),
+    "salir.png": (253, 158, 98),
+    "Menu/salir-preapretado.png": (240, 147, 89),
+    "salir-preapretado.png": (240, 147, 89),
+    "Menu/salir-apretado.png": (221, 131, 78),
+    "salir-apretado.png": (221, 131, 78),
 
     # Botones Volver
     "mundos/boton-volver.png": (212, 212, 212),

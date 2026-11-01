@@ -2146,7 +2146,7 @@ def main():
             "jugar": ("Menu/jugar", (27, 82, 36), 26),
             "personajes": ("Menu/personajes", (42, 68, 124), 22 if idioma == "en" else 24),
             "opciones": ("Menu/opciones", (115, 67, 16), 26),
-            "salir": ("Menu/salir", (255, 255, 255), 26),
+            "salir": ("Menu/salir", (127, 49, 19), 26),
         }
         base_name, col_txt, sz = cfg_botones[tipo]
 

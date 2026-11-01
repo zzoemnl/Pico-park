@@ -40,7 +40,7 @@ from fuentes import (
 # Configura aquí las rutas o nombres de archivo de cada pista de música y el volumen.
 # Puedes colocar los archivos en 'assets/audio/' o 'Sprites/Audio/' (.mp3, .ogg, .wav).
 # ==============================================================================
-AUDIO_MENU = "menu.mp3"          # Música del menú principal y pantallas de navegación
+AUDIO_MENU = "sonidos/menú/menú.mp3"  # Música del menú principal y pantallas de navegación
 AUDIO_MUNDO_1 = "mundo1.mp3"     # Música del Mundo 1
 AUDIO_MUNDO_2 = "mundo2.mp3"     # Música del Mundo 2
 AUDIO_MUNDO_3 = "mundo3.mp3"     # Música del Mundo 3
@@ -55,6 +55,12 @@ DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 RUTA_CONFIG_JSON = os.path.join(DIRECTORIO_ACTUAL, "configuracion.json")
 
 CARPETAS_AUDIO = [
+    os.path.join(DIRECTORIO_ACTUAL, "..", "sonidos", "menú"),
+    os.path.join(DIRECTORIO_ACTUAL, "..", "sonidos", "menu"),
+    os.path.join(DIRECTORIO_ACTUAL, "..", "sonidos"),
+    os.path.join(DIRECTORIO_ACTUAL, "sonidos", "menú"),
+    os.path.join(DIRECTORIO_ACTUAL, "sonidos", "menu"),
+    os.path.join(DIRECTORIO_ACTUAL, "sonidos"),
     os.path.join(DIRECTORIO_ACTUAL, "..", "assets", "audio"),
     os.path.join(DIRECTORIO_ACTUAL, "assets", "audio"),
     os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Audio"),
@@ -669,20 +675,40 @@ _cargar_configuracion_disco()
 def _resolver_ruta_audio(pista_o_nombre):
     """
     Localiza el archivo de audio comprobando rutas absolutas, relativas y carpetas
-    assets/audio y Sprites/Audio. Soporta extensiones .mp3, .ogg, .wav.
+    sonidos, assets/audio y Sprites/Audio. Soporta extensiones .mp3, .ogg, .wav.
     """
     if not pista_o_nombre:
         return None
 
+    # 1. Comprobar si es ruta absoluta existente
     if os.path.isabs(pista_o_nombre) and os.path.isfile(pista_o_nombre):
         return os.path.normpath(pista_o_nombre)
 
+    # 2. Comprobar ruta directa o relativa respecto al directorio de trabajo o a la raíz
+    candidatos_rel = [
+        pista_o_nombre,
+        os.path.join(DIRECTORIO_ACTUAL, "..", pista_o_nombre),
+        os.path.join(DIRECTORIO_ACTUAL, pista_o_nombre),
+    ]
+    for c in candidatos_rel:
+        if os.path.isfile(c):
+            return os.path.normpath(os.path.abspath(c))
+
     base = os.path.basename(pista_o_nombre)
     nombres_a_buscar = [base]
+    if "menú" in base:
+        nombres_a_buscar.append(base.replace("menú", "menu"))
+    elif "menu" in base:
+        nombres_a_buscar.append(base.replace("menu", "menú"))
+
     nombre_raiz, ext = os.path.splitext(base)
     if not ext:
         for posible_ext in [".mp3", ".ogg", ".wav"]:
             nombres_a_buscar.append(nombre_raiz + posible_ext)
+            if "menú" in nombre_raiz:
+                nombres_a_buscar.append(nombre_raiz.replace("menú", "menu") + posible_ext)
+            elif "menu" in nombre_raiz:
+                nombres_a_buscar.append(nombre_raiz.replace("menu", "menú") + posible_ext)
 
     for carpeta in CARPETAS_AUDIO:
         for nom in nombres_a_buscar:
