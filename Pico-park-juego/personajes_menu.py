@@ -29,6 +29,7 @@ Gestiona:
 5. Total independencia de los niveles y mundos reales de juego.
 """
 
+import os
 import math
 import random
 import pygame
@@ -1998,6 +1999,393 @@ class GestorPersonajesMenu:
             dibujar_personaje_rotado(superficie, p)
         self._dibujar_copos_frente(superficie)
 
+    def _obtener_gorro_navideno_pixel_art(self, ancho=64, inclinacion=-4):
+        """
+        Carga y procesa el sprite oficial del gorrito navideño en pixel art
+        para el título:
+        - Utiliza la imagen exacta proporcionada en Sprites/Objetos/gorro_navideno_original.png.
+        - Invierte horizontalmente la imagen (efecto espejo de izquierda a derecha).
+        - Conserva todos sus colores, píxeles, sombras, borde blanco y pompón sin distorsión.
+        - Escala mediante nearest neighbor (transform.scale) para mantener píxeles 100% nítidos.
+        - Aplica inclinación sutil (-4°) para descansar naturalmente sobre las letras finales.
+        """
+        cache_key = (ancho, inclinacion)
+        if not hasattr(self, "_cache_gorros"):
+            self._cache_gorros = {}
+        if cache_key in self._cache_gorros:
+            return self._cache_gorros[cache_key]
+
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        posibles_rutas = [
+            os.path.join(base_dir, "..", "Sprites", "Objetos", "gorro_navideno_original.png"),
+            os.path.join(base_dir, "..", "Sprites", "Objetos", "gorro_navideno_titulo.png"),
+            os.path.join(base_dir, "Sprites", "Objetos", "gorro_navideno_original.png"),
+            os.path.join(base_dir, "Sprites", "Objetos", "gorro_navideno_titulo.png"),
+        ]
+
+        surf_orig = None
+        for r in posibles_rutas:
+            if os.path.isfile(r):
+                try:
+                    surf_orig = pygame.image.load(r)
+                    break
+                except Exception:
+                    continue
+
+        if surf_orig is None:
+            return self._crear_gorrito_navideno(ancho, int(ancho * 40 / 52))
+
+        # Recortar al bounding box de píxeles visibles
+        w, h = surf_orig.get_size()
+        min_x, max_x, min_y, max_y = w, 0, h, 0
+        for y in range(h):
+            for x in range(w):
+                if surf_orig.get_at((x, y))[3] > 0:
+                    if x < min_x: min_x = x
+                    if x > max_x: max_x = x
+                    if y < min_y: min_y = y
+                    if y > max_y: max_y = y
+
+        if max_x >= min_x and max_y >= min_y:
+            cropped = surf_orig.subsurface((min_x, min_y, max_x - min_x + 1, max_y - min_y + 1)).copy()
+        else:
+            cropped = surf_orig
+
+        # Inversión horizontal estricta (espejo izquierda-derecha)
+        flipped = pygame.transform.flip(cropped, True, False)
+
+        # Escala manteniendo definición de pixel art
+        cw, ch = flipped.get_size()
+        alto = int(round(ancho * ch / cw))
+        escalado = pygame.transform.scale(flipped, (ancho, alto))
+
+        # Inclinación sutil para asentarse naturalmente sobre las letras
+        if inclinacion != 0:
+            resultado = pygame.transform.rotate(escalado, inclinacion)
+        else:
+            resultado = escalado
+
+        self._cache_gorros[cache_key] = resultado
+        self._cache_gorro_pixel_art = resultado
+        return resultado
+
+    def _crear_gorrito_navideno(self, ancho=52, alto=46):
+        """
+        Dibuja un gorrito de Papá Noel en pixel art auténtico inclinado naturalmente
+        sobre el extremo superior izquierdo de la letra, con base de peluche blanca,
+        cono rojo curvado con caída suave hacia el lateral y pompón blanco.
+        """
+        surf = pygame.Surface((ancho, alto), pygame.SRCALPHA)
+        c_borde = (38, 12, 16)
+        c_rojo = (215, 34, 42)
+        c_rojo_luz = (248, 78, 88)
+        c_rojo_som = (145, 18, 25)
+        c_blanco = (255, 255, 255)
+        c_blanco_som = (205, 218, 232)
+
+        # 1. Base blanca inclinada ~14° descansando naturalmente sobre la esquina superior de la L
+        for dx in range(-1, 2):
+            for dy in range(-1, 2):
+                pygame.draw.polygon(surf, c_borde, [(10+dx, 32+dy), (38+dx, 25+dy), (40+dx, 34+dy), (12+dx, 41+dy)])
+        pygame.draw.polygon(surf, c_blanco, [(10, 32), (38, 25), (40, 34), (12, 41)])
+        pygame.draw.line(surf, c_blanco_som, (12, 38), (39, 32), 3)
+
+        # 2. Cono rojo sólido continuo con caída suave hacia el hombro de la letra
+        pts_cono_ext = [
+            (13, 31),
+            (20, 16),
+            (26, 9),
+            (34, 9),
+            (40, 14),
+            (46, 21),
+            (48, 28),
+            (46, 32),
+            (42, 32),
+            (40, 24),
+            (35, 17),
+            (30, 13),
+            (24, 13),
+            (19, 21),
+            (15, 30),
+        ]
+        pts_relleno = [
+            (14, 30),
+            (20, 17),
+            (26, 10),
+            (34, 10),
+            (39, 14),
+            (45, 21),
+            (47, 28),
+            (45, 31),
+            (41, 31),
+            (39, 23),
+            (35, 17),
+            (30, 14),
+            (37, 26),
+        ]
+        pygame.draw.polygon(surf, c_rojo, pts_relleno)
+        pygame.draw.circle(surf, c_rojo, (29, 14), 6)
+        pygame.draw.circle(surf, c_rojo, (37, 18), 6)
+        pygame.draw.circle(surf, c_rojo, (43, 24), 5)
+        pygame.draw.circle(surf, c_rojo, (24, 20), 7)
+
+        # Bisel de luz superior y sombra de pliegue
+        pygame.draw.line(surf, c_rojo_luz, (24, 10), (34, 10), 2)
+        pygame.draw.line(surf, c_rojo_luz, (34, 10), (41, 15), 2)
+        pygame.draw.line(surf, c_rojo_som, (38, 20), (44, 26), 2)
+
+        # Contorno del cono
+        pygame.draw.polygon(surf, c_borde, pts_cono_ext, 2)
+
+        # 3. Pompón blanco en la punta caída acompañando el movimiento
+        pygame.draw.circle(surf, c_borde, (46, 30), 6)
+        pygame.draw.circle(surf, c_blanco, (46, 30), 5)
+        pygame.draw.circle(surf, c_blanco_som, (45, 31), 3)
+        surf.set_at((46, 28), c_blanco)
+
+        return surf
+
+    def _crear_cinta_roja(self, ancho_total, alto, texto, fuente_sub):
+        """
+        Crea una cinta roja estilo videojuego retro con bordes biselados,
+        pliegues oscuros y extremos recortados en V (colas de cinta).
+        """
+        surf = pygame.Surface((ancho_total, alto + 12), pygame.SRCALPHA)
+        w_cola = 42
+        h_cinta = alto
+        y_cinta = 4
+        w_cuerpo = ancho_total - 2 * w_cola
+        x_cuerpo = w_cola
+
+        c_borde = (38, 10, 16)
+        c_fondo = (205, 30, 40)
+        c_luz = (242, 74, 84)
+        c_sombra = (135, 18, 25)
+        c_doblez = (95, 12, 18)
+        c_oro = (255, 215, 75)
+
+        y_cola = y_cinta + 5
+
+        # Cola izquierda (muesca en V)
+        pts_izq = [
+            (0, y_cola),
+            (w_cola + 4, y_cola),
+            (w_cola + 4, y_cola + h_cinta),
+            (0, y_cola + h_cinta),
+            (12, y_cola + h_cinta // 2),
+        ]
+        pygame.draw.polygon(surf, c_borde, pts_izq)
+        pts_izq_in = [
+            (2, y_cola + 2),
+            (w_cola + 2, y_cola + 2),
+            (w_cola + 2, y_cola + h_cinta - 2),
+            (2, y_cola + h_cinta - 2),
+            (13, y_cola + h_cinta // 2),
+        ]
+        pygame.draw.polygon(surf, c_sombra, pts_izq_in)
+
+        # Cola derecha (muesca en V)
+        x_cola_der = ancho_total - w_cola
+        pts_der = [
+            (x_cola_der - 4, y_cola),
+            (ancho_total, y_cola),
+            (ancho_total - 12, y_cola + h_cinta // 2),
+            (ancho_total, y_cola + h_cinta),
+            (x_cola_der - 4, y_cola + h_cinta),
+        ]
+        pygame.draw.polygon(surf, c_borde, pts_der)
+        pts_der_in = [
+            (x_cola_der - 2, y_cola + 2),
+            (ancho_total - 2, y_cola + 2),
+            (ancho_total - 13, y_cola + h_cinta // 2),
+            (ancho_total - 2, y_cola + h_cinta - 2),
+            (x_cola_der - 2, y_cola + h_cinta - 2),
+        ]
+        pygame.draw.polygon(surf, c_sombra, pts_der_in)
+
+        # Pliegues de doblez hacia atrás
+        pygame.draw.polygon(surf, c_doblez, [(x_cuerpo, y_cola), (x_cuerpo + 6, y_cinta + h_cinta), (x_cuerpo, y_cinta + h_cinta)])
+        pygame.draw.polygon(surf, c_doblez, [(x_cuerpo + w_cuerpo, y_cola), (x_cuerpo + w_cuerpo - 6, y_cinta + h_cinta), (x_cuerpo + w_cuerpo, y_cinta + h_cinta)])
+
+        # Sombra del cuerpo central
+        pygame.draw.rect(surf, (20, 8, 12, 160), (x_cuerpo, y_cinta + 3, w_cuerpo, h_cinta), border_radius=4)
+
+        # Cuerpo central de la cinta
+        pygame.draw.rect(surf, c_borde, (x_cuerpo - 1, y_cinta - 1, w_cuerpo + 2, h_cinta + 2), border_radius=4)
+        pygame.draw.rect(surf, c_fondo, (x_cuerpo, y_cinta, w_cuerpo, h_cinta), border_radius=3)
+
+        # Luces y sombras biseladas
+        pygame.draw.line(surf, c_luz, (x_cuerpo + 2, y_cinta + 1), (x_cuerpo + w_cuerpo - 3, y_cinta + 1), 2)
+        pygame.draw.line(surf, c_sombra, (x_cuerpo + 2, y_cinta + h_cinta - 2), (x_cuerpo + w_cuerpo - 3, y_cinta + h_cinta - 2), 2)
+
+        # Detalles dorados finos
+        pygame.draw.line(surf, c_oro, (x_cuerpo + 6, y_cinta + 3), (x_cuerpo + 6, y_cinta + h_cinta - 4), 2)
+        pygame.draw.line(surf, c_oro, (x_cuerpo + w_cuerpo - 7, y_cinta + 3), (x_cuerpo + w_cuerpo - 7, y_cinta + h_cinta - 4), 2)
+
+        # Texto centrado en color crema con sombra
+        col_txt = (255, 248, 228)
+        col_sombra_txt = (60, 10, 16)
+        txt_s = fuente_sub.render(texto, False, col_sombra_txt)
+        txt_f = fuente_sub.render(texto, False, col_txt)
+        r_txt = txt_f.get_rect(center=(ancho_total // 2, y_cinta + h_cinta // 2))
+        surf.blit(txt_s, r_txt.move(1, 1))
+        surf.blit(txt_f, r_txt)
+
+        return surf
+
+    def _generar_banner_titulo(self, idioma=None):
+        """
+        Construye el banner de título oficial del menú principal adaptado según el idioma activo:
+        - Español: «LAS AVENTURILLAS DE PICO EN EL PARQUE»
+        - Inglés: «PICO'S LITTLE ADVENTURES IN THE PARK»
+        - Chino Simplificado: «皮科在公园里的小冒险»
+        con degradado crema-naranja cálido, contorno oscuro, sombra desplazada, nieve acumulada,
+        gorrito de Papá Noel y cinta roja con proporción y distribución equilibradas.
+        """
+        import configuracion
+        from fuentes import obtener_fuente_matrix, obtener_fuente_cjk
+
+        idm = idioma or configuracion.obtener_idioma()
+
+        if idm == "en":
+            texto_principal = "PICO'S LITTLE ADVENTURES"
+            texto_secundario = "IN THE PARK"
+            f_main = obtener_fuente_matrix(30)
+            f_sub = obtener_fuente_matrix(23)
+            ancho_cinta = 460
+            alto_cinta = 46
+            antialias = False
+            hat_offset_x = -26
+            hat_offset_y = -30
+            espaciado_cinta = -14
+        elif idm == "zh":
+            texto_principal = "皮科在公园里"
+            texto_secundario = "的小冒险"
+            f_main = obtener_fuente_cjk(46, negrita=True)
+            f_sub = obtener_fuente_cjk(22, negrita=True)
+            ancho_cinta = 280
+            alto_cinta = 44
+            antialias = False
+            hat_offset_x = -20
+            hat_offset_y = -32
+            espaciado_cinta = -14
+        else:  # "es"
+            texto_principal = "LAS AVENTURILLAS"
+            texto_secundario = "DE PICO EN EL PARQUE"
+            f_main = obtener_fuente_matrix(38)
+            f_sub = obtener_fuente_matrix(23)
+            ancho_cinta = 665
+            alto_cinta = 46
+            antialias = False
+            hat_offset_x = -29
+            hat_offset_y = -32
+            espaciado_cinta = -14
+
+        txt_raw = f_main.render(texto_principal, antialias, (255, 255, 255))
+        tw, th = txt_raw.get_size()
+
+        # Relleno de letras en crema y naranja cálido
+        txt_relleno = pygame.Surface((tw, th), pygame.SRCALPHA)
+        for y in range(th):
+            ratio = y / max(1, th - 1)
+            if ratio < 0.42:
+                col = (255, 248, 222)   # Crema
+            elif ratio < 0.54:
+                col = (255, 204, 105)   # Transición dorada
+            elif ratio < 0.80:
+                col = (248, 126, 34)    # Naranja cálido
+            else:
+                col = (215, 88, 22)     # Sombra naranja profunda
+
+            for x in range(tw):
+                if txt_raw.get_at((x, y))[:3] != (0, 0, 0):
+                    txt_relleno.set_at((x, y), (*col, 255))
+
+        pad_c = 10
+        txt_con_borde = pygame.Surface((tw + pad_c * 2, th + pad_c * 2 + 6), pygame.SRCALPHA)
+
+        c_borde = (38, 16, 12)
+
+        # 1. Sombra desplazada (+4, +5)
+        for dx in range(2, 6):
+            for dy in range(3, 7):
+                txt_con_borde.blit(f_main.render(texto_principal, antialias, (18, 10, 15)), (pad_c + dx, pad_c + dy))
+
+        # 2. Contorno grueso de 2-3 píxeles
+        desplazamientos_borde = [
+            (-2, 0), (2, 0), (0, -2), (0, 2),
+            (-2, -1), (-2, 1), (2, -1), (2, 1),
+            (-1, -2), (1, -2), (-1, 2), (1, 2),
+            (-1, -1), (1, -1), (-1, 1), (1, 1),
+            (-2, -2), (2, -2), (-2, 2), (2, 2),
+        ]
+        for dx, dy in desplazamientos_borde:
+            txt_con_borde.blit(f_main.render(texto_principal, antialias, c_borde), (pad_c + dx, pad_c + dy))
+
+        # 3. Relleno dos tonos
+        txt_con_borde.blit(txt_relleno, (pad_c, pad_c))
+
+        # 4. Parches de nieve acumulada en letras clave (distribución orgánica sin saturar)
+        c_nieve = (255, 255, 255)
+        c_nieve_sombra = (208, 226, 246)
+        c_nieve_borde = (165, 190, 218)
+
+        for col_x in range(pad_c + 2, pad_c + tw - 2):
+            primer_y = None
+            for row_y in range(pad_c, pad_c + th):
+                if txt_con_borde.get_at((col_x, row_y)).a > 200:
+                    primer_y = row_y
+                    break
+            if primer_y is not None and primer_y < pad_c + 12:
+                rel_x = col_x - pad_c
+                # Grupos orgánicos de nieve (evitando colocar nieve bajo el gorrito en el extremo derecho)
+                if (rel_x % 44) < 22 and rel_x < tw - 20:
+                    h_nieve = 2 + ((rel_x % 5) % 2)
+                    for ny in range(h_nieve):
+                        col_p = c_nieve if ny < h_nieve - 1 else c_nieve_sombra
+                        txt_con_borde.set_at((col_x, primer_y - ny), col_p)
+                        if ny == h_nieve - 1:
+                            txt_con_borde.set_at((col_x, primer_y - ny - 1), c_nieve_borde)
+
+        # 5. Cinta roja retro inferior
+        cinta_surf = self._crear_cinta_roja(ancho_cinta, alto_cinta, texto_secundario, f_sub)
+
+        # 6. Composición del banner
+        pad_top_banner = 38
+        ancho_total = max(txt_con_borde.get_width() + 100, ancho_cinta + 50)
+        alto_total = txt_con_borde.get_height() + cinta_surf.get_height() + pad_top_banner + 6
+
+        banner = pygame.Surface((ancho_total, alto_total), pygame.SRCALPHA)
+
+        x_txt = (ancho_total - txt_con_borde.get_width()) // 2
+        y_txt = pad_top_banner
+        banner.blit(txt_con_borde, (x_txt, y_txt))
+
+        x_cinta = (ancho_total - cinta_surf.get_width()) // 2
+        y_cinta = y_txt + txt_con_borde.get_height() + espaciado_cinta
+        banner.blit(cinta_surf, (x_cinta, y_cinta))
+
+        # 7. Gorrito de Papá Noel en pixel art
+        gorro = self._obtener_gorro_navideno_pixel_art(64, inclinacion=-4)
+        x_gorro = x_txt + pad_c + tw + hat_offset_x
+        y_gorro = y_txt + pad_c + hat_offset_y
+        banner.blit(gorro, (x_gorro, y_gorro))
+
+        # 8. Estrellitas doradas navideñas
+        def _estrella(cx, cy):
+            if 0 <= cx < banner.get_width() and 0 <= cy < banner.get_height():
+                banner.set_at((cx, cy), (255, 255, 230))
+                for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1), (-2, 0), (2, 0), (0, -2), (0, 2)]:
+                    if 0 <= cx + dx < banner.get_width() and 0 <= cy + dy < banner.get_height():
+                        banner.set_at((cx + dx, cy + dy), (255, 218, 60))
+
+        _estrella(x_txt + pad_c + 12, y_txt + 4)
+        _estrella(x_gorro + 68, y_gorro + 16)
+        _estrella(x_cinta + 16, y_cinta + 32)
+        _estrella(x_cinta + ancho_cinta - 16, y_cinta + 32)
+
+        return banner
+
     def dibujar_menu_completo(
         self,
         superficie,
@@ -2013,8 +2401,9 @@ class GestorPersonajesMenu:
         2. Capa lejana de nieve.
         3. Los 5 personajes animados en suelo, plataformas, paredes y techo.
         4. Botones del Menú como interfaz pura con 100% de visibilidad, respuesta y legibilidad.
-        5. Título "PICO PARK" con sombra de contraste y botón de cierre X.
-        6. Capa de nieve en primer plano con oscilación natural.
+        5. Título oficial adaptado al idioma en pixel art auténtico.
+        6. Botón de cierre X.
+        7. Capa de nieve en primer plano con oscilación natural.
         """
         # 1. Fondo navideño pixel art, nubes, humo, luces y nieve de fondo
         self.dibujar_escenario(superficie)
@@ -2030,13 +2419,18 @@ class GestorPersonajesMenu:
             if spr_dib:
                 superficie.blit(spr_dib, btn_r)
 
-        # 4. Título "PICO PARK" con sombra de contraste
-        if fuente_titulo:
-            titulo = fuente_titulo.render("PICO PARK", True, (255, 255, 255))
-            r_tit = titulo.get_rect(center=(self.ancho // 2, 70))
-            t_sombra = fuente_titulo.render("PICO PARK", True, (35, 35, 45))
-            superficie.blit(t_sombra, r_tit.move(3, 3))
-            superficie.blit(titulo, r_tit)
+        # 4. Título oficial adaptado al idioma
+        import configuracion
+        idm = configuracion.obtener_idioma()
+        if not hasattr(self, "banners_titulo") or self.banners_titulo is None:
+            self.banners_titulo = {}
+        if idm not in self.banners_titulo:
+            self.banners_titulo[idm] = self._generar_banner_titulo(idm)
+
+        banner_actual = self.banners_titulo.get(idm)
+        if banner_actual:
+            r_ban = banner_actual.get_rect(centerx=self.ancho // 2, top=34)
+            superficie.blit(banner_actual, r_ban)
 
         # Botón X de salir
         if spr_x and rect_x:
@@ -2044,3 +2438,4 @@ class GestorPersonajesMenu:
 
         # 5. Capa cercana de copos de nieve flotando en primer plano
         self._dibujar_copos_frente(superficie)
+

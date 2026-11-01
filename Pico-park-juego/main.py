@@ -13,12 +13,13 @@ from sprites import (
     animar_pulsacion_boton,
     aclarar_boton,
     generar_boton_con_texto,
+    generar_marco_boton,
     obtener_accesorios_disponibles,
     cargar_accesorio,
     dibujar_accesorio_en_personaje,
 )
 from pantalla import iniciar_mundo
-from configuracion import t, mostrar_pestana_configuracion, reproducir_musica, detener_musica
+from configuracion import t, mostrar_pestana_configuracion, reproducir_musica, detener_musica, obtener_idioma
 from menu_niveles import (
     dibujar_menu_niveles,
     obtener_geometria_menu,
@@ -46,18 +47,24 @@ from guardado import (
     flujo_crear_nueva_partida,
 )
 from fuentes import (
+    contiene_caracteres_cjk,
     obtener_fuente,
+    obtener_fuente_para_texto,
     obtener_fuente_titulo,
     obtener_fuente_subtitulo,
     obtener_fuente_texto,
     obtener_fuente_boton,
     obtener_fuente_botones,
     obtener_fuente_pequena,
+    obtener_fuente_texto_pequeno,
+    obtener_fuente_cjk,
     obtener_fuente_contador,
     obtener_fuente_dialogos,
+    obtener_fuente_decorativa,
     TAMANO_TITULO,
     TAMANO_TITULO_GRANDE,
     TAMANO_TITULO_MODAL,
+    TAMANO_DECORATIVA,
     TAMANO_SUBTITULO,
     TAMANO_SUBTITULO_GRANDE,
     TAMANO_TEXTO,
@@ -1118,33 +1125,90 @@ def _dibujar_icono_candado(s, cx, cy, abierto=False):
 
 
 def _dibujar_icono_calendario(s, cx, cy):
-    """Dibuja un pequeño icono de diario/calendario pixel art (9x9 px)."""
-    col_papel = (255, 252, 242)
-    col_borde = (90, 70, 50)
-    col_lomo = (185, 65, 50)
-    col_anilla = (65, 45, 30)
-    col_linea = (165, 145, 125)
-
+    """Dibuja un icono de calendario pixel art nítido (11x11 px)."""
+    col_papel = (252, 248, 238)
+    col_rojo = (210, 65, 55)
+    col_borde = (110, 80, 55)
+    col_linea = (150, 125, 95)
     # Anillas superiores
-    for ax in (-2, 2):
-        s.set_at((cx + ax, cy - 4), col_anilla)
-
-    # Hoja de papel
-    for dy in range(-3, 5):
-        for dx in range(-4, 5):
-            px, py = cx + dx, cy + dy
-            if abs(dx) == 4 or dy == -3 or dy == 4:
-                s.set_at((px, py), col_borde)
-            elif dy in (-2, -1):
-                s.set_at((px, py), col_lomo)
+    s.set_at((cx - 3, cy - 5), col_borde)
+    s.set_at((cx + 3, cy - 5), col_borde)
+    # Cuerpo
+    for dy in range(-4, 6):
+        for dx in range(-5, 6):
+            if dx in (-5, 5) or dy in (-4, 5):
+                s.set_at((cx + dx, cy + dy), col_borde)
+            elif dy <= -2:
+                s.set_at((cx + dx, cy + dy), col_rojo)
             else:
-                s.set_at((px, py), col_papel)
+                s.set_at((cx + dx, cy + dy), col_papel)
+    # Puntos de días
+    for px, py in [(-2, 0), (0, 0), (2, 0), (-2, 2), (0, 2), (2, 2)]:
+        s.set_at((cx + px, cy + py), col_linea)
 
-    # Líneas de escritura miniatura
-    for dy in (1, 3):
-        for dx in range(-2, 3):
-            if (dx + dy) % 2 == 0:
-                s.set_at((cx + dx, cy + dy), col_linea)
+
+def _dibujar_icono_reloj(s, cx, cy):
+    """Dibuja un reloj pixel art nítido (11x11 px)."""
+    col_cuerpo = (252, 248, 238)
+    col_borde = (95, 75, 55)
+    col_agujas = (55, 38, 24)
+    for dy in range(-5, 6):
+        for dx in range(-5, 6):
+            d2 = dx * dx + dy * dy
+            if 15 <= d2 <= 26:
+                s.set_at((cx + dx, cy + dy), col_borde)
+            elif d2 < 15:
+                s.set_at((cx + dx, cy + dy), col_cuerpo)
+    # Agujas
+    s.set_at((cx, cy), col_agujas)
+    s.set_at((cx, cy - 1), col_agujas)
+    s.set_at((cx, cy - 2), col_agujas)
+    s.set_at((cx + 1, cy), col_agujas)
+    s.set_at((cx + 2, cy), col_agujas)
+
+
+def _dibujar_icono_trofeo(s, cx, cy):
+    """Dibuja un trofeo pixel art nítido (11x12 px) para niveles completados."""
+    col_oro = (245, 195, 45)
+    col_luz = (255, 240, 140)
+    col_borde = (120, 80, 20)
+    col_base = (145, 95, 35)
+    # Copa
+    for dy in range(-5, 0):
+        w = 4 - abs(dy + 3) // 2
+        for dx in range(-w, w + 1):
+            col = col_luz if (dx < 0 and dy < -2) else col_oro
+            s.set_at((cx + dx, cy + dy), col)
+    # Asas
+    for y_asa in [-4, -3, -2]:
+        s.set_at((cx - 4, cy + y_asa), col_borde)
+        s.set_at((cx + 4, cy + y_asa), col_borde)
+    # Borde superior copa
+    for dx in range(-3, 4):
+        s.set_at((cx + dx, cy - 6), col_borde)
+    # Tallo
+    s.set_at((cx, cy), col_borde)
+    s.set_at((cx, cy + 1), col_base)
+    # Base
+    for dx in range(-3, 4):
+        s.set_at((cx + dx, cy + 2), col_base)
+        s.set_at((cx + dx, cy + 3), col_borde)
+
+
+def _dibujar_icono_estrella_nivel(s, cx, cy):
+    """Dibuja una gema / estrella pixel art nítida (11x11 px)."""
+    col_gema = (235, 130, 35)
+    col_luz = (255, 220, 110)
+    col_borde = (130, 65, 15)
+    for dy in range(-5, 6):
+        w = 5 - abs(dy)
+        for dx in range(-w, w + 1):
+            if abs(dx) == w or abs(dy) == 5:
+                s.set_at((cx + dx, cy + dy), col_borde)
+            elif dy <= 0 and dx <= 0:
+                s.set_at((cx + dx, cy + dy), col_luz)
+            else:
+                s.set_at((cx + dx, cy + dy), col_gema)
 
 
 def obtener_geometria_panel_partidas(ancho_menu, alto_menu, tiene_partidas=True):
@@ -1161,7 +1225,7 @@ def obtener_geometria_panel_partidas(ancho_menu, alto_menu, tiene_partidas=True)
     rect_panel = pygame.Rect(x_panel, y_panel, ancho_panel, alto_panel)
 
     y_btns_inf = 620
-    w_btn, h_btn = 238, 68
+    w_btn, h_btn = 238, 70
     gap_btns = 24
 
     if tiene_partidas:
@@ -1178,19 +1242,19 @@ def obtener_geometria_panel_partidas(ancho_menu, alto_menu, tiene_partidas=True)
     return rect_panel, btn_volver, btn_nueva, btn_iniciar_primera
 
 
-def obtener_geometria_tarjeta_partida(rect_panel, idx_slot, alto_card=80, gap_cards=10):
+def obtener_geometria_tarjeta_partida(rect_panel, idx_slot, alto_card=90, gap_cards=6):
     """
     Calcula los rectángulos de cada elemento dentro de la ficha de registro de partida:
-    - r_card: rectángulo general de la ficha (papel antiguo)
+    - r_card: rectángulo general de la ficha (papel antiguo, altura optimizada 90 px)
     - r_badge: rectángulo del sello/badge de mundo a la izquierda
     - r_btn_cargar: botón principal «CARGAR» (126x38)
     - r_btn_gestionar: botón de administración «GESTIONAR» (118x38)
     - r_btn_borrar: botón secundario «BORRAR» (96x38)
-    - (x_texto, ancho_max_texto): zona exclusiva para los textos y metadatos
+    - (x_texto, ancho_max_texto): zona exclusiva para los textos y metadatos organizados en 2 líneas
     """
     r_card = pygame.Rect(
         rect_panel.left + 20,
-        rect_panel.top + 16 + idx_slot * (alto_card + gap_cards),
+        rect_panel.top + 12 + idx_slot * (alto_card + gap_cards),
         rect_panel.width - 40,
         alto_card,
     )
@@ -1255,11 +1319,18 @@ def dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel, pos_mouse, fuente
     pygame.draw.rect(pantalla, (245, 235, 220), r_badge.inflate(-4, -4), width=1, border_radius=6)
 
     fuente_badge = fuentes.get("badge", fuentes.get("btn"))
-    t_badge = fuente_badge.render(f"MUNDO {m_val}", True, info_b["texto"])
+    txt_badge = f"{t('mundo')} {m_val}"
+    f_badge = obtener_fuente_para_texto(txt_badge, categoria="botones", tamano=TAMANO_BADGE)
+    t_badge = f_badge.render(txt_badge, True, info_b["texto"])
     pantalla.blit(t_badge, t_badge.get_rect(center=r_badge.center))
 
     # 3. Metadatos de la aventura
-    nombre = p.get("nombre", f"Partida {p.get('id', 1)}")
+    nombre = p.get("nombre", f"{t('partida')} {p.get('id', 1)}")
+    if nombre in ("Todos los niveles desbloqueados", "All levels unlocked", "所有关卡已解锁"):
+        nombre = t("todos_desbloqueados")
+    elif str(nombre).startswith("Partida ") or str(nombre).startswith("Game ") or str(nombre).startswith("存档 "):
+        pid = p.get("id", 1)
+        nombre = f"{t('partida')} {pid}"
     mundo_max = p.get("mundo_max", 1)
     nivel_max = p.get("nivel_max", 1)
     fecha = p.get("fecha", "")
@@ -1268,28 +1339,74 @@ def dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel, pos_mouse, fuente
 
     # Símbolo decorativo de aventura: diamante / gema dorada pixel art
     diam_cx = x_texto + 4
-    diam_cy = r_card.top + 22
+    diam_cy = r_card.top + 18
     for d_diam in range(-4, 5):
         w_diam = 4 - abs(d_diam)
         for dx in range(-w_diam, w_diam + 1):
             c_d = (245, 215, 110) if (d_diam <= 0 and dx <= 0) else (210, 145, 35)
             pantalla.set_at((diam_cx + dx, diam_cy + d_diam), c_d)
 
-    # Línea 1: Nombre de la partida en sepia profundo
-    rect_tit_card = pygame.Rect(x_texto + 16, r_card.top + 10, ancho_max_texto - 16, 26)
-    dibujar_texto_en_rect(pantalla, nombre, rect_tit_card, categoria="subtitulo", tamano=18, color=(55, 42, 30), negrita=True, alineacion="izquierda", padding=0)
+    # Línea 1: Nombre de la partida en sepia profundo con soporte para clave
+    cur_x_tit = x_texto + 16
+    if tiene_pwd:
+        _dibujar_icono_candado(pantalla, cur_x_tit + 3, r_card.top + 18, abierto=False)
+        cur_x_tit += 14
 
-    # Línea 2: Icono de candado + nivel alcanzado + progreso + calendario y fecha
-    icono_lock_x = x_texto + 6
-    icono_lock_y = r_card.top + 53
-    _dibujar_icono_candado(pantalla, icono_lock_x, icono_lock_y, abierto=(not tiene_pwd))
+    rect_tit_card = pygame.Rect(cur_x_tit, r_card.top + 7, ancho_max_texto - (cur_x_tit - x_texto), 24)
+    dibujar_texto_en_rect(pantalla, nombre, rect_tit_card, categoria="subtitulo", tamano=21, color=(55, 42, 30), negrita=True, alineacion="izquierda", padding=0)
 
-    texto_detalles = f"Nivel {mundo_max}-{nivel_max}  •  {cant_comp}/15 completados"
-    if fecha:
-        texto_detalles += f"  •  {fecha}"
+    # Metadatos ampliados (+60% a +70%, tamano=28) distribuidos en dos líneas claras sin superposiciones
+    partes_f = fecha.strip().split(" ") if fecha else []
+    str_fecha = partes_f[0] if len(partes_f) > 0 else ""
+    str_hora = partes_f[1] if len(partes_f) > 1 else ""
+    tiene_fecha_hora = bool(str_fecha or str_hora)
 
-    rect_sub_card = pygame.Rect(x_texto + 18, r_card.top + 43, ancho_max_texto - 18, 20)
-    dibujar_texto_en_rect(pantalla, texto_detalles, rect_sub_card, categoria="pequena", tamano=14, color=(115, 95, 75), alineacion="izquierda", padding=0)
+    # Línea 2: Nivel alcanzado y Progreso de expedición
+    y_fila2 = (r_card.top + 35) if tiene_fecha_hora else (r_card.top + 45)
+    cur_x2 = x_texto + 4
+
+    # 1. Nivel alcanzado
+    _dibujar_icono_estrella_nivel(pantalla, cur_x2 + 5, y_fila2 + 14)
+    cur_x2 += 16
+    str_niv = f"{t('nivel')} {mundo_max}-{nivel_max}"
+    f_niv = obtener_fuente_cjk(16, negrita=False) if contiene_caracteres_cjk(str_niv) else (fuentes.get("sub_card") or obtener_fuente_pequena(28))
+    t_niv = f_niv.render(str_niv, True, (75, 48, 30))
+    pantalla.blit(t_niv, (cur_x2, y_fila2))
+    cur_x2 += t_niv.get_width() + 14
+
+    # Separador sutil
+    pygame.draw.circle(pantalla, (180, 150, 120), (cur_x2, y_fila2 + 14), 2)
+    cur_x2 += 10
+
+    # 2. Niveles completados
+    _dibujar_icono_trofeo(pantalla, cur_x2 + 6, y_fila2 + 14)
+    cur_x2 += 18
+    str_comp = f"{cant_comp}/15 {t('completados')}"
+    f_comp = obtener_fuente_cjk(16, negrita=False) if contiene_caracteres_cjk(str_comp) else (fuentes.get("sub_card") or obtener_fuente_pequena(28))
+    t_comp = f_comp.render(str_comp, True, (90, 65, 45))
+    pantalla.blit(t_comp, (cur_x2, y_fila2))
+
+    # Línea 3: Fecha y Hora (perfectamente alineadas debajo, aprovechando el ancho con holgura segura)
+    if tiene_fecha_hora:
+        y_fila3 = r_card.top + 61
+        cur_x3 = x_texto + 4
+
+        # 3. Fecha
+        if str_fecha:
+            _dibujar_icono_calendario(pantalla, cur_x3 + 6, y_fila3 + 14)
+            cur_x3 += 16
+            f_fec = obtener_fuente_cjk(16, negrita=False) if contiene_caracteres_cjk(str_fecha) else (fuentes.get("sub_card") or obtener_fuente_pequena(28))
+            t_fec = f_fec.render(str_fecha, True, (105, 80, 60))
+            pantalla.blit(t_fec, (cur_x3, y_fila3))
+            cur_x3 += t_fec.get_width() + 16
+
+        # 4. Hora
+        if str_hora:
+            _dibujar_icono_reloj(pantalla, cur_x3 + 6, y_fila3 + 14)
+            cur_x3 += 16
+            f_hor = obtener_fuente_cjk(16, negrita=False) if contiene_caracteres_cjk(str_hora) else (fuentes.get("sub_card") or obtener_fuente_pequena(28))
+            t_hor = f_hor.render(str_hora, True, (105, 80, 60))
+            pantalla.blit(t_hor, (cur_x3, y_fila3))
 
     # 4. Botón «CARGAR» (Verde bosque cálido de expedición - Sprite oficial)
     if sprites_botones and sprites_botones.get("cargar_normal"):
@@ -1301,7 +1418,7 @@ def dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel, pos_mouse, fuente
         borde_bc = (22, 45, 24)
         pygame.draw.rect(pantalla, col_bc, r_btn_cargar, border_radius=8)
         pygame.draw.rect(pantalla, borde_bc, r_btn_cargar, width=2, border_radius=8)
-        dibujar_texto_en_rect(pantalla, "CARGAR", r_btn_cargar, categoria="boton", tamano=14, color=(255, 255, 255), padding=4)
+        dibujar_texto_en_rect(pantalla, t("cargar"), r_btn_cargar, categoria="boton", tamano=14, color=(255, 255, 255), padding=4)
 
     # 5. Botón «GESTIONAR» (Pergamino tostado - Sprite oficial)
     if sprites_botones and sprites_botones.get("gestionar_normal"):
@@ -1313,7 +1430,7 @@ def dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel, pos_mouse, fuente
         borde_bg = (150, 115, 80) if hov_gestionar else (185, 155, 120)
         pygame.draw.rect(pantalla, col_bg, r_btn_gestionar, border_radius=8)
         pygame.draw.rect(pantalla, borde_bg, r_btn_gestionar, width=2, border_radius=8)
-        dibujar_texto_en_rect(pantalla, "GESTIONAR", r_btn_gestionar, categoria="boton", tamano=13, color=(65, 45, 30), padding=4)
+        dibujar_texto_en_rect(pantalla, t("gestionar"), r_btn_gestionar, categoria="boton", tamano=13, color=(65, 45, 30), padding=4)
 
     # 6. Botón «BORRAR» (Terracota cálido suave - Sprite oficial)
     if sprites_botones and sprites_botones.get("borrar_normal"):
@@ -1325,7 +1442,7 @@ def dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel, pos_mouse, fuente
         borde_bb = (255, 255, 255) if hov_borrar else (150, 50, 45)
         pygame.draw.rect(pantalla, col_bb, r_btn_borrar, border_radius=8)
         pygame.draw.rect(pantalla, borde_bb, r_btn_borrar, width=2, border_radius=8)
-        dibujar_texto_en_rect(pantalla, "BORRAR", r_btn_borrar, categoria="boton", tamano=14, color=(255, 250, 245), padding=4)
+        dibujar_texto_en_rect(pantalla, t("borrar"), r_btn_borrar, categoria="boton", tamano=14, color=(255, 250, 245), padding=4)
 
     return r_card, r_btn_cargar, r_btn_gestionar, r_btn_borrar
 
@@ -1408,13 +1525,14 @@ def main():
     fuente_sub_btn = obtener_fuente_pequena(TAMANO_PEQUENA)
     fuente_contador = obtener_fuente_contador(TAMANO_CONTADOR)
     fuente_dialogos = obtener_fuente_dialogos(TAMANO_DIALOGOS)
+    fuente_decorativa = obtener_fuente_decorativa(TAMANO_DECORATIVA)
     fuentes_menu = {
         "titulo": fuente_pixel_titulo,
         "tab": obtener_fuente_titulo(TAMANO_TITULO_MODAL, tamano_fallback=34),
         "card": obtener_fuente_boton(TAMANO_CARD, tamano_fallback=28),
     }
     fuente_card_titulo = obtener_fuente_subtitulo(TAMANO_SUBTITULO_GRANDE)
-    fuente_card_sub = obtener_fuente_pequena(TAMANO_PEQUENA)
+    fuente_card_sub = obtener_fuente_pequena(28)
 
     ANCHO_MENU = pantalla.get_width()
     ALTO_MENU = pantalla.get_height()
@@ -1738,6 +1856,335 @@ def main():
     _cargar_recursos_niveles()
     _cargar_recursos_controles()
 
+    # Funciones de soporte dinámico multiidioma para botones
+    _cache_botones_modo = {}
+    _cache_botones_volver = {}
+    _cache_botones_nueva_lista = {}
+    _cache_botones_primera = {}
+    _cache_sprites_tarjeta = {}
+    _cache_botones_menu = {}
+
+    def _obtener_boton_modo(tipo, estado, idioma):
+        tipo_norm = "nueva" if tipo in ("nueva", "nueva_partida") else tipo
+        if idioma == "es":
+            if tipo_norm == "continuar":
+                if estado == "hover": return spr_continuar_hover
+                if estado == "semi": return spr_continuar_semi
+                if estado == "apretado": return spr_continuar_apretado
+                return spr_continuar_normal
+            else:
+                if estado == "hover": return spr_nueva_modo_hover
+                if estado == "semi": return spr_nueva_modo_semi
+                if estado == "apretado": return spr_nueva_modo_apretado
+                return spr_nueva_modo_normal
+
+        clave = (tipo_norm, estado, idioma)
+        if clave in _cache_botones_modo:
+            return _cache_botones_modo[clave]
+
+        if tipo_norm == "continuar":
+            base_path = "Menu/boton-continuar-cargar....png"
+            if estado == "semi": base_path = "Menu/boton-continuar-cargar...-semiapretado.png"
+            elif estado == "apretado": base_path = "Menu/boton-continuar-cargar...-apretado.png"
+            col_bg = (155, 255, 124) if estado not in ("semi", "apretado") else ((142, 237, 115) if estado == "semi" else (124, 211, 103))
+            col_tit = (18, 55, 24)
+            col_sub = (25, 75, 30)
+            tit = t("continuar")
+            sub = t("sub_continuar")
+        else:
+            base_path = "mundos/boton-nueva-partida-reiniciar....png"
+            if estado == "semi": base_path = "mundos/boton-nueva-partida-reiniciar...-semiapretado.png"
+            elif estado == "apretado": base_path = "mundos/boton-nueva-partida-reiniciar...-apretado.png"
+            col_bg = (254, 137, 134) if estado not in ("semi", "apretado") else ((242, 126, 123) if estado == "semi" else (225, 114, 112))
+            col_tit = (95, 25, 35)
+            col_sub = (115, 30, 42)
+            tit = t("nueva_partida")
+            sub = t("sub_nueva_partida")
+
+        w, h = W_MODO, H_MODO
+        btn_base = cargar_boton_escalado(base_path, w, h)
+        if not btn_base:
+            btn_base = cargar_boton_escalado("mundos/boton-nueva-partida-reiniciar....png", w, h)
+        surf = btn_base.copy()
+
+        # Limpiar suavemente solo la cara interior manteniendo intactos los bordes y biseles 3D
+        shift_y = 10 if estado == 'apretado' else (5 if estado == 'semi' else 0)
+        pad_top = 6 + shift_y
+        h_int = 68
+        rect_interior = pygame.Rect(6, pad_top, w - 12, h_int)
+        pygame.draw.rect(surf, col_bg, rect_interior)
+
+        if idioma == "zh":
+            f_tit = obtener_fuente_cjk(28, negrita=True)
+            f_sub = obtener_fuente_cjk(14, negrita=False)
+        else:
+            f_tit = obtener_fuente_para_texto(tit, categoria="boton", tamano=24, negrita=True)
+            f_sub = obtener_fuente_para_texto(sub, categoria="texto", tamano=12, negrita=False)
+
+        t_tit = f_tit.render(tit, True, col_tit)
+        t_sub = f_sub.render(sub, True, col_sub)
+
+        offset_y = shift_y
+        r_tit = t_tit.get_rect(center=(w // 2, 33 + offset_y))
+        surf.blit(t_tit, r_tit)
+
+        r_sub = t_sub.get_rect(center=(w // 2, 59 + offset_y))
+        surf.blit(t_sub, r_sub)
+
+        if estado == "hover":
+            surf = aclarar_boton(surf)
+
+        _cache_botones_modo[clave] = surf
+        return surf
+
+    def _obtener_boton_volver(estado, idioma, w=W_VOLVER, h=H_VOLVER):
+        if idioma == "es":
+            if w == W_VOLVER and h == H_VOLVER:
+                if estado == "hover": return spr_volver_modo_hover
+                if estado == "semi": return spr_volver_modo_semi
+                if estado == "apretado": return spr_volver_modo_apretado
+                return spr_volver_modo_normal
+            base_p = "mundos/boton-volver.png"
+            if estado == "semi": base_p = "mundos/boton-volver-semiapretado.png"
+            elif estado == "apretado": base_p = "mundos/boton-volver-apretado.png"
+            btn = cargar_boton_escalado(base_p, w, h) or cargar_boton_escalado("mundos/boton-volver.png", w, h)
+            if estado == "hover":
+                btn = aclarar_boton(btn)
+            return btn
+
+        clave = (estado, idioma, w, h)
+        if clave in _cache_botones_volver:
+            return _cache_botones_volver[clave]
+
+        base_path = "mundos/boton-volver.png"
+        offset_y = 0
+        if estado == "semi":
+            base_path = "mundos/boton-volver-semiapretado.png"
+            offset_y = 1
+        elif estado == "apretado":
+            base_path = "mundos/boton-volver-apretado.png"
+            offset_y = 2
+
+        btn_base = cargar_boton_escalado(base_path, w, h) or cargar_boton_escalado("mundos/boton-volver.png", w, h)
+        surf = btn_base.copy()
+
+        col_interior = (212, 212, 212) if estado not in ("semi", "apretado") else ((200, 200, 200) if estado == "semi" else (181, 181, 181))
+        shift_y = 7 if estado == 'apretado' else (3 if estado == 'semi' else 0)
+        pad_top = 5 + shift_y
+        h_face = 44
+        rect_interior = pygame.Rect(6, pad_top, w - 12, h_face)
+        pygame.draw.rect(surf, col_interior, rect_interior)
+
+        txt_v = t("volver")
+        if idioma == "zh":
+            f_v = obtener_fuente_cjk(18, negrita=True)
+        else:
+            f_v = obtener_fuente_para_texto(txt_v, categoria="boton", tamano=18, negrita=True)
+
+        t_v = f_v.render(txt_v, True, (60, 60, 60))
+        r_v = t_v.get_rect(center=(w // 2, 27 + shift_y))
+        surf.blit(t_v, r_v)
+
+        if estado == "hover":
+            surf = aclarar_boton(surf)
+
+        _cache_botones_volver[clave] = surf
+        return surf
+
+    def _obtener_boton_nueva_lista(estado, idioma):
+        if idioma == "es":
+            if estado == "hover": return spr_nueva_lista_hover
+            if estado == "semi": return spr_nueva_lista_semi
+            if estado == "apretado": return spr_nueva_lista_apretado
+            return spr_nueva_lista_normal
+
+        clave = (estado, idioma)
+        if clave in _cache_botones_nueva_lista:
+            return _cache_botones_nueva_lista[clave]
+
+        base_path = "mundos/boton-nueva-partida.png"
+        offset_y = 0
+        if estado == "semi":
+            base_path = "mundos/boton-nueva-partida-semiapretado.png"
+            offset_y = 1
+        elif estado == "apretado":
+            base_path = "mundos/boton-nueva-partida-apretado.png"
+            offset_y = 2
+
+        btn_base = cargar_boton_escalado(base_path, W_VOLVER, H_VOLVER) or cargar_boton_escalado("mundos/boton-nueva-partida.png", W_VOLVER, H_VOLVER)
+        surf = btn_base.copy()
+
+        col_interior = (255, 159, 99) if estado not in ("semi", "apretado") else ((242, 148, 91) if estado == "semi" else (223, 132, 79))
+        shift_y = 7 if estado == 'apretado' else (3 if estado == 'semi' else 0)
+        pad_top = 5 + shift_y
+        h_face = 44
+        rect_interior = pygame.Rect(6, pad_top, W_VOLVER - 12, h_face)
+        pygame.draw.rect(surf, col_interior, rect_interior)
+
+        txt_nl = t("nueva_partida")
+        if idioma == "zh":
+            f_nl = obtener_fuente_cjk(18, negrita=True)
+        else:
+            f_nl = obtener_fuente_para_texto(txt_nl, categoria="boton", tamano=16, negrita=True)
+
+        t_nl = f_nl.render(txt_nl, True, (115, 35, 20))
+        r_nl = t_nl.get_rect(center=(W_VOLVER // 2, 27 + shift_y))
+        surf.blit(t_nl, r_nl)
+
+        if estado == "hover":
+            surf = aclarar_boton(surf)
+
+        _cache_botones_nueva_lista[clave] = surf
+        return surf
+
+    def _obtener_boton_primera_partida(estado, idioma):
+        if idioma == "es":
+            if estado == "hover": return spr_nueva_primera_hover
+            if estado == "semi": return spr_nueva_primera_semi
+            if estado == "apretado": return spr_nueva_primera_apretado
+            return spr_nueva_primera_normal
+
+        clave = (estado, idioma)
+        if clave in _cache_botones_primera:
+            return _cache_botones_primera[clave]
+
+        base_path = "mundos/boton-nueva-partida.png"
+        offset_y = 0
+        if estado == "semi":
+            base_path = "mundos/boton-nueva-partida-semiapretado.png"
+            offset_y = 1
+        elif estado == "apretado":
+            base_path = "mundos/boton-nueva-partida-apretado.png"
+            offset_y = 2
+
+        btn_base = cargar_boton_escalado(base_path, 272, 80) or cargar_boton_escalado("mundos/boton-nueva-partida.png", 272, 80)
+        surf = btn_base.copy()
+        col_interior = (255, 159, 99) if estado not in ("semi", "apretado") else ((242, 148, 91) if estado == "semi" else (223, 132, 79))
+        shift_y = 8 if estado == 'apretado' else (4 if estado == 'semi' else 0)
+        pad_top = 6 + shift_y
+        h_face = 50
+        rect_interior = pygame.Rect(6, pad_top, 272 - 12, h_face)
+        pygame.draw.rect(surf, col_interior, rect_interior)
+
+        txt_p = t("comenzar_aventura")
+        if idioma == "zh":
+            f_p = obtener_fuente_cjk(20, negrita=True)
+        else:
+            f_p = obtener_fuente_para_texto(txt_p, categoria="boton", tamano=18, negrita=True)
+
+        t_p = f_p.render(txt_p, True, (115, 35, 20))
+        surf.blit(t_p, t_p.get_rect(center=(136, 31 + shift_y)))
+
+        if estado == "hover":
+            surf = aclarar_boton(surf)
+
+        _cache_botones_primera[clave] = surf
+        return surf
+
+    def _obtener_sprites_tarjeta(idioma):
+        if idioma == "es":
+            return dict_sprites_tarjeta
+        if idioma in _cache_sprites_tarjeta:
+            return _cache_sprites_tarjeta[idioma]
+
+        sp_c_n = generar_boton_con_texto("mundos/boton-cargar.png", 126, 38, t("cargar"), (26, 83, 29), 14, 0, idioma)
+        sp_c_h = aclarar_boton(sp_c_n)
+        sp_c_s = generar_boton_con_texto("mundos/boton-cargar-semiapretado.png", 126, 38, t("cargar"), (26, 83, 29), 14, 1, idioma)
+        sp_c_a = generar_boton_con_texto("mundos/boton-cargar-apretado.png", 126, 38, t("cargar"), (26, 83, 29), 14, 2, idioma)
+
+        sp_g_n = generar_boton_con_texto("mundos/boton-volver.png", 118, 38, t("gestionar"), (60, 45, 30), 13, 0, idioma)
+        sp_g_h = aclarar_boton(sp_g_n)
+        sp_g_s = generar_boton_con_texto("mundos/boton-volver-semiapretado.png", 118, 38, t("gestionar"), (60, 45, 30), 13, 1, idioma)
+        sp_g_a = generar_boton_con_texto("mundos/boton-volver-apretado.png", 118, 38, t("gestionar"), (60, 45, 30), 13, 2, idioma)
+
+        sp_b_n = generar_boton_con_texto("Menu/salir.png", 96, 38, t("borrar"), (255, 255, 255), 14, 0, idioma)
+        sp_b_h = aclarar_boton(sp_b_n)
+        sp_b_s = generar_boton_con_texto("Menu/salir-preapretado.png", 96, 38, t("borrar"), (255, 255, 255), 14, 1, idioma)
+        sp_b_a = generar_boton_con_texto("Menu/salir-apretado.png", 96, 38, t("borrar"), (255, 255, 255), 14, 2, idioma)
+
+        res = {
+            "cargar_normal": sp_c_n,
+            "cargar_hover": sp_c_h,
+            "cargar_semi": sp_c_s,
+            "cargar_apretado": sp_c_a,
+            "gestionar_normal": sp_g_n,
+            "gestionar_hover": sp_g_h,
+            "gestionar_semi": sp_g_s,
+            "gestionar_apretado": sp_g_a,
+            "borrar_normal": sp_b_n,
+            "borrar_hover": sp_b_h,
+            "borrar_semi": sp_b_s,
+            "borrar_apretado": sp_b_a,
+        }
+        _cache_sprites_tarjeta[idioma] = res
+        return res
+
+    def _obtener_boton_menu_principal_estado(tipo, estado, idioma):
+        if idioma == "es":
+            if tipo == "jugar":
+                if estado == "hover": return spr_jugar_hover
+                if estado == "semi": return spr_jugar_semi
+                if estado == "apretado": return spr_jugar_apretado
+                return spr_jugar_normal
+            elif tipo == "personajes":
+                if estado == "hover": return spr_personajes_hover
+                if estado == "semi": return spr_personajes_semi
+                if estado == "apretado": return spr_personajes_apretado
+                return spr_personajes_normal
+            elif tipo == "opciones":
+                if estado == "hover": return spr_opciones_hover
+                if estado == "semi": return spr_opciones_semi
+                if estado == "apretado": return spr_opciones_apretado
+                return spr_opciones_normal
+            elif tipo == "salir":
+                if estado == "hover": return spr_salir_hover
+                if estado == "semi": return spr_salir_semi
+                if estado == "apretado": return spr_salir_apretado
+                return spr_salir_normal
+
+        clave = (tipo, estado, idioma)
+        if clave in _cache_botones_menu:
+            return _cache_botones_menu[clave]
+
+        cfg_botones = {
+            "jugar": ("Menu/jugar", (27, 82, 36), 26),
+            "personajes": ("Menu/personajes", (42, 68, 124), 22 if idioma == "en" else 24),
+            "opciones": ("Menu/opciones", (115, 67, 16), 26),
+            "salir": ("Menu/salir", (255, 255, 255), 26),
+        }
+        base_name, col_txt, sz = cfg_botones[tipo]
+
+        if estado == "normal":
+            sprite_path = f"{base_name}.png"
+            offset_y = 0
+            surf = generar_boton_con_texto(sprite_path, ANCHO_BOTON, ALTO_BOTON, t(tipo), col_txt, sz, offset_y, idioma)
+        elif estado == "hover":
+            norm = _obtener_boton_menu_principal_estado(tipo, "normal", idioma)
+            surf = aclarar_boton(norm)
+        elif estado == "semi":
+            pre_name = f"{base_name}-preapretado.png"
+            sprite_path = pre_name
+            offset_y = 4
+            surf = generar_boton_con_texto(sprite_path, ANCHO_BOTON, ALTO_BOTON, t(tipo), col_txt, sz, offset_y, idioma)
+        elif estado == "apretado":
+            apr_name = f"{base_name}-apretado.png"
+            sprite_path = apr_name
+            offset_y = 8
+            surf = generar_boton_con_texto(sprite_path, ANCHO_BOTON, ALTO_BOTON, t(tipo), col_txt, sz, offset_y, idioma)
+        else:
+            surf = None
+
+        _cache_botones_menu[clave] = surf
+        return surf
+
+    def _obtener_botones_menu_principal(idioma):
+        return [
+            (btn_jugar, _obtener_boton_menu_principal_estado("jugar", "normal", idioma), _obtener_boton_menu_principal_estado("jugar", "hover", idioma)),
+            (btn_personajes, _obtener_boton_menu_principal_estado("personajes", "normal", idioma), _obtener_boton_menu_principal_estado("personajes", "hover", idioma)),
+            (btn_config, _obtener_boton_menu_principal_estado("opciones", "normal", idioma), _obtener_boton_menu_principal_estado("opciones", "hover", idioma)),
+            (btn_salir, _obtener_boton_menu_principal_estado("salir", "normal", idioma), _obtener_boton_menu_principal_estado("salir", "hover", idioma)),
+        ]
+
     # Instanciar el gestor del escenario interactivo y personajes autónomos del Menú Principal
     gestor_personajes_menu = GestorPersonajesMenu(
         ancho=ANCHO_MENU,
@@ -1751,12 +2198,7 @@ def main():
     # Renderizar el primer fotograma del Menú Principal con todos los botones e interfaz completamente listos
     pantalla.fill((30, 30, 30))
     pos_mouse_inicial = pygame.mouse.get_pos()
-    botones_menu_datos_ini = [
-        (btn_jugar, spr_jugar_normal, spr_jugar_hover),
-        (btn_personajes, spr_personajes_normal, spr_personajes_hover),
-        (btn_config, spr_opciones_normal, spr_opciones_hover),
-        (btn_salir, spr_salir_normal, spr_salir_hover),
-    ]
+    botones_menu_datos_ini = _obtener_botones_menu_principal(obtener_idioma())
     gestor_personajes_menu.dibujar_menu_completo(
         pantalla,
         botones_menu_datos=botones_menu_datos_ini,
@@ -1782,6 +2224,7 @@ def main():
     estado_actual = ESTADO_MENU_PRINCIPAL
     mundo_seleccionado = 1
     ejecutando = True
+    _ultimo_idioma_menu = obtener_idioma()
 
     def intentar_salir():
         nonlocal ejecutando, snapshot_guardado
@@ -1810,6 +2253,16 @@ def main():
     while ejecutando:
         reloj.tick(FPS)
         reproducir_musica("menu")
+
+        idm_act = obtener_idioma()
+        if idm_act != _ultimo_idioma_menu:
+            _cache_botones_menu.clear()
+            _cache_botones_modo.clear()
+            _cache_botones_volver.clear()
+            _cache_botones_nueva_lista.clear()
+            _cache_botones_primera.clear()
+            _cache_sprites_tarjeta.clear()
+            _ultimo_idioma_menu = idm_act
 
         # Cargar recursos bajo demanda según el estado actual antes de procesar eventos o dibujar
         if estado_actual == ESTADO_MODO_JUEGO:
@@ -1840,32 +2293,52 @@ def main():
 
                 if estado_actual == ESTADO_MENU_PRINCIPAL:
                     _asegurar_semi_apretados_menu()
+                    idm_act = obtener_idioma()
                     if btn_jugar.collidepoint(evento.pos):
                         f_limp = gestor_personajes_menu.fondo_estatico.subsurface(btn_jugar)
-                        if animar_pulsacion_boton(pantalla, btn_jugar, spr_jugar_semi, spr_jugar_apretado, f_limp, spr_jugar_normal):
+                        sp_s = _obtener_boton_menu_principal_estado("jugar", "semi", idm_act)
+                        sp_a = _obtener_boton_menu_principal_estado("jugar", "apretado", idm_act)
+                        sp_n = _obtener_boton_menu_principal_estado("jugar", "normal", idm_act)
+                        if animar_pulsacion_boton(pantalla, btn_jugar, sp_s, sp_a, f_limp, sp_n):
                             estado_actual = ESTADO_MODO_JUEGO
                     elif btn_personajes.collidepoint(evento.pos):
                         f_limp = gestor_personajes_menu.fondo_estatico.subsurface(btn_personajes)
-                        if animar_pulsacion_boton(pantalla, btn_personajes, spr_personajes_semi, spr_personajes_apretado, f_limp, spr_personajes_normal):
+                        sp_s = _obtener_boton_menu_principal_estado("personajes", "semi", idm_act)
+                        sp_a = _obtener_boton_menu_principal_estado("personajes", "apretado", idm_act)
+                        sp_n = _obtener_boton_menu_principal_estado("personajes", "normal", idm_act)
+                        if animar_pulsacion_boton(pantalla, btn_personajes, sp_s, sp_a, f_limp, sp_n):
                             estado_actual = ESTADO_PERSONAJES
                     elif btn_config.collidepoint(evento.pos):
                         f_limp = gestor_personajes_menu.fondo_estatico.subsurface(btn_config)
-                        if animar_pulsacion_boton(pantalla, btn_config, spr_opciones_semi, spr_opciones_apretado, f_limp, spr_opciones_normal):
+                        sp_s = _obtener_boton_menu_principal_estado("opciones", "semi", idm_act)
+                        sp_a = _obtener_boton_menu_principal_estado("opciones", "apretado", idm_act)
+                        sp_n = _obtener_boton_menu_principal_estado("opciones", "normal", idm_act)
+                        if animar_pulsacion_boton(pantalla, btn_config, sp_s, sp_a, f_limp, sp_n):
                             mostrar_pestana_configuracion(pantalla, reloj)
                             break
                     elif btn_salir.collidepoint(evento.pos):
                         f_limp = gestor_personajes_menu.fondo_estatico.subsurface(btn_salir)
-                        if animar_pulsacion_boton(pantalla, btn_salir, spr_salir_semi, spr_salir_apretado, f_limp, spr_salir_normal):
+                        sp_s = _obtener_boton_menu_principal_estado("salir", "semi", idm_act)
+                        sp_a = _obtener_boton_menu_principal_estado("salir", "apretado", idm_act)
+                        sp_n = _obtener_boton_menu_principal_estado("salir", "normal", idm_act)
+                        if animar_pulsacion_boton(pantalla, btn_salir, sp_s, sp_a, f_limp, sp_n):
                             intentar_salir()
 
                 elif estado_actual == ESTADO_MODO_JUEGO:
                     f_limp_modo = _obtener_fondo_modo_juego(ANCHO_MENU, ALTO_MENU)
+                    idm_act = obtener_idioma()
                     if btn_continuar.collidepoint(evento.pos):
-                        if animar_pulsacion_boton(pantalla, btn_continuar, spr_continuar_semi, spr_continuar_apretado, f_limp_modo, spr_continuar_normal):
+                        sp_c_s = _obtener_boton_modo("continuar", "semi", idm_act)
+                        sp_c_a = _obtener_boton_modo("continuar", "apretado", idm_act)
+                        sp_c_n = _obtener_boton_modo("continuar", "normal", idm_act)
+                        if animar_pulsacion_boton(pantalla, btn_continuar, sp_c_s, sp_c_a, f_limp_modo, sp_c_n):
                             pagina_partidas = 0
                             estado_actual = ESTADO_LISTA_PARTIDAS
                     elif btn_nueva_partida.collidepoint(evento.pos):
-                        if animar_pulsacion_boton(pantalla, btn_nueva_partida, spr_nueva_modo_semi, spr_nueva_modo_apretado, f_limp_modo, spr_nueva_modo_normal):
+                        sp_n_s = _obtener_boton_modo("nueva_partida", "semi", idm_act)
+                        sp_n_a = _obtener_boton_modo("nueva_partida", "apretado", idm_act)
+                        sp_n_n = _obtener_boton_modo("nueva_partida", "normal", idm_act)
+                        if animar_pulsacion_boton(pantalla, btn_nueva_partida, sp_n_s, sp_n_a, f_limp_modo, sp_n_n):
                             nueva_p = flujo_crear_nueva_partida(
                                 pantalla, reloj,
                                 color_p1=color_p1, color_p2=color_p2,
@@ -1897,7 +2370,10 @@ def main():
                                 else:
                                     ejecutando = False
                     elif btn_volver_modo.collidepoint(evento.pos):
-                        if animar_pulsacion_boton(pantalla, btn_volver_modo, spr_volver_modo_semi, spr_volver_modo_apretado, f_limp_modo, spr_volver_modo_normal):
+                        sp_v_s = _obtener_boton_volver("semi", idm_act)
+                        sp_v_a = _obtener_boton_volver("apretado", idm_act)
+                        sp_v_n = _obtener_boton_volver("normal", idm_act)
+                        if animar_pulsacion_boton(pantalla, btn_volver_modo, sp_v_s, sp_v_a, f_limp_modo, sp_v_n):
                             estado_actual = ESTADO_MENU_PRINCIPAL
 
                 elif estado_actual == ESTADO_LISTA_PARTIDAS:
@@ -1910,11 +2386,17 @@ def main():
                     if pagina_partidas >= total_paginas:
                         pagina_partidas = max(0, total_paginas - 1)
 
+                    idm_act = obtener_idioma()
+                    dict_sp_act = _obtener_sprites_tarjeta(idm_act)
+
                     if not partidas_guardadas:
                         if btn_iniciar_primera.collidepoint(evento.pos):
                             pulsado = True
-                            if spr_nueva_primera_semi and spr_nueva_primera_apretado:
-                                pulsado = animar_pulsacion_boton(pantalla, btn_iniciar_primera, spr_nueva_primera_semi, spr_nueva_primera_apretado, (255, 240, 195), spr_nueva_primera_normal)
+                            sp_pr_semi = _obtener_boton_primera_partida("semi", idm_act)
+                            sp_pr_apret = _obtener_boton_primera_partida("apretado", idm_act)
+                            sp_pr_norm = _obtener_boton_primera_partida("normal", idm_act)
+                            if sp_pr_semi and sp_pr_apret:
+                                pulsado = animar_pulsacion_boton(pantalla, btn_iniciar_primera, sp_pr_semi, sp_pr_apret, (252, 248, 238), sp_pr_norm)
                             if pulsado:
                                 nueva_p = flujo_crear_nueva_partida(
                                     pantalla, reloj,
@@ -1959,9 +2441,9 @@ def main():
                             # Clic en botón BORRAR (dispara confirmación previa con advertencia)
                             if r_btn_borrar.collidepoint(evento.pos):
                                 pulsado = True
-                                spr_b_s = dict_sprites_tarjeta.get("borrar_semi")
-                                spr_b_a = dict_sprites_tarjeta.get("borrar_apretado")
-                                spr_b_n = dict_sprites_tarjeta.get("borrar_normal")
+                                spr_b_s = dict_sp_act.get("borrar_semi")
+                                spr_b_a = dict_sp_act.get("borrar_apretado")
+                                spr_b_n = dict_sp_act.get("borrar_normal")
                                 if spr_b_s and spr_b_a:
                                     pulsado = animar_pulsacion_boton(pantalla, r_btn_borrar, spr_b_s, spr_b_a, (253, 246, 233), spr_b_n)
                                 if pulsado:
@@ -1986,9 +2468,9 @@ def main():
                             # Clic en botón GESTIONAR (renombrar, cambiar/quitar clave, borrar)
                             elif r_btn_gestionar.collidepoint(evento.pos):
                                 pulsado = True
-                                spr_g_s = dict_sprites_tarjeta.get("gestionar_semi")
-                                spr_g_a = dict_sprites_tarjeta.get("gestionar_apretado")
-                                spr_g_n = dict_sprites_tarjeta.get("gestionar_normal")
+                                spr_g_s = dict_sp_act.get("gestionar_semi")
+                                spr_g_a = dict_sp_act.get("gestionar_apretado")
+                                spr_g_n = dict_sp_act.get("gestionar_normal")
                                 if spr_g_s and spr_g_a:
                                     pulsado = animar_pulsacion_boton(pantalla, r_btn_gestionar, spr_g_s, spr_g_a, (253, 246, 233), spr_g_n)
                                 if pulsado:
@@ -2003,8 +2485,11 @@ def main():
                             # Clic en botón CARGAR (única y exclusivamente sobre r_btn_cargar)
                             elif r_btn_cargar.collidepoint(evento.pos):
                                 pulsado = True
-                                if spr_cargar_semi and spr_cargar_apretado:
-                                    pulsado = animar_pulsacion_boton(pantalla, r_btn_cargar, spr_cargar_semi, spr_cargar_apretado, (253, 246, 233), spr_cargar_normal)
+                                spr_c_s = dict_sp_act.get("cargar_semi")
+                                spr_c_a = dict_sp_act.get("cargar_apretado")
+                                spr_c_n = dict_sp_act.get("cargar_normal")
+                                if spr_c_s and spr_c_a:
+                                    pulsado = animar_pulsacion_boton(pantalla, r_btn_cargar, spr_c_s, spr_c_a, (253, 246, 233), spr_c_n)
                                 if pulsado:
                                     if p.get("tiene_password", False):
                                         if not pedir_password_modal(pantalla, reloj, p):
@@ -2082,9 +2567,12 @@ def main():
 
                             if btn_nueva_desde_lista.collidepoint(evento.pos):
                                 pulsado = True
-                                if spr_nueva_lista_semi and spr_nueva_lista_apretado:
+                                sp_nl_s = _obtener_boton_nueva_lista("semi", idm_act)
+                                sp_nl_a = _obtener_boton_nueva_lista("apretado", idm_act)
+                                sp_nl_n = _obtener_boton_nueva_lista("normal", idm_act)
+                                if sp_nl_s and sp_nl_a:
                                     f_limp = _obtener_fondo_partidas(ANCHO_MENU, ALTO_MENU)
-                                    pulsado = animar_pulsacion_boton(pantalla, btn_nueva_desde_lista, spr_nueva_lista_semi, spr_nueva_lista_apretado, f_limp, spr_nueva_lista_normal)
+                                    pulsado = animar_pulsacion_boton(pantalla, btn_nueva_desde_lista, sp_nl_s, sp_nl_a, f_limp, sp_nl_n)
                                 if pulsado:
                                     nueva_p = flujo_crear_nueva_partida(
                                         pantalla, reloj,
@@ -2119,17 +2607,24 @@ def main():
 
                     if btn_volver_partidas.collidepoint(evento.pos):
                         pulsado = True
-                        if spr_volver_partidas_semi and spr_volver_partidas_apretado:
+                        sp_vp_s = _obtener_boton_volver("semi", idm_act)
+                        sp_vp_a = _obtener_boton_volver("apretado", idm_act)
+                        sp_vp_n = _obtener_boton_volver("normal", idm_act)
+                        if sp_vp_s and sp_vp_a:
                             f_limp = _obtener_fondo_partidas(ANCHO_MENU, ALTO_MENU)
-                            pulsado = animar_pulsacion_boton(pantalla, btn_volver_partidas, spr_volver_partidas_semi, spr_volver_partidas_apretado, f_limp, spr_volver_partidas_normal)
+                            pulsado = animar_pulsacion_boton(pantalla, btn_volver_partidas, sp_vp_s, sp_vp_a, f_limp, sp_vp_n)
                         if pulsado:
                             estado_actual = ESTADO_MODO_JUEGO
 
                 elif estado_actual == ESTADO_PERSONAJES:
                     if btn_volver_personajes.collidepoint(evento.pos) or btn_guardar.collidepoint(evento.pos):
                         pulsado = True
-                        if spr_volver_semi and spr_volver_apretado and btn_volver_personajes.collidepoint(evento.pos):
-                            pulsado = animar_pulsacion_boton(pantalla, btn_volver_personajes, spr_volver_semi, spr_volver_apretado, (225, 110, 80), spr_volver_normal)
+                        idm_act = obtener_idioma()
+                        sp_vp_s = _obtener_boton_volver("semi", idm_act)
+                        sp_vp_a = _obtener_boton_volver("apretado", idm_act)
+                        sp_vp_n = _obtener_boton_volver("normal", idm_act)
+                        if sp_vp_s and sp_vp_a and btn_volver_personajes.collidepoint(evento.pos):
+                            pulsado = animar_pulsacion_boton(pantalla, btn_volver_personajes, sp_vp_s, sp_vp_a, (225, 110, 80), sp_vp_n)
                         if pulsado:
                             estado_actual = ESTADO_MENU_PRINCIPAL
                             break
@@ -2199,18 +2694,22 @@ def main():
                                     personalizacion_modificada_en_menu = True
 
                 elif estado_actual == ESTADO_CONFIGURACION:
+                    idm_act = obtener_idioma()
                     if btn_volver_config.collidepoint(evento.pos):
-                        pulsado = True
-                        if spr_volver_semi and spr_volver_apretado:
-                            pulsado = animar_pulsacion_boton(pantalla, btn_volver_config, spr_volver_semi, spr_volver_apretado, (30, 30, 30), spr_volver_normal)
+                        sp_v_s = _obtener_boton_volver("semi", idm_act)
+                        sp_v_a = _obtener_boton_volver("apretado", idm_act)
+                        sp_v_n = _obtener_boton_volver("normal", idm_act)
+                        pulsado = animar_pulsacion_boton(pantalla, btn_volver_config, sp_v_s, sp_v_a, (30, 30, 30), sp_v_n)
                         if pulsado:
                             estado_actual = ESTADO_MENU_PRINCIPAL
 
                 elif estado_actual == ESTADO_CREDITOS:
+                    idm_act = obtener_idioma()
                     if btn_volver_creditos.collidepoint(evento.pos):
-                        pulsado = True
-                        if spr_volver_semi and spr_volver_apretado:
-                            pulsado = animar_pulsacion_boton(pantalla, btn_volver_creditos, spr_volver_semi, spr_volver_apretado, (30, 30, 30), spr_volver_normal)
+                        sp_v_s = _obtener_boton_volver("semi", idm_act)
+                        sp_v_a = _obtener_boton_volver("apretado", idm_act)
+                        sp_v_n = _obtener_boton_volver("normal", idm_act)
+                        pulsado = animar_pulsacion_boton(pantalla, btn_volver_creditos, sp_v_s, sp_v_a, (30, 30, 30), sp_v_n)
                         if pulsado:
                             estado_actual = ESTADO_MENU_PRINCIPAL
 
@@ -2288,12 +2787,8 @@ def main():
             gestor_personajes_menu.actualizar()
 
             pos_mouse = pygame.mouse.get_pos()
-            botones_menu_datos = [
-                (btn_jugar, spr_jugar_normal, spr_jugar_hover),
-                (btn_personajes, spr_personajes_normal, spr_personajes_hover),
-                (btn_config, spr_opciones_normal, spr_opciones_hover),
-                (btn_salir, spr_salir_normal, spr_salir_hover),
-            ]
+            idm_act = obtener_idioma()
+            botones_menu_datos = _obtener_botones_menu_principal(idm_act)
             spr_x_dib = spr_x_hover if (spr_x_hover and rect_btn_x.collidepoint(pos_mouse)) else spr_x_normal
             gestor_personajes_menu.dibujar_menu_completo(
                 pantalla,
@@ -2310,9 +2805,11 @@ def main():
             _dibujar_copos_modo(pantalla)
 
             pos_mouse = pygame.mouse.get_pos()
+            idm_act = obtener_idioma()
 
             # Marquesina / Placa cálida para Título y Subtítulo que asegura contraste y armonía
-            w_placa, h_placa = 680, 106
+            w_placa = min(680, ANCHO_MENU - 40)
+            h_placa = 106
             x_placa = (ANCHO_MENU - w_placa) // 2
             y_placa = 45
 
@@ -2326,36 +2823,51 @@ def main():
             pantalla.blit(surf_placa, (x_placa, y_placa))
 
             # Título «MODO DE JUEGO» en bordó profundo con sombra sutil de relieve
-            txt_tit = "MODO DE JUEGO"
-            t_somb = fuente_pixel_titulo.render(txt_tit, True, (225, 205, 185))
-            t_tit = fuente_pixel_titulo.render(txt_tit, True, (68, 20, 42))
+            txt_tit = t("modo_juego")
+            f_tit_modo = obtener_fuente_para_texto(txt_tit, categoria="titulo", tamano=TAMANO_TITULO, negrita=True)
+            t_somb = f_tit_modo.render(txt_tit, True, (225, 205, 185))
+            t_tit = f_tit_modo.render(txt_tit, True, (68, 20, 42))
             rect_tit = t_tit.get_rect(center=(ANCHO_MENU // 2, y_placa + 38))
             pantalla.blit(t_somb, (rect_tit.x + 2, rect_tit.y + 2))
             pantalla.blit(t_tit, rect_tit)
 
-            # Subtítulo en marrón cálido
-            txt_sub = "Selecciona cómo deseas comenzar tu aventura"
-            t_sub_s = fuente_subtitulo.render(txt_sub, True, (255, 255, 255))
-            t_sub = fuente_subtitulo.render(txt_sub, True, (108, 52, 45))
+            # Subtítulo en marrón cálido con ajuste dinámico de tamaño y márgenes interiores
+            txt_sub = t("subtitulo_modo")
+            ancho_max_sub = w_placa - 70  # Margen interior de al menos 35px a cada lado
+            f_sub_modo, _ = ajustar_tamano_fuente(
+                txt_sub,
+                categoria="subtitulo",
+                tamano_inicial=TAMANO_SUBTITULO,
+                ancho_max=ancho_max_sub,
+                tamano_min=13
+            )
+            t_sub_s = f_sub_modo.render(txt_sub, True, (255, 255, 255))
+            t_sub = f_sub_modo.render(txt_sub, True, (108, 52, 45))
             rect_sub = t_sub.get_rect(center=(ANCHO_MENU // 2, y_placa + 78))
             pantalla.blit(t_sub_s, (rect_sub.x + 1, rect_sub.y + 1))
             pantalla.blit(t_sub, rect_sub)
 
             # Botón CONTINUAR (Ámbar atardecer con relieve y sombra)
             hov_c = btn_continuar.collidepoint(pos_mouse)
-            spr_c = spr_continuar_hover if (hov_c and spr_continuar_hover) else spr_continuar_normal
+            spr_c_norm = _obtener_boton_modo("continuar", "normal", idm_act)
+            spr_c_hov = _obtener_boton_modo("continuar", "hover", idm_act)
+            spr_c = spr_c_hov if (hov_c and spr_c_hov) else spr_c_norm
             if spr_c:
                 pantalla.blit(spr_c, btn_continuar)
 
             # Botón NUEVA PARTIDA (Violeta/Ciruela atardecer con resplandor)
             hov_n = btn_nueva_partida.collidepoint(pos_mouse)
-            spr_n = spr_nueva_modo_hover if (hov_n and spr_nueva_modo_hover) else spr_nueva_modo_normal
+            spr_n_norm = _obtener_boton_modo("nueva", "normal", idm_act)
+            spr_n_hov = _obtener_boton_modo("nueva", "hover", idm_act)
+            spr_n = spr_n_hov if (hov_n and spr_n_hov) else spr_n_norm
             if spr_n:
                 pantalla.blit(spr_n, btn_nueva_partida)
 
             # Botón VOLVER AL MENÚ (Pergamino crema con borde bordó y relieve)
             hov_v = btn_volver_modo.collidepoint(pos_mouse)
-            spr_v = spr_volver_modo_hover if (hov_v and spr_volver_modo_hover) else spr_volver_modo_normal
+            spr_v_norm = _obtener_boton_volver("normal", idm_act)
+            spr_v_hov = _obtener_boton_volver("hover", idm_act)
+            spr_v = spr_v_hov if (hov_v and spr_v_hov) else spr_v_norm
             if spr_v:
                 pantalla.blit(spr_v, btn_volver_modo)
 
@@ -2363,6 +2875,7 @@ def main():
             ANCHO_MENU = pantalla.get_width()
             ALTO_MENU = pantalla.get_height()
             pos_mouse = pygame.mouse.get_pos()
+            idm_act = obtener_idioma()
             partidas = cargar_partidas()
 
             # Asegurar recursos pixel art del diario cargados
@@ -2376,13 +2889,17 @@ def main():
             )
 
             # Título «PARTIDAS GUARDADAS» en sepia oscuro con relieve y subtítulo de expedición
-            t_somb = fuente_pixel_titulo.render("PARTIDAS GUARDADAS", True, (195, 170, 140))
-            t_tit = fuente_pixel_titulo.render("PARTIDAS GUARDADAS", True, (58, 38, 24))
+            txt_tit_lp = t("partidas_guardadas")
+            f_tit_lp = obtener_fuente_para_texto(txt_tit_lp, categoria="titulo", tamano=TAMANO_TITULO, negrita=True)
+            t_somb = f_tit_lp.render(txt_tit_lp, True, (195, 170, 140))
+            t_tit = f_tit_lp.render(txt_tit_lp, True, (58, 38, 24))
             rect_tit = t_tit.get_rect(center=(ANCHO_MENU // 2, 46))
             pantalla.blit(t_somb, (rect_tit.x + 2, rect_tit.y + 2))
             pantalla.blit(t_tit, rect_tit)
 
-            subt = fuente_subtitulo.render("Registro de expediciones y progreso de aventura", True, (125, 95, 65))
+            txt_sub_lp = t("sub_partidas")
+            f_sub_lp = obtener_fuente_para_texto(txt_sub_lp, categoria="decorativa", tamano=TAMANO_DECORATIVA)
+            subt = f_sub_lp.render(txt_sub_lp, True, (125, 95, 65))
             pantalla.blit(subt, subt.get_rect(center=(ANCHO_MENU // 2, 78)))
 
             # Contenedor de página del diario (folio pergamino con líneas sutiles y remaches)
@@ -2408,22 +2925,25 @@ def main():
                 pygame.draw.circle(pantalla, (100, 70, 40), (rx, ry), 3, width=1)
 
             if not partidas:
-                t_sin = fuente_subtitulo.render("No se encontraron registros de expedición", True, (65, 45, 30))
+                txt_sin = t("no_partidas")
+                f_sin = obtener_fuente_para_texto(txt_sin, categoria="subtitulo", tamano=TAMANO_SUBTITULO)
+                t_sin = f_sin.render(txt_sin, True, (65, 45, 30))
                 pantalla.blit(t_sin, t_sin.get_rect(center=(rect_panel_partidas.centerx, rect_panel_partidas.centery - 40)))
 
-                t_sin2 = fuente_texto.render("Comenzá una nueva partida para escribir tu historia en este diario.", True, (120, 100, 80))
-                pantalla.blit(t_sin2, t_sin2.get_rect(center=(rect_panel_partidas.centerx, rect_panel_partidas.centery - 8)))
+                rect_sin2 = pygame.Rect(rect_panel_partidas.left + 40, rect_panel_partidas.centery - 20, rect_panel_partidas.width - 80, 24)
+                dibujar_texto_en_rect(pantalla, t("comenzar_historia"), rect_sin2, categoria="texto", tamano=16, color=(120, 100, 80))
 
                 hov_prim = btn_iniciar_primera.collidepoint(pos_mouse)
-                spr_prim = spr_nueva_primera_hover if (hov_prim and spr_nueva_primera_hover) else spr_nueva_primera_normal
+                spr_prim_norm = _obtener_boton_primera_partida("normal", idm_act)
+                spr_prim_hov = _obtener_boton_primera_partida("hover", idm_act)
+                spr_prim = spr_prim_hov if (hov_prim and spr_prim_hov) else spr_prim_norm
                 if spr_prim:
                     pantalla.blit(spr_prim, btn_iniciar_primera)
                 else:
                     col_prim = (235, 128, 48) if hov_prim else (215, 110, 42)
                     pygame.draw.rect(pantalla, col_prim, btn_iniciar_primera, border_radius=12)
                     pygame.draw.rect(pantalla, (118, 44, 14), btn_iniciar_primera, width=2, border_radius=12)
-                    t_btn_prim = fuente_pixel_btn.render("COMENZAR AVENTURA", True, (255, 255, 255))
-                    pantalla.blit(t_btn_prim, t_btn_prim.get_rect(center=btn_iniciar_primera.center))
+                    dibujar_texto_en_rect(pantalla, t("comenzar_aventura"), btn_iniciar_primera, categoria="boton", tamano=TAMANO_BOTONES, color=(255, 255, 255), padding=6)
             else:
                 total_paginas = max(1, (len(partidas) + MAX_PARTIDAS_POR_PAGINA - 1) // MAX_PARTIDAS_POR_PAGINA)
                 if pagina_partidas >= total_paginas:
@@ -2443,8 +2963,9 @@ def main():
                     "sub_btn": fuente_sub_btn,
                 }
 
+                dict_sp_partidas = _obtener_sprites_tarjeta(idm_act)
                 for idx_slot, p in enumerate(partidas_pagina):
-                    dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel_partidas, pos_mouse, fuentes_tarjetas, sprites_botones=dict_sprites_tarjeta)
+                    dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel_partidas, pos_mouse, fuentes_tarjetas, sprites_botones=dict_sp_partidas)
 
                 # Indicador de paginación si hay más de 1 página (y = 508, dentro del panel inferior sin colisiones)
                 if total_paginas > 1:
@@ -2464,7 +2985,9 @@ def main():
                             pantalla.set_at((cx_a + 2 - dx, cy_a + dy), col_flecha_ant)
 
                     # Contador de página
-                    t_pag = fuente_contador.render(f"Entrada página {pagina_partidas + 1} de {total_paginas}", True, (75, 55, 38))
+                    txt_pag = t("entrada_pagina").format(pagina_partidas + 1, total_paginas)
+                    f_pag = obtener_fuente_para_texto(txt_pag, categoria="contador", tamano=TAMANO_CONTADOR)
+                    t_pag = f_pag.render(txt_pag, True, (75, 55, 38))
                     pantalla.blit(t_pag, t_pag.get_rect(center=(rect_panel_partidas.centerx, 523)))
 
                     # Botón página siguiente
@@ -2482,7 +3005,9 @@ def main():
 
             # Botón «VOLVER» centrado al pie de la pantalla en tonos pergamino/crema
             hov_vp = btn_volver_partidas.collidepoint(pos_mouse)
-            spr_vp = spr_volver_partidas_hover if (hov_vp and spr_volver_partidas_hover) else spr_volver_partidas_normal
+            spr_vp_norm = _obtener_boton_volver("normal", idm_act)
+            spr_vp_hov = _obtener_boton_volver("hover", idm_act)
+            spr_vp = spr_vp_hov if (hov_vp and spr_vp_hov) else spr_vp_norm
             if spr_vp:
                 pantalla.blit(spr_vp, btn_volver_partidas)
             else:
@@ -2490,13 +3015,14 @@ def main():
                 borde_vp = (165, 135, 105) if hov_vp else (195, 168, 138)
                 pygame.draw.rect(pantalla, col_vp, btn_volver_partidas, border_radius=12)
                 pygame.draw.rect(pantalla, borde_vp, btn_volver_partidas, width=2, border_radius=12)
-                t_vp = fuente_pixel_btn.render("VOLVER", True, (60, 45, 35))
-                pantalla.blit(t_vp, t_vp.get_rect(center=btn_volver_partidas.center))
+                dibujar_texto_en_rect(pantalla, t("volver"), btn_volver_partidas, categoria="boton", tamano=TAMANO_BOTONES, color=(60, 45, 35), padding=6)
 
             if partidas:
                 # Botón «NUEVA PARTIDA» ubicado al lado de «VOLVER», centrados juntos en ámbar/terracota
                 hov_nd = btn_nueva_desde_lista.collidepoint(pos_mouse)
-                spr_nd = spr_nueva_lista_hover if (hov_nd and spr_nueva_lista_hover) else spr_nueva_lista_normal
+                spr_nd_norm = _obtener_boton_nueva_lista("normal", idm_act)
+                spr_nd_hov = _obtener_boton_nueva_lista("hover", idm_act)
+                spr_nd = spr_nd_hov if (hov_nd and spr_nd_hov) else spr_nd_norm
                 if spr_nd:
                     pantalla.blit(spr_nd, btn_nueva_desde_lista)
                 else:
@@ -2504,21 +3030,25 @@ def main():
                     borde_nd = (255, 255, 255) if hov_nd else (118, 44, 14)
                     pygame.draw.rect(pantalla, col_nd, btn_nueva_desde_lista, border_radius=12)
                     pygame.draw.rect(pantalla, borde_nd, btn_nueva_desde_lista, width=2, border_radius=12)
-                    t_nd = fuente_pixel_btn.render("NUEVA PARTIDA", True, (255, 255, 255))
-                    pantalla.blit(t_nd, t_nd.get_rect(center=btn_nueva_desde_lista.center))
+                    dibujar_texto_en_rect(pantalla, t("nueva_partida"), btn_nueva_desde_lista, categoria="boton", tamano=TAMANO_BOTONES, color=(255, 255, 255), padding=6)
 
         elif estado_actual == ESTADO_PERSONAJES:
             pos_mouse = pygame.mouse.get_pos()
+            idm_act = obtener_idioma()
 
             # 1. Fondo crema cálido y franja de suelo original del juego
             pantalla.fill((255, 240, 195))
             pygame.draw.rect(pantalla, (225, 110, 80), pygame.Rect(0, ALTO_MENU - 80, ANCHO_MENU, 80))
 
             # 2. Título y subtítulo centrados
-            titulo = fuente_pixel_titulo.render("PERSONALIZACION DE PERSONAJES", True, (60, 45, 35))
+            txt_tit_pj = t("personalizacion_personajes")
+            f_tit_pj = obtener_fuente_para_texto(txt_tit_pj, categoria="titulo", tamano=TAMANO_TITULO, negrita=True)
+            titulo = f_tit_pj.render(txt_tit_pj, True, (60, 45, 35))
             pantalla.blit(titulo, titulo.get_rect(center=(ANCHO_MENU // 2, 46)))
 
-            subt = fuente_subtitulo.render("Personaliza el color y los accesorios de cada personaje", True, (120, 100, 85))
+            txt_sub_pj = t("sub_personalizacion")
+            f_sub_pj = obtener_fuente_para_texto(txt_sub_pj, categoria="subtitulo", tamano=TAMANO_SUBTITULO)
+            subt = f_sub_pj.render(txt_sub_pj, True, (120, 100, 85))
             pantalla.blit(subt, subt.get_rect(center=(ANCHO_MENU // 2, 78)))
 
             # 3. Pestañas visuales [ COLORES ] y [ ACCESORIOS ]
@@ -2540,7 +3070,9 @@ def main():
                 pygame.draw.rect(pantalla, col_tab_borde, r_tab, ancho_b, border_radius=12)
 
                 col_txt = (50, 40, 30) if es_activa else (130, 115, 100)
-                txt_tab = fuente_pixel_card_btn.render(tab_id.upper(), True, col_txt)
+                txt_tab_str = t(tab_id).upper()
+                f_tab_str = obtener_fuente_para_texto(txt_tab_str, categoria="card_btn", tamano=TAMANO_CARD, negrita=True)
+                txt_tab = f_tab_str.render(txt_tab_str, True, col_txt)
                 pantalla.blit(txt_tab, txt_tab.get_rect(center=r_tab.center))
 
                 if es_activa:
@@ -2558,12 +3090,14 @@ def main():
             r_badge_p1 = pygame.Rect(cx_p1 - 130, 164, 260, 34)
             pygame.draw.rect(pantalla, c_p1_val, r_badge_p1, border_radius=8)
             pygame.draw.rect(pantalla, (60, 45, 35), r_badge_p1, 2, border_radius=8)
-            dibujar_texto_en_rect(pantalla, f"JUGADOR 1  ({color_p1.upper()})", r_badge_p1, categoria="boton", tamano=TAMANO_BADGE, color=(35, 30, 25), padding=6)
+            col_p1_trad = t(color_p1.lower()).upper()
+            dibujar_texto_en_rect(pantalla, f"{t('jugador')} 1  ({col_p1_trad})", r_badge_p1, categoria="boton", tamano=TAMANO_BADGE, color=(35, 30, 25), padding=6)
 
             r_badge_p2 = pygame.Rect(cx_p2 - 130, 164, 260, 34)
             pygame.draw.rect(pantalla, c_p2_val, r_badge_p2, border_radius=8)
             pygame.draw.rect(pantalla, (60, 45, 35), r_badge_p2, 2, border_radius=8)
-            dibujar_texto_en_rect(pantalla, f"JUGADOR 2  ({color_p2.upper()})", r_badge_p2, categoria="boton", tamano=TAMANO_BADGE, color=(35, 30, 25), padding=6)
+            col_p2_trad = t(color_p2.lower()).upper()
+            dibujar_texto_en_rect(pantalla, f"{t('jugador')} 2  ({col_p2_trad})", r_badge_p2, categoria="boton", tamano=TAMANO_BADGE, color=(35, 30, 25), padding=6)
 
             # Previews de personajes con pedestal y accesorios
             for cx, col_pj, acc_pj in [
@@ -2590,8 +3124,9 @@ def main():
                 pygame.draw.rect(pantalla, (253, 246, 233), rf, border_radius=16)
                 pygame.draw.rect(pantalla, (195, 168, 138), rf, 3, border_radius=16)
 
-                txt_encabezado = "COLORES DISPONIBLES" if tab_personajes_actual == "colores" else "ACCESORIOS DISPONIBLES"
-                t_enc = fuente_texto.render(txt_encabezado, True, (115, 95, 80))
+                txt_encabezado = t("colores_disponibles") if tab_personajes_actual == "colores" else t("accesorios_disponibles")
+                f_enc = obtener_fuente_para_texto(txt_encabezado, categoria="texto", tamano=TAMANO_TEXTO, negrita=True)
+                t_enc = f_enc.render(txt_encabezado, True, (115, 95, 80))
                 pantalla.blit(t_enc, t_enc.get_rect(center=(rf.centerx, rf.top + 20)))
                 pygame.draw.line(pantalla, (235, 215, 195), (rf.left + 24, rf.top + 34), (rf.right - 24, rf.top + 34), 2)
 
@@ -2620,8 +3155,9 @@ def main():
                     if sel1:
                         pygame.draw.rect(pantalla, (255, 255, 255), r1, 3, border_radius=8)
                         pygame.draw.rect(pantalla, (40, 30, 25), r1, 1, border_radius=8)
-                        t_chk = fuente_pixel_badge.render("✓", True, (255, 255, 255))
-                        pantalla.blit(t_chk, t_chk.get_rect(center=r1.center))
+                        cx_k, cy_k = r1.center
+                        pts_chk = [(cx_k - 7, cy_k), (cx_k - 2, cy_k + 5), (cx_k + 7, cy_k - 5)]
+                        pygame.draw.lines(pantalla, (255, 255, 255), False, pts_chk, 3)
                     elif hov1:
                         pygame.draw.rect(pantalla, (255, 255, 255), r1, 2, border_radius=8)
                     else:
@@ -2634,8 +3170,9 @@ def main():
                     if sel2:
                         pygame.draw.rect(pantalla, (255, 255, 255), r2, 3, border_radius=8)
                         pygame.draw.rect(pantalla, (40, 30, 25), r2, 1, border_radius=8)
-                        t_chk = fuente_pixel_badge.render("✓", True, (255, 255, 255))
-                        pantalla.blit(t_chk, t_chk.get_rect(center=r2.center))
+                        cx_k2, cy_k2 = r2.center
+                        pts_chk2 = [(cx_k2 - 7, cy_k2), (cx_k2 - 2, cy_k2 + 5), (cx_k2 + 7, cy_k2 - 5)]
+                        pygame.draw.lines(pantalla, (255, 255, 255), False, pts_chk2, 3)
                     elif hov2:
                         pygame.draw.rect(pantalla, (255, 255, 255), r2, 2, border_radius=8)
                     else:
@@ -2667,9 +3204,11 @@ def main():
                         pygame.draw.rect(pantalla, col_brd_a, r_card_a, 3 if sel else 2, border_radius=10)
 
                         if sel:
-                            pygame.draw.circle(pantalla, (82, 194, 114), (r_card_a.right - 12, r_card_a.top + 12), 8)
-                            t_chk_a = fuente_sub_btn.render("✓", True, (255, 255, 255))
-                            pantalla.blit(t_chk_a, t_chk_a.get_rect(center=(r_card_a.right - 12, r_card_a.top + 12)))
+                            cx_ca = r_card_a.right - 12
+                            cy_ca = r_card_a.top + 12
+                            pygame.draw.circle(pantalla, (82, 194, 114), (cx_ca, cy_ca), 8)
+                            pts_ca = [(cx_ca - 4, cy_ca), (cx_ca - 1, cy_ca + 3), (cx_ca + 4, cy_ca - 3)]
+                            pygame.draw.lines(pantalla, (255, 255, 255), False, pts_ca, 2)
 
                         if acc["id"] == "Ninguno":
                             cx_ic, cy_ic = r_card_a.centerx, r_card_a.top + 30
@@ -2683,18 +3222,21 @@ def main():
 
                         col_nom = (50, 40, 30) if sel else (95, 80, 70)
                         rect_nom_acc = pygame.Rect(r_card_a.left + 4, r_card_a.bottom - 26, r_card_a.width - 8, 20)
-                        dibujar_texto_en_rect(pantalla, acc["nombre"], rect_nom_acc, categoria="boton", tamano=TAMANO_BADGE, color=col_nom, padding=2)
+                        nom_acc_trad = t(acc["id"].lower())
+                        dibujar_texto_en_rect(pantalla, nom_acc_trad, rect_nom_acc, categoria="boton", tamano=TAMANO_BADGE, color=col_nom, padding=2)
 
             # 7. Botón Volver al Menú
             hov_vpj = btn_volver_personajes.collidepoint(pos_mouse)
-            spr_vpj = spr_volver_hover if (hov_vpj and spr_volver_hover) else spr_volver_normal
+            spr_vpj_norm = _obtener_boton_volver("normal", idm_act)
+            spr_vpj_hov = _obtener_boton_volver("hover", idm_act)
+            spr_vpj = spr_vpj_hov if (hov_vpj and spr_vpj_hov) else spr_vpj_norm
             if spr_vpj:
                 pantalla.blit(spr_vpj, btn_volver_personajes)
             else:
                 col_v = (255, 255, 255) if hov_vpj else (242, 234, 222)
                 pygame.draw.rect(pantalla, col_v, btn_volver_personajes, border_radius=10)
                 pygame.draw.rect(pantalla, (185, 155, 125), btn_volver_personajes, width=2, border_radius=10)
-                dibujar_texto_en_rect(pantalla, "VOLVER AL MENU", btn_volver_personajes, categoria="boton", tamano=TAMANO_BOTONES, color=(60, 45, 35), padding=6)
+                dibujar_texto_en_rect(pantalla, t("volver_al_menu"), btn_volver_personajes, categoria="boton", tamano=TAMANO_BOTONES, color=(60, 45, 35), padding=6)
 
         elif estado_actual == ESTADO_CONFIGURACION:
             pos_mouse = pygame.mouse.get_pos()
@@ -2769,13 +3311,17 @@ def main():
             dibujar_texto_en_rect(pantalla, "Flecha Abajo : Nadar / Sumergirse (Agua)", pygame.Rect(rect_card_p2.left + 16, r_aba.bottom + 76, rect_card_p2.width - 32, 24), categoria="texto", tamano=TAMANO_TEXTO, color=(220, 205, 235), padding=2)
 
             # Botón Volver al Menú (mundos/boton-volver)
+            idm_act = obtener_idioma()
             hov_vcfg = btn_volver_config.collidepoint(pos_mouse)
-            spr_vcfg = spr_volver_hover if (hov_vcfg and spr_volver_hover) else spr_volver_normal
+            spr_vcfg_norm = _obtener_boton_volver("normal", idm_act)
+            spr_vcfg_hov = _obtener_boton_volver("hover", idm_act)
+            spr_vcfg = spr_vcfg_hov if (hov_vcfg and spr_vcfg_hov) else spr_vcfg_norm
             if spr_vcfg:
                 pantalla.blit(spr_vcfg, btn_volver_config)
 
         elif estado_actual == ESTADO_CREDITOS:
             pos_mouse = pygame.mouse.get_pos()
+            idm_act = obtener_idioma()
             titulo = fuente_pixel_titulo.render("CREDITOS", True, (255, 255, 255))
             pantalla.blit(titulo, titulo.get_rect(center=(ANCHO_MENU // 2, 100)))
 
@@ -2784,7 +3330,9 @@ def main():
 
             # Botón Volver al Menú (mundos/boton-volver)
             hov_vcr = btn_volver_creditos.collidepoint(pos_mouse)
-            spr_vcr = spr_volver_hover if (hov_vcr and spr_volver_hover) else spr_volver_normal
+            spr_vcr_norm = _obtener_boton_volver("normal", idm_act)
+            spr_vcr_hov = _obtener_boton_volver("hover", idm_act)
+            spr_vcr = spr_vcr_hov if (hov_vcr and spr_vcr_hov) else spr_vcr_norm
             if spr_vcr:
                 pantalla.blit(spr_vcr, btn_volver_creditos)
 

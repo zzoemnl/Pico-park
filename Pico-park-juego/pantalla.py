@@ -92,13 +92,23 @@ def pantalla_muerte(pantalla, reloj):
 
     w_btn, h_btn = 272, 80
 
-    boton_menu_normal = cargar_boton_escalado("Ventanas/boton-menu.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu.png", w_btn, h_btn) or cargar_boton_escalado("salir.png", w_btn, h_btn)
-    boton_menu_semi = cargar_boton_escalado("Ventanas/boton-menu-semiapretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu-semiapretado.png", w_btn, h_btn) or cargar_boton_escalado("salir-preapretado.png", w_btn, h_btn)
-    boton_menu_apretado = cargar_boton_escalado("Ventanas/boton-menu-apretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu-apretado.png", w_btn, h_btn) or cargar_boton_escalado("salir-apretado.png", w_btn, h_btn)
+    idm_muerte = obtener_idioma()
+    if idm_muerte == "es":
+        boton_menu_normal = cargar_boton_escalado("Ventanas/boton-menu.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu.png", w_btn, h_btn) or cargar_boton_escalado("salir.png", w_btn, h_btn)
+        boton_menu_semi = cargar_boton_escalado("Ventanas/boton-menu-semiapretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu-semiapretado.png", w_btn, h_btn) or cargar_boton_escalado("salir-preapretado.png", w_btn, h_btn)
+        boton_menu_apretado = cargar_boton_escalado("Ventanas/boton-menu-apretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu-apretado.png", w_btn, h_btn) or cargar_boton_escalado("salir-apretado.png", w_btn, h_btn)
 
-    boton_reiniciar_normal = cargar_boton_escalado("Ventanas/boton-reiniciar.png", w_btn, h_btn) or cargar_boton_escalado("boton-reiniciar.png", w_btn, h_btn)
-    boton_reiniciar_semi = cargar_boton_escalado("Ventanas/boton-reiniciar-semiapretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-reiniciar-semiapretado.png", w_btn, h_btn)
-    boton_reiniciar_apretado = cargar_boton_escalado("Ventanas/boton-reiniciar-apretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-reiniciar-apretado.png", w_btn, h_btn)
+        boton_reiniciar_normal = cargar_boton_escalado("Ventanas/boton-reiniciar.png", w_btn, h_btn) or cargar_boton_escalado("boton-reiniciar.png", w_btn, h_btn)
+        boton_reiniciar_semi = cargar_boton_escalado("Ventanas/boton-reiniciar-semiapretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-reiniciar-semiapretado.png", w_btn, h_btn)
+        boton_reiniciar_apretado = cargar_boton_escalado("Ventanas/boton-reiniciar-apretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-reiniciar-apretado.png", w_btn, h_btn)
+    else:
+        boton_menu_normal = generar_boton_con_texto("Ventanas/boton-menu.png", w_btn, h_btn, t("menu"), (255, 255, 255), 24, 0, idm_muerte)
+        boton_menu_semi = generar_boton_con_texto("Ventanas/boton-menu-semiapretado.png", w_btn, h_btn, t("menu"), (255, 255, 255), 24, 1, idm_muerte)
+        boton_menu_apretado = generar_boton_con_texto("Ventanas/boton-menu-apretado.png", w_btn, h_btn, t("menu"), (255, 255, 255), 24, 2, idm_muerte)
+
+        boton_reiniciar_normal = generar_boton_con_texto("Ventanas/boton-reiniciar.png", w_btn, h_btn, t("reiniciar"), (255, 255, 255), 24, 0, idm_muerte)
+        boton_reiniciar_semi = generar_boton_con_texto("Ventanas/boton-reiniciar-semiapretado.png", w_btn, h_btn, t("reiniciar"), (255, 255, 255), 24, 1, idm_muerte)
+        boton_reiniciar_apretado = generar_boton_con_texto("Ventanas/boton-reiniciar-apretado.png", w_btn, h_btn, t("reiniciar"), (255, 255, 255), 24, 2, idm_muerte)
 
     if any(x is None for x in (
         boton_menu_normal, boton_menu_apretado,
@@ -674,19 +684,30 @@ def mostrar_pantalla_victoria(
     rect_btn1 = pygame.Rect(btn1_x, btn1_target_y, w_btn, h_btn)
     rect_btn2 = pygame.Rect(btn2_x, btn2_target_y, w_btn, h_btn)
 
-    spr_sig_normal = cargar_boton_escalado("Ventanas/boton-siguiente.png", w_btn, h_btn) or cargar_boton_escalado("boton-siguiente.png", w_btn, h_btn)
-    spr_sig_semi = cargar_boton_escalado("Ventanas/boton-siguiente-semiapretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-siguiente-semiapretado.png", w_btn, h_btn)
-    spr_sig_apretado = cargar_boton_escalado("Ventanas/boton-siguiente-apretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-siguiente-apretado.png", w_btn, h_btn)
+    txt_btn1 = t("siguiente") if hay_siguiente else t("finalizar")
+    txt_btn2 = t("volver_juego")
 
-    spr_menu_normal = cargar_boton_escalado("Ventanas/boton-menu.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu.png", w_btn, h_btn)
-    spr_menu_semi = cargar_boton_escalado("Ventanas/boton-menu-semiapretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu-semiapretado.png", w_btn, h_btn)
-    spr_menu_apretado = cargar_boton_escalado("Ventanas/boton-menu-apretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu-apretado.png", w_btn, h_btn)
+    idm_vic = obtener_idioma()
+    if idm_vic == "es":
+        spr_sig_normal = cargar_boton_escalado("Ventanas/boton-siguiente.png", w_btn, h_btn) or cargar_boton_escalado("boton-siguiente.png", w_btn, h_btn)
+        spr_sig_semi = cargar_boton_escalado("Ventanas/boton-siguiente-semiapretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-siguiente-semiapretado.png", w_btn, h_btn)
+        spr_sig_apretado = cargar_boton_escalado("Ventanas/boton-siguiente-apretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-siguiente-apretado.png", w_btn, h_btn)
+
+        spr_menu_normal = cargar_boton_escalado("Ventanas/boton-menu.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu.png", w_btn, h_btn)
+        spr_menu_semi = cargar_boton_escalado("Ventanas/boton-menu-semiapretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu-semiapretado.png", w_btn, h_btn)
+        spr_menu_apretado = cargar_boton_escalado("Ventanas/boton-menu-apretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu-apretado.png", w_btn, h_btn)
+    else:
+        spr_sig_normal = generar_boton_con_texto("Ventanas/boton-siguiente.png", w_btn, h_btn, txt_btn1, (255, 255, 255), 24, 0, idm_vic)
+        spr_sig_semi = generar_boton_con_texto("Ventanas/boton-siguiente-semiapretado.png", w_btn, h_btn, txt_btn1, (255, 255, 255), 24, 1, idm_vic)
+        spr_sig_apretado = generar_boton_con_texto("Ventanas/boton-siguiente-apretado.png", w_btn, h_btn, txt_btn1, (255, 255, 255), 24, 2, idm_vic)
+
+        spr_menu_normal = generar_boton_con_texto("Ventanas/boton-menu.png", w_btn, h_btn, txt_btn2, (255, 255, 255), 20 if idm_vic == "en" else 22, 0, idm_vic)
+        spr_menu_semi = generar_boton_con_texto("Ventanas/boton-menu-semiapretado.png", w_btn, h_btn, txt_btn2, (255, 255, 255), 20 if idm_vic == "en" else 22, 1, idm_vic)
+        spr_menu_apretado = generar_boton_con_texto("Ventanas/boton-menu-apretado.png", w_btn, h_btn, txt_btn2, (255, 255, 255), 20 if idm_vic == "en" else 22, 2, idm_vic)
 
     spr_sig_hover = aclarar_boton(spr_sig_normal) if spr_sig_normal else None
     spr_menu_hover = aclarar_boton(spr_menu_normal) if spr_menu_normal else None
 
-    txt_btn1 = t("siguiente") if hay_siguiente else t("finalizar")
-    txt_btn2 = t("volver_juego")
 
     nom_nivel = f"{t('mundo')} {mundo} — {t('nivel')} {numero_nivel}"
 

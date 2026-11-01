@@ -1,4 +1,5 @@
 import os
+import weakref
 import pygame
 
 ANCHO, ALTO = 1280, 720
@@ -28,7 +29,7 @@ ESTADOS_PERSONAJE = [
 
 _CACHE_BOTONES = {}
 _CACHE_BOTONES_ESCALADOS = {}
-_CACHE_BOTONES_ACLARADOS = {}
+_CACHE_BOTONES_ACLARADOS = weakref.WeakKeyDictionary()
 _CACHE_MARCOS_BOTONES = {}
 _CACHE_BOTONES_PERSONALIZADOS = {}
 _MAPA_BOTONES = None
@@ -108,18 +109,29 @@ def aclarar_boton(surf, factor=45):
     """
     Genera una versión iluminada / más clara del sprite del botón para el estado hover.
     Mantiene intactos los bordes y la transparencia.
-    Cachea el resultado para no crear superficies adicionales en cada fotograma.
+    Cachea el resultado de forma segura con referencias débiles para evitar colisiones de memoria.
     """
     if surf is None:
         return None
-    clave = (id(surf), factor)
-    if clave in _CACHE_BOTONES_ACLARADOS:
-        return _CACHE_BOTONES_ACLARADOS[clave]
+    try:
+        subdict = _CACHE_BOTONES_ACLARADOS.get(surf)
+        if subdict is not None and factor in subdict:
+            return subdict[factor]
+    except TypeError:
+        subdict = None
+
     brillante = surf.copy()
     capa = pygame.Surface(surf.get_size(), pygame.SRCALPHA)
     capa.fill((factor, factor, factor, 0))
     brillante.blit(capa, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
-    _CACHE_BOTONES_ACLARADOS[clave] = brillante
+
+    try:
+        if subdict is None:
+            subdict = {}
+            _CACHE_BOTONES_ACLARADOS[surf] = subdict
+        subdict[factor] = brillante
+    except TypeError:
+        pass
     return brillante
 
 
@@ -138,6 +150,13 @@ def generar_marco_boton(sprite_nombre, w_target, h_target):
         return None
 
     bw, bh = base.get_size()
+    # Si la relación de aspecto objetivo coincide aproximadamente con la original,
+    # escalar suavemente sin 9-slice para preservar el 100% de la fidelidad pixel art original.
+    if abs((w_target / max(1, h_target)) - (bw / max(1, bh))) < 0.08:
+        scaled = pygame.transform.smoothscale(base, (w_target, h_target))
+        _CACHE_MARCOS_BOTONES[clave] = scaled
+        return scaled
+
     cap_w = 900
     if cap_w >= bw // 2:
         cap_w = bw // 4
@@ -162,15 +181,176 @@ def generar_marco_boton(sprite_nombre, w_target, h_target):
     return scaled
 
 
-def generar_boton_con_texto(sprite_base, w, h, texto=None, color_texto=(60, 45, 30), tamano_fuente=14, offset_y=0):
+COLORES_INTERIORES_BOTONES = {
+    # Menu Principal
+    "Menu/jugar.png": (155, 255, 124),
+    "jugar.png": (155, 255, 124),
+    "Menu/jugar-preapretado.png": (142, 237, 115),
+    "jugar-preapretado.png": (142, 237, 115),
+    "Menu/jugar-apretado.png": (124, 211, 103),
+    "jugar-apretado.png": (124, 211, 103),
+
+    "Menu/personajes.png": (122, 230, 255),
+    "personajes.png": (122, 230, 255),
+    "Menu/personajes-preapretado.png": (114, 214, 242),
+    "personajes-preapretado.png": (114, 214, 242),
+    "Menu/personajes-apretado.png": (102, 190, 223),
+    "personajes-apretado.png": (102, 190, 223),
+
+    "Menu/opciones.png": (255, 243, 123),
+    "opciones.png": (255, 243, 123),
+    "Menu/opciones-preapretado.png": (240, 226, 113),
+    "opciones-preapretado.png": (240, 226, 113),
+    "Menu/opciones-apretado.png": (220, 200, 97),
+    "opciones-apretado.png": (220, 200, 97),
+
+    "Menu/salir.png": (255, 159, 99),
+    "salir.png": (255, 159, 99),
+    "Menu/salir-preapretado.png": (242, 148, 91),
+    "salir-preapretado.png": (242, 148, 91),
+    "Menu/salir-apretado.png": (223, 132, 79),
+    "salir-apretado.png": (223, 132, 79),
+
+    # Botones Volver
+    "mundos/boton-volver.png": (212, 212, 212),
+    "boton-volver.png": (212, 212, 212),
+    "mundos/boton-volver-semiapretado.png": (200, 200, 200),
+    "boton-volver-semiapretado.png": (200, 200, 200),
+    "mundos/boton-volver-apretado.png": (181, 181, 181),
+    "boton-volver-apretado.png": (181, 181, 181),
+
+    # Botones Cargar
+    "mundos/boton-cargar.png": (155, 255, 124),
+    "boton-cargar.png": (155, 255, 124),
+    "mundos/boton-cargar-semiapretado.png": (142, 237, 115),
+    "boton-cargar-semiapretado.png": (142, 237, 115),
+    "mundos/boton-cargar-apretado.png": (124, 211, 103),
+    "boton-cargar-apretado.png": (124, 211, 103),
+
+    # Botones Modo de Juego
+    "Menu/boton-continuar-cargar....png": (155, 255, 124),
+    "boton-continuar-cargar....png": (155, 255, 124),
+    "Menu/boton-continuar-cargar...-semiapretado.png": (142, 237, 115),
+    "boton-continuar-cargar...-semiapretado.png": (142, 237, 115),
+    "Menu/boton-continuar-cargar...-apretado.png": (124, 211, 103),
+    "boton-continuar-cargar...-apretado.png": (124, 211, 103),
+
+    "mundos/boton-nueva-partida-reiniciar....png": (254, 137, 134),
+    "boton-nueva-partida-reiniciar....png": (254, 137, 134),
+    "mundos/boton-nueva-partida-reiniciar...-semiapretado.png": (242, 126, 123),
+    "boton-nueva-partida-reiniciar...-semiapretado.png": (242, 126, 123),
+    "mundos/boton-nueva-partida-reiniciar...-apretado.png": (225, 114, 112),
+    "boton-nueva-partida-reiniciar...-apretado.png": (225, 114, 112),
+
+    # Botones Nueva Partida (Lista)
+    "mundos/boton-nueva-partida.png": (255, 159, 99),
+    "boton-nueva-partida.png": (255, 159, 99),
+    "mundos/boton-nueva-partida-semiapretado.png": (242, 148, 91),
+    "boton-nueva-partida-semiapretado.png": (242, 148, 91),
+    "mundos/boton-nueva-partida-apretado.png": (223, 132, 79),
+    "boton-nueva-partida-apretado.png": (223, 132, 79),
+
+    # Botones Cancelar (Modales)
+    "Menu/boton-cancelar.png": (212, 212, 212),
+    "boton-cancelar.png": (212, 212, 212),
+    "Menu/boton-cancelar-semiapretado.png": (200, 200, 200),
+    "boton-cancelar-semiapretado.png": (200, 200, 200),
+    "Menu/boton-cancelar-apretado.png": (181, 181, 181),
+    "boton-cancelar-apretado.png": (181, 181, 181),
+
+    # Ventanas / Diálogos / Fin de nivel
+    "Ventanas/boton-guardar-y-salir.png": (155, 255, 124),
+    "boton-guardar-y-salir.png": (155, 255, 124),
+    "Ventanas/boton-guardar-y-salir-semiapretado.png": (142, 237, 115),
+    "boton-guardar-y-salir-semiapretado.png": (142, 237, 115),
+    "Ventanas/boton-guardar-y-salir-apretado.png": (124, 211, 103),
+    "boton-guardar-y-salir-apretado.png": (124, 211, 103),
+
+    "Ventanas/boton-menu.png": (255, 159, 99),
+    "boton-menu.png": (255, 159, 99),
+    "Ventanas/boton-menu-semiapretado.png": (242, 148, 91),
+    "boton-menu-semiapretado.png": (242, 148, 91),
+    "Ventanas/boton-menu-apretado.png": (223, 132, 79),
+    "boton-menu-apretado.png": (223, 132, 79),
+
+    "Ventanas/boton-reiniciar.png": (255, 159, 99),
+    "boton-reiniciar.png": (255, 159, 99),
+    "Ventanas/boton-reiniciar-semiapretado.png": (242, 148, 91),
+    "boton-reiniciar-semiapretado.png": (242, 148, 91),
+    "Ventanas/boton-reiniciar-apretado.png": (223, 132, 79),
+    "boton-reiniciar-apretado.png": (223, 132, 79),
+
+    "Ventanas/boton-siguiente.png": (255, 159, 99),
+    "boton-siguiente.png": (255, 159, 99),
+    "Ventanas/boton-siguiente-semiapretado.png": (242, 148, 91),
+    "boton-siguiente-semiapretado.png": (242, 148, 91),
+    "Ventanas/boton-siguiente-apretado.png": (223, 132, 79),
+    "boton-siguiente-apretado.png": (223, 132, 79),
+
+    "Ventanas/boton-salir-sin-guardar.png": (254, 137, 134),
+    "boton-salir-sin-guardar.png": (254, 137, 134),
+    "Menu/boton-salir-sin-guardar-semiapretado.png": (242, 126, 123),
+    "boton-salir-sin-guardar-semiapretado.png": (242, 126, 123),
+    "Ventanas/boton-salir-sin-guardar-apretado.png": (225, 114, 112),
+    "boton-salir-sin-guardar-apretado.png": (225, 114, 112),
+}
+
+
+def limpiar_cache_botones():
+    """Limpia el caché interno de botones personalizados."""
+    _CACHE_BOTONES_PERSONALIZADOS.clear()
+    _CACHE_MARCOS_BOTONES.clear()
+    _CACHE_BOTONES_ESCALADOS.clear()
+    _CACHE_BOTONES_ACLARADOS.clear()
+
+
+def generar_boton_con_texto(sprite_base, w, h, texto=None, color_texto=(60, 45, 30), tamano_fuente=14, offset_y=0, idioma=None):
     """
     Construye un botón temático de alta fidelidad basado en los recursos de Sprites/Botones,
     con el texto especificado centrado y nítido.
     Soporta caracteres especiales como Ñ/ñ con tildes pixel art y CJK/Unicode.
     """
-    clave = (sprite_base, w, h, texto, color_texto, tamano_fuente, offset_y)
+    if idioma is None:
+        try:
+            from configuracion import obtener_idioma
+            idioma = obtener_idioma()
+        except Exception:
+            idioma = "es"
+
+    clave = (sprite_base, w, h, texto, color_texto, tamano_fuente, offset_y, idioma)
     if clave in _CACHE_BOTONES_PERSONALIZADOS:
         return _CACHE_BOTONES_PERSONALIZADOS[clave]
+
+    base_norm = str(sprite_base).replace("\\", "/")
+    from fuentes import contiene_caracteres_cjk, obtener_fuente_cjk, obtener_fuente_boton
+
+    # 1. Determinar si el texto requiere tipografía CJK (chino) o tipografía pixel art oficial (español/inglés)
+    es_cjk = contiene_caracteres_cjk(texto) or (idioma == "zh" and any(ord(ch) > 127 for ch in str(texto)))
+    if str(texto).strip().upper() in ("ESPAÑOL", "ESPANOL", "ENGLISH") or idioma in ("es", "en"):
+        if not contiene_caracteres_cjk(texto):
+            es_cjk = False
+
+    # Si el idioma es español y el texto coincide con el texto horneado del sprite, retornar el sprite escalado original
+    base_lower = base_norm.lower()
+    t_clean = str(texto).strip().upper() if texto else ""
+    if idioma == "es":
+        es_nativo = False
+        if "volver" in base_lower and t_clean == "VOLVER": es_nativo = True
+        elif "jugar" in base_lower and t_clean == "JUGAR": es_nativo = True
+        elif "personajes" in base_lower and t_clean == "PERSONAJES": es_nativo = True
+        elif "opciones" in base_lower and t_clean == "OPCIONES": es_nativo = True
+        elif "salir" in base_lower and t_clean == "SALIR": es_nativo = True
+        elif "cargar" in base_lower and t_clean == "CARGAR": es_nativo = True
+        elif "cancelar" in base_lower and t_clean == "CANCELAR": es_nativo = True
+        elif "nueva-partida" in base_lower and t_clean == "NUEVA PARTIDA": es_nativo = True
+        elif "reiniciar" in base_lower and t_clean == "REINICIAR": es_nativo = True
+        elif "siguiente" in base_lower and t_clean == "SIGUIENTE": es_nativo = True
+        elif "menu" in base_lower and t_clean in ("MENÚ", "MENU"): es_nativo = True
+        if es_nativo:
+            res_btn = cargar_boton_escalado(sprite_base, w, h)
+            if res_btn:
+                _CACHE_BOTONES_PERSONALIZADOS[clave] = res_btn
+                return res_btn
 
     marco = generar_marco_boton(sprite_base, w, h)
     if not marco:
@@ -178,39 +358,65 @@ def generar_boton_con_texto(sprite_base, w, h, texto=None, color_texto=(60, 45, 
 
     surf = marco.copy()
     if texto:
-        # 1. Si contiene caracteres CJK / asiáticos, usar tipografía con soporte Unicode
-        if any(ord(ch) > 255 for ch in texto):
-            f_sys = pygame.font.SysFont(["Microsoft YaHei", "SimHei", "Arial"], tamano_fuente, bold=True)
-            txt_surf = f_sys.render(texto, True, color_texto)
-        else:
-            from pantalla import obtener_fuente_boton
-            f = obtener_fuente_boton(tamano_fuente, tamano_fallback=tamano_fuente)
-            # 2. Si contiene Ñ o acentos, componer de forma nítida para la fuente pixel art
-            if any(ch in "ÑñÁÉÍÓÚáéíóú" for ch in texto):
-                txt_limpio = (
-                    texto.replace("Á", "A").replace("É", "E").replace("Í", "I").replace("Ó", "O").replace("Ú", "U")
-                         .replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
-                )
-                ancho_t, alto_t = f.size(txt_limpio.replace("Ñ", "N").replace("ñ", "n"))
-                txt_surf = pygame.Surface((ancho_t, alto_t + 4), pygame.SRCALPHA)
-                curr_x = 0
-                for ch in txt_limpio:
-                    if ch in ("Ñ", "ñ"):
-                        letra = f.render("N" if ch == "Ñ" else "n", True, color_texto)
-                        txt_surf.blit(letra, (curr_x, 3))
-                        lw = letra.get_width()
-                        # Dibujar virgulilla pixel art decorativa sobre la N
-                        pygame.draw.rect(txt_surf, color_texto, (curr_x + 2, 0, 3, 2))
-                        pygame.draw.rect(txt_surf, color_texto, (curr_x + 5, 1, 3, 2))
-                        curr_x += lw
-                    else:
-                        letra = f.render(ch, True, color_texto)
-                        txt_surf.blit(letra, (curr_x, 3))
-                        curr_x += letra.get_width()
-            else:
-                txt_surf = f.render(texto, True, color_texto)
+        # Limpieza interior segura si el marco contiene texto original horneado
+        base_key = os.path.basename(base_norm)
+        col_interior = COLORES_INTERIORES_BOTONES.get(base_norm) or COLORES_INTERIORES_BOTONES.get(base_key)
+        if col_interior:
+            is_apr = "apretado" in base_lower and "pre" not in base_lower and "semi" not in base_lower
+            is_semi = "semi" in base_lower or "pre" in base_lower
+            shift_clear = int(h * 0.10) if is_apr else (int(h * 0.05) if is_semi else 0)
+            h_bisel = max(6, int(h * 0.28))
+            pad_lat = max(4, int(w * 0.03))
+            pad_top = max(4, int(h * 0.08)) + shift_clear
+            h_clear = max(10, h - max(4, int(h * 0.08)) - h_bisel)
+            rect_int = pygame.Rect(pad_lat, pad_top, w - 2 * pad_lat, h_clear)
+            pygame.draw.rect(surf, col_interior, rect_int)
 
-        rect_txt = txt_surf.get_rect(center=(w // 2, h // 2 + offset_y))
+        curr_sz = tamano_fuente
+        if es_cjk:
+            f_sys = obtener_fuente_cjk(curr_sz, negrita=True)
+            txt_surf = f_sys.render(str(texto), True, color_texto)
+            while txt_surf.get_width() > w - 16 and curr_sz > 8:
+                curr_sz -= 1
+                f_sys = obtener_fuente_cjk(curr_sz, negrita=True)
+                txt_surf = f_sys.render(str(texto), True, color_texto)
+        else:
+            def _render_latin(sz):
+                f = obtener_fuente_boton(sz, tamano_fallback=sz, idioma="es")
+                if any(ch in "ÑñÁÉÍÓÚáéíóú" for ch in str(texto)):
+                    txt_limpio = (
+                        str(texto).replace("Á", "A").replace("É", "E").replace("Í", "I").replace("Ó", "O").replace("Ú", "U")
+                                  .replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
+                    )
+                    ancho_t, alto_t = f.size(txt_limpio.replace("Ñ", "N").replace("ñ", "n"))
+                    t_s = pygame.Surface((ancho_t, alto_t + 4), pygame.SRCALPHA)
+                    curr_x = 0
+                    for ch in txt_limpio:
+                        if ch in ("Ñ", "ñ"):
+                            letra = f.render("N" if ch == "Ñ" else "n", True, color_texto)
+                            t_s.blit(letra, (curr_x, 3))
+                            lw = letra.get_width()
+                            pygame.draw.rect(t_s, color_texto, (curr_x + 2, 0, 3, 2))
+                            pygame.draw.rect(t_s, color_texto, (curr_x + 5, 1, 3, 2))
+                            curr_x += lw
+                        else:
+                            letra = f.render(ch, True, color_texto)
+                            t_s.blit(letra, (curr_x, 3))
+                            curr_x += letra.get_width()
+                    return f, t_s
+                else:
+                    return f, f.render(str(texto), True, color_texto)
+
+            f_lat, txt_surf = _render_latin(curr_sz)
+            while txt_surf.get_width() > w - 16 and curr_sz > 8:
+                curr_sz -= 1
+                f_lat, txt_surf = _render_latin(curr_sz)
+
+        rect_txt = txt_surf.get_rect(center=(w // 2, (h - 4) // 2 + offset_y))
+        if color_texto == (255, 255, 255) and ("salir" in base_norm.lower() or "borrar" in str(texto).lower()):
+            f_somb = f_sys if es_cjk else f_lat
+            somb_surf = f_somb.render(str(texto), True, (127, 49, 19))
+            surf.blit(somb_surf, rect_txt.move(1, 1))
         surf.blit(txt_surf, rect_txt)
 
     _CACHE_BOTONES_PERSONALIZADOS[clave] = surf
@@ -342,17 +548,28 @@ def animar_pulsacion_boton(pantalla, rect, spr_semi, spr_apretado, fondo_limpio=
     3. Mientras mantenga presionado el clic: permanece visualmente apretado de forma continua.
     4. Al soltar: realiza una transición rápida de regreso (semiapretado ~45 ms -> normal)
        y ejecuta la acción una sola vez por clic.
-    Si el usuario arrastra el mouse afuera antes de soltar, cancela la pulsación y retorna False.
+    Garantiza dimensiones 1:1 estrictas para impedir cualquier deformación o agrandamiento.
     """
+    target_size = (rect.width, rect.height)
+    if spr_semi is not None and spr_semi.get_size() != target_size:
+        spr_semi = pygame.transform.smoothscale(spr_semi, target_size)
+    if spr_apretado is not None and spr_apretado.get_size() != target_size:
+        spr_apretado = pygame.transform.smoothscale(spr_apretado, target_size)
+    if spr_normal is not None and spr_normal.get_size() != target_size:
+        spr_normal = pygame.transform.smoothscale(spr_normal, target_size)
+
     def _limpiar():
         if fondo_limpio is not None:
             if isinstance(fondo_limpio, (tuple, list)):
                 pygame.draw.rect(pantalla, fondo_limpio[:3], rect)
             elif isinstance(fondo_limpio, pygame.Surface):
-                if fondo_limpio.get_size() == (rect.width, rect.height):
+                fw, fh = fondo_limpio.get_size()
+                if (fw, fh) == (rect.width, rect.height):
                     pantalla.blit(fondo_limpio, rect)
-                else:
+                elif fw >= rect.right and fh >= rect.bottom:
                     pantalla.blit(fondo_limpio, rect, rect)
+                else:
+                    pantalla.blit(fondo_limpio, rect)
         else:
             ancho_p, alto_p = pantalla.get_size()
             x_muestra = max(0, rect.left - 4)
@@ -835,4 +1052,4 @@ def dibujar_agua(pantalla, zona_agua=None):
         superficie.fill(COLOR_AGUA)
         _CACHE_AGUA[clave] = superficie
 
-    pantalla.blit(superficie, (zona_agua.x, zona_agua.y))
+    pantalla.blit(superficie, (zona_agua.x, zona_agua.y))
