@@ -230,10 +230,6 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, 
             p2["en_suelo"] = True
 
 
-def transportar_personaje_encima(p_arriba, p_abajo):
-    pass
-
-
 def crear_caja(x, y):
     return {
         "x_inicial": x,

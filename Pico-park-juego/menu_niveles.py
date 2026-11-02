@@ -8,7 +8,6 @@ from fuentes import (
     TAMANO_TITULO,
     TAMANO_TITULO_MODAL,
     TAMANO_CARD,
-    dibujar_texto_en_rect,
 )
 from configuracion import t
 from sprites import generar_boton_con_texto, aclarar_boton

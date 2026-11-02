@@ -14,22 +14,14 @@ import struct
 import pygame
 
 from sprites import (
-    cargar_boton,
     cargar_boton_escalado,
     animar_pulsacion_boton,
     aclarar_boton,
     generar_boton_con_texto,
-    generar_marco_boton,
 )
 from fuentes import (
-    obtener_fuente_titulo,
     obtener_fuente_subtitulo,
-    obtener_fuente_texto,
-    obtener_fuente_boton,
-    obtener_fuente_botones,
-    obtener_fuente_pequena,
     obtener_fuente_contador,
-    obtener_fuente_dialogos,
     limpiar_cache_fuentes,
     dibujar_texto_en_rect,
 )
@@ -41,7 +33,7 @@ from fuentes import (
 # Puedes colocar los archivos en 'assets/audio/' o 'Sprites/Audio/' (.mp3, .ogg, .wav).
 # ==============================================================================
 AUDIO_MENU = "sonidos/menú/menú.mp3"  # Música del menú principal y pantallas de navegación
-AUDIO_MUNDO_1 = "mundo1.mp3"     # Música del Mundo 1
+AUDIO_MUNDO_1 = "sonidos/mundo1/mundo 1.mp3"  # Música del Mundo 1
 AUDIO_MUNDO_2 = "mundo2.mp3"     # Música del Mundo 2
 AUDIO_MUNDO_3 = "mundo3.mp3"     # Música del Mundo 3
 
@@ -57,9 +49,15 @@ RUTA_CONFIG_JSON = os.path.join(DIRECTORIO_ACTUAL, "configuracion.json")
 CARPETAS_AUDIO = [
     os.path.join(DIRECTORIO_ACTUAL, "..", "sonidos", "menú"),
     os.path.join(DIRECTORIO_ACTUAL, "..", "sonidos", "menu"),
+    os.path.join(DIRECTORIO_ACTUAL, "..", "sonidos", "mundo1"),
+    os.path.join(DIRECTORIO_ACTUAL, "..", "sonidos", "jefe1"),
+    os.path.join(DIRECTORIO_ACTUAL, "..", "sonidos", "ahogamiento"),
     os.path.join(DIRECTORIO_ACTUAL, "..", "sonidos"),
     os.path.join(DIRECTORIO_ACTUAL, "sonidos", "menú"),
     os.path.join(DIRECTORIO_ACTUAL, "sonidos", "menu"),
+    os.path.join(DIRECTORIO_ACTUAL, "sonidos", "mundo1"),
+    os.path.join(DIRECTORIO_ACTUAL, "sonidos", "jefe1"),
+    os.path.join(DIRECTORIO_ACTUAL, "sonidos", "ahogamiento"),
     os.path.join(DIRECTORIO_ACTUAL, "sonidos"),
     os.path.join(DIRECTORIO_ACTUAL, "..", "assets", "audio"),
     os.path.join(DIRECTORIO_ACTUAL, "assets", "audio"),
@@ -700,6 +698,10 @@ def _resolver_ruta_audio(pista_o_nombre):
         nombres_a_buscar.append(base.replace("menú", "menu"))
     elif "menu" in base:
         nombres_a_buscar.append(base.replace("menu", "menú"))
+    if "mundo1" in base:
+        nombres_a_buscar.append(base.replace("mundo1", "mundo 1"))
+    elif "mundo 1" in base:
+        nombres_a_buscar.append(base.replace("mundo 1", "mundo1"))
 
     nombre_raiz, ext = os.path.splitext(base)
     if not ext:
@@ -709,6 +711,10 @@ def _resolver_ruta_audio(pista_o_nombre):
                 nombres_a_buscar.append(nombre_raiz.replace("menú", "menu") + posible_ext)
             elif "menu" in nombre_raiz:
                 nombres_a_buscar.append(nombre_raiz.replace("menu", "menú") + posible_ext)
+            if "mundo1" in nombre_raiz:
+                nombres_a_buscar.append(nombre_raiz.replace("mundo1", "mundo 1") + posible_ext)
+            elif "mundo 1" in nombre_raiz:
+                nombres_a_buscar.append(nombre_raiz.replace("mundo 1", "mundo1") + posible_ext)
 
     for carpeta in CARPETAS_AUDIO:
         for nom in nombres_a_buscar:

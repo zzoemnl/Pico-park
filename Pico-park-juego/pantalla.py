@@ -1,11 +1,9 @@
-import os
 import sys
 import math
 import random
 import pygame
 
 from fuentes import (
-    obtener_fuente,
     obtener_fuente_titulo,
     obtener_fuente_subtitulo,
     obtener_fuente_texto,
@@ -13,21 +11,11 @@ from fuentes import (
     obtener_fuente_botones,
     obtener_fuente_pequena,
     obtener_fuente_contador,
-    obtener_fuente_dialogos,
-    TAMANO_TITULO,
     TAMANO_TITULO_GRANDE,
-    TAMANO_SUBTITULO,
     TAMANO_SUBTITULO_GRANDE,
-    TAMANO_TEXTO,
     TAMANO_TEXTO_GRANDE,
-    TAMANO_BOTON,
-    TAMANO_BOTONES,
     TAMANO_BOTON_GRANDE,
-    TAMANO_PEQUENA,
     TAMANO_BADGE,
-    TAMANO_CONTADOR,
-    TAMANO_DIALOGOS,
-    renderizar_texto_ajustado,
     dibujar_texto_en_rect,
 )
 from configuracion import t, mostrar_pestana_configuracion, reproducir_musica
@@ -35,7 +23,6 @@ from configuracion import t, mostrar_pestana_configuracion, reproducir_musica
 from sprites import (
     ANCHO, ALTO, FPS,
     COLOR_JUGADOR1, COLOR_JUGADOR2,
-    RUTA_BOTONES,
     dibujar_personaje,
     dibujar_agua,
     cargar_boton,
@@ -47,7 +34,6 @@ from movimientos import (
     crear_personaje,
     crear_caja,
     crear_pinchos,
-    PinchoRect,
     crear_pincho,
     crear_llave,
     crear_puerta,
@@ -68,9 +54,7 @@ from movimientos import (
     ZONA_AGUA,
     actualizar_estado_agua,
     aplicar_fisica_agua,
-    actualizar_estado_soga_muerte,
     ALTO_HITBOX,
-    ANCHO_HITBOX,
 )
 from guardado import (
     crear_desbloqueados_inicial,
@@ -154,34 +138,6 @@ def pantalla_muerte(pantalla, reloj):
         pantalla.blit(spr_m, boton_menu)
         pygame.display.flip()
         reloj.tick(FPS)
-
-
-def obtener_fuente_elegante(tamanio, negrita=True):
-    return obtener_fuente_subtitulo(tamanio, negrita=negrita, tamano_fallback=int(tamanio * 1.1))
-
-
-def dibujar_estrella_decorativa(superficie, centro, r_exterior=14, r_interior=6, col_relleno=(255, 222, 90), col_borde=(185, 145, 75)):
-    """Dibuja una estrella decorativa de 5 puntas estilo pixel/cartoon."""
-    puntos = []
-    cx, cy = centro
-    for i in range(10):
-        r = r_exterior if i % 2 == 0 else r_interior
-        ang = i * (math.pi / 5) - math.pi / 2
-        puntos.append((cx + r * math.cos(ang), cy + r * math.sin(ang)))
-    pygame.draw.polygon(superficie, col_relleno, puntos)
-    pygame.draw.polygon(superficie, col_borde, puntos, 2)
-
-
-def renderizar_texto_con_sombra(texto, fuente, col_texto, col_sombra=(20, 20, 20), offset=(3, 3)):
-    """Crea una superficie SRCALPHA con el texto nítido y su sombra suave."""
-    t_sombra = fuente.render(texto, True, col_sombra)
-    t_texto = fuente.render(texto, True, col_texto)
-    w = max(t_sombra.get_width() + abs(offset[0]), t_texto.get_width() + abs(offset[0])) + 8
-    h = max(t_sombra.get_height() + abs(offset[1]), t_texto.get_height() + abs(offset[1])) + 8
-    surf = pygame.Surface((w, h), pygame.SRCALPHA)
-    surf.blit(t_sombra, (max(0, offset[0]) + 4, max(0, offset[1]) + 4))
-    surf.blit(t_texto, (4, 4))
-    return surf
 
 
 def crear_franjas_geometricas(ancho, alto):

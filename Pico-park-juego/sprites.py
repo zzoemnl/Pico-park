@@ -289,6 +289,7 @@ COLORES_INTERIORES_BOTONES = {
 
     "Ventanas/boton-salir-sin-guardar.png": (254, 137, 134),
     "boton-salir-sin-guardar.png": (254, 137, 134),
+    "Ventanas/boton-salir-sin-guardar-semiapretado.png": (242, 126, 123),
     "Menu/boton-salir-sin-guardar-semiapretado.png": (242, 126, 123),
     "boton-salir-sin-guardar-semiapretado.png": (242, 126, 123),
     "Ventanas/boton-salir-sin-guardar-apretado.png": (225, 114, 112),

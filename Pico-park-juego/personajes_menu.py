@@ -41,8 +41,6 @@ from sprites import (
     aplicar_tinta,
     actualizar_temporizadores,
     obtener_estado,
-    ANCHO as ANCHO_DEFECTO,
-    ALTO as ALTO_DEFECTO,
 )
 from movimientos import (
     crear_personaje,
@@ -2018,9 +2016,7 @@ class GestorPersonajesMenu:
         base_dir = os.path.dirname(os.path.abspath(__file__))
         posibles_rutas = [
             os.path.join(base_dir, "..", "Sprites", "Objetos", "gorro_navideno_original.png"),
-            os.path.join(base_dir, "..", "Sprites", "Objetos", "gorro_navideno_titulo.png"),
             os.path.join(base_dir, "Sprites", "Objetos", "gorro_navideno_original.png"),
-            os.path.join(base_dir, "Sprites", "Objetos", "gorro_navideno_titulo.png"),
         ]
 
         surf_orig = None

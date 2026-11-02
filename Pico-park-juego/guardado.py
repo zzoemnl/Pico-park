@@ -1,5 +1,4 @@
 import os
-import sys
 import copy
 import datetime
 import hashlib
@@ -7,12 +6,10 @@ import secrets
 import pygame
 
 from sprites import (
-    cargar_boton,
     cargar_boton_escalado,
     animar_pulsacion_boton,
     aclarar_boton,
     generar_boton_con_texto,
-    generar_marco_boton,
 )
 from configuracion import t, obtener_idioma
 
@@ -55,34 +52,23 @@ def _cargar_sprite_boton(nombre, w, h):
 
 
 from fuentes import (
-    obtener_fuente,
     obtener_fuente_titulo,
     obtener_fuente_subtitulo,
     obtener_fuente_texto,
     obtener_fuente_boton,
-    obtener_fuente_botones,
     obtener_fuente_pequena,
     obtener_fuente_contador,
     obtener_fuente_dialogos,
-    cargar_fuente_pixel,
-    TAMANO_TITULO,
     TAMANO_TITULO_MODAL,
     TAMANO_SUBTITULO,
     TAMANO_SUBTITULO_GRANDE,
     TAMANO_TEXTO,
     TAMANO_TEXTO_GRANDE,
     TAMANO_INPUT,
-    TAMANO_BOTON,
-    TAMANO_BOTONES,
     TAMANO_BOTON_MODAL,
     TAMANO_PEQUENA,
     TAMANO_ITEM_TITULO,
-    TAMANO_CONTADOR,
-    TAMANO_DIALOGOS,
-    dividir_texto_en_lineas,
-    ajustar_tamano_fuente,
     renderizar_texto_ajustado,
-    renderizar_texto_multilinea,
     dibujar_texto_en_rect,
 )
 

@@ -10,7 +10,6 @@ import pygame
 
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 RUTA_FUENTE_PIXEL = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Fuentes", "04B_30__.TTF")
-RUTA_FUENTE_ZIP = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Fuentes", "04b_30.zip")
 CARPETAS_FUENTES = [
     os.path.join(DIRECTORIO_ACTUAL, "..", "assets", "fuentes"),
     os.path.join(DIRECTORIO_ACTUAL, "assets", "fuentes"),
@@ -120,7 +119,7 @@ def obtener_fuente_cjk(tamano=18, negrita=False):
 
 
 def _resolver_ruta_fuente(nombre_o_ruta):
-    """Resuelve la ruta absoluta al archivo de fuente, buscando en assets y descomprimiendo zips si es necesario."""
+    """Resuelve la ruta absoluta al archivo de fuente buscando en las carpetas de fuentes configuradas."""
     if not nombre_o_ruta:
         return None
 
@@ -129,29 +128,10 @@ def _resolver_ruta_fuente(nombre_o_ruta):
 
     base = os.path.basename(nombre_o_ruta)
 
-    # 1. Buscar directamente en carpetas de fuentes configuradas
     for carpeta in CARPETAS_FUENTES:
         ruta_directa = os.path.join(carpeta, base)
         if os.path.isfile(ruta_directa):
             return os.path.normpath(ruta_directa)
-
-    # 2. Intentar buscar dentro de archivos ZIP en las carpetas de fuentes
-    for carpeta in CARPETAS_FUENTES:
-        if os.path.isdir(carpeta):
-            for arch in os.listdir(carpeta):
-                if arch.lower().endswith(".zip"):
-                    zip_path = os.path.join(carpeta, arch)
-                    try:
-                        import zipfile
-                        with zipfile.ZipFile(zip_path, "r") as z:
-                            for miembro in z.namelist():
-                                if os.path.basename(miembro).lower() == base.lower():
-                                    z.extract(miembro, carpeta)
-                                    ruta_extraida = os.path.join(carpeta, miembro)
-                                    if os.path.isfile(ruta_extraida):
-                                        return os.path.normpath(ruta_extraida)
-                    except Exception:
-                        pass
 
     return None
 
