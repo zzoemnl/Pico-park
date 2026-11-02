@@ -18,7 +18,7 @@ from fuentes import (
     TAMANO_BADGE,
     dibujar_texto_en_rect,
 )
-from configuracion import t, mostrar_pestana_configuracion, reproducir_musica
+from configuracion import t,mostrar_pestana_configuracion, reproducir_musica,obtener_idioma
 
 from sprites import (
     ANCHO, ALTO, FPS,
@@ -650,7 +650,7 @@ def mostrar_pantalla_victoria(
         spr_sig_apretado = cargar_boton_escalado("Ventanas/boton-siguiente-apretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-siguiente-apretado.png", w_btn, h_btn)
 
         spr_menu_normal = cargar_boton_escalado("Ventanas/boton-menu.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu.png", w_btn, h_btn)
-        spr_menu_semi = cargar_boton_escalado("Ventanas/boton-menu-semiapretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu-semiapretado.png", w_btn, h_btn)
+        spr_menu_semi = cargar_boton_escalado("Ventanas/botfon-menu-semiapretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu-semiapretado.png", w_btn, h_btn)
         spr_menu_apretado = cargar_boton_escalado("Ventanas/boton-menu-apretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu-apretado.png", w_btn, h_btn)
     else:
         spr_sig_normal = generar_boton_con_texto("Ventanas/boton-siguiente.png", w_btn, h_btn, txt_btn1, (255, 255, 255), 24, 0, idm_vic)

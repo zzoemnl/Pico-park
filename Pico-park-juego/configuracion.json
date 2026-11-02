@@ -1,6 +1,6 @@
 {
-    "volumen": 0,
-    "volumen_musica": 0,
-    "volumen_efectos": 0,
+    "volumen": 60,
+    "volumen_musica": 60,
+    "volumen_efectos": 60,
     "idioma": "es"
 }
