@@ -94,6 +94,14 @@ def pantalla_muerte(pantalla, reloj):
         boton_reiniciar_semi = generar_boton_con_texto("Ventanas/boton-reiniciar-semiapretado.png", w_btn, h_btn, t("reiniciar"), (255, 255, 255), 24, 1, idm_muerte)
         boton_reiniciar_apretado = generar_boton_con_texto("Ventanas/boton-reiniciar-apretado.png", w_btn, h_btn, t("reiniciar"), (255, 255, 255), 24, 2, idm_muerte)
 
+    # Botón X pixel art para salir completamente del juego
+    w_x, h_x = 44, 52
+    rect_btn_x = pygame.Rect(ANCHO - 18 - w_x, 16, w_x, h_x)
+    boton_x_normal = cargar_boton_escalado("HUD/boton-x.png", w_x, h_x) or cargar_boton_escalado("boton-x.png", w_x, h_x)
+    boton_x_semi = cargar_boton_escalado("HUD/boton-x-semiapretado.png", w_x, h_x) or cargar_boton_escalado("boton-x-semiapretado.png", w_x, h_x)
+    boton_x_apretado = cargar_boton_escalado("HUD/boton-x-apretado.png", w_x, h_x) or cargar_boton_escalado("boton-x-apretado.png", w_x, h_x)
+    boton_x_hover = aclarar_boton(boton_x_normal) if boton_x_normal else None
+
     if any(x is None for x in (
         boton_menu_normal, boton_menu_apretado,
         boton_reiniciar_normal, boton_reiniciar_apretado
@@ -110,20 +118,49 @@ def pantalla_muerte(pantalla, reloj):
         pos_mouse = pygame.mouse.get_pos()
         hov_reinicio = boton_reiniciar.collidepoint(pos_mouse)
         hov_menu = boton_menu.collidepoint(pos_mouse)
+        hov_x = rect_btn_x.collidepoint(pos_mouse)
+
+        try:
+            if hov_reinicio or hov_menu or hov_x:
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+            else:
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+        except Exception:
+            pass
 
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
+                try:
+                    pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+                except Exception:
+                    pass
                 pygame.quit()
                 sys.exit()
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-                if boton_reiniciar.collidepoint(evento.pos):
+                if rect_btn_x.collidepoint(evento.pos):
+                    try:
+                        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+                    except Exception:
+                        pass
+                    if animar_pulsacion_boton(pantalla, rect_btn_x, boton_x_semi, boton_x_apretado, (25, 25, 25), boton_x_normal):
+                        return "salir"
+
+                elif boton_reiniciar.collidepoint(evento.pos):
+                    try:
+                        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+                    except Exception:
+                        pass
                     if animar_pulsacion_boton(pantalla, boton_reiniciar, boton_reiniciar_semi, boton_reiniciar_apretado, (25, 25, 25), boton_reiniciar_normal):
                         return "reiniciar"
 
-                if boton_menu.collidepoint(evento.pos):
+                elif boton_menu.collidepoint(evento.pos):
+                    try:
+                        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+                    except Exception:
+                        pass
                     if animar_pulsacion_boton(pantalla, boton_menu, boton_menu_semi, boton_menu_apretado, (25, 25, 25), boton_menu_normal):
-                        return "salir"
+                        return "menu"
 
         pantalla.fill((25, 25, 25))
         rect_tit = pygame.Rect(ANCHO // 2 - 300, 155, 600, 50)
@@ -133,9 +170,12 @@ def pantalla_muerte(pantalla, reloj):
 
         spr_r = boton_reiniciar_hover if (hov_reinicio and boton_reiniciar_hover) else boton_reiniciar_normal
         spr_m = boton_menu_hover if (hov_menu and boton_menu_hover) else boton_menu_normal
+        spr_x = boton_x_hover if (hov_x and boton_x_hover) else boton_x_normal
 
         pantalla.blit(spr_r, boton_reiniciar)
         pantalla.blit(spr_m, boton_menu)
+        if spr_x:
+            pantalla.blit(spr_x, rect_btn_x)
         pygame.display.flip()
         reloj.tick(FPS)
 
@@ -540,12 +580,13 @@ def dibujar_panel_victoria_solido(superficie, rect_panel, color_p1=None, color_p
     # Borde exterior contundente
     pygame.draw.rect(superficie, (45, 45, 50), rect_panel, width=4, border_radius=8)
 
-    # Mini bloques decorativos de los personajes en la cabecera
-    r_sq1 = pygame.Rect(rect_panel.left + 16, rect_panel.top + 16, 26, 26)
+    # Mini bloques decorativos de los personajes en la franja naranja inferior
+    y_sq = r_bot.centery - 13
+    r_sq1 = pygame.Rect(rect_panel.left + 24, y_sq, 26, 26)
     pygame.draw.rect(superficie, c_p1, r_sq1, border_radius=4)
     pygame.draw.rect(superficie, (45, 45, 50), r_sq1, width=2, border_radius=4)
 
-    r_sq2 = pygame.Rect(rect_panel.right - 42, rect_panel.top + 16, 26, 26)
+    r_sq2 = pygame.Rect(rect_panel.right - 50, y_sq, 26, 26)
     pygame.draw.rect(superficie, c_p2, r_sq2, border_radius=4)
     pygame.draw.rect(superficie, (45, 45, 50), r_sq2, width=2, border_radius=4)
 
@@ -624,8 +665,24 @@ def mostrar_pantalla_victoria(
 
         pygame.display.flip()
 
-    # Fuentes estilizadas para la pantalla de victoria (conectadas a las variables centralizadas)
-    fuente_titulo = obtener_fuente_titulo(TAMANO_TITULO_GRANDE)
+    # Botón X pixel art DENTRO del encabezado en la esquina superior derecha
+    w_x, h_x = 36, 42
+    h_top = int(rect_panel.height / 6)
+    rect_btn_x = pygame.Rect(rect_panel.right - 14 - w_x, rect_panel.top + (h_top - h_x) // 2, w_x, h_x)
+    spr_x_normal = cargar_boton_escalado("HUD/boton-x.png", w_x, h_x) or cargar_boton_escalado("boton-x.png", w_x, h_x)
+    spr_x_semi = cargar_boton_escalado("HUD/boton-x-semiapretado.png", w_x, h_x) or cargar_boton_escalado("boton-x-semiapretado.png", w_x, h_x)
+    spr_x_apretado = cargar_boton_escalado("HUD/boton-x-apretado.png", w_x, h_x) or cargar_boton_escalado("boton-x-apretado.png", w_x, h_x)
+    spr_x_hover = aclarar_boton(spr_x_normal) if spr_x_normal else None
+
+    # Título dinámico para evitar desbordes y no tapar el botón X
+    txt_titulo = t("nivel_completado")
+    max_w_tit = (rect_btn_x.left - cx - 20) * 2
+    sz_tit = 22
+    fuente_titulo = obtener_fuente_titulo(sz_tit)
+    while sz_tit > 16 and fuente_titulo.size(txt_titulo)[0] > max_w_tit:
+        sz_tit -= 1
+        fuente_titulo = obtener_fuente_titulo(sz_tit)
+
     fuente_sub = obtener_fuente_subtitulo(TAMANO_SUBTITULO_GRANDE, negrita=True)
     fuente_badge = obtener_fuente_contador(20, negrita=True)
     fuente_btn = obtener_fuente_botones(26, negrita=True)
@@ -650,7 +707,7 @@ def mostrar_pantalla_victoria(
         spr_sig_apretado = cargar_boton_escalado("Ventanas/boton-siguiente-apretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-siguiente-apretado.png", w_btn, h_btn)
 
         spr_menu_normal = cargar_boton_escalado("Ventanas/boton-menu.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu.png", w_btn, h_btn)
-        spr_menu_semi = cargar_boton_escalado("Ventanas/botfon-menu-semiapretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu-semiapretado.png", w_btn, h_btn)
+        spr_menu_semi = cargar_boton_escalado("Ventanas/boton-menu-semiapretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu-semiapretado.png", w_btn, h_btn)
         spr_menu_apretado = cargar_boton_escalado("Ventanas/boton-menu-apretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu-apretado.png", w_btn, h_btn)
     else:
         spr_sig_normal = generar_boton_con_texto("Ventanas/boton-siguiente.png", w_btn, h_btn, txt_btn1, (255, 255, 255), 24, 0, idm_vic)
@@ -683,7 +740,7 @@ def mostrar_pantalla_victoria(
         t_tit = min(1.0, f / 18.0)
         bounce_tit = math.sin(t_tit * math.pi * 2.5) * (1.0 - t_tit) if t_tit < 1.0 else 0.0
         y_tit = rect_panel.top + 35 + int(-28 * bounce_tit)
-        t_tit_surf = fuente_titulo.render(t("nivel_completado"), True, (255, 255, 255))
+        t_tit_surf = fuente_titulo.render(txt_titulo, True, (255, 255, 255))
         pantalla.blit(t_tit_surf, t_tit_surf.get_rect(center=(cx, y_tit)))
 
         # Subtítulo y cápsula de nivel
@@ -691,10 +748,14 @@ def mostrar_pantalla_victoria(
             t_sub = fuente_sub.render(t("buen_trabajo"), True, (75, 70, 70))
             pantalla.blit(t_sub, t_sub.get_rect(center=(cx, rect_panel.top + 98)))
 
-            r_badge = pygame.Rect(cx - 150, rect_panel.top + 132, 300, 36)
+            r_badge = pygame.Rect(cx - 195, rect_panel.top + 130, 390, 42)
             pygame.draw.rect(pantalla, (255, 255, 255), r_badge, border_radius=8)
-            pygame.draw.rect(pantalla, (210, 195, 160), r_badge, width=2, border_radius=8)
-            dibujar_texto_en_rect(pantalla, nom_nivel, r_badge, categoria="boton", tamano=TAMANO_BADGE, color=(50, 45, 40), padding=4)
+            pygame.draw.rect(pantalla, (180, 75, 55), r_badge, width=2, border_radius=8)
+            dibujar_texto_en_rect(pantalla, nom_nivel, r_badge, categoria="boton", tamano=21, color=(25, 25, 30), padding=4)
+
+        # Botón X animado en la esquina superior derecha
+        if f >= 12 and spr_x_normal:
+            pantalla.blit(spr_x_normal, rect_btn_x)
 
         # 2. Botón 1 con desplazamiento y rebote (empieza en f=12)
         if f >= 12:
@@ -735,16 +796,18 @@ def mostrar_pantalla_victoria(
     boton_presionado = None
     fondo_limpio_btn1 = None
     fondo_limpio_btn2 = None
+    fondo_limpio_btn_x = None
 
     while accion_seleccionada is None:
         reloj.tick(FPS)
         pos_mouse = pygame.mouse.get_pos()
         hover1 = rect_btn1.collidepoint(pos_mouse)
         hover2 = rect_btn2.collidepoint(pos_mouse)
+        hover_x = rect_btn_x.collidepoint(pos_mouse)
 
         # Ajuste de cursor al pasar sobre los botones
         try:
-            if hover1 or hover2:
+            if hover1 or hover2 or hover_x:
                 pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
             else:
                 pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
@@ -772,7 +835,14 @@ def mostrar_pantalla_victoria(
                     sys.exit()
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-                if rect_btn1.collidepoint(evento.pos):
+                if rect_btn_x.collidepoint(evento.pos):
+                    try:
+                        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+                    except Exception:
+                        pass
+                    if animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, fondo_limpio_btn_x or (0, 0, 0), spr_x_normal):
+                        accion_seleccionada = "salir"
+                elif rect_btn1.collidepoint(evento.pos):
                     spr1_norm = spr_sig_normal if hay_siguiente else spr_menu_normal
                     spr1_semi = spr_sig_semi if hay_siguiente else spr_menu_semi
                     spr1_apr = spr_sig_apretado if hay_siguiente else spr_menu_apretado
@@ -789,21 +859,27 @@ def mostrar_pantalla_victoria(
         dibujar_panel_victoria_solido(pantalla, rect_panel, color_p1, color_p2)
 
         # Título
-        t_tit_surf = fuente_titulo.render(t("nivel_completado"), True, (255, 255, 255))
+        t_tit_surf = fuente_titulo.render(txt_titulo, True, (255, 255, 255))
         pantalla.blit(t_tit_surf, t_tit_surf.get_rect(center=(cx, rect_panel.top + 35)))
 
         # Subtítulo y cápsula
         t_sub = fuente_sub.render(t("buen_trabajo"), True, (75, 70, 70))
         pantalla.blit(t_sub, t_sub.get_rect(center=(cx, rect_panel.top + 98)))
 
-        r_badge = pygame.Rect(cx - 150, rect_panel.top + 132, 300, 36)
+        r_badge = pygame.Rect(cx - 195, rect_panel.top + 130, 390, 42)
         pygame.draw.rect(pantalla, (255, 255, 255), r_badge, border_radius=8)
-        pygame.draw.rect(pantalla, (210, 195, 160), r_badge, width=2, border_radius=8)
-        dibujar_texto_en_rect(pantalla, nom_nivel, r_badge, categoria="boton", tamano=TAMANO_BADGE, color=(50, 45, 40), padding=4)
+        pygame.draw.rect(pantalla, (180, 75, 55), r_badge, width=2, border_radius=8)
+        dibujar_texto_en_rect(pantalla, nom_nivel, r_badge, categoria="boton", tamano=21, color=(25, 25, 30), padding=4)
 
         # Captura de fondos limpios antes de renderizar los botones
         fondo_limpio_btn1 = pantalla.subsurface(rect_btn1).copy()
         fondo_limpio_btn2 = pantalla.subsurface(rect_btn2).copy()
+        fondo_limpio_btn_x = pantalla.subsurface(rect_btn_x).copy()
+
+        # Renderizado interactivo Botón X
+        if spr_x_normal:
+            spr_x_dib = spr_x_apretado if (boton_presionado == 3 and hover_x) else (spr_x_hover if (hover_x and spr_x_hover) else spr_x_normal)
+            pantalla.blit(spr_x_dib, rect_btn_x)
 
         # Renderizado interactivo Botón 1 («SIGUIENTE NIVEL →»)
         press1 = (boton_presionado == 1 and hover1)
@@ -860,6 +936,9 @@ def mostrar_pantalla_victoria(
         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
     except Exception:
         pass
+
+    if accion_seleccionada == "salir":
+        return "salir"
 
     # --- FASE 4: Desarmado del panel en bloques rectangulares que se dispersan (~0.4s) ---
     frames_desarme = 24
@@ -1288,12 +1367,13 @@ def dibujar_barrera_l_escenario(superficie, barrera_horiz, barrera_vert):
 
 def dibujar_soga_escenario(superficie, p1, p2, estado_soga=None, d_reposo=DISTANCIA_SOGA_REPOSO, d_max=DISTANCIA_SOGA_MAXIMA):
     """
-    Dibuja la soga que une a ambos personajes con estiramiento progresivo y aspecto visual natural:
-    - Cuando los personajes están cerca (<= d_reposo), la soga cuelga formando una curva catenaria/Bézier suave y floja.
-    - A medida que se alejan hacia d_max, la comba se reduce progresivamente en consonancia con la tensión física.
-    - Durante la secuencia de muerte, permite un margen exclusivo de +10px de estiramiento.
-    - Al superar ese límite, se muestra la soga rota en ambos extremos con hilachas y partículas de rotura.
-    - Anclada en el torso/cintura para no tapar los rostros ni interferir con los sprites.
+    Dibuja la soga que une a ambos personajes con desgaste acumulativo en la parte central:
+    - Los extremos conectados a los personajes mantienen SIEMPRE su grosor original (4px exterior, 2px interior).
+    - Los círculos de anclaje en la cintura conservan su tamaño original (radio 4 / 2).
+    - El desgaste acumulado se concentra en la zona central y se extiende progresivamente hacia los costados.
+    - Pequeñas irregularidades pixeladas en las fibras de la zona central según el nivel de daño.
+    - Cuando está muy dañada (>82%), el centro es un hilo de 1px con sutil temblor armónico.
+    - Si se rompe, muestra una animación limpia de rotura en el centro con los cabos colgando naturalmente.
     """
     if p1 is None or p2 is None:
         return
@@ -1308,8 +1388,11 @@ def dibujar_soga_escenario(superficie, p1, p2, estado_soga=None, d_reposo=DISTAN
 
     col_soga_ext = (175, 125, 65)
     col_soga_int = (215, 170, 105)
+    col_soga_mid = (185, 135, 75)
+    col_fibra_clara = (230, 185, 120)
+    col_fibra_oscura = (145, 95, 40)
 
-    # 1. Caso soga rota por muerte en el Mundo 2
+    # 1. Caso soga rota (animación de rotura en la parte central)
     if estado_soga and estado_soga.get("rota", False):
         if dist > 0.001:
             dir_x = dx / dist
@@ -1317,71 +1400,148 @@ def dibujar_soga_escenario(superficie, p1, p2, estado_soga=None, d_reposo=DISTAN
         else:
             dir_x, dir_y = 1.0, 0.0
 
-        len_cabo = 35.0
-        # Cabo 1 (desde p1)
-        m1 = (p_inicio[0] + dir_x * (len_cabo * 0.5), p_inicio[1] + dir_y * (len_cabo * 0.5) + 6)
-        e1 = (p_inicio[0] + dir_x * len_cabo, p_inicio[1] + dir_y * len_cabo + 16)
-        pygame.draw.lines(superficie, col_soga_ext, False, [p_inicio, m1, e1], 4)
-        pygame.draw.lines(superficie, col_soga_int, False, [p_inicio, m1, e1], 2)
-        # Hilachas deshilachadas en la punta
-        pygame.draw.line(superficie, col_soga_ext, e1, (e1[0] - 2, e1[1] + 5), 1)
-        pygame.draw.line(superficie, col_soga_ext, e1, (e1[0] + 3, e1[1] + 4), 1)
+        t_rot = estado_soga.get("tiempo_rotura", 0)
+        recoil = min(1.0, t_rot / 18.0)
+        y_caida = min(36.0, t_rot * 1.6)
+
+        len_cabo = max(26.0, 36.0 - recoil * 6.0)
+
+        # Cabo 1 (desde P1): anclaje intacto, se afina hacia la punta rota
+        m1 = (p_inicio[0] + dir_x * (len_cabo * 0.4), p_inicio[1] + (y_caida * 0.4) + 6.0)
+        e1 = (p_inicio[0] + dir_x * (len_cabo * 0.8), p_inicio[1] + y_caida + 14.0)
+        pygame.draw.lines(superficie, col_soga_ext, False, [p_inicio, m1], 4)
+        pygame.draw.lines(superficie, col_soga_int, False, [p_inicio, m1], 2)
+        pygame.draw.line(superficie, col_soga_mid, m1, e1, 2)
+        pygame.draw.circle(superficie, col_soga_ext, (int(e1[0]), int(e1[1])), 1)
         pygame.draw.circle(superficie, col_soga_ext, p_inicio, 4)
         pygame.draw.circle(superficie, col_soga_int, p_inicio, 2)
 
-        # Cabo 2 (desde p2)
-        m2 = (p_fin[0] - dir_x * (len_cabo * 0.5), p_fin[1] - dir_y * (len_cabo * 0.5) + 6)
-        e2 = (p_fin[0] - dir_x * len_cabo, p_fin[1] - dir_y * len_cabo + 16)
-        pygame.draw.lines(superficie, col_soga_ext, False, [p_fin, m2, e2], 4)
-        pygame.draw.lines(superficie, col_soga_int, False, [p_fin, m2, e2], 2)
-        # Hilachas deshilachadas en la punta
-        pygame.draw.line(superficie, col_soga_ext, e2, (e2[0] - 2, e2[1] + 5), 1)
-        pygame.draw.line(superficie, col_soga_ext, e2, (e2[0] + 3, e2[1] + 4), 1)
+        # Cabo 2 (desde P2): anclaje intacto, se afina hacia la punta rota
+        m2 = (p_fin[0] - dir_x * (len_cabo * 0.4), p_fin[1] + (y_caida * 0.4) + 6.0)
+        e2 = (p_fin[0] - dir_x * (len_cabo * 0.8), p_fin[1] + y_caida + 14.0)
+        pygame.draw.lines(superficie, col_soga_ext, False, [p_fin, m2], 4)
+        pygame.draw.lines(superficie, col_soga_int, False, [p_fin, m2], 2)
+        pygame.draw.line(superficie, col_soga_mid, m2, e2, 2)
+        pygame.draw.circle(superficie, col_soga_ext, (int(e2[0]), int(e2[1])), 1)
         pygame.draw.circle(superficie, col_soga_ext, p_fin, 4)
         pygame.draw.circle(superficie, col_soga_int, p_fin, 2)
-
-        # Partículas de rotura
-        for part in estado_soga.get("particulas_rotura", []):
-            pygame.draw.circle(superficie, col_soga_ext, (int(part["x"]), int(part["y"])), 3)
-            pygame.draw.circle(superficie, col_soga_int, (int(part["x"]), int(part["y"])), 2)
         return
 
-    # Si está en secuencia de muerte pero aún no rompió, el límite máximo se estira 10px adicionales
     en_muerte = estado_soga and estado_soga.get("en_muerte", False)
     d_max_efectivo = (d_max + 10.0) if en_muerte else d_max
 
     if dist < 16:
         pygame.draw.line(superficie, col_soga_ext, p_inicio, p_fin, 4)
         pygame.draw.line(superficie, col_soga_int, p_inicio, p_fin, 2)
+        pygame.draw.circle(superficie, col_soga_ext, p_inicio, 4)
+        pygame.draw.circle(superficie, col_soga_int, p_inicio, 2)
+        pygame.draw.circle(superficie, col_soga_ext, p_fin, 4)
+        pygame.draw.circle(superficie, col_soga_int, p_fin, 2)
         return
 
-    # Grado de tensión visual entre 0.0 (reposo) y 1.0 (máximo estiramiento)
+    # Tensión instantánea geométrica
     if dist <= d_reposo:
-        tension_visual = 0.0
+        tension_geom = 0.0
     else:
-        tension_visual = min(1.0, (dist - d_reposo) / max(1.0, d_max_efectivo - d_reposo))
+        tension_geom = min(1.0, (dist - d_reposo) / max(1.0, d_max_efectivo - d_reposo))
 
-    if tension_visual < 0.96 and dist < d_max_efectivo:
+    dano = estado_soga.get("dano_acumulado", 0.0) if estado_soga else 0.0
+    tension_act = estado_soga.get("tension", 0.0) if estado_soga else 0.0
+
+    # Determinar comba catenaria o recta tensa
+    comba = (tension_geom < 0.95 and dist < (d_max_efectivo - 2.0))
+    if comba:
         sag_max = min(52.0, max(10.0, (d_max_efectivo - dist) * 0.42))
-        sag = sag_max * (1.0 - (tension_visual ** 1.4))
+        sag = sag_max * (1.0 - (tension_geom ** 1.4))
         ctrl_x = (p_inicio[0] + p_fin[0]) / 2.0
         ctrl_y = (p_inicio[1] + p_fin[1]) / 2.0 + sag
+    else:
+        ctrl_x, ctrl_y = 0.0, 0.0
 
-        puntos = []
-        pasos = 14
-        for i in range(pasos + 1):
-            t = i / pasos
-            bx = (1 - t) ** 2 * p_inicio[0] + 2 * (1 - t) * t * ctrl_x + t ** 2 * p_fin[0]
-            by = (1 - t) ** 2 * p_inicio[1] + 2 * (1 - t) * t * ctrl_y + t ** 2 * p_fin[1]
-            puntos.append((bx, by))
+    # Vector normal perpendicular a la cuerda
+    if dist > 0.001:
+        nx = -dy / dist
+        ny = dx / dist
+    else:
+        nx, ny = 0.0, 1.0
 
+    # Número de pasos para renderizado suave de la cuerda
+    pasos = 28
+    puntos = []
+    for i in range(pasos + 1):
+        fr = i / pasos
+        if comba:
+            bx = (1 - fr) ** 2 * p_inicio[0] + 2 * (1 - fr) * fr * ctrl_x + fr ** 2 * p_fin[0]
+            by = (1 - fr) ** 2 * p_inicio[1] + 2 * (1 - fr) * fr * ctrl_y + fr ** 2 * p_fin[1]
+        else:
+            bx = p_inicio[0] + fr * dx
+            by = p_inicio[1] + fr * dy
+        puntos.append((bx, by))
+
+    ticks = pygame.time.get_ticks()
+
+    # Si no hay daño acumulado, renderizado uniforme clásico de grosor original
+    if dano <= 0.01:
         pygame.draw.lines(superficie, col_soga_ext, False, puntos, 4)
         pygame.draw.lines(superficie, col_soga_int, False, puntos, 2)
     else:
-        # Soga tensa recta
-        pygame.draw.line(superficie, (160, 110, 50), p_inicio, p_fin, 4)
-        pygame.draw.line(superficie, (225, 180, 110), p_inicio, p_fin, 2)
+        # El efecto aparece ÚNICAMENTE en la parte central:
+        # Los extremos mantienen grosor original (4px / 2px).
+        # El centro se hace progresivamente más fino y se extiende hacia los costados.
+        ancho_zona_desgaste = 0.08 + 0.16 * dano  # Entre 16% y 48% de la longitud total centrada en s=0.5
 
+        for i in range(pasos):
+            p_a = puntos[i]
+            p_b = puntos[i + 1]
+            s_mid = (i + 0.5) / pasos
+            dist_centro = abs(s_mid - 0.5)
+
+            if dist_centro >= ancho_zona_desgaste:
+                # Fuera de la zona central desgastada: grosor original completo (4px exterior, 2px interior)
+                pygame.draw.line(superficie, col_soga_ext, p_a, p_b, 4)
+                pygame.draw.line(superficie, col_soga_int, p_a, p_b, 2)
+            else:
+                # Dentro de la zona central desgastada:
+                # Intensidad local del desgaste (1.0 en el centro exacto s=0.5, 0.0 en el borde)
+                factor_centro = 1.0 - (dist_centro / ancho_zona_desgaste)
+                desgaste_local = dano * (factor_centro ** 1.3)
+
+                if desgaste_local < 0.22:
+                    # Inicio de afinamiento en el centro (3px exterior, 1px interior)
+                    pygame.draw.line(superficie, col_soga_ext, p_a, p_b, 3)
+                    pygame.draw.line(superficie, col_soga_int, p_a, p_b, 1)
+                elif desgaste_local < 0.55:
+                    # Zona central notablemente más fina (2px sólido con tono dorado medio)
+                    pygame.draw.line(superficie, col_soga_mid, p_a, p_b, 2)
+                    pygame.draw.line(superficie, col_fibra_clara, p_a, p_b, 1)
+                elif desgaste_local < 0.82:
+                    # Zona central fina (1px) con irregularidades pixeladas de fibras cediendo
+                    pygame.draw.line(superficie, col_soga_mid, p_a, p_b, 1)
+                    # Pequeña irregularidad pixelada alterna simulando hebras de fibra cediendo
+                    if i % 2 == 1:
+                        offset_x = nx * (1.0 if (i % 4 == 1) else -1.0)
+                        offset_y = ny * (1.0 if (i % 4 == 1) else -1.0)
+                        p_irr_a = (p_a[0] + offset_x, p_a[1] + offset_y)
+                        p_irr_b = (p_b[0] + offset_x, p_b[1] + offset_y)
+                        pygame.draw.line(superficie, col_fibra_oscura, p_irr_a, p_irr_b, 1)
+                else:
+                    # Daño crítico (>82%): la parte central parece a punto de cortarse (1px nítido + temblor sutil)
+                    vibr_px = 0.0
+                    if tension_act > 0.35:
+                        vibr_px = math.sin(ticks * 0.14 + i * 0.8) * 1.0
+
+                    p_v_a = (p_a[0] + nx * vibr_px, p_a[1] + ny * vibr_px)
+                    p_v_b = (p_b[0] + nx * vibr_px, p_b[1] + ny * vibr_px)
+                    pygame.draw.line(superficie, col_soga_mid, p_v_a, p_v_b, 1)
+
+                    # Micro-irregularidad pixelada de fibra estirada al límite
+                    if i % 2 == 0:
+                        irr_px = 1.0 if (i % 4 == 0) else -1.0
+                        pygame.draw.line(superficie, col_fibra_clara,
+                                         (p_v_a[0] + nx * irr_px, p_v_a[1] + ny * irr_px),
+                                         (p_v_b[0] + nx * irr_px, p_v_b[1] + ny * irr_px), 1)
+
+    # Anclajes en la cintura de los personajes: SIEMPRE conservan su tamaño y grosor original
     pygame.draw.circle(superficie, col_soga_ext, p_inicio, 4)
     pygame.draw.circle(superficie, col_soga_int, p_inicio, 2)
     pygame.draw.circle(superficie, col_soga_ext, p_fin, 4)
@@ -5943,6 +6103,7 @@ def iniciar_mundo(
         if debe_mostrar_muerte:
             resultado = pantalla_muerte(pantalla, reloj)
             if resultado == "salir": return "salir"
+            if resultado == "menu": return "menu"
             if resultado == "reiniciar":
                 _reiniciar_nivel_completo()
 

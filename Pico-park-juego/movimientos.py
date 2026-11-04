@@ -51,9 +51,12 @@ def crear_personaje(x, y, color_carpeta="Blanco", accesorio="Ninguno"):
 def reiniciar_juego(p1, p2, caja=None, llave=None, puerta=None, estado_soga=None):
     if estado_soga is not None:
         estado_soga["tension"] = 0.0
+        estado_soga["dano_acumulado"] = 0.0
+        estado_soga["nivel_estres"] = 0.0
         estado_soga["rota"] = False
         estado_soga["en_muerte"] = False
         estado_soga["particulas_rotura"] = []
+        estado_soga["tiempo_rotura"] = 0
 
     for p in (p1, p2):
         p["hitbox"].x = p["x_inicial"]
@@ -149,19 +152,68 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, 
     if caja is not None:
         empujar_caja(p1, caja, p2, pantalla_rect, plataformas)
 
-    # Colisión lateral entre personajes (solo si están al mismo nivel lateral, no si uno está encima del otro)
+    # Empuje y colisión lateral entre personajes (solo si están al mismo nivel lateral, no si uno está encima del otro)
     if hb2 is not None and not p2_encima and hb1.colliderect(hb2):
         if hb1.bottom > hb2.top + 10 and hb1.top < hb2.bottom - 10:
             if p1["vel_x"] > 0:
-                hb1.right = hb2.left
-                p1["vel_x"] = 0
-                p1["empujando"] = True
-                p1["direccion_empuje"] = 1
+                penetracion = hb1.right - hb2.left
+                p2_resiste = (p2.get("vel_x", 0) < 0 and p2.get("moviendo", False)) or (p2.get("empujando", False) and p2.get("direccion_empuje", 0) == -1)
+                if p2_resiste:
+                    hb1.right = hb2.left
+                    p1["vel_x"] = 0
+                    p1["empujando"] = True
+                    p1["direccion_empuje"] = 1
+                else:
+                    max_desp = penetracion
+                    if plataformas:
+                        for plat in plataformas:
+                            if hb2.bottom > plat.top + 2 and hb2.top < plat.bottom - 2 and plat.left >= hb2.left:
+                                max_desp = min(max_desp, max(0, plat.left - hb2.right))
+                    if pantalla_rect:
+                        max_desp = min(max_desp, max(0, pantalla_rect.right - hb2.right))
+
+                    if max_desp > 0:
+                        hb2.x += max_desp
+                        hb1.right = hb2.left
+                        p1["empujando"] = True
+                        p1["direccion_empuje"] = 1
+                        p2["moviendo"] = True
+                        p2["mirando_derecha"] = True
+                    else:
+                        hb1.right = hb2.left
+                        p1["vel_x"] = 0
+                        p1["empujando"] = True
+                        p1["direccion_empuje"] = 1
+
             elif p1["vel_x"] < 0:
-                hb1.left = hb2.right
-                p1["vel_x"] = 0
-                p1["empujando"] = True
-                p1["direccion_empuje"] = -1
+                penetracion = hb2.right - hb1.left
+                p2_resiste = (p2.get("vel_x", 0) > 0 and p2.get("moviendo", False)) or (p2.get("empujando", False) and p2.get("direccion_empuje", 0) == 1)
+                if p2_resiste:
+                    hb1.left = hb2.right
+                    p1["vel_x"] = 0
+                    p1["empujando"] = True
+                    p1["direccion_empuje"] = -1
+                else:
+                    max_desp = penetracion
+                    if plataformas:
+                        for plat in plataformas:
+                            if hb2.bottom > plat.top + 2 and hb2.top < plat.bottom - 2 and plat.right <= hb2.right:
+                                max_desp = min(max_desp, max(0, hb2.left - plat.right))
+                    if pantalla_rect:
+                        max_desp = min(max_desp, max(0, hb2.left - pantalla_rect.left))
+
+                    if max_desp > 0:
+                        hb2.x -= max_desp
+                        hb1.left = hb2.right
+                        p1["empujando"] = True
+                        p1["direccion_empuje"] = -1
+                        p2["moviendo"] = True
+                        p2["mirando_derecha"] = False
+                    else:
+                        hb1.left = hb2.right
+                        p1["vel_x"] = 0
+                        p1["empujando"] = True
+                        p1["direccion_empuje"] = -1
 
     # Si p2 estaba encima de p1, trasladar a p2 el desplazamiento horizontal real de p1
     if p2_encima and hb2 is not None:
@@ -373,19 +425,23 @@ def empujar_caja(p, caja, otro=None, pantalla_rect=None, plataformas=None):
 def crear_estado_soga():
     return {
         "tension": 0.0,
+        "dano_acumulado": 0.0,
+        "nivel_estres": 0.0,
         "rota": False,
         "en_muerte": False,
         "particulas_rotura": [],
+        "tiempo_rotura": 0,
     }
 
 
 def actualizar_estado_soga_muerte(p1, p2, estado_soga=None, d_max=DISTANCIA_SOGA_MAXIMA):
     """
     Gestiona el comportamiento de la soga cuando uno de los personajes muere en el Mundo 2:
-    - Permite un estiramiento adicional exclusivo de 10 px por encima de d_max (hasta d_max + 10).
-    - Al superar ese límite adicional, la soga se rompe de forma visible.
+    - Permite un estiramiento adicional exclusivo de 10 px por encima de d_max (hasta d_max + 10 = 170).
+    - Al superar ese límite adicional, la soga se rompe de forma visible y limpia en el centro.
     - Deja de ejercer fuerza física tras romperse.
     - El personaje muerto continúa cayendo libremente sin interferencias ni tirones.
+    - Cada personaje conserva su cabo limpio colgando sin partículas ni hilachas sueltas.
     """
     if estado_soga is None:
         return
@@ -406,46 +462,24 @@ def actualizar_estado_soga_muerte(p1, p2, estado_soga=None, d_max=DISTANCIA_SOGA
         if distancia >= limite_muerte:
             estado_soga["rota"] = True
             estado_soga["tension"] = 0.0
-
-            # Generar partículas de rotura en el punto de ruptura
-            mid = (c1 + c2) * 0.5
-            particulas = []
-            for i in range(8):
-                ang = i * (math.pi / 4.0) + random.uniform(-0.2, 0.2)
-                spd = random.uniform(1.5, 3.5)
-                particulas.append({
-                    "x": mid.x + random.uniform(-3, 3),
-                    "y": mid.y + random.uniform(-3, 3),
-                    "vx": math.cos(ang) * spd,
-                    "vy": math.sin(ang) * spd - 1.0,
-                    "vida": random.randint(20, 35),
-                })
-            estado_soga["particulas_rotura"] = particulas
+            estado_soga["tiempo_rotura"] = 0
+            estado_soga["particulas_rotura"] = []
     else:
         estado_soga["tension"] = 0.0
-
-    # Actualizar partículas existentes
-    particulas_activas = []
-    for part in estado_soga.get("particulas_rotura", []):
-        part["x"] += part["vx"]
-        part["y"] += part["vy"]
-        part["vy"] += 0.25
-        part["vida"] -= 1
-        if part["vida"] > 0:
-            particulas_activas.append(part)
-    estado_soga["particulas_rotura"] = particulas_activas
+        estado_soga["tiempo_rotura"] = estado_soga.get("tiempo_rotura", 0) + 1
 
 
 def actualizar_fisica_soga(p1, p2, estado_soga=None, d_reposo=DISTANCIA_SOGA_REPOSO, d_max=DISTANCIA_SOGA_MAXIMA):
     """
-    Aplica una física de soga suave, continua y natural con límite estricto de estiramiento:
+    Aplica una física de soga suave, continua y natural con desgaste acumulativo y límite estricto de estiramiento:
     - Cuando los personajes están dentro de la distancia de reposo (distancia <= d_reposo = 140px),
-      la soga está floja y no genera tensión ni fuerzas (libertad total de movimiento).
-    - Al superar d_reposo, la tensión elástica aparece progresivamente hasta d_max (~20 px de estiramiento = 160px).
-    - Al alcanzar d_max, transmite tensión y limita la separación afectando la velocidad de los personajes,
-      impidiendo que la cuerda se estire más de lo permitido.
-    - Conserva de manera fidedigna la inercia tangencial pendular y la trayectoria continua del péndulo.
-    - Distingue adecuadamente entre personajes en el suelo y en el aire sin aceleraciones exageradas ni tirones bruscos.
+      la soga está floja (zona segura) y recupera progresivamente el desgaste acumulado.
+    - Al superar d_reposo, la tensión elástica aparece progresivamente hasta d_max (160px).
+    - Al alcanzar d_max con tensión/tirón activo, acumula daño en la zona central.
+    - Si los personajes se quedan quietos, el daño acumulado PERMANECE en el nivel alcanzado (no se borra).
+    - La recuperación solamente ocurre cuando los personajes se acercan lo suficiente entre sí (distancia <= 140px).
+    - Si el daño acumulado llega al 100% (1.0), la cuerda se rompe limpiamente en el centro.
+    - Remolque a velocidad natural completa sin frenos artificiales ni pérdidas de control.
     """
     if p1.get("muerto", False) or p2.get("muerto", False) or (estado_soga is not None and estado_soga.get("rota", False)):
         actualizar_estado_soga_muerte(p1, p2, estado_soga, d_max)
@@ -465,36 +499,25 @@ def actualizar_fisica_soga(p1, p2, estado_soga=None, d_reposo=DISTANCIA_SOGA_REP
 
     direccion = v / distancia
 
-    # 1. Cálculo del estiramiento elástico y tensión progresiva
+    # 1. Cálculo de tensión elástica progresiva instantánea [0.0, 1.0]
     if distancia <= d_reposo:
-        if estado_soga is not None:
-            estado_soga["tension"] = 0.0
-        return
-
-    estiramiento = distancia - d_reposo
-    rango = max(1.0, d_max - d_reposo)
-    tasa = min(1.0, estiramiento / rango)
-    tension_objetivo = tasa * tasa  # Crecimiento suave cuadrático
-
-    if distancia >= d_max:
-        tension_objetivo = 1.0
+        tension_objetivo = 0.0
+    else:
+        estiramiento = distancia - d_reposo
+        rango = max(1.0, d_max - d_reposo)
+        tasa = min(1.0, estiramiento / rango)
+        tension_objetivo = tasa * tasa  # Crecimiento suave cuadrático
+        if distancia >= d_max:
+            tension_objetivo = 1.0
 
     if estado_soga is not None:
         tension_actual = estado_soga.get("tension", 0.0)
-        if tension_objetivo > tension_actual:
-            factor_retardo = 0.35 if distancia < d_max else 0.85
-            tension_actual += (tension_objetivo - tension_actual) * factor_retardo
-        else:
-            tension_actual += (tension_objetivo - tension_actual) * 0.50
-            if tension_actual < 0.001:
-                tension_actual = 0.0
+        factor = 0.40 if tension_objetivo > tension_actual else 0.50
+        tension_actual += (tension_objetivo - tension_actual) * factor
         estado_soga["tension"] = max(0.0, min(1.0, tension_actual))
         t = estado_soga["tension"]
     else:
         t = tension_objetivo
-
-    if t <= 0.01:
-        return
 
     p1_suelo = p1.get("en_suelo", False)
     p2_suelo = p2.get("en_suelo", False)
@@ -504,155 +527,235 @@ def actualizar_fisica_soga(p1, p2, estado_soga=None, d_reposo=DISTANCIA_SOGA_REP
     v_rel = v2 - v1
     v_separacion = v_rel.dot(direccion)
 
-    # 2. Situación A: Ambos personajes en el suelo
-    # Límite estricto a d_max (~20px adicionales = 160px). Ninguno puede alejarse más allá del límite.
-    if p1_suelo and p2_suelo:
-        if v_separacion > 0:
-            sep_max_permitida = max(0.0, d_max - distancia)
-            exceso_vel = max(0.0, v_separacion - sep_max_permitida)
-            if exceso_vel > 0:
-                p1_away = max(0.0, -v1.dot(direccion))
-                p2_away = max(0.0, v2.dot(direccion))
-                tot = p1_away + p2_away
-                if tot > 0.001:
-                    p1["vel_x"] += direccion.x * (exceso_vel * (p1_away / tot))
-                    p2["vel_x"] -= direccion.x * (exceso_vel * (p2_away / tot))
-            else:
-                factor_freno = t * 0.60
-                if v1.dot(direccion) < 0:
-                    p1["vel_x"] += direccion.x * (v_separacion * factor_freno * 0.5)
-                if v2.dot(direccion) > 0:
-                    p2["vel_x"] -= direccion.x * (v_separacion * factor_freno * 0.5)
+    # 2. Mecánica de Daño Acumulativo (Desgaste en el centro)
+    if estado_soga is not None:
+        ux = direccion.x
+        v1_away_h = -p1.get("vel_x", 0.0) * ux
+        v2_away_h = p2.get("vel_x", 0.0) * ux
+        dano_act = estado_soga.get("dano_acumulado", 0.0)
+
+        # A. Acumulación de daño: ocurre cuando la cuerda supera su límite de tensión y hay esfuerzo de separación
+        if distancia >= (d_max - 2.5):
+            tasa_dano = 0.0
+            if v1_away_h > 0.1 and v2_away_h > 0.1:
+                # Tirón activo en direcciones opuestas (tug-of-war): máxima tensión
+                tasa_dano = 0.0055  # ~180 frames (3 segundos continuos) de 0% a 100%
+            elif v1_away_h > 0.1:
+                p2_bloq = p2.get("empujando", False) or abs(p2.get("vel_x", 0.0)) < 0.1
+                if p2_bloq:
+                    tasa_dano = 0.0045
+            elif v2_away_h > 0.1:
+                p1_bloq = p1.get("empujando", False) or abs(p1.get("vel_x", 0.0)) < 0.1
+                if p1_bloq:
+                    tasa_dano = 0.0045
+            elif not p1_suelo and not p2_suelo and v_separacion > 0.05:
+                tasa_dano = 0.0045
+
+            if tasa_dano > 0.0:
+                dano_act = min(1.0, dano_act + tasa_dano)
+                estado_soga["dano_acumulado"] = dano_act
+
+        # B. Recuperación de daño: SOLAMENTE cuando los personajes se acercan a la zona segura (distancia <= d_reposo)
+        elif distancia <= d_reposo:
+            if dano_act > 0.0:
+                tasa_recuperacion = 0.006  # Recuperación progresiva suave (~2.7s para volver a 0%)
+                dano_act = max(0.0, dano_act - tasa_recuperacion)
+                estado_soga["dano_acumulado"] = dano_act
+
+        # C. Si los personajes se quedan quietos o están a distancia intermedia (140 < dist < 157):
+        # El daño acumulado PERMANECE en el nivel exacto que alcanzó sin recuperarse automáticamente.
+
+        estado_soga["nivel_estres"] = estado_soga["dano_acumulado"]
+
+        # D. Rotura por desgaste máximo (100% de daño acumulado)
+        if estado_soga["dano_acumulado"] >= 1.0:
+            estado_soga["rota"] = True
+            estado_soga["tension"] = 0.0
+            estado_soga["tiempo_rotura"] = 0
+            estado_soga["particulas_rotura"] = []
+            matar_personaje(p1)
+            matar_personaje(p2)
+            return
+
+    # Si la tensión física es despreciable y no hay restricción por distancia máxima
+    if t <= 0.005 and distancia < d_max:
         return
 
-    # 3. Situación B: P1 en el suelo, P2 en el aire
-    # P1 actúa como ancla sobre la plataforma. P2 cuelga y se balancea como un péndulo continuo.
-    if p1_suelo and not p2_suelo:
-        fuerza_tiron = t * 1.3
+    # 3. Situación A: Ambos personajes en el suelo
+    if p1_suelo and p2_suelo:
+        ux = direccion.x
+        v1_x = p1.get("vel_x", 0.0)
+        v2_x = p2.get("vel_x", 0.0)
 
+        v1_away = -v1_x * ux
+        v2_away = v2_x * ux
+
+        p2_bloqueado_hacia_p1 = (
+            p2.get("empujando", False) and (
+                (-ux < -0.1 and p2.get("direccion_empuje", 0) == -1) or
+                (-ux > 0.1 and p2.get("direccion_empuje", 0) == 1)
+            )
+        )
+        p1_bloqueado_hacia_p2 = (
+            p1.get("empujando", False) and (
+                (ux < -0.1 and p1.get("direccion_empuje", 0) == -1) or
+                (ux > 0.1 and p1.get("direccion_empuje", 0) == 1)
+            )
+        )
+
+        if v1_away > 0.1 and v2_away > 0.1:
+            # Tirón en direcciones opuestas (Tug of war)
+            if distancia >= d_max:
+                p1["vel_x"] = 0.0
+                p2["vel_x"] = 0.0
+            else:
+                p1["vel_x"] *= max(0.0, 1.0 - t * 0.70)
+                p2["vel_x"] *= max(0.0, 1.0 - t * 0.70)
+        elif v1_away > 0.1 and v2_away <= 0.1:
+            # P1 tira de P2
+            if p2_bloqueado_hacia_p1:
+                if distancia >= d_max:
+                    p1["vel_x"] = 0.0
+                else:
+                    p1["vel_x"] *= max(0.0, 1.0 - t * 0.70)
+            else:
+                if distancia >= d_max:
+                    # Remolque continuo a velocidad idéntica y completa: v_sep = 0, distancia fija en d_max
+                    # P1 conserva el control total de su velocidad de movimiento y remolca a P2
+                    vel_remolque = v1_away
+                    p1["vel_x"] = -ux * vel_remolque
+                    p2["vel_x"] = -ux * vel_remolque
+                    p2["moviendo"] = True
+                    p2["mirando_derecha"] = (p2["vel_x"] >= 0)
+                else:
+                    fuerza = t * v1_away * 0.85
+                    p2["vel_x"] += -ux * fuerza
+                    p2["moviendo"] = True
+                    p2["mirando_derecha"] = (p2["vel_x"] >= 0)
+        elif v2_away > 0.1 and v1_away <= 0.1:
+            # P2 tira de P1
+            if p1_bloqueado_hacia_p2:
+                if distancia >= d_max:
+                    p2["vel_x"] = 0.0
+                else:
+                    p2["vel_x"] *= max(0.0, 1.0 - t * 0.70)
+            else:
+                if distancia >= d_max:
+                    vel_remolque = v2_away
+                    p2["vel_x"] = ux * vel_remolque
+                    p1["vel_x"] = ux * vel_remolque
+                    p1["moviendo"] = True
+                    p1["mirando_derecha"] = (p1["vel_x"] >= 0)
+                else:
+                    fuerza = t * v2_away * 0.85
+                    p1["vel_x"] += ux * fuerza
+                    p1["moviendo"] = True
+                    p1["mirando_derecha"] = (p1["vel_x"] >= 0)
+
+        # Garantizar que ninguna velocidad residual aumente la distancia por encima de d_max
+        v1_post = p1.get("vel_x", 0.0)
+        v2_post = p2.get("vel_x", 0.0)
+        v_sep_post = (v2_post - v1_post) * ux
+        if distancia >= d_max and v_sep_post > 0:
+            p1["vel_x"] += ux * (v_sep_post * 0.5)
+            p2["vel_x"] -= ux * (v_sep_post * 0.5)
+        return
+
+    # 4. Situación B: P1 en suelo, P2 en el aire
+    if p1_suelo and not p2_suelo:
         if direccion.y > 0.05:
-            # P2 cuelga por debajo de P1: física de péndulo real
-            # 1. Soporte radial contra la gravedad
+            # P2 cuelga por debajo de P1: Péndulo continuo
             p2["vel_y"] -= t * GRAVEDAD * (direccion.y * direccion.y)
             p2["vel_x"] -= t * GRAVEDAD * (direccion.y * direccion.x)
 
-            # 2. Aceleración centrípeta a lo largo del arco de oscilación
             v_tan = v_rel - v_separacion * direccion
             v_tan_mag = v_tan.length()
             a_c = min(3.5, (v_tan_mag * v_tan_mag) / max(1.0, distancia))
             p2["vel_x"] -= t * a_c * direccion.x
             p2["vel_y"] -= t * a_c * direccion.y
 
-            # 3. Control de velocidad de separación
             if v_separacion > 0:
-                sep_max_permitida = max(0.0, d_max - distancia)
-                exceso_vel = max(0.0, v_separacion - sep_max_permitida)
-                if exceso_vel > 0:
-                    # Al límite máximo, P1 no puede seguir alejándose libremente
-                    v1_away = max(0.0, -v1.dot(direccion))
-                    if v1_away > 0:
-                        p1["vel_x"] += direccion.x * min(v1_away, exceso_vel)
-                    p2["vel_x"] -= direccion.x * (exceso_vel * 0.5)
-                    p2["vel_y"] -= direccion.y * (exceso_vel * 0.5)
+                sep_max = max(0.0, d_max - distancia)
+                exc = max(0.0, v_separacion - sep_max)
+                if exc > 0:
+                    p2["vel_x"] -= direccion.x * exc
+                    p2["vel_y"] -= direccion.y * exc
                 else:
                     damp = v_separacion * (0.45 + 0.35 * t)
                     p2["vel_x"] -= direccion.x * damp
                     p2["vel_y"] -= direccion.y * damp
 
-            # 4. Tracción transmitida al personaje ancla en el suelo (P1)
-            tension_total = t * (GRAVEDAD * direccion.y + a_c + max(0.0, v_separacion) * 0.5)
-            pull_x = tension_total * direccion.x
-            if distancia >= d_max:
-                v1_away = max(0.0, -v1.dot(direccion))
-                if v1_away > 0:
-                    p1["vel_x"] += direccion.x * v1_away
-                else:
-                    p1["vel_x"] += pull_x * 0.25
+            if not p1.get("moviendo", False):
+                p1["vel_x"] = 0.0
             else:
-                if p1.get("moviendo", False):
-                    p1["vel_x"] += pull_x * 0.15
-                else:
-                    p1["vel_x"] += pull_x * 0.40
+                if distancia >= d_max and v1.dot(direccion) < 0:
+                    p1["vel_x"] *= 0.88
         else:
-            # P2 está por encima o al mismo nivel de P1 (salto estándar)
+            # P2 está por encima o a nivel (salto / gap)
+            fuerza_tiron = t * 1.3
             if direccion.y < -0.15:
                 p2["vel_y"] -= direccion.y * (t * 0.6)
             p2["vel_x"] -= direccion.x * (fuerza_tiron * 0.6)
-            p1["vel_x"] += direccion.x * (fuerza_tiron * 0.5)
             if v_separacion > 0:
-                sep_max_permitida = max(0.0, d_max - distancia)
-                exceso_vel = max(0.0, v_separacion - sep_max_permitida)
-                if exceso_vel > 0:
-                    p1["vel_x"] += direccion.x * (exceso_vel * 0.5)
-                    p2["vel_x"] -= direccion.x * (exceso_vel * 0.5)
+                sep_max = max(0.0, d_max - distancia)
+                exc = max(0.0, v_separacion - sep_max)
+                if exc > 0:
+                    p2["vel_x"] -= direccion.x * exc
+                    p2["vel_y"] -= direccion.y * (exc * 0.5)
                 else:
-                    damp = v_separacion * (0.35 + 0.45 * t)
-                    p2["vel_x"] -= direccion.x * (damp * 0.6)
-                    p1["vel_x"] += direccion.x * (damp * 0.4)
+                    damp = v_separacion * 0.5
+                    p2["vel_x"] -= direccion.x * damp
         return
 
-    # 4. Situación C: P2 en el suelo, P1 en el aire (completamente simétrico a Situación B)
+    # 5. Situación C: P2 en suelo, P1 en el aire (completamente simétrico a Situación B)
     if p2_suelo and not p1_suelo:
-        fuerza_tiron = t * 1.3
-        if direccion.y < -0.05:
-            dir_hacia_p1 = -direccion
-            v_rel_p1 = v1 - v2
-            v_sep_p1 = v_rel_p1.dot(dir_hacia_p1)
+        dir_p1 = -direccion
+        v_rel_p1 = v1 - v2
+        v_sep_p1 = v_rel_p1.dot(dir_p1)
 
-            p1["vel_y"] -= t * GRAVEDAD * (dir_hacia_p1.y * dir_hacia_p1.y)
-            p1["vel_x"] -= t * GRAVEDAD * (dir_hacia_p1.y * dir_hacia_p1.x)
+        if dir_p1.y > 0.05:
+            p1["vel_y"] -= t * GRAVEDAD * (dir_p1.y * dir_p1.y)
+            p1["vel_x"] -= t * GRAVEDAD * (dir_p1.y * dir_p1.x)
 
-            v_tan = v_rel_p1 - v_sep_p1 * dir_hacia_p1
+            v_tan = v_rel_p1 - v_sep_p1 * dir_p1
             v_tan_mag = v_tan.length()
             a_c = min(3.5, (v_tan_mag * v_tan_mag) / max(1.0, distancia))
-            p1["vel_x"] -= t * a_c * dir_hacia_p1.x
-            p1["vel_y"] -= t * a_c * dir_hacia_p1.y
+            p1["vel_x"] -= t * a_c * dir_p1.x
+            p1["vel_y"] -= t * a_c * dir_p1.y
 
             if v_sep_p1 > 0:
-                sep_max_permitida = max(0.0, d_max - distancia)
-                exceso_vel = max(0.0, v_sep_p1 - sep_max_permitida)
-                if exceso_vel > 0:
-                    v2_away = max(0.0, -v2.dot(dir_hacia_p1))
-                    if v2_away > 0:
-                        p2["vel_x"] += dir_hacia_p1.x * min(v2_away, exceso_vel)
-                    p1["vel_x"] -= dir_hacia_p1.x * (exceso_vel * 0.5)
-                    p1["vel_y"] -= dir_hacia_p1.y * (exceso_vel * 0.5)
+                sep_max = max(0.0, d_max - distancia)
+                exc = max(0.0, v_sep_p1 - sep_max)
+                if exc > 0:
+                    p1["vel_x"] -= dir_p1.x * exc
+                    p1["vel_y"] -= dir_p1.y * exc
                 else:
                     damp = v_sep_p1 * (0.45 + 0.35 * t)
-                    p1["vel_x"] -= dir_hacia_p1.x * damp
-                    p1["vel_y"] -= dir_hacia_p1.y * damp
+                    p1["vel_x"] -= dir_p1.x * damp
+                    p1["vel_y"] -= dir_p1.y * damp
 
-            tension_total = t * (GRAVEDAD * dir_hacia_p1.y + a_c + max(0.0, v_sep_p1) * 0.5)
-            pull_x = tension_total * dir_hacia_p1.x
-            if distancia >= d_max:
-                v2_away = max(0.0, -v2.dot(dir_hacia_p1))
-                if v2_away > 0:
-                    p2["vel_x"] += dir_hacia_p1.x * v2_away
-                else:
-                    p2["vel_x"] += pull_x * 0.25
+            if not p2.get("moviendo", False):
+                p2["vel_x"] = 0.0
             else:
-                if p2.get("moviendo", False):
-                    p2["vel_x"] += pull_x * 0.15
-                else:
-                    p2["vel_x"] += pull_x * 0.40
+                if distancia >= d_max and v2.dot(dir_p1) < 0:
+                    p2["vel_x"] *= 0.88
         else:
-            if direccion.y > 0.15:
-                p1["vel_y"] += direccion.y * (t * 0.6)
-            p1["vel_x"] += direccion.x * (fuerza_tiron * 0.6)
-            p2["vel_x"] -= direccion.x * (fuerza_tiron * 0.5)
-            if v_separacion > 0:
-                sep_max_permitida = max(0.0, d_max - distancia)
-                exceso_vel = max(0.0, v_separacion - sep_max_permitida)
-                if exceso_vel > 0:
-                    p1["vel_x"] += direccion.x * (exceso_vel * 0.5)
-                    p2["vel_x"] -= direccion.x * (exceso_vel * 0.5)
+            fuerza_tiron = t * 1.3
+            if dir_p1.y < -0.15:
+                p1["vel_y"] -= dir_p1.y * (t * 0.6)
+            p1["vel_x"] -= dir_p1.x * (fuerza_tiron * 0.6)
+            if v_sep_p1 > 0:
+                sep_max = max(0.0, d_max - distancia)
+                exc = max(0.0, v_sep_p1 - sep_max)
+                if exc > 0:
+                    p1["vel_x"] -= dir_p1.x * exc
+                    p1["vel_y"] -= dir_p1.y * (exc * 0.5)
                 else:
-                    damp = v_separacion * (0.35 + 0.45 * t)
-                    p1["vel_x"] += direccion.x * (damp * 0.6)
-                    p2["vel_x"] -= direccion.x * (damp * 0.4)
+                    damp = v_sep_p1 * 0.5
+                    p1["vel_x"] -= dir_p1.x * damp
         return
 
-    # 5. Situación D: Ambos personajes en el aire
+    # 6. Situación D: Ambos personajes en el aire
     fuerza_tiron = t * 1.0
     p1["vel_x"] += direccion.x * (fuerza_tiron * 0.5)
     p1["vel_y"] += direccion.y * (fuerza_tiron * 0.5)
@@ -660,27 +763,29 @@ def actualizar_fisica_soga(p1, p2, estado_soga=None, d_reposo=DISTANCIA_SOGA_REP
     p2["vel_y"] -= direccion.y * (fuerza_tiron * 0.5)
 
     if v_separacion > 0:
-        sep_max_permitida = max(0.0, d_max - distancia)
-        exceso_vel = max(0.0, v_separacion - sep_max_permitida)
-        if exceso_vel > 0:
-            p1["vel_x"] += direccion.x * (exceso_vel * 0.5)
-            p1["vel_y"] += direccion.y * (exceso_vel * 0.5)
-            p2["vel_x"] -= direccion.x * (exceso_vel * 0.5)
-            p2["vel_y"] -= direccion.y * (exceso_vel * 0.5)
-        else:
-            damp = v_separacion * (0.40 + 0.35 * t)
-            p1["vel_x"] += direccion.x * (damp * 0.5)
-            p1["vel_y"] += direccion.y * (damp * 0.5)
-            p2["vel_x"] -= direccion.x * (damp * 0.5)
-            p2["vel_y"] -= direccion.y * (damp * 0.5)
+        sep_max = max(0.0, d_max - distancia)
+        exc = max(0.0, v_separacion - sep_max)
+        if exc > 0:
+            p1["vel_x"] += direccion.x * (exc * 0.5)
+            p1["vel_y"] += direccion.y * (exc * 0.5)
+            p2["vel_x"] -= direccion.x * (exc * 0.5)
+            p2["vel_y"] -= direccion.y * (exc * 0.5)
+
+        # Elevación asistida: Si uno salta hacia arriba y el otro cuelga, lo eleva suavemente
+        if p1["vel_y"] < -2.0 and direccion.y > 0.15:
+            p2["vel_y"] = min(p2["vel_y"], p1["vel_y"] * 0.65)
+        elif p2["vel_y"] < -2.0 and direccion.y < -0.15:
+            p1["vel_y"] = min(p1["vel_y"], p2["vel_y"] * 0.65)
 
 
 def aplicar_restriccion_soga(p1, p2, distancia_maxima=DISTANCIA_SOGA_MAXIMA, plataformas=None, suelo=None, estado_soga=None):
     """
     Garantiza el límite absoluto de distancia sin teletransportes ni tirones bruscos:
     - Aplica una estabilización suave únicamente si la distancia supera el límite máximo.
+    - Con histéresis sub-píxel (<0.5px) para evitar jitter o vibración numérica.
     - Respeta colisiones sólidas con plataformas y suelo impidiendo atravesar techos o suelos.
-    - Distribuye la corrección equilibradamente para no desplazar instantáneamente a personajes colgados.
+    - Cuando un personaje está en el suelo y el otro cuelga, el del suelo actúa como ancla firme (w=0, w=1).
+    - Anula cualquier velocidad residual que causó el exceso sin inyectar rebotes ni fuerzas opuestas.
     - Mantiene la trayectoria continua y natural del balanceo pendular.
     """
     if p1.get("muerto", False) or p2.get("muerto", False) or (estado_soga is not None and estado_soga.get("rota", False)):
@@ -694,32 +799,32 @@ def aplicar_restriccion_soga(p1, p2, distancia_maxima=DISTANCIA_SOGA_MAXIMA, pla
     if distancia <= distancia_maxima or distancia < 0.001:
         return
 
-    direccion = v / distancia
     exceso = distancia - distancia_maxima
+    # Histéresis contra oscilaciones numéricas de sub-píxel
+    if exceso < 0.5:
+        return
+
+    direccion = v / distancia
 
     p1_suelo = p1.get("en_suelo", False)
     p2_suelo = p2.get("en_suelo", False)
 
     # Distribución equilibrada de la corrección posicional
     if p1_suelo and not p2_suelo:
-        w1, w2 = 0.40, 0.60
+        w1, w2 = 0.0, 1.0
     elif p2_suelo and not p1_suelo:
-        w1, w2 = 0.60, 0.40
+        w1, w2 = 1.0, 0.0
     elif p1_suelo and p2_suelo:
-        w1, w2 = 0.50, 0.50
+        p1_emp = p1.get("empujando", False)
+        p2_emp = p2.get("empujando", False)
+        if p1_emp and not p2_emp:
+            w1, w2 = 0.0, 1.0
+        elif p2_emp and not p1_emp:
+            w1, w2 = 1.0, 0.0
+        else:
+            w1, w2 = 0.50, 0.50
     else:
         w1, w2 = 0.50, 0.50
-
-    # Cancelar residualmente velocidad de separación a lo largo de la cuerda
-    v1 = pygame.Vector2(p1.get("vel_x", 0.0), p1.get("vel_y", 0.0))
-    v2 = pygame.Vector2(p2.get("vel_x", 0.0), p2.get("vel_y", 0.0))
-    v_separacion = (v2 - v1).dot(direccion)
-
-    if v_separacion > 0:
-        p1["vel_x"] += direccion.x * (v_separacion * w1)
-        p1["vel_y"] += direccion.y * (v_separacion * w1)
-        p2["vel_x"] -= direccion.x * (v_separacion * w2)
-        p2["vel_y"] -= direccion.y * (v_separacion * w2)
 
     desp1 = direccion * (exceso * w1)
     desp2 = -direccion * (exceso * w2)
@@ -1005,4 +1110,4 @@ def puede_saltar(p):
     Verifica si el personaje tiene permitido saltar.
     - Regla: debe estar en el suelo firme, no sumergido en agua y no estar muerto.
     """
-    return p["en_suelo"] and not p["en_agua"] and not p["muerto"]
+    return p["en_suelo"] and not p["en_agua"] and not p["muerto"]
