@@ -10,7 +10,6 @@ import pygame
 
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 RUTA_FUENTE_PIXEL = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Fuentes", "04B_30__.TTF")
-RUTA_FUENTE_ZIP = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Fuentes", "04b_30.zip")
 CARPETAS_FUENTES = [
     os.path.join(DIRECTORIO_ACTUAL, "..", "assets", "fuentes"),
     os.path.join(DIRECTORIO_ACTUAL, "assets", "fuentes"),
@@ -21,48 +20,54 @@ CARPETAS_FUENTES = [
 # ==============================================================================
 # 1. VARIABLES CENTRALIZADAS PARA LAS TIPOGRAFÍAS
 # ==============================================================================
-# Para cambiar la tipografía de una categoría en todo el juego, modifica estas variables:
-# - Puedes asignar el nombre de archivo en Sprites/Fuentes o assets/fuentes: ej. "04B_30__.TTF"
-# - Puedes asignar el nombre de una fuente del sistema: ej. "Arial", "Segoe UI", "Verdana"
-# - Puedes asignar None para usar la tipografía predeterminada del sistema con soporte Unicode
+# Asignación de tipografías según su función y jerarquía visual:
+# - Matrix Mono: Logo principal y títulos de identidad
+# - Super Mario Bros. 2: Títulos principales de pantallas, mundos y niveles
+# - Dot Dot Dot: Subtítulos y encabezados secundarios
+# - Nanoplex: Información pequeña, fechas, estadísticas y descripciones
+# - Belanidi Serif: Textos decorativos y registros de aventuras
+# - Comicoro: Diálogos y mensajes de personajes
 # ==============================================================================
-FUENTE_TITULO = "04B_30__.TTF"      # Títulos principales de las pantallas
-FUENTE_SUBTITULO = None            # Subtítulos y encabezados de secciones
-FUENTE_TEXTO = None                # Textos normales, descripciones y mensajes
-FUENTE_BOTONES = "04B_30__.TTF"    # Textos de los botones y badges interactivos
-FUENTE_BOTON = FUENTE_BOTONES      # Alias de compatibilidad
-FUENTE_PEQUENA = None              # Indicaciones y textos secundarios
-FUENTE_CONTADOR = None             # Números, porcentajes, temporizadores y contadores
-FUENTE_DIALOGOS = None             # Mensajes, confirmaciones y ventanas emergentes
+FUENTE_LOGO = "Matrix_Mono.ttf"                  # Logo principal y títulos de identidad
+FUENTE_TITULO = "Super Mario Bros. 2.ttf"        # Títulos principales de pantallas, mundos y niveles
+FUENTE_SUBTITULO = "DotDotDot-Regular.otf"       # Subtítulos y encabezados secundarios
+FUENTE_TEXTO = "DotDotDot-Regular.otf"           # Textos normales, descripciones y mensajes
+FUENTE_TEXTO_PEQUENO = "Nanoplex.ttf"            # Información pequeña, fechas, estadísticas y descripciones
+FUENTE_PEQUENA = FUENTE_TEXTO_PEQUENO            # Alias de compatibilidad
+FUENTE_BOTONES = "Super Mario Bros. 2.ttf"       # Textos de los botones y badges interactivos
+FUENTE_BOTON = FUENTE_BOTONES                    # Alias de compatibilidad
+FUENTE_CONTADOR = "Nanoplex.ttf"                 # Números, porcentajes, temporizadores y contadores
+FUENTE_DIALOGOS = "Comicoro.ttf"                 # Diálogos y mensajes de personajes
+FUENTE_DECORATIVA = "BelanidiSerif-Regular.otf"  # Textos decorativos y registros de aventuras
 
 # ==============================================================================
 # 2. VARIABLES CENTRALIZADAS PARA LOS TAMAÑOS
 # ==============================================================================
-# Modifica los tamaños globales desde estas variables para ajustar la escala visual:
-# ==============================================================================
-TAMANO_TITULO = 30                 # Títulos principales de pantallas
-TAMANO_TITULO_GRANDE = 40          # Títulos destacados (victoria, muerte)
+TAMANO_TITULO = 28                 # Títulos principales de pantallas (Super Mario Bros. 2)
+TAMANO_TITULO_GRANDE = 34          # Títulos destacados (victoria, muerte)
 TAMANO_TITULO_MODAL = 18           # Títulos de ventanas modales y confirmaciones
 
-TAMANO_SUBTITULO = 24              # Subtítulos y encabezados de secciones
-TAMANO_SUBTITULO_GRANDE = 28       # Subtítulos destacados
+TAMANO_SUBTITULO = 22              # Subtítulos y encabezados de secciones (Dot Dot Dot)
+TAMANO_SUBTITULO_GRANDE = 26       # Subtítulos destacados
 
-TAMANO_TEXTO = 24                  # Texto estándar de lectura e instrucciones
-TAMANO_TEXTO_GRANDE = 26           # Texto en cuadros de confirmación y advertencias
-TAMANO_INPUT = 30                  # Campos de entrada de texto (nombre, clave)
+TAMANO_TEXTO = 20                  # Texto estándar de lectura e instrucciones (Dot Dot Dot)
+TAMANO_TEXTO_GRANDE = 22           # Texto en cuadros de confirmación y advertencias
+TAMANO_INPUT = 24                  # Campos de entrada de texto (nombre, clave)
 
-TAMANO_BOTONES = 15                # Botones estándar del menú y tarjetas
+TAMANO_BOTONES = 15                # Botones estándar del menú y tarjetas (Super Mario Bros. 2)
 TAMANO_BOTON = TAMANO_BOTONES      # Alias de compatibilidad
-TAMANO_BOTON_GRANDE = 20           # Botones destacados y primarios
+TAMANO_BOTON_GRANDE = 18           # Botones destacados y primarios
 TAMANO_BOTON_MODAL = 12            # Botones de modales y acciones secundarias
 
-TAMANO_PEQUENA = 20                # Indicaciones pequeñas y detalles de partida
+TAMANO_PEQUENA = 14                # Indicaciones pequeñas y detalles de partida (Nanoplex)
+TAMANO_TEXTO_PEQUENO = TAMANO_PEQUENA
 TAMANO_ITEM_TITULO = 14            # Títulos de ítems en listas de partidas y cards
-TAMANO_BADGE = 15                  # Badges de estado, checkmarks y etiquetas
+TAMANO_BADGE = 13                  # Badges de estado, checkmarks y etiquetas
 TAMANO_CARD = 13                   # Etiquetas en cards de niveles
 
-TAMANO_CONTADOR = 16               # Números, porcentajes, temporizadores y contadores
-TAMANO_DIALOGOS = 22               # Ventanas emergentes, avisos y confirmaciones
+TAMANO_CONTADOR = 14               # Números, porcentajes, temporizadores y contadores (Nanoplex)
+TAMANO_DIALOGOS = 20               # Ventanas emergentes, avisos y confirmaciones (Comicoro)
+TAMANO_DECORATIVA = 22             # Textos decorativos y registros de aventuras (Belanidi Serif)
 
 
 # ==============================================================================
@@ -70,14 +75,51 @@ TAMANO_DIALOGOS = 22               # Ventanas emergentes, avisos y confirmacione
 # ==============================================================================
 _CACHE_FUENTES = {}
 
+FUENTES_SISTEMA_CJK = ["Microsoft YaHei", "SimHei", "SimSun", "Segoe UI", "Arial Unicode MS"]
+
 
 def limpiar_cache_fuentes():
     """Limpia el caché interno para forzar la recarga si se cambian variables dinámicamente."""
     _CACHE_FUENTES.clear()
 
 
+def contiene_caracteres_cjk(texto):
+    """Retorna True si el texto contiene caracteres CJK / asiáticos que requieren tipografía Unicode."""
+    if not texto:
+        return False
+    return any(ord(ch) > 255 for ch in str(texto))
+
+
+def obtener_fuente_cjk(tamano=18, negrita=False):
+    """
+    Retorna una tipografía del sistema compatible con caracteres chinos simplificados (CJK).
+    Reutiliza instancias cacheadas para máximo rendimiento.
+    """
+    if not pygame.font.get_init():
+        pygame.font.init()
+    tam_final = int(tamano) if tamano is not None else 18
+    cache_key = ("cjk", tam_final, bool(negrita))
+    if cache_key in _CACHE_FUENTES:
+        return _CACHE_FUENTES[cache_key]
+
+    for f_cjk in FUENTES_SISTEMA_CJK:
+        try:
+            font_obj = pygame.font.SysFont(f_cjk, tam_final, bold=negrita)
+            if font_obj is not None:
+                _CACHE_FUENTES[cache_key] = font_obj
+                return font_obj
+        except Exception:
+            pass
+
+    font_obj = pygame.font.Font(None, tam_final)
+    if negrita:
+        font_obj.set_bold(True)
+    _CACHE_FUENTES[cache_key] = font_obj
+    return font_obj
+
+
 def _resolver_ruta_fuente(nombre_o_ruta):
-    """Resuelve la ruta absoluta al archivo de fuente, buscando en assets y descomprimiendo zips si es necesario."""
+    """Resuelve la ruta absoluta al archivo de fuente buscando en las carpetas de fuentes configuradas."""
     if not nombre_o_ruta:
         return None
 
@@ -86,43 +128,29 @@ def _resolver_ruta_fuente(nombre_o_ruta):
 
     base = os.path.basename(nombre_o_ruta)
 
-    # 1. Buscar directamente en carpetas de fuentes configuradas
     for carpeta in CARPETAS_FUENTES:
         ruta_directa = os.path.join(carpeta, base)
         if os.path.isfile(ruta_directa):
             return os.path.normpath(ruta_directa)
 
-    # 2. Intentar buscar dentro de archivos ZIP en las carpetas de fuentes
-    for carpeta in CARPETAS_FUENTES:
-        if os.path.isdir(carpeta):
-            for arch in os.listdir(carpeta):
-                if arch.lower().endswith(".zip"):
-                    zip_path = os.path.join(carpeta, arch)
-                    try:
-                        import zipfile
-                        with zipfile.ZipFile(zip_path, "r") as z:
-                            for miembro in z.namelist():
-                                if os.path.basename(miembro).lower() == base.lower():
-                                    z.extract(miembro, carpeta)
-                                    ruta_extraida = os.path.join(carpeta, miembro)
-                                    if os.path.isfile(ruta_extraida):
-                                        return os.path.normpath(ruta_extraida)
-                    except Exception:
-                        pass
-
     return None
 
 
-def obtener_fuente(categoria="texto", tamano=None, negrita=False, tamano_fallback=None):
+def obtener_fuente(categoria="texto", tamano=None, negrita=False, tamano_fallback=None, idioma=None):
     """
-    Retorna una instancia reutilizable de pygame.font.Font según la categoría y tamaño.
-    Reutiliza instancias cacheadas para evitar recargas en cada fotograma.
+    Retorna una instancia reutilizable de pygame.font.Font según la categoría, tamaño e idioma.
+    - Categorías independientes ('contador', 'logo', 'identidad') SIEMPRE retornan su fuente pixel art nativa.
+    - Textos en español e inglés utilizan las tipografías pixel art oficiales del juego.
+    - Textos en chino utilizan la tipografía CJK del sistema correspondiente.
     """
     if not pygame.font.get_init():
         pygame.font.init()
 
     cat = str(categoria).lower().strip()
-    if cat == "titulo":
+    if cat in ("logo", "identidad"):
+        fuente_config = FUENTE_LOGO
+        tamano_defecto = TAMANO_TITULO
+    elif cat == "titulo":
         fuente_config = FUENTE_TITULO
         tamano_defecto = TAMANO_TITULO
     elif cat == "subtitulo":
@@ -131,8 +159,8 @@ def obtener_fuente(categoria="texto", tamano=None, negrita=False, tamano_fallbac
     elif cat in ("boton", "botones"):
         fuente_config = FUENTE_BOTONES
         tamano_defecto = TAMANO_BOTONES
-    elif cat == "pequena":
-        fuente_config = FUENTE_PEQUENA
+    elif cat in ("pequena", "texto_pequeno", "pequeno", "info_pequena"):
+        fuente_config = FUENTE_TEXTO_PEQUENO
         tamano_defecto = TAMANO_PEQUENA
     elif cat == "contador":
         fuente_config = FUENTE_CONTADOR
@@ -140,33 +168,54 @@ def obtener_fuente(categoria="texto", tamano=None, negrita=False, tamano_fallbac
     elif cat in ("dialogos", "dialogo"):
         fuente_config = FUENTE_DIALOGOS
         tamano_defecto = TAMANO_DIALOGOS
+    elif cat in ("decorativa", "decorativo", "diario", "aventura", "registro"):
+        fuente_config = FUENTE_DECORATIVA
+        tamano_defecto = TAMANO_DECORATIVA
     else:  # "texto" o general
         fuente_config = FUENTE_TEXTO
         tamano_defecto = TAMANO_TEXTO
 
     tamano_final = tamano if tamano is not None else tamano_defecto
 
-    # Soporte automático de glifos para Chino Simplificado
-    try:
-        import configuracion
-        idioma_actual = configuracion.obtener_idioma()
-    except Exception:
-        idioma_actual = "es"
+    # 1. ELEMENTOS ESTRICTAMENTE INDEPENDIENTES DEL IDIOMA
+    # Contadores, porcentajes de volumen, números y logos NUNCA son afectados por el idioma.
+    if cat in ("contador", "logo", "identidad"):
+        cache_key_indep = ("indep", cat, fuente_config, tamano_final, negrita)
+        if cache_key_indep in _CACHE_FUENTES:
+            return _CACHE_FUENTES[cache_key_indep]
 
+        font_obj = None
+        if fuente_config:
+            ruta_archivo = _resolver_ruta_fuente(fuente_config)
+            if ruta_archivo and os.path.isfile(ruta_archivo):
+                try:
+                    font_obj = pygame.font.Font(ruta_archivo, tamano_final)
+                except Exception:
+                    font_obj = None
+
+        if font_obj is None:
+            font_obj = pygame.font.Font(None, tamano_fallback or tamano_final)
+            if negrita:
+                font_obj.set_bold(True)
+
+        _CACHE_FUENTES[cache_key_indep] = font_obj
+        return font_obj
+
+    # 2. RESOLUCIÓN SEGÚN IDIOMA (es, en, zh)
+    idioma_actual = idioma
+    if idioma_actual is None:
+        try:
+            import configuracion
+            idioma_actual = configuracion.obtener_idioma()
+        except Exception:
+            idioma_actual = "es"
+
+    # Si el idioma activo es Chino Simplificado, utilizar tipografía con glifos CJK
     if idioma_actual == "zh":
-        cache_key_zh = ("zh", cat, tamano_final, negrita)
-        if cache_key_zh in _CACHE_FUENTES:
-            return _CACHE_FUENTES[cache_key_zh]
-        for f_cjk in ["Microsoft YaHei", "SimHei", "SimSun", "Segoe UI", "Arial Unicode MS"]:
-            try:
-                font_obj = pygame.font.SysFont(f_cjk, tamano_final, bold=negrita)
-                if font_obj is not None:
-                    _CACHE_FUENTES[cache_key_zh] = font_obj
-                    return font_obj
-            except Exception:
-                pass
+        return obtener_fuente_cjk(tamano_final, negrita=negrita)
 
-    cache_key = (cat, fuente_config, tamano_final, negrita, tamano_fallback)
+    # Para Español e Inglés, usar las tipografías pixel art oficiales
+    cache_key = (idioma_actual, cat, fuente_config, tamano_final, negrita, tamano_fallback)
     if cache_key in _CACHE_FUENTES:
         return _CACHE_FUENTES[cache_key]
 
@@ -209,49 +258,106 @@ def obtener_fuente(categoria="texto", tamano=None, negrita=False, tamano_fallbac
     return font_obj
 
 
-def obtener_fuente_titulo(tamano=None, negrita=False, tamano_fallback=None):
+def obtener_fuente_para_texto(texto, categoria="texto", tamano=None, negrita=False, tamano_fallback=None):
+    """
+    Retorna la tipografía óptima para un texto específico.
+    Si contiene caracteres CJK, utiliza la fuente compatible con chino.
+    Si contiene texto en español o inglés, utiliza la tipografía pixel art oficial de la categoría.
+    """
+    if contiene_caracteres_cjk(texto):
+        return obtener_fuente_cjk(tamano or 18, negrita=negrita)
+    return obtener_fuente(categoria, tamano=tamano, negrita=negrita, tamano_fallback=tamano_fallback, idioma="es")
+
+
+def obtener_fuente_titulo(tamano=None, negrita=False, tamano_fallback=None, idioma=None):
     """Retorna la fuente configurada para títulos principales."""
-    return obtener_fuente("titulo", tamano=tamano, negrita=negrita, tamano_fallback=tamano_fallback)
+    return obtener_fuente("titulo", tamano=tamano, negrita=negrita, tamano_fallback=tamano_fallback, idioma=idioma)
 
 
-def obtener_fuente_subtitulo(tamano=None, negrita=False, tamano_fallback=None):
+def obtener_fuente_subtitulo(tamano=None, negrita=False, tamano_fallback=None, idioma=None):
     """Retorna la fuente configurada para subtítulos y encabezados."""
-    return obtener_fuente("subtitulo", tamano=tamano, negrita=negrita, tamano_fallback=tamano_fallback)
+    return obtener_fuente("subtitulo", tamano=tamano, negrita=negrita, tamano_fallback=tamano_fallback, idioma=idioma)
 
 
-def obtener_fuente_texto(tamano=None, negrita=False, tamano_fallback=None):
+def obtener_fuente_texto(tamano=None, negrita=False, tamano_fallback=None, idioma=None):
     """Retorna la fuente configurada para textos normales y descripciones."""
-    return obtener_fuente("texto", tamano=tamano, negrita=negrita, tamano_fallback=tamano_fallback)
+    return obtener_fuente("texto", tamano=tamano, negrita=negrita, tamano_fallback=tamano_fallback, idioma=idioma)
 
 
-def obtener_fuente_botones(tamano=None, negrita=False, tamano_fallback=None):
+def obtener_fuente_botones(tamano=None, negrita=False, tamano_fallback=None, idioma=None):
     """Retorna la fuente configurada para botones y opciones."""
-    return obtener_fuente("botones", tamano=tamano, negrita=negrita, tamano_fallback=tamano_fallback)
+    return obtener_fuente("botones", tamano=tamano, negrita=negrita, tamano_fallback=tamano_fallback, idioma=idioma)
 
 
-def obtener_fuente_boton(tamano=None, negrita=False, tamano_fallback=None):
+def obtener_fuente_boton(tamano=None, negrita=False, tamano_fallback=None, idioma=None):
     """Alias retrocompatible de obtener_fuente_botones."""
-    return obtener_fuente_botones(tamano=tamano, negrita=negrita, tamano_fallback=tamano_fallback)
+    return obtener_fuente_botones(tamano=tamano, negrita=negrita, tamano_fallback=tamano_fallback, idioma=idioma)
 
 
-def obtener_fuente_pequena(tamano=None, negrita=False, tamano_fallback=None):
+def obtener_fuente_pequena(tamano=None, negrita=False, tamano_fallback=None, idioma=None):
     """Retorna la fuente configurada para textos secundarios y detalles."""
-    return obtener_fuente("pequena", tamano=tamano, negrita=negrita, tamano_fallback=tamano_fallback)
+    return obtener_fuente("pequena", tamano=tamano, negrita=negrita, tamano_fallback=tamano_fallback, idioma=idioma)
 
 
-def obtener_fuente_contador(tamano=None, negrita=False, tamano_fallback=None):
-    """Retorna la fuente configurada para números, porcentajes, temporizadores y contadores."""
-    return obtener_fuente("contador", tamano=tamano, negrita=negrita, tamano_fallback=tamano_fallback)
+def obtener_fuente_contador(tamano=None, negrita=False, tamano_fallback=None, idioma=None):
+    """Retorna la fuente configurada para números, porcentajes, temporizadores y contadores (Nanoplex, independiente de idioma)."""
+    return obtener_fuente("contador", tamano=tamano, negrita=negrita, tamano_fallback=tamano_fallback, idioma=idioma)
 
 
-def obtener_fuente_dialogos(tamano=None, negrita=False, tamano_fallback=None):
+def obtener_fuente_dialogos(tamano=None, negrita=False, tamano_fallback=None, idioma=None):
     """Retorna la fuente configurada para mensajes, confirmaciones y ventanas emergentes."""
-    return obtener_fuente("dialogos", tamano=tamano, negrita=negrita, tamano_fallback=tamano_fallback)
+    return obtener_fuente("dialogos", tamano=tamano, negrita=negrita, tamano_fallback=tamano_fallback, idioma=idioma)
+
+
+def obtener_fuente_logo(tamano=None, negrita=False):
+    """Retorna la fuente configurada para el logo principal y títulos de identidad (Matrix Mono)."""
+    return obtener_fuente("logo", tamano=tamano, negrita=negrita)
+
+
+def obtener_fuente_decorativa(tamano=None, negrita=False, tamano_fallback=None, idioma=None):
+    """Retorna la fuente configurada para textos decorativos y registros de aventuras (Belanidi Serif)."""
+    return obtener_fuente("decorativa", tamano=tamano, negrita=negrita, tamano_fallback=tamano_fallback, idioma=idioma)
+
+
+def obtener_fuente_texto_pequeno(tamano=None, negrita=False, tamano_fallback=None, idioma=None):
+    """Retorna la fuente configurada para información pequeña, fechas, estadísticas y descripciones (Nanoplex)."""
+    return obtener_fuente("texto_pequeno", tamano=tamano, negrita=negrita, tamano_fallback=tamano_fallback, idioma=idioma)
 
 
 def cargar_fuente_pixel(tamano, fallback_tamano=None):
     """Función de compatibilidad retroactiva con código existente."""
     return obtener_fuente_titulo(tamano=tamano, tamano_fallback=fallback_tamano)
+
+
+def obtener_fuente_matrix(tamano=38):
+    """
+    Retorna la tipografía obligatoria 'matrix_mono' (Matrix_Mono.ttf) cargada
+    desde las carpetas de fuentes del proyecto.
+    Si la fuente no se encuentra o no se puede cargar, genera un error explicativo
+    en lugar de sustituirla silenciosamente.
+    """
+    if not pygame.font.get_init():
+        pygame.font.init()
+
+    ruta = _resolver_ruta_fuente("Matrix_Mono.ttf") or _resolver_ruta_fuente("matrix_mono.zip")
+    if not ruta or not os.path.isfile(ruta):
+        for c in CARPETAS_FUENTES:
+            cand = os.path.join(c, "Matrix_Mono.ttf")
+            if os.path.isfile(cand):
+                ruta = cand
+                break
+
+    if not ruta or not os.path.isfile(ruta):
+        raise FileNotFoundError(
+            "ERROR: La tipografía obligatoria 'matrix_mono' (Matrix_Mono.ttf) no se encuentra en las carpetas de fuentes del proyecto."
+        )
+
+    try:
+        return pygame.font.Font(ruta, tamano)
+    except Exception as e:
+        raise RuntimeError(
+            f"ERROR al cargar la tipografía obligatoria 'matrix_mono' desde '{ruta}': {e}"
+        )
 
 
 # ==============================================================================
@@ -330,7 +436,7 @@ def ajustar_tamano_fuente(texto, categoria="texto", tamano_inicial=None, ancho_m
             tamano_inicial = TAMANO_TEXTO
 
     t_actual = tamano_inicial
-    f_actual = obtener_fuente(categoria, tamano=t_actual, negrita=negrita)
+    f_actual = obtener_fuente_para_texto(texto, categoria=categoria, tamano=t_actual, negrita=negrita)
 
     if not texto or (ancho_max is None and alto_max is None):
         return f_actual, t_actual
@@ -342,7 +448,7 @@ def ajustar_tamano_fuente(texto, categoria="texto", tamano_inicial=None, ancho_m
         if cabe_ancho and cabe_alto:
             return f_actual, t_actual
         t_actual -= 1
-        f_actual = obtener_fuente(categoria, tamano=t_actual, negrita=negrita)
+        f_actual = obtener_fuente_para_texto(texto, categoria=categoria, tamano=t_actual, negrita=negrita)
 
     return f_actual, t_actual
 
@@ -422,7 +528,7 @@ def renderizar_texto_multilinea(
             tamano = TAMANO_TEXTO
 
     t_actual = tamano
-    f_actual = obtener_fuente(categoria, tamano=t_actual, negrita=negrita)
+    f_actual = obtener_fuente_para_texto(str_txt, categoria=categoria, tamano=t_actual, negrita=negrita)
     max_w_calc = ancho_max or 500
 
     while True:
@@ -432,7 +538,7 @@ def renderizar_texto_multilinea(
         if alto_max is None or total_h <= alto_max or t_actual <= tamano_min:
             break
         t_actual -= 1
-        f_actual = obtener_fuente(categoria, tamano=t_actual, negrita=negrita)
+        f_actual = obtener_fuente_para_texto(str_txt, categoria=categoria, tamano=t_actual, negrita=negrita)
 
     ancho_total = 0
     surfs_lineas = []

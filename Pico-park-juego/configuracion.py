@@ -13,16 +13,15 @@ import math
 import struct
 import pygame
 
-from sprites import cargar_boton, cargar_boton_escalado, animar_pulsacion_boton, aclarar_boton
+from sprites import (
+    cargar_boton_escalado,
+    animar_pulsacion_boton,
+    aclarar_boton,
+    generar_boton_con_texto,
+)
 from fuentes import (
-    obtener_fuente_titulo,
     obtener_fuente_subtitulo,
-    obtener_fuente_texto,
-    obtener_fuente_boton,
-    obtener_fuente_botones,
-    obtener_fuente_pequena,
     obtener_fuente_contador,
-    obtener_fuente_dialogos,
     limpiar_cache_fuentes,
     dibujar_texto_en_rect,
 )
@@ -33,8 +32,8 @@ from fuentes import (
 # Configura aquí las rutas o nombres de archivo de cada pista de música y el volumen.
 # Puedes colocar los archivos en 'assets/audio/' o 'Sprites/Audio/' (.mp3, .ogg, .wav).
 # ==============================================================================
-AUDIO_MENU = "menu.mp3"          # Música del menú principal y pantallas de navegación
-AUDIO_MUNDO_1 = "mundo1.mp3"     # Música del Mundo 1
+AUDIO_MENU = "sonidos/menú/menú.mp3"  # Música del menú principal y pantallas de navegación
+AUDIO_MUNDO_1 = "sonidos/mundo1/mundo 1.mp3"  # Música del Mundo 1
 AUDIO_MUNDO_2 = "mundo2.mp3"     # Música del Mundo 2
 AUDIO_MUNDO_3 = "mundo3.mp3"     # Música del Mundo 3
 
@@ -48,6 +47,18 @@ DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 RUTA_CONFIG_JSON = os.path.join(DIRECTORIO_ACTUAL, "configuracion.json")
 
 CARPETAS_AUDIO = [
+    os.path.join(DIRECTORIO_ACTUAL, "..", "sonidos", "menú"),
+    os.path.join(DIRECTORIO_ACTUAL, "..", "sonidos", "menu"),
+    os.path.join(DIRECTORIO_ACTUAL, "..", "sonidos", "mundo1"),
+    os.path.join(DIRECTORIO_ACTUAL, "..", "sonidos", "jefe1"),
+    os.path.join(DIRECTORIO_ACTUAL, "..", "sonidos", "ahogamiento"),
+    os.path.join(DIRECTORIO_ACTUAL, "..", "sonidos"),
+    os.path.join(DIRECTORIO_ACTUAL, "sonidos", "menú"),
+    os.path.join(DIRECTORIO_ACTUAL, "sonidos", "menu"),
+    os.path.join(DIRECTORIO_ACTUAL, "sonidos", "mundo1"),
+    os.path.join(DIRECTORIO_ACTUAL, "sonidos", "jefe1"),
+    os.path.join(DIRECTORIO_ACTUAL, "sonidos", "ahogamiento"),
+    os.path.join(DIRECTORIO_ACTUAL, "sonidos"),
     os.path.join(DIRECTORIO_ACTUAL, "..", "assets", "audio"),
     os.path.join(DIRECTORIO_ACTUAL, "assets", "audio"),
     os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Audio"),
@@ -205,9 +216,9 @@ DICCIONARIO = {
         "zh": "返回",
     },
     "seleccion_nivel": {
-        "es": "SELECCION DE NIVEL",
+        "es": "SELECCIÓN DE NIVEL",
         "en": "LEVEL SELECTION",
-        "zh": "选择关卡",
+        "zh": "关卡选择",
     },
     "bloqueado": {
         "es": "BLOQUEADO",
@@ -218,6 +229,357 @@ DICCIONARIO = {
         "es": "Puedes guardar tu partida en un perfil antes de salir.",
         "en": "You can save your game before exiting.",
         "zh": "退出前您可以将游戏进度保存到档案中。",
+    },
+    "opciones": {
+        "es": "OPCIONES",
+        "en": "SETTINGS",
+        "zh": "设置",
+    },
+    "modo_juego": {
+        "es": "MODO DE JUEGO",
+        "en": "GAME MODE",
+        "zh": "游戏模式",
+    },
+    "subtitulo_modo": {
+        "es": "Selecciona cómo deseas comenzar tu aventura",
+        "en": "Choose how you want to start your adventure",
+        "zh": "选择你开始冒险的方式",
+    },
+    "continuar": {
+        "es": "CONTINUAR",
+        "en": "CONTINUE",
+        "zh": "继续游戏",
+    },
+    "sub_continuar": {
+        "es": "Cargar partida guardada y ver tus niveles alcanzados",
+        "en": "Load saved game and view level progress",
+        "zh": "加载保存的存档并查看关卡进度",
+    },
+    "nueva_partida": {
+        "es": "NUEVA PARTIDA",
+        "en": "NEW GAME",
+        "zh": "新建游戏",
+    },
+    "sub_nueva_partida": {
+        "es": "Reiniciar y comenzar desde el Mundo 1 - Nivel 1",
+        "en": "Restart and begin from World 1 - Level 1",
+        "zh": "重新开始，从世界 1 - 关卡 1 开始",
+    },
+    "partidas_guardadas": {
+        "es": "PARTIDAS GUARDADAS",
+        "en": "SAVED GAMES",
+        "zh": "保存的游戏",
+    },
+    "partida": {
+        "es": "Partida",
+        "en": "Game",
+        "zh": "游戏",
+    },
+    "sub_partidas": {
+        "es": "Registro de expediciones y progreso de aventura",
+        "en": "Expedition record and adventure progress",
+        "zh": "探险记录与冒险进度",
+    },
+    "todos_desbloqueados": {
+        "es": "Todos los niveles desbloqueados",
+        "en": "All levels unlocked",
+        "zh": "所有关卡已解锁",
+    },
+    "completados": {
+        "es": "completados",
+        "en": "completed",
+        "zh": "已完成",
+    },
+    "fecha": {
+        "es": "Fecha",
+        "en": "Date",
+        "zh": "日期",
+    },
+    "hora": {
+        "es": "Hora",
+        "en": "Time",
+        "zh": "时间",
+    },
+    "cargar": {
+        "es": "CARGAR",
+        "en": "LOAD",
+        "zh": "加载",
+    },
+    "gestionar": {
+        "es": "GESTIONAR",
+        "en": "MANAGE",
+        "zh": "管理",
+    },
+    "borrar": {
+        "es": "BORRAR",
+        "en": "DELETE",
+        "zh": "删除",
+    },
+    "no_partidas": {
+        "es": "No se encontraron registros de expedición",
+        "en": "No expedition records found",
+        "zh": "未找到探险记录",
+    },
+    "comenzar_historia": {
+        "es": "Comenzá una nueva partida para escribir tu historia en este diario.",
+        "en": "Start a new game to write your story in this journal.",
+        "zh": "开始新游戏以在此日记中谱写你的故事。",
+    },
+    "comenzar_aventura": {
+        "es": "COMENZAR AVENTURA",
+        "en": "START ADVENTURE",
+        "zh": "开始冒险",
+    },
+    "entrada_pagina": {
+        "es": "Entrada página {0} de {1}",
+        "en": "Journal page {0} of {1}",
+        "zh": "档案页码 {0} / {1}",
+    },
+    "personalizacion_personajes": {
+        "es": "PERSONALIZACIÓN DE PERSONAJES",
+        "en": "CHARACTER CUSTOMIZATION",
+        "zh": "角色定制",
+    },
+    "sub_personalizacion": {
+        "es": "Personaliza el color y los accesorios de cada personaje",
+        "en": "Customize the color and accessories of each character",
+        "zh": "自定义每个角色的颜色和配饰",
+    },
+    "colores": {
+        "es": "COLORES",
+        "en": "COLORS",
+        "zh": "颜色",
+    },
+    "accesorios": {
+        "es": "ACCESORIOS",
+        "en": "ACCESSORIES",
+        "zh": "配饰",
+    },
+    "jugador": {
+        "es": "JUGADOR",
+        "en": "PLAYER",
+        "zh": "玩家",
+    },
+    "colores_disponibles": {
+        "es": "COLORES DISPONIBLES",
+        "en": "AVAILABLE COLORS",
+        "zh": "可用颜色",
+    },
+    "accesorios_disponibles": {
+        "es": "ACCESORIOS DISPONIBLES",
+        "en": "AVAILABLE ACCESSORIES",
+        "zh": "可用配饰",
+    },
+    "administrar_perfil": {
+        "es": "ADMINISTRAR PERFIL",
+        "en": "MANAGE PROFILE",
+        "zh": "管理档案",
+    },
+    "eliminar_perfil": {
+        "es": "ELIMINAR PERFIL",
+        "en": "DELETE PROFILE",
+        "zh": "删除档案",
+    },
+    "confirmar": {
+        "es": "CONFIRMAR",
+        "en": "CONFIRM",
+        "zh": "确认",
+    },
+    "cambiar_nombre": {
+        "es": "CAMBIAR NOMBRE",
+        "en": "CHANGE NAME",
+        "zh": "更改名称",
+    },
+    "cambiar_quitar_clave": {
+        "es": "CAMBIAR / QUITAR CONTRASEÑA",
+        "en": "CHANGE / REMOVE PASSWORD",
+        "zh": "更改 / 移除密码",
+    },
+    "agregar_clave": {
+        "es": "AGREGAR CONTRASEÑA",
+        "en": "ADD PASSWORD",
+        "zh": "添加密码",
+    },
+    "perfil": {
+        "es": "Perfil",
+        "en": "Profile",
+        "zh": "档案",
+    },
+    "estado_protegido": {
+        "es": "Estado: Protegido con contraseña",
+        "en": "Status: Password protected",
+        "zh": "状态：密码保护",
+    },
+    "estado_sin_clave": {
+        "es": "Estado: Sin contraseña",
+        "en": "Status: No password",
+        "zh": "状态：无密码",
+    },
+    "seguro_eliminar_perfil": {
+        "es": "¿Seguro que deseas eliminar este perfil y su partida?",
+        "en": "Are you sure you want to delete this profile and its save?",
+        "zh": "确定要删除此档案及其存档吗？",
+    },
+    "aviso_borrado_progreso": {
+        "es": "Se borrará todo su progreso y no se podrá recuperar.",
+        "en": "All progress will be deleted and cannot be recovered.",
+        "zh": "所有进度都将被删除且无法恢复。",
+    },
+    "borrar_perfil": {
+        "es": "BORRAR PERFIL",
+        "en": "DELETE PROFILE",
+        "zh": "删除档案",
+    },
+    "partida_existente": {
+        "es": "PARTIDA EXISTENTE",
+        "en": "EXISTING GAME",
+        "zh": "已有存档",
+    },
+    "ya_existe_partida_con_nombre": {
+        "es": "Ya existe una partida guardada con el nombre",
+        "en": "A saved game already exists with the name",
+        "zh": "已存在同名存档",
+    },
+    "elegir_otro_o_sobrescribir": {
+        "es": "¿Deseas elegir otro nombre o sobrescribir la partida existente?",
+        "en": "Do you want to choose another name or overwrite the existing game?",
+        "zh": "要选择其他名称还是覆盖现有存档？",
+    },
+    "otro_nombre": {
+        "es": "OTRO NOMBRE",
+        "en": "ANOTHER NAME",
+        "zh": "其他名称",
+    },
+    "sobrescribir": {
+        "es": "SOBRESCRIBIR",
+        "en": "OVERWRITE",
+        "zh": "覆盖",
+    },
+    "ingresa_nombre_partida": {
+        "es": "Ingresa un nombre para tu partida:",
+        "en": "Enter a name for your game:",
+        "zh": "输入存档名称：",
+    },
+    "contrasena_opcional": {
+        "es": "CONTRASEÑA (OPCIONAL)",
+        "en": "PASSWORD (OPTIONAL)",
+        "zh": "密码（可选）",
+    },
+    "sub_contrasena_opcional": {
+        "es": "Establece una contraseña o deja vacío si no deseas protegerla:",
+        "en": "Set a password or leave blank if not needed:",
+        "zh": "设置密码，如不需要保护请留空：",
+    },
+    "campo_no_vacio": {
+        "es": "El campo no puede estar vacío.",
+        "en": "This field cannot be empty.",
+        "zh": "该字段不能为空。",
+    },
+    "guardar_en": {
+        "es": "GUARDAR EN",
+        "en": "SAVE TO",
+        "zh": "保存到",
+    },
+    "crear_nueva_partida": {
+        "es": "CREAR NUEVA PARTIDA",
+        "en": "CREATE NEW GAME",
+        "zh": "创建新存档",
+    },
+    "elige_partida_o_crea": {
+        "es": "Elige una partida para actualizar o crea una nueva:",
+        "en": "Choose a game to update or create a new one:",
+        "zh": "选择要更新的存档或创建新存档：",
+    },
+    "niveles_completados": {
+        "es": "Niveles completados",
+        "en": "Completed levels",
+        "zh": "已完成关卡",
+    },
+    "guardado": {
+        "es": "Guardado",
+        "en": "Saved",
+        "zh": "保存时间",
+    },
+    "partida_actual": {
+        "es": "Partida actual",
+        "en": "Current game",
+        "zh": "当前存档",
+    },
+    "volver_al_menu": {
+        "es": "VOLVER AL MENÚ",
+        "en": "BACK TO MENU",
+        "zh": "返回主菜单",
+    },
+    "blanco": {"es": "Blanco", "en": "White", "zh": "白色"},
+    "gris": {"es": "Gris", "en": "Gray", "zh": "灰色"},
+    "negro": {"es": "Negro", "en": "Black", "zh": "黑色"},
+    "marron": {"es": "Marrón", "en": "Brown", "zh": "棕色"},
+    "rojo": {"es": "Rojo", "en": "Red", "zh": "红色"},
+    "rosa": {"es": "Rosa", "en": "Pink", "zh": "粉色"},
+    "naranja": {"es": "Naranja", "en": "Orange", "zh": "橙色"},
+    "amarillo": {"es": "Amarillo", "en": "Yellow", "zh": "黄色"},
+    "verde": {"es": "Verde", "en": "Green", "zh": "绿色"},
+    "verde oscuro": {"es": "Verde oscuro", "en": "Dark Green", "zh": "深绿色"},
+    "celeste": {"es": "Celeste", "en": "Sky Blue", "zh": "天蓝色"},
+    "azul": {"es": "Azul", "en": "Blue", "zh": "蓝色"},
+    "violeta": {"es": "Violeta", "en": "Purple", "zh": "紫色"},
+    "ninguno": {"es": "Ninguno", "en": "None", "zh": "无"},
+    "corona": {"es": "Corona", "en": "Crown", "zh": "皇冠"},
+    "gorro": {"es": "Gorro", "en": "Beanie", "zh": "毛线帽"},
+    "anteojos": {"es": "Anteojos", "en": "Glasses", "zh": "眼镜"},
+    "moño": {"es": "Moño", "en": "Bowtie", "zh": "蝴蝶结"},
+    "sombrero": {"es": "Sombrero", "en": "Hat", "zh": "礼帽"},
+    "marrón": {"es": "Marrón", "en": "Brown", "zh": "棕色"},
+    "mono": {"es": "Moño", "en": "Bowtie", "zh": "蝴蝶结"},
+    "cambiar_atuendos": {
+        "es": "CAMBIAR ATUENDOS",
+        "en": "CHANGE OUTFITS",
+        "zh": "更换装扮",
+    },
+    "sub_modificaste_personajes": {
+        "es": "Modificaste los personajes antes de continuar «{0}».",
+        "en": "You modified characters before continuing «{0}».",
+        "zh": "继续«{0}»前你修改了角色装扮。",
+    },
+    "pregunta_mantener_o_cambiar": {
+        "es": "¿Deseas mantener los atuendos guardados o aplicar los nuevos?",
+        "en": "Do you want to keep saved outfits or apply new ones?",
+        "zh": "你想保留已保存的装扮还是应用新装扮？",
+    },
+    "atuendos_guardados": {
+        "es": "ATUENDOS GUARDADOS",
+        "en": "SAVED OUTFITS",
+        "zh": "已保存装扮",
+    },
+    "nuevos_atuendos": {
+        "es": "NUEVOS ATUENDOS",
+        "en": "NEW OUTFITS",
+        "zh": "新装扮",
+    },
+    "mantener_guardados": {
+        "es": "MANTENER GUARDADOS",
+        "en": "KEEP SAVED",
+        "zh": "保留已保存",
+    },
+    "jugador_1": {
+        "es": "Jugador 1",
+        "en": "Player 1",
+        "zh": "玩家 1",
+    },
+    "jugador_2": {
+        "es": "Jugador 2",
+        "en": "Player 2",
+        "zh": "玩家 2",
+    },
+    "accesorio_label": {
+        "es": "Accesorio",
+        "en": "Accessory",
+        "zh": "配饰",
+    },
+    "sin_accesorio": {
+        "es": "Sin accesorio",
+        "en": "No accessory",
+        "zh": "无配饰",
     },
 }
 
@@ -230,6 +592,11 @@ def t(clave, default=None):
     info = DICCIONARIO.get(clave)
     if isinstance(info, dict):
         return info.get(_idioma, info.get("es", default or clave))
+    if isinstance(clave, str):
+        c_low = clave.lower().strip()
+        info = DICCIONARIO.get(c_low)
+        if isinstance(info, dict):
+            return info.get(_idioma, info.get("es", default or clave))
     return default if default is not None else clave
 
 
@@ -248,6 +615,11 @@ def cambiar_idioma(nuevo_idioma):
             limpiar_cache_fuentes()
         except Exception:
             pass
+        try:
+            from sprites import limpiar_cache_botones
+            limpiar_cache_botones()
+        except Exception:
+            pass
 
 
 # ==============================================================================
@@ -260,7 +632,7 @@ def _guardar_configuracion_disco():
             "volumen": _volumen,
             "volumen_musica": VOLUMEN_MUSICA,
             "volumen_efectos": VOLUMEN_EFECTOS,
-            "idioma": _idioma,
+            "idioma": "es",
         }
         with open(RUTA_CONFIG_JSON, "w", encoding="utf-8") as f:
             json.dump(datos, f, indent=4)
@@ -269,8 +641,9 @@ def _guardar_configuracion_disco():
 
 
 def _cargar_configuracion_disco():
-    """Carga los ajustes guardados de volumen e idioma si existen en disco."""
+    """Carga los ajustes guardados de volumen si existen en disco. Al iniciar el juego siempre debe estar en español."""
     global _volumen, VOLUMEN_MUSICA, VOLUMEN_EFECTOS, _idioma
+    _idioma = "es"
     if os.path.isfile(RUTA_CONFIG_JSON):
         try:
             with open(RUTA_CONFIG_JSON, "r", encoding="utf-8") as f:
@@ -285,10 +658,9 @@ def _cargar_configuracion_disco():
                 VOLUMEN_EFECTOS = max(0, min(100, int(datos["volumen_efectos"])))
             else:
                 VOLUMEN_EFECTOS = _volumen
-            if "idioma" in datos and datos["idioma"] in ("es", "en", "zh"):
-                _idioma = datos["idioma"]
         except Exception:
             pass
+    _idioma = "es"
 
 
 # Carga inicial de ajustes al importar el módulo
@@ -301,20 +673,48 @@ _cargar_configuracion_disco()
 def _resolver_ruta_audio(pista_o_nombre):
     """
     Localiza el archivo de audio comprobando rutas absolutas, relativas y carpetas
-    assets/audio y Sprites/Audio. Soporta extensiones .mp3, .ogg, .wav.
+    sonidos, assets/audio y Sprites/Audio. Soporta extensiones .mp3, .ogg, .wav.
     """
     if not pista_o_nombre:
         return None
 
+    # 1. Comprobar si es ruta absoluta existente
     if os.path.isabs(pista_o_nombre) and os.path.isfile(pista_o_nombre):
         return os.path.normpath(pista_o_nombre)
 
+    # 2. Comprobar ruta directa o relativa respecto al directorio de trabajo o a la raíz
+    candidatos_rel = [
+        pista_o_nombre,
+        os.path.join(DIRECTORIO_ACTUAL, "..", pista_o_nombre),
+        os.path.join(DIRECTORIO_ACTUAL, pista_o_nombre),
+    ]
+    for c in candidatos_rel:
+        if os.path.isfile(c):
+            return os.path.normpath(os.path.abspath(c))
+
     base = os.path.basename(pista_o_nombre)
     nombres_a_buscar = [base]
+    if "menú" in base:
+        nombres_a_buscar.append(base.replace("menú", "menu"))
+    elif "menu" in base:
+        nombres_a_buscar.append(base.replace("menu", "menú"))
+    if "mundo1" in base:
+        nombres_a_buscar.append(base.replace("mundo1", "mundo 1"))
+    elif "mundo 1" in base:
+        nombres_a_buscar.append(base.replace("mundo 1", "mundo1"))
+
     nombre_raiz, ext = os.path.splitext(base)
     if not ext:
         for posible_ext in [".mp3", ".ogg", ".wav"]:
             nombres_a_buscar.append(nombre_raiz + posible_ext)
+            if "menú" in nombre_raiz:
+                nombres_a_buscar.append(nombre_raiz.replace("menú", "menu") + posible_ext)
+            elif "menu" in nombre_raiz:
+                nombres_a_buscar.append(nombre_raiz.replace("menu", "menú") + posible_ext)
+            if "mundo1" in nombre_raiz:
+                nombres_a_buscar.append(nombre_raiz.replace("mundo1", "mundo 1") + posible_ext)
+            elif "mundo 1" in nombre_raiz:
+                nombres_a_buscar.append(nombre_raiz.replace("mundo 1", "mundo1") + posible_ext)
 
     for carpeta in CARPETAS_AUDIO:
         for nom in nombres_a_buscar:
@@ -549,19 +949,31 @@ def mostrar_pestana_configuracion(pantalla, reloj):
 
     # Cargar sprites para los botones de volumen con proporción nativa 0.8496 (870x1024 -> 42x50)
     W_BTN_VOL, H_BTN_VOL = 42, 50
+    def _asegurar_orientacion_derecha(surf):
+        if surf is None:
+            return None
+        w, h = surf.get_size()
+        # Muestrear densidad de píxeles del dibujo del icono (marrón oscuro sobre botón naranja)
+        px_izq = sum(1 for y in range(h) for x in range(0, w // 2) if surf.get_at((x, y))[0] < 200 and surf.get_at((x, y))[1] < 120 and surf.get_at((x, y))[3] > 0)
+        px_der = sum(1 for y in range(h) for x in range(w // 2, w) if surf.get_at((x, y))[0] < 200 and surf.get_at((x, y))[1] < 120 and surf.get_at((x, y))[3] > 0)
+        # Si la mayor concentración está en la derecha (parlante mirando a la izquierda), invertir horizontalmente
+        if px_der > px_izq:
+            return pygame.transform.flip(surf, True, False)
+        return surf
+
     def _cargar_scaled(nombre, w, h):
         return cargar_boton_escalado(nombre, w, h)
 
-    # Botón Bajar Volumen (Parlante con X / Silencio)
-    spr_menos_norm = _cargar_scaled("HUD/boton-bajar-volumen.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-bajar-volumen.png", W_BTN_VOL, H_BTN_VOL)
-    spr_menos_semi = _cargar_scaled("HUD/boton-bajar-volumen-semiapretado.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-bajar-volumen-semiapretado.png", W_BTN_VOL, H_BTN_VOL)
-    spr_menos_apr = _cargar_scaled("HUD/boton-bajar-volumen-apretado.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-bajar-volumen-apretado.png", W_BTN_VOL, H_BTN_VOL)
+    # Botón Bajar Volumen (Parlante con X / Silencio orientado a la derecha)
+    spr_menos_norm = _asegurar_orientacion_derecha(_cargar_scaled("HUD/boton-bajar-volumen.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-bajar-volumen.png", W_BTN_VOL, H_BTN_VOL))
+    spr_menos_semi = _asegurar_orientacion_derecha(_cargar_scaled("HUD/boton-bajar-volumen-semiapretado.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-bajar-volumen-semiapretado.png", W_BTN_VOL, H_BTN_VOL))
+    spr_menos_apr = _asegurar_orientacion_derecha(_cargar_scaled("HUD/boton-bajar-volumen-apretado.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-bajar-volumen-apretado.png", W_BTN_VOL, H_BTN_VOL))
     spr_menos_hov = aclarar_boton(spr_menos_norm)
 
-    # Botón Subir Volumen (Parlante con ondas sonoras)
-    spr_mas_norm = _cargar_scaled("HUD/boton-subir-volumen.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-subir-volumen.png", W_BTN_VOL, H_BTN_VOL)
-    spr_mas_semi = _cargar_scaled("HUD/boton-subir-volumen-semiapretado.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-subir-volumen-semiapretado.png", W_BTN_VOL, H_BTN_VOL)
-    spr_mas_apr = _cargar_scaled("HUD/boton-subir-volumen-apretado.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-subir-volumen-apretado.png", W_BTN_VOL, H_BTN_VOL)
+    # Botón Subir Volumen (Parlante con ondas sonoras orientado a la derecha)
+    spr_mas_norm = _asegurar_orientacion_derecha(_cargar_scaled("HUD/boton-subir-volumen.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-subir-volumen.png", W_BTN_VOL, H_BTN_VOL))
+    spr_mas_semi = _asegurar_orientacion_derecha(_cargar_scaled("HUD/boton-subir-volumen-semiapretado.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-subir-volumen-semiapretado.png", W_BTN_VOL, H_BTN_VOL))
+    spr_mas_apr = _asegurar_orientacion_derecha(_cargar_scaled("HUD/boton-subir-volumen-apretado.png", W_BTN_VOL, H_BTN_VOL) or _cargar_scaled("boton-subir-volumen-apretado.png", W_BTN_VOL, H_BTN_VOL))
     spr_mas_hov = aclarar_boton(spr_mas_norm)
 
     # Botón X de cabecera
@@ -578,7 +990,7 @@ def mostrar_pestana_configuracion(pantalla, reloj):
     # Sección 1: Volumen (alineada exactamente a 436 px con botones proporcionales y centros unificados)
     gap_vol = 14
     w_barra = total_w_content - (2 * W_BTN_VOL + 2 * gap_vol)  # 324 px
-    h_barra = 28
+    h_barra = 36
 
     y_seccion_vol = rect_modal.top + 72
     cy_vol_fila = rect_modal.top + 122  # Centro vertical compartido de la fila de volumen
@@ -694,7 +1106,7 @@ def mostrar_pestana_configuracion(pantalla, reloj):
             pantalla.blit(spr_x_dib, rect_x_header)
 
         # --- SECCIÓN 1: VOLUMEN ---
-        fuente_seccion = obtener_fuente_subtitulo(18, negrita=True, tamano_fallback=18)
+        fuente_seccion = obtener_fuente_subtitulo(20, negrita=True, tamano_fallback=20)
         t_vol_lbl = fuente_seccion.render(t("volumen"), True, (255, 195, 140))
         pantalla.blit(t_vol_lbl, (x_margen_contenido, y_seccion_vol))
 
@@ -712,13 +1124,31 @@ def mostrar_pestana_configuracion(pantalla, reloj):
             pygame.draw.rect(pantalla, (255, 160, 100), rect_relleno, border_radius=6)
         pygame.draw.rect(pantalla, (80, 88, 110), rect_barra_bg, width=2, border_radius=8)
 
-        # Texto de porcentaje centrado sobre la barra (categoría contador)
-        fuente_pct = obtener_fuente_contador(16, negrita=True, tamano_fallback=16)
-        t_pct = fuente_pct.render(f"{_volumen} %", True, (255, 255, 255))
+        # Texto de porcentaje centrado sobre la barra (categoría contador, ampliado 75 % a tamaño 42)
+        fuente_pct = obtener_fuente_contador(42, negrita=True, tamano_fallback=42)
+        txt_porcentaje = f"{_volumen} %"
+        t_pct = fuente_pct.render(txt_porcentaje, True, (255, 255, 255))
         rect_pct = t_pct.get_rect(center=rect_barra_bg.center)
-        # Sombra de texto para alta legibilidad sobre la barra
-        t_pct_sombra = fuente_pct.render(f"{_volumen} %", True, (20, 20, 20))
-        pantalla.blit(t_pct_sombra, rect_pct.move(1, 1))
+
+        # Ajuste de centrado óptico vertical por caja de glifos de la fuente
+        try:
+            mask_pct = pygame.mask.from_surface(t_pct)
+            bbs = mask_pct.get_bounding_rects()
+            if bbs:
+                ubb = bbs[0].unionall(bbs[1:])
+                top_offset = (ubb.top - (t_pct.get_height() - ubb.bottom)) // 2
+                rect_pct.y -= top_offset
+        except Exception:
+            pass
+
+        # Contorno oscuro nítido y reforzado para máxima legibilidad sobre cualquier nivel de volumen y color
+        t_pct_borde = fuente_pct.render(txt_porcentaje, True, (18, 20, 26))
+        for dx_p, dy_p in [
+            (-1, 0), (1, 0), (0, -1), (0, 1),
+            (-1, -1), (1, -1), (-1, 1), (1, 1),
+            (-2, 0), (2, 0), (0, -2), (0, 2),
+        ]:
+            pantalla.blit(t_pct_borde, rect_pct.move(dx_p, dy_p))
         pantalla.blit(t_pct, rect_pct)
 
         # Botón Subir Volumen
@@ -732,39 +1162,33 @@ def mostrar_pestana_configuracion(pantalla, reloj):
         pantalla.blit(t_lang_lbl, (x_margen_contenido, y_seccion_idioma))
 
         opciones_idioma = [
-            ("es", "Español", rect_lang_es),
-            ("en", "English", rect_lang_en),
+            ("es", "ESPAÑOL", rect_lang_es),
+            ("en", "ENGLISH", rect_lang_en),
             ("zh", "简体中文", rect_lang_zh),
         ]
 
-        fuente_btn_lang = obtener_fuente_subtitulo(16, negrita=True, tamano_fallback=16)
         for cod, etiqueta, rect_btn in opciones_idioma:
             es_activo = (_idioma == cod)
             hov_btn = rect_btn.collidepoint(pos_mouse)
 
-            if es_activo:
-                col_bg = (210, 115, 60)
-                col_borde = (255, 220, 150)
-                col_txt = (255, 255, 255)
-                grosor_borde = 3
-            elif hov_btn:
-                col_bg = (64, 70, 90)
-                col_borde = (120, 130, 160)
-                col_txt = (240, 240, 240)
-                grosor_borde = 2
-            else:
-                col_bg = (46, 52, 68)
-                col_borde = (75, 82, 104)
-                col_txt = (195, 200, 215)
-                grosor_borde = 2
+            base_sprite = "mundos/boton-cargar.png" if es_activo else "mundos/boton-volver.png"
+            col_txt = (26, 83, 29) if es_activo else (60, 45, 30)
 
-            pygame.draw.rect(pantalla, col_bg, rect_btn, border_radius=10)
-            pygame.draw.rect(pantalla, col_borde, rect_btn, width=grosor_borde, border_radius=10)
+            btn_surf = generar_boton_con_texto(
+                sprite_base=base_sprite,
+                w=rect_btn.w,
+                h=rect_btn.h,
+                texto=etiqueta,
+                color_texto=col_txt,
+                tamano_fuente=18,
+                idioma=cod
+            )
 
-            # Usar tipografía con soporte CJK para chino y evitar caracteres no soportados
-            f_actual = pygame.font.SysFont("Microsoft YaHei", 16, bold=True) if cod == "zh" else fuente_btn_lang
-            t_lbl = f_actual.render(etiqueta, True, col_txt)
-            pantalla.blit(t_lbl, t_lbl.get_rect(center=rect_btn.center))
+            if hov_btn and btn_surf:
+                btn_surf = aclarar_boton(btn_surf)
+
+            if btn_surf:
+                pantalla.blit(btn_surf, rect_btn)
 
         pygame.display.flip()
         reloj.tick(60)

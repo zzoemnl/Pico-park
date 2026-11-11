@@ -1,5 +1,11 @@
 .venv/
+venv_incompleto/
 build/
 dist/
 .vscode/
 *.spec
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+scratch/

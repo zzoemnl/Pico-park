@@ -8,9 +8,9 @@ from fuentes import (
     TAMANO_TITULO,
     TAMANO_TITULO_MODAL,
     TAMANO_CARD,
-    dibujar_texto_en_rect,
 )
 from configuracion import t
+from sprites import generar_boton_con_texto, aclarar_boton
 
 # Paletas de colores del menú
 COL_CIELO = (244, 238, 226)
@@ -296,19 +296,13 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
         # Botón / Badge de estado inferior ("JUGAR" o "BLOQUEADO")
         r_btn_status = pygame.Rect(r_card.centerx - 70, r_card.bottom - 44, 140, 32)
         if desbloqueado:
-            col_pill = (96, 212, 130) if mouse_encima else (82, 194, 114)
-            borde_pill = (45, 130, 70)
-            txt_pill_col = (255, 255, 255)
-            texto_pill = f"{t('jugar')} >"
+            spr_btn = generar_boton_con_texto("mundos/boton-cargar.png", 140, 32, f"{t('jugar')} >", (26, 83, 29), 13, 0)
+            if mouse_encima:
+                spr_btn = aclarar_boton(spr_btn)
+            pantalla.blit(spr_btn, r_btn_status)
         else:
-            col_pill = (220, 212, 204)
-            borde_pill = (180, 170, 160)
-            txt_pill_col = (140, 130, 120)
-            texto_pill = t("bloqueado")
-
-        pygame.draw.rect(pantalla, col_pill, r_btn_status, border_radius=8)
-        pygame.draw.rect(pantalla, borde_pill, r_btn_status, 2, border_radius=8)
-        dibujar_texto_en_rect(pantalla, texto_pill, r_btn_status, categoria="boton", tamano=TAMANO_CARD, color=txt_pill_col, padding=4)
+            spr_btn = generar_boton_con_texto("Menu/boton-cancelar.png", 140, 32, t("bloqueado"), (70, 65, 60), 13, 0)
+            pantalla.blit(spr_btn, r_btn_status)
 
 
 # ==============================================================================
