@@ -37,6 +37,7 @@ from movimientos import (
     crear_pincho,
     crear_llave,
     crear_puerta,
+    actualizar_puerta,
     reiniciar_juego,
     matar_personaje,
     resolver_colisiones,
@@ -49,6 +50,7 @@ from movimientos import (
     DISTANCIA_SOGA_REPOSO,
     DISTANCIA_SOGA_MAXIMA,
     crear_estado_soga,
+    coordinar_movimiento_soga,
     actualizar_fisica_soga,
     aplicar_restriccion_soga,
     ZONA_AGUA,
@@ -322,8 +324,8 @@ def animar_cierre_puerta(pantalla, reloj, mundo, puerta, cam_x, ancho_mundo_nive
         t = f / frames_cierre
         factor = t * t
 
-        # Redibujar fondo original del escenario detrás de la puerta
-        pygame.draw.rect(mundo, (255, 240, 195), rect_p)
+        # Redibujar fondo original del escenario detrás de la puerta (sin tapar el suelo de apoyo)
+        pygame.draw.rect(mundo, (255, 240, 195), (rect_p.x, rect_p.y, ancho_p, alto_p - 4))
 
         # Animar el desplazamiento de la hoja usando directamente el sprite original cerrado
         w_actual = max(15, min(ancho_p, int(15 + (ancho_p - 15) * factor)))
@@ -345,7 +347,7 @@ def animar_cierre_puerta(pantalla, reloj, mundo, puerta, cam_x, ancho_mundo_nive
         p_b = fb / frames_brillo
         alpha_b = int(75 * math.sin(p_b * math.pi))
 
-        pygame.draw.rect(mundo, (255, 240, 195), rect_p)
+        pygame.draw.rect(mundo, (255, 240, 195), (rect_p.x, rect_p.y, ancho_p, alto_p - 4))
         mundo.blit(sprite_cerrada, rect_p.topleft)
 
         if alpha_b > 0:
@@ -359,7 +361,7 @@ def animar_cierre_puerta(pantalla, reloj, mundo, puerta, cam_x, ancho_mundo_nive
         pygame.display.flip()
 
     # Dejar el escenario en mundo con la puerta cerrada original limpia
-    pygame.draw.rect(mundo, (255, 240, 195), rect_p)
+    pygame.draw.rect(mundo, (255, 240, 195), (rect_p.x, rect_p.y, ancho_p, alto_p - 4))
     mundo.blit(sprite_cerrada, rect_p.topleft)
     pantalla.blit(mundo, (0, 0), pygame.Rect(cam_x, 0, pantalla.get_width(), pantalla.get_height()))
     pygame.display.flip()
@@ -998,7 +1000,8 @@ def animar_transicion_nivel_completado(
     # 2. Captura del escenario base detrás de la puerta para el sistema multicapa
     mundo_fondo = mundo_surface.copy()
     if puerta is not None:
-        pygame.draw.rect(mundo_fondo, (255, 240, 195), puerta["rect"])
+        rp = puerta["rect"]
+        pygame.draw.rect(mundo_fondo, (255, 240, 195), (rp.x, rp.y, rp.width, rp.height - 4))
     captura_escenario = pygame.Surface((pantalla.get_width(), pantalla.get_height()))
     captura_escenario.blit(mundo_fondo, (0, 0), pygame.Rect(cam_x, 0, pantalla.get_width(), pantalla.get_height()))
 
@@ -2187,7 +2190,7 @@ def generar_laberinto_coral_m3_n2(ancho_mundo, alto_mundo, y_suelo, y_techo, rng
 
     puerta_x = 2460
     puerta_y = y_suelo - 90
-    pedestal_puerta = pygame.Rect(2420, y_suelo - 15, 150, 15)
+    pedestal_puerta = pygame.Rect(2405, y_suelo - 15, 170, 15)
     rocas.append({"rect": pedestal_puerta, "coral": True, "color_coral": (255, 135, 70)})
 
     corales.append({"tipo": "ramificado", "x": 2430, "y": y_suelo, "escala": 1.25, "fase": 0.5, "color": (250, 95, 135), "color_sec": (255, 185, 205), "anclaje": "abajo"})
@@ -2676,7 +2679,7 @@ def generar_laberinto_oscuro_m3_n4(ancho_mundo, alto_mundo, y_suelo, y_techo, rn
 
     puerta_x = 2460
     puerta_y = y_suelo - 90
-    pedestal_puerta = pygame.Rect(2420, y_suelo - 15, 150, 15)
+    pedestal_puerta = pygame.Rect(2405, y_suelo - 15, 170, 15)
     rocas.append({"rect": pedestal_puerta, "coral": True, "color_coral": (255, 135, 70)})
 
     corales.append({"tipo": "ramificado", "x": 2430, "y": y_suelo, "escala": 1.25, "fase": 0.5, "color": (250, 95, 135), "color_sec": (255, 185, 205), "anclaje": "abajo"})
@@ -4928,6 +4931,7 @@ def iniciar_mundo(
         mundo_inicio.blit(caja["sprite"], caja["rect"])
 
     if usar_llave and puerta:
+        actualizar_puerta(puerta)
         estado_p = "cerrada"
         mundo_inicio.blit(puerta["sprites"][estado_p], puerta["rect"])
         if llave:
@@ -4983,6 +4987,8 @@ def iniciar_mundo(
 
     jugador1["accesorio"] = p1_acc
     jugador2["accesorio"] = p2_acc
+    jugador1["equipo_buceo"] = (numero_mundo == 3)
+    jugador2["equipo_buceo"] = (numero_mundo == 3)
 
     def _reiniciar_nivel_completo():
         nonlocal p1_completado, p2_completado, mostrar_tutorial, contador_tutorial
@@ -4993,6 +4999,8 @@ def iniciar_mundo(
         reiniciar_juego(jugador1, jugador2, caja, llave, puerta, estado_soga=estado_soga)
         jugador1["accesorio"] = p1_acc
         jugador2["accesorio"] = p2_acc
+        jugador1["equipo_buceo"] = (numero_mundo == 3)
+        jugador2["equipo_buceo"] = (numero_mundo == 3)
         if boton_nivel is not None and pared_nivel is not None:
             boton_nivel["presionado"] = False
             pared_nivel["progreso"] = 0.0
@@ -5649,10 +5657,13 @@ def iniciar_mundo(
                 if caja["rect"].left < 20:
                     caja["rect"].left = 20
 
+        if usar_soga and not p1_completado and not p2_completado:
+            coordinar_movimiento_soga(jugador1, jugador2, DISTANCIA_SOGA_MAXIMA)
+
         if not jugador1["muerto"] and not p1_completado:
-            resolver_colisiones(jugador1, jugador2 if not p2_completado and not jugador2["muerto"] else None, suelo, mundo_rect, caja if usar_caja else None, jugador1["en_agua"], plataformas)
+            resolver_colisiones(jugador1, jugador2 if not p2_completado and not jugador2["muerto"] else None, suelo, mundo_rect, caja if usar_caja else None, jugador1["en_agua"], plataformas, usar_soga=usar_soga, d_max=DISTANCIA_SOGA_MAXIMA)
         if not jugador2["muerto"] and not p2_completado:
-            resolver_colisiones(jugador2, jugador1 if not p1_completado and not jugador1["muerto"] else None, suelo, mundo_rect, caja if usar_caja else None, jugador2["en_agua"], plataformas)
+            resolver_colisiones(jugador2, jugador1 if not p1_completado and not jugador1["muerto"] else None, suelo, mundo_rect, caja if usar_caja else None, jugador2["en_agua"], plataformas, usar_soga=usar_soga, d_max=DISTANCIA_SOGA_MAXIMA)
 
         if numero_mundo == 3 and numero_nivel == 5:
             # 1. Empuje de corrientes marinas sobre personajes activos
@@ -5818,10 +5829,11 @@ def iniciar_mundo(
                                 _crear_efecto_soplar(jugador2, es_p1=False, dir_viento=dir_v)
 
         if puerta and puerta["abierta"]:
-            if not p1_completado and jugador1["hitbox"].colliderect(puerta["rect"]):
+            rect_ent = puerta.get("rect_entrada", puerta["rect"])
+            if not p1_completado and jugador1["hitbox"].colliderect(rect_ent):
                 p1_completado = True
                 jugador1["hitbox"].x = -9999
-            if not p2_completado and jugador2["hitbox"].colliderect(puerta["rect"]):
+            if not p2_completado and jugador2["hitbox"].colliderect(rect_ent):
                 p2_completado = True
                 jugador2["hitbox"].x = -9999
 
@@ -5974,7 +5986,8 @@ def iniciar_mundo(
             dibujar_soga_escenario(mundo, jugador1, jugador2, estado_soga, DISTANCIA_SOGA_REPOSO, DISTANCIA_SOGA_MAXIMA)
         if usar_caja: mundo.blit(caja["sprite"], caja["rect"])
 
-        if usar_llave:
+        if usar_llave and puerta:
+            actualizar_puerta(puerta)
             estado_p = "abierta" if puerta["abierta"] else "cerrada"
             mundo.blit(puerta["sprites"][estado_p], puerta["rect"])
             if llave and not puerta["abierta"]:

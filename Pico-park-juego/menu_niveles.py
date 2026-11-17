@@ -390,17 +390,18 @@ def _cargar_llave(tamano=(10, 18)):
 
 
 def _crear_puerta_original(tamano=(16, 26)):
-    """Representación fiel en pixel art de la puerta de madera con marco y pomo dorado."""
+    """Representación en miniatura del Portal místico con marco de piedra y energía verde."""
+    try:
+        from sprites import cargar_sprites_puerta
+        sps = cargar_sprites_puerta(tamano)
+        if sps and "cerrada" in sps:
+            return sps["cerrada"]
+    except Exception:
+        pass
     p = pygame.Surface(tamano, pygame.SRCALPHA)
     w, h = tamano
-    # Marco exterior
-    pygame.draw.rect(p, (90, 45, 15), (0, 0, w, h), border_radius=2)
-    # Hoja de madera
-    pygame.draw.rect(p, (139, 69, 19), (2, 2, w - 4, h - 2), border_radius=2)
-    # Tablones decorativos sutiles
-    pygame.draw.line(p, (115, 55, 15), (w // 2, 3), (w // 2, h - 2), 1)
-    # Pomo dorado
-    pygame.draw.circle(p, (255, 215, 0), (w - 4, h // 2 + 2), 2)
+    pygame.draw.rect(p, (88, 88, 88), (0, 0, w, h), border_radius=w // 2)
+    pygame.draw.ellipse(p, (95, 215, 60), (3, 4, w - 6, h - 8))
     return p
 
 

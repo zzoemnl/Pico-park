@@ -90,9 +90,113 @@ def reiniciar_juego(p1, p2, caja=None, llave=None, puerta=None, estado_soga=None
 
     if puerta is not None:
         puerta["abierta"] = False
+        puerta["fase_candado"] = 0
+        puerta["tick_candado"] = 0
+        puerta["desbloqueando"] = False
 
 
-def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, plataformas=None):
+def coordinar_movimiento_soga(p1, p2, d_max=DISTANCIA_SOGA_MAXIMA):
+    """
+    Coordinación y recorte pre-desplazamiento para garantizar que la soga NUNCA
+    supere su longitud máxima (distancia <= d_max) en ninguna actualización física.
+    - Recorta únicamente la componente del desplazamiento que provocaría exceso.
+    - Si un personaje camina y el otro está quieto, el que camina se detiene firmemente al llegar a d_max.
+    - Si ambos caminan en direcciones opuestas, ambos se detienen al llegar al límite.
+    - El movimiento de acercamiento o perpendicular es 100% libre sin ninguna resistencia.
+    - Si uno cuelga en el aire y el otro camina en una plataforma, el del suelo arrastra al suspendido suavemente.
+    - No aplica teletransportes ni retrocesos bruscos.
+    """
+    if p1 is None or p2 is None or p1.get("muerto", False) or p2.get("muerto", False):
+        return
+
+    c1 = pygame.Vector2(p1["hitbox"].centerx, p1["hitbox"].centery + 4)
+    c2 = pygame.Vector2(p2["hitbox"].centerx, p2["hitbox"].centery + 4)
+    v = c2 - c1
+    d = v.length()
+
+    # Si por alguna colisión previa la distancia supera d_max, corregir suavemente antes de mover
+    if d > d_max and d > 0.001:
+        exceso = d - d_max
+        u = v / d
+        if p1.get("en_suelo", False) and not p2.get("en_suelo", False):
+            p2["hitbox"].x -= int(round(u.x * exceso))
+            p2["hitbox"].y -= int(round(u.y * exceso))
+        elif p2.get("en_suelo", False) and not p1.get("en_suelo", False):
+            p1["hitbox"].x += int(round(u.x * exceso))
+            p1["hitbox"].y += int(round(u.y * exceso))
+        else:
+            p1["hitbox"].x += int(round(u.x * exceso * 0.5))
+            p1["hitbox"].y += int(round(u.y * exceso * 0.5))
+            p2["hitbox"].x -= int(round(u.x * exceso * 0.5))
+            p2["hitbox"].y -= int(round(u.y * exceso * 0.5))
+        c1 = pygame.Vector2(p1["hitbox"].centerx, p1["hitbox"].centery + 4)
+        c2 = pygame.Vector2(p2["hitbox"].centerx, p2["hitbox"].centery + 4)
+
+    p1_suelo = p1.get("en_suelo", False)
+    p2_suelo = p2.get("en_suelo", False)
+    dy = c2.y - c1.y
+    if abs(dy) >= d_max:
+        x_max = 0.0
+    else:
+        x_max = math.sqrt(max(0.0, d_max * d_max - dy * dy))
+
+    v1_x = p1.get("vel_x", 0.0)
+    v2_x = p2.get("vel_x", 0.0)
+    dx1 = int(round(v1_x))
+    dx2 = int(round(v2_x))
+
+    # Arrastre horizontal cuando uno cuelga en el aire y el otro camina en plataforma
+    if p1_suelo and not p2_suelo and dy > 15:
+        if dx1 != 0 and abs(dx2) <= 1:
+            dx2 = dx1
+            p2["vel_x"] = float(dx2)
+    elif p2_suelo and not p1_suelo and -dy > 15:
+        if dx2 != 0 and abs(dx1) <= 1:
+            dx1 = dx2
+            p1["vel_x"] = float(dx1)
+
+    new_rel_x = (c2.x + dx2) - (c1.x + dx1)
+    if new_rel_x > x_max:
+        excess = new_rel_x - x_max
+        s1 = max(0, -dx1)
+        s2 = max(0, dx2)
+        s_tot = s1 + s2
+        reduce = int(math.ceil(excess))
+        if s1 > 0 and s2 == 0:
+            dx1 += reduce
+            p1["vel_x"] = float(dx1)
+        elif s2 > 0 and s1 == 0:
+            dx2 -= reduce
+            p2["vel_x"] = float(dx2)
+        elif s_tot > 0:
+            r1 = int(round(reduce * (s1 / s_tot)))
+            r2 = reduce - r1
+            dx1 += r1
+            dx2 -= r2
+            p1["vel_x"] = float(dx1)
+            p2["vel_x"] = float(dx2)
+    elif new_rel_x < -x_max:
+        excess = -x_max - new_rel_x
+        s1 = max(0, dx1)
+        s2 = max(0, -dx2)
+        s_tot = s1 + s2
+        reduce = int(math.ceil(excess))
+        if s1 > 0 and s2 == 0:
+            dx1 -= reduce
+            p1["vel_x"] = float(dx1)
+        elif s2 > 0 and s1 == 0:
+            dx2 += reduce
+            p2["vel_x"] = float(dx2)
+        elif s_tot > 0:
+            r1 = int(round(reduce * (s1 / s_tot)))
+            r2 = reduce - r1
+            dx1 -= r1
+            dx2 += r2
+            p1["vel_x"] = float(dx1)
+            p2["vel_x"] = float(dx2)
+
+
+def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, plataformas=None, usar_soga=False, d_max=DISTANCIA_SOGA_MAXIMA):
     hb1 = p1["hitbox"]
     hb2 = p2["hitbox"] if p2 is not None else None
 
@@ -107,8 +211,32 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, 
     x_inicio = hb1.x
     y_inicio = hb1.y
 
-    # Movimiento horizontal de p1
-    hb1.x += int(round(p1["vel_x"]))
+    # Movimiento horizontal de p1 con límite físico estricto de soga
+    dx = int(round(p1["vel_x"]))
+    if usar_soga and hb2 is not None and not p1.get("muerto", False) and not p2.get("muerto", False):
+        c1_y = hb1.centery + 4
+        c2_y = hb2.centery + 4
+        dy = c2_y - c1_y
+        if abs(dy) >= d_max:
+            x_max = 0.0
+        else:
+            x_max = math.sqrt(max(0.0, d_max * d_max - dy * dy))
+
+        c1_x = hb1.centerx
+        c2_x = hb2.centerx
+        c1_x_prop = c1_x + dx
+
+        rel_x = c2_x - c1_x_prop
+        if rel_x > x_max:
+            max_c1_x = c2_x - x_max
+            dx = int(math.ceil(max_c1_x - c1_x))
+            p1["vel_x"] = float(dx)
+        elif rel_x < -x_max:
+            min_c1_x = c2_x + x_max
+            dx = int(math.floor(min_c1_x - c1_x))
+            p1["vel_x"] = float(dx)
+
+    hb1.x += dx
 
     p1["empujando"] = False
     p1["direccion_empuje"] = 0
@@ -223,7 +351,30 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, 
     if not en_agua:
         p1["vel_y"] += GRAVEDAD
 
-    hb1.y += int(p1["vel_y"])
+    dy = int(p1["vel_y"])
+    if usar_soga and hb2 is not None and not p1.get("muerto", False) and not p2.get("muerto", False):
+        c1_x = hb1.centerx
+        c2_x = hb2.centerx
+        dx_cur = c2_x - c1_x
+        if abs(dx_cur) >= d_max:
+            y_max = 0.0
+        else:
+            y_max = math.sqrt(max(0.0, d_max * d_max - dx_cur * dx_cur))
+
+        c1_y = hb1.centery + 4
+        c2_y = hb2.centery + 4
+        c1_y_prop = c1_y + dy
+        rel_y = c2_y - c1_y_prop
+        if rel_y > y_max:
+            max_c1_y = c2_y - y_max
+            dy = int(math.ceil(max_c1_y - c1_y))
+            p1["vel_y"] = float(dy)
+        elif rel_y < -y_max:
+            min_c1_y = c2_y + y_max
+            dy = int(math.floor(min_c1_y - c1_y))
+            p1["vel_y"] = float(dy)
+
+    hb1.y += dy
 
     toco_superficie = False
     if plataformas:
@@ -565,10 +716,10 @@ def actualizar_fisica_soga(p1, p2, estado_soga=None, d_reposo=DISTANCIA_SOGA_REP
         # C. Si los personajes se quedan quietos o están a distancia intermedia (140 < dist < 157):
         # El daño acumulado PERMANECE en el nivel exacto que alcanzó sin recuperarse automáticamente.
 
-        estado_soga["nivel_estres"] = estado_soga["dano_acumulado"]
+        estado_soga["nivel_estres"] = dano_act
 
         # D. Rotura por desgaste máximo (100% de daño acumulado)
-        if estado_soga["dano_acumulado"] >= 1.0:
+        if dano_act >= 1.0:
             estado_soga["rota"] = True
             estado_soga["tension"] = 0.0
             estado_soga["tiempo_rotura"] = 0
@@ -612,53 +763,40 @@ def actualizar_fisica_soga(p1, p2, estado_soga=None, d_reposo=DISTANCIA_SOGA_REP
                 p1["vel_x"] *= max(0.0, 1.0 - t * 0.70)
                 p2["vel_x"] *= max(0.0, 1.0 - t * 0.70)
         elif v1_away > 0.1 and v2_away <= 0.1:
-            # P1 tira de P2
-            if p2_bloqueado_hacia_p1:
-                if distancia >= d_max:
-                    p1["vel_x"] = 0.0
+            # P1 tira de P2 mientras P2 está en el suelo
+            if distancia >= d_max:
+                # P1 alcanza el límite y detiene su avance en la dirección que estira la soga
+                if ux > 0:
+                    p1["vel_x"] = max(0.0, p1.get("vel_x", 0.0))
                 else:
-                    p1["vel_x"] *= max(0.0, 1.0 - t * 0.70)
-            else:
-                if distancia >= d_max:
-                    # Remolque continuo a velocidad idéntica y completa: v_sep = 0, distancia fija en d_max
-                    # P1 conserva el control total de su velocidad de movimiento y remolca a P2
-                    vel_remolque = v1_away
-                    p1["vel_x"] = -ux * vel_remolque
-                    p2["vel_x"] = -ux * vel_remolque
-                    p2["moviendo"] = True
-                    p2["mirando_derecha"] = (p2["vel_x"] >= 0)
-                else:
-                    fuerza = t * v1_away * 0.85
-                    p2["vel_x"] += -ux * fuerza
-                    p2["moviendo"] = True
-                    p2["mirando_derecha"] = (p2["vel_x"] >= 0)
-        elif v2_away > 0.1 and v1_away <= 0.1:
-            # P2 tira de P1
-            if p1_bloqueado_hacia_p2:
-                if distancia >= d_max:
+                    p1["vel_x"] = min(0.0, p1.get("vel_x", 0.0))
+                if not p2.get("moviendo", False):
                     p2["vel_x"] = 0.0
-                else:
-                    p2["vel_x"] *= max(0.0, 1.0 - t * 0.70)
             else:
-                if distancia >= d_max:
-                    vel_remolque = v2_away
-                    p2["vel_x"] = ux * vel_remolque
-                    p1["vel_x"] = ux * vel_remolque
-                    p1["moviendo"] = True
-                    p1["mirando_derecha"] = (p1["vel_x"] >= 0)
+                p1["vel_x"] *= max(0.0, 1.0 - t * 0.70)
+        elif v2_away > 0.1 and v1_away <= 0.1:
+            # P2 tira de P1 mientras P1 está en el suelo
+            if distancia >= d_max:
+                if ux > 0:
+                    p2["vel_x"] = min(0.0, p2.get("vel_x", 0.0))
                 else:
-                    fuerza = t * v2_away * 0.85
-                    p1["vel_x"] += ux * fuerza
-                    p1["moviendo"] = True
-                    p1["mirando_derecha"] = (p1["vel_x"] >= 0)
+                    p2["vel_x"] = max(0.0, p2.get("vel_x", 0.0))
+                if not p1.get("moviendo", False):
+                    p1["vel_x"] = 0.0
+            else:
+                p2["vel_x"] *= max(0.0, 1.0 - t * 0.70)
 
         # Garantizar que ninguna velocidad residual aumente la distancia por encima de d_max
         v1_post = p1.get("vel_x", 0.0)
         v2_post = p2.get("vel_x", 0.0)
         v_sep_post = (v2_post - v1_post) * ux
         if distancia >= d_max and v_sep_post > 0:
-            p1["vel_x"] += ux * (v_sep_post * 0.5)
-            p2["vel_x"] -= ux * (v_sep_post * 0.5)
+            if ux > 0:
+                p1["vel_x"] = max(0.0, p1["vel_x"])
+                p2["vel_x"] = min(0.0, p2["vel_x"])
+            else:
+                p1["vel_x"] = min(0.0, p1["vel_x"])
+                p2["vel_x"] = max(0.0, p2["vel_x"])
         return
 
     # 4. Situación B: P1 en suelo, P2 en el aire
@@ -800,8 +938,7 @@ def aplicar_restriccion_soga(p1, p2, distancia_maxima=DISTANCIA_SOGA_MAXIMA, pla
         return
 
     exceso = distancia - distancia_maxima
-    # Histéresis contra oscilaciones numéricas de sub-píxel
-    if exceso < 0.5:
+    if exceso <= 0.001:
         return
 
     direccion = v / distancia
@@ -834,7 +971,7 @@ def aplicar_restriccion_soga(p1, p2, distancia_maxima=DISTANCIA_SOGA_MAXIMA, pla
         x_prev = hb.x
         y_prev = hb.y
 
-        dx = int(round(desp.x))
+        dx = int(math.ceil(desp.x)) if desp.x > 0 else int(math.floor(desp.x))
         if dx != 0:
             hb.x += dx
             if plataformas:
@@ -849,7 +986,7 @@ def aplicar_restriccion_soga(p1, p2, distancia_maxima=DISTANCIA_SOGA_MAXIMA, pla
                             if p.get("vel_x", 0) < 0:
                                 p["vel_x"] = 0
 
-        dy = int(round(desp.y))
+        dy = int(math.ceil(desp.y)) if desp.y > 0 else int(math.floor(desp.y))
         if dy != 0:
             hb.y += dy
             if suelo is not None and hb.right > suelo.left and hb.left < suelo.right and hb.bottom > suelo.top:
@@ -883,6 +1020,16 @@ def aplicar_restriccion_soga(p1, p2, distancia_maxima=DISTANCIA_SOGA_MAXIMA, pla
     if w2 > 0:
         ajustar_posicion_con_solidez(p2, desp2)
 
+    # Anular cualquier velocidad residual de separación
+    v1 = pygame.Vector2(p1.get("vel_x", 0.0), p1.get("vel_y", 0.0))
+    v2 = pygame.Vector2(p2.get("vel_x", 0.0), p2.get("vel_y", 0.0))
+    v_sep = (v2 - v1).dot(direccion)
+    if v_sep > 0:
+        p1["vel_x"] += direccion.x * (v_sep * w1)
+        p1["vel_y"] += direccion.y * (v_sep * w1)
+        p2["vel_x"] -= direccion.x * (v_sep * w2)
+        p2["vel_y"] -= direccion.y * (v_sep * w2)
+
 
 def crear_llave(x, y):
     return {
@@ -898,12 +1045,115 @@ def crear_llave(x, y):
     }
 
 
-def crear_puerta(x, y):
+ANCHO_PORTAL = 146
+ALTO_PORTAL = 180
+
+
+def crear_puerta(x, y, w=ANCHO_PORTAL, h=ALTO_PORTAL):
+    sprites = cargar_sprites_puerta((w, h))
+    # Mantener el portal apoyado sobre el suelo y centrado en su posición actual:
+    # La coordenada y histórica correspondía a (suelo.top - 90), y x al borde izquierdo de 60 px.
+    # El centro x original era (x + 30) y el suelo base era (y + 90).
+    centro_x = x + 30
+    suelo_y = y + 90
+    rect_x = centro_x - w // 2
+    # El sprite del portal (146x180) posee 4 filas transparentes en su base inferior (y=176..179).
+    # Desplazamos rect_y 4 px hacia abajo para que el umbral de piedra apoye directamente sobre la superficie del suelo sin ningún hueco visible.
+    rect_y = suelo_y - h + 4
+    rect = pygame.Rect(rect_x, rect_y, w, h)
+    # Zona de entrada al núcleo de energía verde para que los personajes entren visualmente al portal
+    rect_entrada = pygame.Rect(centro_x - 30, rect_y + 20, 60, h - 20)
     return {
-        "rect": pygame.Rect(x, y, 60, 90),
-        "sprites": cargar_sprites_puerta(),
+        "rect": rect,
+        "rect_entrada": rect_entrada,
+        "sprites": sprites,
         "abierta": False,
+        "tick_portal": 0,
+        "frame_portal": 0,
+        "fase_candado": 0,      # 0: cerrado, 1: roto, 2: cayendo, 3: particula, 4: desaparecido
+        "tick_candado": 0,
+        "desbloqueando": False,
     }
+
+
+def actualizar_puerta(puerta):
+    """
+    Actualiza la animación en bucle continuo de la energía verde del portal
+    y la secuencia fluida de desbloqueo del candado (roto -> cayendo -> partícula -> desaparecer).
+    Actualiza automáticamente 'cerrada' y 'abierta' en puerta['sprites'] para que cualquier
+    llamada a blit(puerta['sprites'][estado], puerta['rect']) renderice la animación completa.
+    """
+    if puerta is None or "sprites" not in puerta:
+        return
+
+    # 1. Animación fluida en bucle de la energía verde del portal (Sprite 1 -> 2 -> 3 -> 1...)
+    # 15 frames por sprite a 60 FPS (~4 FPS de rotación suave, gradual y natural de la energía mística)
+    puerta["tick_portal"] = puerta.get("tick_portal", 0) + 1
+    if puerta["tick_portal"] >= 15:
+        puerta["tick_portal"] = 0
+        puerta["frame_portal"] = (puerta.get("frame_portal", 0) + 1) % 3
+
+    idx_p = puerta.get("frame_portal", 0)
+    sp_portal_actual = puerta["sprites"]["portal"][idx_p]
+
+    # 2. Secuencia de desbloqueo del candado
+    fase = puerta.get("fase_candado", 0)
+    tick_c = puerta.get("tick_candado", 0)
+    candados = puerta["sprites"]["candado"]
+
+    surf_candado_actual = None
+    alpha_candado = 255
+    offset_candado_y = 0
+
+    if fase == 0:
+        # Candado cerrado: permanece estático sobre el portal mientras esté bloqueado
+        surf_candado_actual = candados[0]
+    elif fase == 1:
+        # Candado roto: al entrar en contacto con la llave (~14 frames / 0.23 s)
+        surf_candado_actual = candados[1]
+        puerta["tick_candado"] = tick_c + 1
+        if puerta["tick_candado"] >= 14:
+            puerta["fase_candado"] = 2
+            puerta["tick_candado"] = 0
+    elif fase == 2:
+        # Candado cayendo: cae hacia abajo mientras se desvanece progresivamente (~24 frames / 0.40 s)
+        surf_candado_actual = candados[2]
+        puerta["tick_candado"] = tick_c + 1
+        alpha_candado = max(30, int(255 * (1.0 - (puerta["tick_candado"] / 24.0))))
+        offset_candado_y = int(puerta["tick_candado"] * 0.3)
+        if puerta["tick_candado"] >= 24:
+            puerta["fase_candado"] = 3
+            puerta["tick_candado"] = 0
+    elif fase == 3:
+        # Última partícula: pequeña partícula en el suelo terminando de desaparecer (~18 frames / 0.30 s)
+        surf_candado_actual = candados[3]
+        puerta["tick_candado"] = tick_c + 1
+        alpha_candado = max(0, int(255 * (1.0 - (puerta["tick_candado"] / 18.0))))
+        if puerta["tick_candado"] >= 18:
+            puerta["fase_candado"] = 4
+            puerta["tick_candado"] = 0
+    # fase == 4: Candado desaparecido por completo (no vuelve a aparecer jamás)
+
+    # 3. Componer la superficie actual del portal + candado
+    # Superficie limpia del portal sin candado
+    puerta["sprites"]["abierta"] = sp_portal_actual
+
+    # Si hay candado visible en pantalla
+    if surf_candado_actual is not None and alpha_candado > 0:
+        surf_comp = sp_portal_actual.copy()
+        if alpha_candado < 255:
+            s_alpha = surf_candado_actual.copy()
+            s_alpha.set_alpha(alpha_candado)
+            surf_comp.blit(s_alpha, (0, offset_candado_y))
+        else:
+            surf_comp.blit(surf_candado_actual, (0, offset_candado_y))
+
+        # Durante el desbloqueo (fases 1, 2, 3), mostramos la transición activa
+        if fase > 0:
+            puerta["sprites"]["abierta"] = surf_comp
+        puerta["sprites"]["cerrada"] = surf_comp
+    else:
+        puerta["sprites"]["cerrada"] = sp_portal_actual
 
 
 def actualizar_llave(llave, personajes, puerta):
@@ -948,6 +1198,9 @@ def actualizar_llave(llave, personajes, puerta):
         portador = llave["portador"]
         if portador is not None and portador["hitbox"].colliderect(puerta["rect"]):
             puerta["abierta"] = True
+            puerta["desbloqueando"] = True
+            puerta["fase_candado"] = 1  # Inicia desbloqueo: candado roto
+            puerta["tick_candado"] = 0
             llave["portador"] = None
 
 

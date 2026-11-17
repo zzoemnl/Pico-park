@@ -1361,16 +1361,24 @@ def modal_flujo_guardar_perfil(
                 hov_p_sig = btn_pag_sig.collidepoint(pos_mouse) and pagina_guardar < total_paginas - 1
                 pygame.draw.rect(pantalla, (255, 255, 255) if hov_p_ant else (240, 230, 215), btn_pag_ant, border_radius=6)
                 pygame.draw.rect(pantalla, (180, 150, 120), btn_pag_ant, width=1, border_radius=6)
-                t_pa = fuente_pag.render("◀", True, (60, 45, 35) if pagina_guardar > 0 else (175, 160, 145))
-                pantalla.blit(t_pa, t_pa.get_rect(center=btn_pag_ant.center))
+                col_fl_ant = (60, 45, 35) if pagina_guardar > 0 else (175, 160, 145)
+                cx_pa, cy_pa = btn_pag_ant.center
+                for dy in range(-5, 6):
+                    ancho_f = 5 - abs(dy)
+                    for dx in range(ancho_f + 1):
+                        pantalla.set_at((cx_pa + 2 - dx, cy_pa + dy), col_fl_ant)
 
                 t_pnum = fuente_pag.render(f"{pagina_guardar + 1} / {total_paginas}", True, (80, 65, 55))
                 pantalla.blit(t_pnum, t_pnum.get_rect(center=(rect_card.centerx, rect_card.top + 432)))
 
                 pygame.draw.rect(pantalla, (255, 255, 255) if hov_p_sig else (240, 230, 215), btn_pag_sig, border_radius=6)
                 pygame.draw.rect(pantalla, (180, 150, 120), btn_pag_sig, width=1, border_radius=6)
-                t_ps = fuente_pag.render("▶", True, (60, 45, 35) if pagina_guardar < total_paginas - 1 else (175, 160, 145))
-                pantalla.blit(t_ps, t_ps.get_rect(center=btn_pag_sig.center))
+                col_fl_sig = (60, 45, 35) if pagina_guardar < total_paginas - 1 else (175, 160, 145)
+                cx_ps, cy_ps = btn_pag_sig.center
+                for dy in range(-5, 6):
+                    ancho_f = 5 - abs(dy)
+                    for dx in range(ancho_f + 1):
+                        pantalla.set_at((cx_ps - 2 + dx, cy_ps + dy), col_fl_sig)
 
         # Botón Cancelar (reutiliza el botón oficial del proyecto con proporciones 3.4:1)
         if spr_can_norm:

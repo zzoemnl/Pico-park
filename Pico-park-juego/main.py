@@ -1,6 +1,9 @@
+import os
 import sys
 import copy
 import pygame
+
+DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 
 from sprites import (
     ANCHO,
@@ -15,9 +18,15 @@ from sprites import (
     obtener_accesorios_disponibles,
     cargar_accesorio,
     dibujar_accesorio_en_personaje,
+    agregar_contorno_pixel_art,
+    ACCESORIOS_CON_CONTORNO,
 )
 from pantalla import iniciar_mundo
-from configuracion import t, mostrar_pestana_configuracion, reproducir_musica, detener_musica, obtener_idioma
+from configuracion import (
+    t, mostrar_pestana_configuracion, reproducir_musica, detener_musica,
+    obtener_idioma, cambiar_idioma, obtener_volumen, fijar_volumen,
+    cambiar_volumen, reproducir_beep_volumen, reproducir_sonido_ui,
+)
 from menu_niveles import (
     dibujar_menu_niveles,
     obtener_geometria_menu,
@@ -104,6 +113,34 @@ PERSONAJES_DISPONIBLES = [
     {"nombre": "Azul", "color": (36, 166, 247)},
     {"nombre": "Violeta", "color": (161, 123, 255)},
 ]
+
+NOMBRES_COLORES_MOSTRAR = {
+    "Blanco": "Blanco",
+    "Gris": "Gris claro",
+    "Negro": "Gris oscuro",
+    "Marron": "Marrón",
+    "Rojo": "Rojo",
+    "Rosa": "Rosa",
+    "Naranja": "Naranja",
+    "Amarillo": "Amarillo",
+    "Verde": "Verde claro",
+    "Verde oscuro": "Verde",
+    "Celeste": "Celeste",
+    "Azul": "Azul",
+    "Violeta": "Violeta",
+}
+
+FILAS_COLORES_SELECCION = [
+    [0, 1, 2, 3],       # Fila 1 (Neutros y Tierra): Blanco, Gris claro, Gris oscuro, Marrón
+    [4, 5, 6, 7, 8],    # Fila 2 (Cálidos y Verde claro): Rojo, Rosa, Naranja, Amarillo, Verde claro
+    [9, 10, 11, 12],    # Fila 3 (Verdes y Fríos): Verde, Celeste, Azul, Violeta
+]
+
+
+def _obtener_nombre_color_visible(nombre_interno, idioma=None):
+    nom_base = NOMBRES_COLORES_MOSTRAR.get(nombre_interno, nombre_interno)
+    trad = t(nom_base.lower(), idioma) if idioma else t(nom_base.lower())
+    return trad if trad else nom_base
 
 
 # ==============================================================================
@@ -830,6 +867,668 @@ def _obtener_fondo_partidas(ancho: int = 1280, alto: int = 720) -> "pygame.Surfa
     return _fondo_partidas_cache
 
 
+_fondo_opciones_cache: "pygame.Surface | None" = None
+_copos_opciones: list[dict] = []
+
+
+def _generar_fondo_opciones(ancho: int = 1280, alto: int = 720) -> "pygame.Surface":
+    """
+    Paisaje invernal pixel art con montañas nevadas, árboles de invierno y cielo nocturno
+    estrellado con luna suave para la pantalla completa de «OPCIONES».
+    """
+    W, H = 640, 360
+    surf = pygame.Surface((W, H))
+
+    # 1. Cielo nocturno invernal profundo
+    bandas = [
+        (0,   60,  (12, 16, 32)),   # Azul medianoche oscuro
+        (60,  130, (20, 28, 54)),   # Azul zafiro profundo
+        (130, 200, (32, 45, 78)),   # Azul frío
+        (200, 255, (48, 64, 102)),  # Azul noche boreal tenue
+        (255, 300, (68, 86, 124)),  # Brillo frío sobre montañas
+    ]
+    for y1, y2, col in bandas:
+        pygame.draw.rect(surf, col, (0, y1, W, y2 - y1))
+
+    for i in range(len(bandas) - 1):
+        yt = bandas[i][1]
+        c1, c2 = bandas[i][2], bandas[i+1][2]
+        for dy in range(-3, 4):
+            y = yt + dy
+            if 0 <= y < H:
+                for x in range(W):
+                    if dy == -3 and (x % 4 == 0 and y % 4 == 0): surf.set_at((x, y), c2)
+                    elif dy == -2 and (x + y) % 4 == 0: surf.set_at((x, y), c2)
+                    elif dy == -1 and (x % 2 == 0 and y % 2 == 0): surf.set_at((x, y), c2)
+                    elif dy == 0 and (x + y) % 2 == 0: surf.set_at((x, y), c2)
+                    elif dy == 1 and (x % 2 == 0 and y % 2 == 0): surf.set_at((x, y), c1)
+                    elif dy == 2 and (x + y) % 4 == 0: surf.set_at((x, y), c1)
+                    elif dy == 3 and (x % 4 == 0 and y % 4 == 0): surf.set_at((x, y), c1)
+
+    # 2. Estrellas nocturnas
+    rnd = _random.Random(4242)
+    for _ in range(65):
+        sx = rnd.randint(10, W - 10)
+        sy = rnd.randint(6, 190)
+        alpha = rnd.choice([(255, 255, 255), (200, 220, 255), (230, 240, 255), (170, 190, 230)])
+        surf.set_at((sx, sy), alpha)
+        if rnd.random() < 0.15:
+            surf.set_at((sx + 1, sy), (180, 205, 240))
+            surf.set_at((sx - 1, sy), (180, 205, 240))
+            surf.set_at((sx, sy + 1), (180, 205, 240))
+            surf.set_at((sx, sy - 1), (180, 205, 240))
+
+    # Luna invernal suave
+    mx, my, mr = 540, 55, 20
+    for dy in range(-mr, mr + 1):
+        for dx in range(-mr, mr + 1):
+            d2 = dx * dx + dy * dy
+            if d2 <= mr * mr:
+                surf.set_at((mx + dx, my + dy), (245, 248, 255))
+            elif d2 <= (mr + 3) * (mr + 3):
+                surf.set_at((mx + dx, my + dy), (120, 150, 200))
+
+    # 3. Montañas lejanas nevadas
+    def mnt(x, seed, h_base, amp):
+        return h_base - int(amp * _math.sin(x * 0.008 + seed) + amp * 0.5 * _math.sin(x * 0.021 + seed * 2))
+
+    for x in range(W):
+        y_m1 = mnt(x, 12, 225, 45)
+        for y in range(y_m1, 280):
+            surf.set_at((x, y), (195, 215, 240) if y < y_m1 + 18 else (55, 70, 105))
+
+    for x in range(W):
+        y_m2 = mnt(x, 77, 245, 38)
+        for y in range(y_m2, 310):
+            surf.set_at((x, y), (225, 238, 255) if y < y_m2 + 15 else (38, 52, 85))
+
+    # 4. Colinas nevadas en primer plano
+    for x in range(W):
+        y_col = 285 + int(12 * _math.sin(x * 0.015))
+        for y in range(y_col, H):
+            prog = (y - y_col) / max(1, H - y_col)
+            if prog < 0.2:
+                col = (235, 242, 255)
+            elif prog < 0.6:
+                col = (210, 225, 248) if (x + y) % 2 == 0 else (185, 205, 235)
+            else:
+                col = (160, 182, 215)
+            surf.set_at((x, y), col)
+
+    # 5. Pinos nevados en los laterales
+    def pino_nevado(cx, by, alt, anc):
+        for y in range(by - alt, by):
+            prog = (y - (by - alt)) / alt
+            w_act = int(anc * prog)
+            for dx in range(-w_act // 2, w_act // 2 + 1):
+                px = cx + dx
+                if 0 <= px < W and 0 <= y < H:
+                    if dx == -w_act // 2 or dx == w_act // 2 or (y % 6 in (0, 1)):
+                        surf.set_at((px, y), (230, 240, 255))
+                    else:
+                        surf.set_at((px, y), (24, 48, 42))
+
+    pino_nevado(30, 310, 85, 32)
+    pino_nevado(65, 320, 95, 38)
+    pino_nevado(100, 335, 75, 30)
+    pino_nevado(610, 310, 85, 32)
+    pino_nevado(575, 320, 95, 38)
+    pino_nevado(540, 335, 75, 30)
+
+    return pygame.transform.scale(surf, (ancho, alto))
+
+
+def _obtener_fondo_opciones(ancho: int = 1280, alto: int = 720) -> "pygame.Surface":
+    global _fondo_opciones_cache
+    if _fondo_opciones_cache is None:
+        _fondo_opciones_cache = _generar_fondo_opciones(ancho, alto)
+    return _fondo_opciones_cache
+
+
+_fondo_camerino_personajes_cache: "pygame.Surface | None" = None
+
+
+def _generar_fondo_camerino_personajes(W: int = 1280, H: int = 720) -> "pygame.Surface":
+    """
+    Genera un fondo pixel art auténtico estilo habitación de vestuario / camerino cálido
+    para la pantalla de PERSONALIZACIÓN DE PERSONAJES de Las Aventurillas de Pico en el Parque.
+    Paleta: Rosa pastel, durazno, beige cálido, marrón suave, detalles en coral y crema.
+    """
+    sw, sh = 640, 360
+    surf = pygame.Surface((sw, sh))
+
+    # =========================================================================
+    # 1. PARED DE HABITACIÓN DE VESTUARIO (y = 0 a 282)
+    # =========================================================================
+    c_pared_base = (246, 222, 224)
+    c_pared_raya = (252, 230, 232)
+    c_pared_sombra = (240, 212, 216)
+
+    surf.fill(c_pared_base)
+
+    # Rayas de papel tapiz vertical sutil
+    for x in range(sw):
+        if x % 10 in (0, 1, 2, 3):
+            pygame.draw.line(surf, c_pared_raya, (x, 0), (x, 225))
+        elif x % 10 == 9:
+            pygame.draw.line(surf, c_pared_sombra, (x, 0), (x, 225))
+
+    # Moldura superior del techo (Cornisa de yeso / madera crema)
+    pygame.draw.rect(surf, (253, 248, 242), (0, 0, sw, 3))
+    pygame.draw.rect(surf, (242, 230, 218), (0, 3, sw, 3))
+    pygame.draw.rect(surf, (218, 196, 180), (0, 6, sw, 2))
+
+    # Moldura intermedia (Chair rail / moldura a y = 222..228)
+    pygame.draw.rect(surf, (255, 250, 244), (0, 222, sw, 2))
+    pygame.draw.rect(surf, (235, 215, 198), (0, 224, sw, 3))
+    pygame.draw.rect(surf, (208, 184, 165), (0, 227, sw, 2))
+
+    # Panel inferior de pared (Wainscoting en crema / durazno suave y = 229..282)
+    c_wains_base = (252, 238, 232)
+    c_wains_luz = (255, 248, 244)
+    c_wains_som = (230, 212, 202)
+    pygame.draw.rect(surf, c_wains_base, (0, 229, sw, 53))
+
+    # Paneles moldurados en la parte inferior
+    w_pnl = 38
+    for px in range(6, sw - 6, w_pnl + 6):
+        r_pnl = pygame.Rect(px, 233, w_pnl, 45)
+        pygame.draw.rect(surf, c_wains_som, r_pnl, 1)
+        pygame.draw.line(surf, c_wains_luz, (r_pnl.left + 1, r_pnl.top + 1), (r_pnl.right - 1, r_pnl.top + 1))
+        pygame.draw.line(surf, c_wains_luz, (r_pnl.left + 1, r_pnl.top + 1), (r_pnl.left + 1, r_pnl.bottom - 1))
+
+    # =========================================================================
+    # 2. ZÓCALO Y SUELO DE MADERA EN TONOS CÁLIDOS (y = 282 a 360)
+    # =========================================================================
+    # Zócalo de madera cálida
+    pygame.draw.rect(surf, (232, 188, 142), (0, 282, sw, 2)) # Bisel superior de luz
+    pygame.draw.rect(surf, (168, 116, 75), (0, 284, sw, 4))  # Madera base
+    pygame.draw.rect(surf, (115, 75, 45), (0, 288, sw, 2))   # Sombra de contacto
+
+    # Suelo de madera: tablones de parquet cálidos
+    col_tablones = [
+        (198, 144, 96),
+        (184, 130, 82),
+        (206, 152, 104),
+        (190, 136, 88),
+        (178, 124, 76),
+        (200, 146, 98),
+        (186, 132, 84),
+    ]
+    h_tab = 10
+    rnd_wood = _random.Random(789)
+
+    for i, c_tab in enumerate(col_tablones):
+        y_tab = 290 + i * h_tab
+        h_act = min(h_tab, sh - y_tab)
+        pygame.draw.rect(surf, c_tab, (0, y_tab, sw, h_act))
+        # Vetas de madera
+        for vy in range(y_tab + 2, y_tab + h_act - 2, 3):
+            c_veta = (max(0, c_tab[0] - 14), max(0, c_tab[1] - 12), max(0, c_tab[2] - 10))
+            for vx in range(0, sw, rnd_wood.randint(10, 24)):
+                pygame.draw.line(surf, c_veta, (vx, vy), (min(sw, vx + rnd_wood.randint(8, 20)), vy))
+        # Línea de unión horizontal oscura
+        pygame.draw.line(surf, (115, 75, 45), (0, y_tab + h_act - 1), (sw, y_tab + h_act - 1))
+        # Juntas verticales escalonadas
+        offset_junta = (i * 41) % 70
+        for jx in range(offset_junta, sw, 70):
+            pygame.draw.line(surf, (110, 70, 40), (jx, y_tab), (jx, y_tab + h_act - 1))
+            surf.set_at((jx + 2, y_tab + 3), (85, 52, 28))
+            surf.set_at((jx - 3, y_tab + h_act - 4), (85, 52, 28))
+
+    # =========================================================================
+    # 3. ALFOMBRA OVALADA GRANDE Y DISCRETA (debajo de la interfaz)
+    # =========================================================================
+    cx_alf, cy_alf = 320, 324
+    rx_alf, ry_alf = 276, 33
+
+    s_alf = pygame.Surface((sw, sh), pygame.SRCALPHA)
+
+    c_fringe_ext = (226, 132, 114, 255)
+    c_fringe_int = (242, 162, 146, 255)
+    c_alf_borde = (252, 214, 198, 255)
+    c_alf_cuerpo = (254, 248, 240, 255)
+    c_alf_textura = (246, 238, 226, 255)
+
+    pygame.draw.ellipse(s_alf, c_fringe_ext, (cx_alf - rx_alf, cy_alf - ry_alf, rx_alf * 2, ry_alf * 2))
+    pygame.draw.ellipse(s_alf, c_fringe_int, (cx_alf - rx_alf + 2, cy_alf - ry_alf + 2, (rx_alf - 2) * 2, (ry_alf - 2) * 2))
+    pygame.draw.ellipse(s_alf, c_alf_borde, (cx_alf - rx_alf + 5, cy_alf - ry_alf + 4, (rx_alf - 5) * 2, (ry_alf - 4) * 2))
+    pygame.draw.ellipse(s_alf, c_alf_cuerpo, (cx_alf - rx_alf + 10, cy_alf - ry_alf + 7, (rx_alf - 10) * 2, (ry_alf - 7) * 2))
+
+    # Textura tejida suave
+    for y in range(cy_alf - ry_alf + 8, cy_alf + ry_alf - 7, 2):
+        for x in range(cx_alf - rx_alf + 12, cx_alf + rx_alf - 12, 4):
+            dx = (x - cx_alf) / float(rx_alf - 12)
+            dy = (y - cy_alf) / float(ry_alf - 9)
+            if dx * dx + dy * dy < 0.95:
+                if (x + y) % 4 == 0:
+                    s_alf.set_at((x, y), c_alf_textura)
+
+    # Ribete decorativo interno
+    rx_rib, ry_rib = rx_alf - 22, ry_alf - 12
+    pygame.draw.ellipse(s_alf, (240, 180, 168, 180), (cx_alf - rx_rib, cy_alf - ry_rib, rx_rib * 2, ry_rib * 2), 1)
+
+    surf.blit(s_alf, (0, 0))
+
+    # =========================================================================
+    # 4. ELEMENTOS DECORATIVOS: PARTE SUPERIOR (Guirnalda de luces y plantas)
+    # =========================================================================
+    # Guirnalda de luces cálidas pegada al techo (y entre 7 y 14) para no tocar el título
+    pts_guirnalda = []
+    tramos = [
+        (0, 105, 7, 14),
+        (105, 210, 7, 13),
+        (210, 315, 7, 12),
+        (315, 420, 7, 12),
+        (420, 525, 7, 13),
+        (525, 640, 7, 14),
+    ]
+    for x0, x1, y_top, y_dip in tramos:
+        mid = (x0 + x1) / 2.0
+        w_t = (x1 - x0) / 2.0
+        for x in range(x0, x1 + 1):
+            norm = (x - mid) / w_t
+            y = int(y_dip - (y_dip - y_top) * (1 - norm * norm))
+            pts_guirnalda.append((x, y))
+
+    for i in range(len(pts_guirnalda) - 1):
+        pygame.draw.line(surf, (95, 80, 65), pts_guirnalda[i], pts_guirnalda[i+1], 1)
+
+    c_halo = (255, 235, 175, 75)
+    s_halo = pygame.Surface((sw, sh), pygame.SRCALPHA)
+
+    for i in range(10, len(pts_guirnalda) - 10, 22):
+        bx, by = pts_guirnalda[i]
+        by += 1
+        surf.set_at((bx, by), (115, 95, 75))
+        surf.set_at((bx, by + 1), (255, 255, 235))
+        surf.set_at((bx - 1, by + 2), (255, 225, 130))
+        surf.set_at((bx, by + 2), (255, 255, 245))
+        surf.set_at((bx + 1, by + 2), (255, 225, 130))
+        surf.set_at((bx, by + 3), (255, 190, 105))
+        pygame.draw.circle(s_halo, c_halo, (bx, by + 2), 5)
+        pygame.draw.circle(s_halo, (255, 245, 205, 130), (bx, by + 2), 2)
+
+    surf.blit(s_halo, (0, 0))
+
+    # Plantas colgantes en las esquinas superiores
+    def dibujar_maceta_colgante(s, cx, cy, flip=False):
+        col_cuerda = (235, 220, 205)
+        pygame.draw.line(s, col_cuerda, (cx - 6, 0), (cx - 4, cy - 3))
+        pygame.draw.line(s, col_cuerda, (cx + 6, 0), (cx + 4, cy - 3))
+        pygame.draw.line(s, col_cuerda, (cx, 0), (cx, cy - 3))
+
+        r_pot = pygame.Rect(cx - 6, cy - 3, 13, 8)
+        pygame.draw.rect(s, (225, 125, 95), r_pot, border_radius=2)
+        pygame.draw.rect(s, (248, 165, 138), (r_pot.left + 1, r_pot.top + 1, r_pot.width - 2, 2))
+        pygame.draw.rect(s, (165, 80, 55), r_pot, 1, border_radius=2)
+
+        col_v1 = (72, 142, 68)
+        col_v2 = (110, 182, 95)
+        col_v3 = (46, 102, 45)
+        hojas = [
+            (cx - 4, cy + 5, 5, 8, col_v1),
+            (cx + 2, cy + 6, 6, 12, col_v2),
+            (cx - 2, cy + 10, 5, 15, col_v1),
+            (cx + 4, cy + 14, 4, 10, col_v3),
+            (cx - 5, cy + 18, 5, 8, col_v2),
+            (cx, cy + 24, 4, 12, col_v1),
+            (cx + 1, cy + 34, 3, 6, col_v2),
+        ]
+        if flip:
+            hojas = [(cx - (hx - cx), hy, w, h, c) for hx, hy, w, h, c in hojas]
+        for hx, hy, hw, hh, hc in hojas:
+            pygame.draw.ellipse(s, hc, (hx - hw//2, hy, hw, hh))
+            s.set_at((hx, hy + 2), col_v2)
+            pygame.draw.line(s, col_v3, (cx, cy + 2), (hx, hy), 1)
+
+    dibujar_maceta_colgante(surf, 18, 11, flip=False)
+    dibujar_maceta_colgante(surf, sw - 18, 11, flip=True)
+
+    # =========================================================================
+    # 5. ELEMENTOS DECORATIVOS: LADO IZQUIERDO
+    # =========================================================================
+    # a) Cuadrito pixel art en la pared (x = 12..44, y = 46..76)
+    r_cuadro = pygame.Rect(12, 46, 33, 29)
+    pygame.draw.rect(surf, (165, 110, 60), r_cuadro, border_radius=2)
+    pygame.draw.rect(surf, (220, 175, 105), (r_cuadro.left + 1, r_cuadro.top + 1, r_cuadro.width - 2, r_cuadro.height - 2), 1)
+    pygame.draw.rect(surf, (110, 68, 35), r_cuadro, 1, border_radius=2)
+
+    r_lienzo = pygame.Rect(r_cuadro.left + 3, r_cuadro.top + 3, r_cuadro.width - 6, r_cuadro.height - 6)
+    pygame.draw.rect(surf, (253, 248, 238), r_lienzo)
+    pygame.draw.rect(surf, (255, 185, 160), (r_lienzo.left, r_lienzo.top, r_lienzo.width, 9))
+    pygame.draw.rect(surf, (255, 218, 175), (r_lienzo.left, r_lienzo.top + 9, r_lienzo.width, 6))
+    surf.set_at((r_lienzo.right - 7, r_lienzo.top + 4), (255, 245, 210))
+    pts_colina = [(r_lienzo.left, r_lienzo.bottom), (r_lienzo.left + 9, r_lienzo.top + 11), (r_lienzo.right, r_lienzo.bottom)]
+    pygame.draw.polygon(surf, (105, 165, 95), pts_colina)
+    gx, gy = r_lienzo.left + 7, r_lienzo.bottom - 6
+    pygame.draw.rect(surf, (55, 45, 40), (gx, gy, 4, 4))
+    surf.set_at((gx, gy - 1), (55, 45, 40))
+    surf.set_at((gx + 2, gy - 1), (55, 45, 40))
+    surf.set_at((gx + 4, gy + 2), (55, 45, 40))
+    pygame.draw.line(surf, (140, 100, 65), (r_cuadro.centerx, r_cuadro.top - 5), (r_cuadro.left + 5, r_cuadro.top), 1)
+    pygame.draw.line(surf, (140, 100, 65), (r_cuadro.centerx, r_cuadro.top - 5), (r_cuadro.right - 6, r_cuadro.top), 1)
+    surf.set_at((r_cuadro.centerx, r_cuadro.top - 6), (110, 75, 45))
+
+    # b) Repisa de madera en la pared izquierda (x = 8..48, y = 94..98)
+    r_rep1 = pygame.Rect(8, 94, 41, 5)
+    pygame.draw.rect(surf, (175, 120, 72), r_rep1, border_radius=1)
+    pygame.draw.rect(surf, (215, 165, 115), (r_rep1.left, r_rep1.top, r_rep1.width, 2))
+    pygame.draw.rect(surf, (115, 75, 40), r_rep1, 1)
+    pygame.draw.polygon(surf, (135, 85, 50), [(12, 99), (16, 99), (12, 106)])
+    pygame.draw.polygon(surf, (135, 85, 50), [(42, 99), (46, 99), (46, 106)])
+
+    # Perfume vintage
+    r_perf = pygame.Rect(30, 82, 8, 12)
+    pygame.draw.rect(surf, (250, 175, 195), r_perf, border_radius=2)
+    pygame.draw.rect(surf, (255, 220, 232), (r_perf.left + 1, r_perf.top + 2, 2, 8))
+    surf.set_at((33, 80), (225, 180, 75))
+    surf.set_at((34, 80), (225, 180, 75))
+    pygame.draw.line(surf, (170, 130, 50), (35, 81), (39, 84))
+    pygame.draw.circle(surf, (225, 175, 80), (40, 85), 2)
+
+    # Maceta con enredadera / suculenta
+    r_pot_rep = pygame.Rect(11, 85, 11, 9)
+    pygame.draw.rect(surf, (230, 135, 100), r_pot_rep, border_radius=2)
+    pygame.draw.rect(surf, (155, 80, 55), r_pot_rep, 1)
+    surf.set_at((13, 83), (105, 175, 90))
+    surf.set_at((15, 82), (72, 142, 68))
+    surf.set_at((17, 83), (115, 185, 98))
+    surf.set_at((19, 84), (72, 142, 68))
+    pts_enredadera = [(12, 94), (10, 101), (13, 108), (9, 116), (12, 124), (10, 131)]
+    for i in range(len(pts_enredadera) - 1):
+        pygame.draw.line(surf, (60, 120, 55), pts_enredadera[i], pts_enredadera[i+1], 1)
+    for px, py in [(9, 98), (14, 105), (8, 113), (14, 120), (9, 128)]:
+        pygame.draw.circle(surf, (95, 168, 85), (px, py), 2)
+        surf.set_at((px, py), (140, 205, 125))
+
+    # c) Perchero de madera de pie con prendas colgadas (x = 6..44, y = 142..288)
+    cx_perch = 24
+    pygame.draw.circle(surf, (205, 150, 95), (cx_perch, 144), 3)
+    surf.set_at((cx_perch, 143), (240, 190, 140))
+    pygame.draw.line(surf, (165, 112, 68), (cx_perch, 147), (cx_perch, 280), 2)
+    pygame.draw.line(surf, (205, 155, 105), (cx_perch - 1, 147), (cx_perch - 1, 280), 1)
+    pygame.draw.line(surf, (115, 75, 42), (cx_perch + 1, 147), (cx_perch + 1, 280), 1)
+
+    pygame.draw.line(surf, (155, 105, 62), (cx_perch, 154), (cx_perch - 11, 149), 2)
+    pygame.draw.circle(surf, (195, 145, 95), (cx_perch - 11, 149), 2)
+    pygame.draw.line(surf, (155, 105, 62), (cx_perch, 154), (cx_perch + 11, 149), 2)
+    pygame.draw.circle(surf, (195, 145, 95), (cx_perch + 11, 149), 2)
+
+    # Prendas colgadas:
+    # 1. Chaqueta coral
+    pts_tapado = [
+        (cx_perch - 11, 151), (cx_perch - 1, 155), (cx_perch, 205),
+        (cx_perch - 7, 208), (cx_perch - 17, 204), (cx_perch - 19, 172)
+    ]
+    pygame.draw.polygon(surf, (230, 115, 98), pts_tapado)
+    pygame.draw.polygon(surf, (175, 78, 65), pts_tapado, 1)
+    pygame.draw.line(surf, (248, 155, 138), (cx_perch - 6, 155), (cx_perch - 6, 205), 1)
+    for by in [165, 175, 185]:
+        surf.set_at((cx_perch - 8, by), (255, 235, 160))
+
+    # 2. Bufanda celeste abrigada
+    pts_bufanda = [
+        (cx_perch - 5, 162), (cx_perch + 7, 160), (cx_perch + 10, 192),
+        (cx_perch + 5, 195), (cx_perch + 2, 170), (cx_perch - 4, 168)
+    ]
+    pygame.draw.polygon(surf, (125, 188, 218), pts_bufanda)
+    pygame.draw.polygon(surf, (85, 140, 168), pts_bufanda, 1)
+    for fx in range(cx_perch + 5, cx_perch + 11, 2):
+        surf.set_at((fx, 196), (125, 188, 218))
+
+    # 3. Suéter mostaza
+    pts_sueter = [
+        (cx_perch + 2, 152), (cx_perch + 12, 151), (cx_perch + 14, 180),
+        (cx_perch + 9, 182), (cx_perch + 3, 172)
+    ]
+    pygame.draw.polygon(surf, (242, 195, 88), pts_sueter)
+    pygame.draw.polygon(surf, (180, 138, 52), pts_sueter, 1)
+
+    # Patas de madera
+    pygame.draw.line(surf, (140, 92, 55), (cx_perch, 276), (cx_perch - 13, 287), 2)
+    pygame.draw.line(surf, (140, 92, 55), (cx_perch, 276), (cx_perch + 13, 287), 2)
+    pygame.draw.line(surf, (110, 70, 40), (cx_perch, 276), (cx_perch, 289), 2)
+
+    # =========================================================================
+    # 6. ELEMENTOS DECORATIVOS: LADO DERECHO
+    # =========================================================================
+    # a) Repisa de madera en la pared derecha (x = 590..634, y = 88..92)
+    r_rep2 = pygame.Rect(590, 88, 42, 5)
+    pygame.draw.rect(surf, (175, 120, 72), r_rep2, border_radius=1)
+    pygame.draw.rect(surf, (215, 165, 115), (r_rep2.left, r_rep2.top, r_rep2.width, 2))
+    pygame.draw.rect(surf, (115, 75, 40), r_rep2, 1)
+    pygame.draw.polygon(surf, (135, 85, 50), [(595, 93), (599, 93), (595, 100)])
+    pygame.draw.polygon(surf, (135, 85, 50), [(625, 93), (629, 93), (629, 100)])
+
+    # Cajas sombrereras
+    r_box1 = pygame.Rect(594, 71, 22, 17)
+    pygame.draw.rect(surf, (244, 182, 190), r_box1, border_radius=3)
+    pygame.draw.rect(surf, (255, 238, 240), (r_box1.left, r_box1.top, r_box1.width, 4), border_radius=2)
+    pygame.draw.rect(surf, (185, 120, 130), r_box1, 1, border_radius=3)
+    pygame.draw.rect(surf, (230, 110, 95), (r_box1.centerx - 2, r_box1.top, 4, r_box1.height))
+
+    r_box2 = pygame.Rect(597, 56, 16, 15)
+    pygame.draw.rect(surf, (252, 212, 185), r_box2, border_radius=3)
+    pygame.draw.rect(surf, (255, 246, 235), (r_box2.left, r_box2.top, r_box2.width, 4), border_radius=2)
+    pygame.draw.rect(surf, (195, 145, 120), r_box2, 1, border_radius=3)
+    pygame.draw.rect(surf, (235, 185, 75), (r_box2.centerx - 1, r_box2.top, 3, r_box2.height))
+    surf.set_at((r_box2.centerx - 2, r_box2.top - 1), (235, 185, 75))
+    surf.set_at((r_box2.centerx + 2, r_box2.top - 1), (235, 185, 75))
+    surf.set_at((r_box2.centerx, r_box2.top - 1), (255, 220, 110))
+
+    # Florerito decorativo
+    r_vaso = pygame.Rect(620, 74, 9, 14)
+    pygame.draw.rect(surf, (175, 215, 230), r_vaso, border_radius=3)
+    pygame.draw.rect(surf, (230, 245, 252), (r_vaso.left + 1, r_vaso.top + 2, 2, 10))
+    pygame.draw.rect(surf, (120, 160, 175), r_vaso, 1, border_radius=3)
+    pygame.draw.line(surf, (140, 100, 65), (624, 74), (622, 65))
+    pygame.draw.line(surf, (140, 100, 65), (625, 74), (627, 63))
+    pygame.draw.circle(surf, (248, 165, 165), (622, 64), 2)
+    pygame.draw.circle(surf, (252, 210, 140), (627, 62), 2)
+
+    # b) Soporte / maniquí con sombrero (posicionado a x = 556..580, y = 100..144)
+    cx_man = 566
+    pygame.draw.ellipse(surf, (165, 112, 68), (cx_man - 7, 141, 15, 5))
+    pygame.draw.ellipse(surf, (205, 155, 105), (cx_man - 6, 142, 13, 2))
+    pygame.draw.line(surf, (155, 105, 65), (cx_man, 126), (cx_man, 142), 2)
+    pygame.draw.circle(surf, (225, 185, 145), (cx_man, 122), 6)
+
+    pygame.draw.ellipse(surf, (185, 75, 70), (cx_man - 14, 117, 28, 8))
+    pygame.draw.ellipse(surf, (215, 105, 100), (cx_man - 13, 118, 26, 5))
+    r_copa = pygame.Rect(cx_man - 7, 108, 15, 10)
+    pygame.draw.rect(surf, (185, 75, 70), r_copa, border_radius=4)
+    pygame.draw.rect(surf, (220, 110, 105), (r_copa.left + 2, r_copa.top + 1, r_copa.width - 4, 3))
+    pygame.draw.rect(surf, (255, 245, 230), (r_copa.left, r_copa.bottom - 3, r_copa.width, 3))
+    surf.set_at((r_copa.right + 1, r_copa.top + 2), (255, 220, 120))
+
+    # c) Espejo grande de cuerpo entero con marco de madera (x = 590..630, y = 138..288)
+    cx_esp = 610
+    w_esp = 38
+    h_esp = 142
+    r_esp_marco = pygame.Rect(cx_esp - w_esp // 2, 138, w_esp, h_esp)
+
+    pygame.draw.line(surf, (135, 88, 50), (r_esp_marco.left + 2, r_esp_marco.bottom - 10), (r_esp_marco.left - 5, r_esp_marco.bottom + 6), 3)
+    pygame.draw.line(surf, (135, 88, 50), (r_esp_marco.right - 2, r_esp_marco.bottom - 10), (r_esp_marco.right + 5, r_esp_marco.bottom + 6), 3)
+
+    pygame.draw.rect(surf, (165, 112, 68), r_esp_marco, border_radius=8)
+    pygame.draw.circle(surf, (195, 145, 95), (cx_esp, r_esp_marco.top + 2), 4)
+    surf.set_at((cx_esp, r_esp_marco.top + 1), (240, 190, 135))
+    pygame.draw.rect(surf, (115, 75, 42), r_esp_marco, 1, border_radius=8)
+    pygame.draw.rect(surf, (215, 165, 115), (r_esp_marco.left + 1, r_esp_marco.top + 1, r_esp_marco.width - 2, r_esp_marco.height - 2), 1, border_radius=7)
+
+    r_vidrio = pygame.Rect(r_esp_marco.left + 3, r_esp_marco.top + 6, r_esp_marco.width - 6, r_esp_marco.height - 10)
+    pygame.draw.rect(surf, (218, 234, 244), r_vidrio, border_radius=5)
+    pygame.draw.rect(surf, (235, 222, 224), (r_vidrio.left, r_vidrio.top + 20, r_vidrio.width, r_vidrio.height - 35))
+
+    for d in range(12):
+        surf.set_at((r_vidrio.left + 5 + d, r_vidrio.top + 8 + d * 2), (255, 255, 255))
+        surf.set_at((r_vidrio.left + 6 + d, r_vidrio.top + 8 + d * 2), (255, 255, 255))
+        if d < 18:
+            surf.set_at((r_vidrio.left + 4 + d, r_vidrio.top + 45 + d * 2), (255, 255, 255))
+            surf.set_at((r_vidrio.left + 5 + d, r_vidrio.top + 45 + d * 2), (255, 255, 255))
+
+    pygame.draw.circle(surf, (210, 160, 100), (r_esp_marco.left - 1, r_esp_marco.top + 60), 3)
+    pygame.draw.circle(surf, (210, 160, 100), (r_esp_marco.right + 1, r_esp_marco.top + 60), 3)
+
+    return pygame.transform.scale(surf, (W, H))
+
+
+def _obtener_fondo_personajes(ancho: int = 1280, alto: int = 720) -> "pygame.Surface":
+    global _fondo_camerino_personajes_cache
+    if _fondo_camerino_personajes_cache is None:
+        _fondo_camerino_personajes_cache = _generar_fondo_camerino_personajes(ancho, alto)
+    return _fondo_camerino_personajes_cache
+
+
+_cache_iconos_instrucciones = {}
+
+
+def _obtener_icono_instruccion(tipo: str, max_w: int = 48, max_h: int = 46) -> "pygame.Surface | None":
+    """Carga y escala proporcionalmente los sprites originales del juego para la guía de mundos."""
+    key = (tipo, max_w, max_h)
+    if key in _cache_iconos_instrucciones:
+        return _cache_iconos_instrucciones[key]
+
+    ruta = None
+    if tipo == "llave":
+        ruta = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Objetos", "llave.png")
+    elif tipo == "caja":
+        ruta = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Objetos", "caja.png")
+    elif tipo == "buceo":
+        ruta = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Accesorios", "buceo_m3.png")
+
+    if not ruta or not os.path.isfile(ruta):
+        return None
+
+    try:
+        surf = pygame.image.load(ruta).convert_alpha()
+        w, h = surf.get_size()
+        scale = min(max_w / float(w), max_h / float(h))
+        nw = max(1, int(round(w * scale)))
+        nh = max(1, int(round(h * scale)))
+        try:
+            res = pygame.transform.smoothscale(surf, (nw, nh))
+        except Exception:
+            res = pygame.transform.scale(surf, (nw, nh))
+        _cache_iconos_instrucciones[key] = res
+        return res
+    except Exception:
+        return None
+
+
+_cache_previews_accesorios = {}
+
+
+def _obtener_preview_accesorio_tarjeta(acc_id: str) -> "pygame.Surface | None":
+    """
+    Genera y cachea una previsualización de alta nitidez y tamaño óptimo
+    para las tarjetas de selección de accesorios en la pantalla de personalización.
+    Optimiza especialmente Papá Noel, Ángel y Orejas de Conejo para una visibilidad perfecta.
+    """
+    if not acc_id or acc_id == "Ninguno":
+        return None
+    if acc_id in _cache_previews_accesorios:
+        return _cache_previews_accesorios[acc_id]
+
+    surf = cargar_accesorio(acc_id)
+    if not surf:
+        return None
+
+    w, h = surf.get_size()
+
+    if acc_id == "Ángel":
+        try:
+            halo = surf.subsurface((0, 0, w, min(18, h)))
+            wing_y = min(64, h - 16)
+            wing = surf.subsurface((0, wing_y, w, min(16, h - wing_y)))
+            comp = pygame.Surface((w, 36), pygame.SRCALPHA)
+            comp.blit(halo, (0, 0))
+            comp.blit(wing, (0, 18))
+            res = pygame.transform.scale(comp, (46, 32))
+        except Exception:
+            res = surf
+    elif acc_id == "Papá Noel":
+        try:
+            gorro = surf.subsurface((0, 0, w, min(24, h)))
+            barba_y = min(54, h - 23)
+            barba = surf.subsurface((0, barba_y, w, min(23, h - barba_y)))
+            comp = pygame.Surface((w, 44), pygame.SRCALPHA)
+            comp.blit(gorro, (0, 0))
+            comp.blit(barba, (0, 21))
+            res = pygame.transform.scale(comp, (44, 34))
+        except Exception:
+            res = surf
+    elif acc_id == "Orejas de Conejo":
+        res = pygame.transform.scale(surf, (50, 26))
+    else:
+        # Escalado proporcional estándar para los demás accesorios (máx 44x36)
+        max_w, max_h = 44, 36
+        if w > max_w or h > max_h:
+            ratio = min(max_w / float(w), max_h / float(h))
+            nw = max(1, int(round(w * ratio)))
+            nh = max(1, int(round(h * ratio)))
+            res = pygame.transform.scale(surf, (nw, nh))
+        else:
+            res = surf
+
+    if acc_id in ACCESORIOS_CON_CONTORNO and res is not None:
+        res = agregar_contorno_pixel_art(res, (65, 45, 30))
+
+    _cache_previews_accesorios[acc_id] = res
+    return res
+
+
+def _init_copos_opciones(ancho: int = 1280, alto: int = 720) -> None:
+    global _copos_opciones
+    rnd = _random.Random(1337)
+    _copos_opciones = [
+        {
+            "x": rnd.uniform(0, ancho),
+            "y": rnd.uniform(0, alto),
+            "vy": rnd.uniform(0.5, 1.4),
+            "vx": rnd.uniform(-0.3, 0.3),
+            "r": rnd.choice([1, 2, 2, 3]),
+            "alpha": rnd.randint(120, 210),
+        }
+        for _ in range(45)
+    ]
+
+
+def _dibujar_copos_opciones(pantalla: "pygame.Surface") -> None:
+    global _copos_opciones
+    if not _copos_opciones:
+        _init_copos_opciones(pantalla.get_width(), pantalla.get_height())
+    w, h = pantalla.get_size()
+    for c in _copos_opciones:
+        c["x"] += c["vx"]
+        c["y"] += c["vy"]
+        if c["y"] > h:
+            c["y"] = -4
+            c["x"] = _random.uniform(0, w)
+        if c["x"] < 0:
+            c["x"] = w
+        elif c["x"] > w:
+            c["x"] = 0
+        r = c["r"]
+        surf_c = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
+        pygame.draw.circle(surf_c, (235, 245, 255, c["alpha"]), (r, r), r)
+        pantalla.blit(surf_c, (int(c["x"]) - r, int(c["y"]) - r))
+
+
+def _dibujar_icono_tecla(surf, texto, rect, activo=False, tamano_fuente=14):
+    col_bg = (255, 252, 245) if not activo else (255, 242, 210)
+    col_sombra = (150, 140, 135)
+    col_borde = (75, 60, 50)
+    col_txt = (30, 20, 15)
+    r_som = pygame.Rect(rect.left, rect.top + 3, rect.width, rect.height - 3)
+    pygame.draw.rect(surf, col_sombra, r_som, border_radius=6)
+    r_key = pygame.Rect(rect.left, rect.top, rect.width, rect.height - 4)
+    pygame.draw.rect(surf, col_bg, r_key, border_radius=6)
+    pygame.draw.rect(surf, col_borde, r_key, 2, border_radius=6)
+    dibujar_texto_en_rect(surf, texto, r_key, categoria="boton", tamano=tamano_fuente, color=col_txt, negrita=True, padding=2)
+
+
 def _dibujar_icono_candado(s, cx, cy, abierto=False):
     """Dibuja un pequeño candado pixel art (7x9 px) para fichas de diario."""
     col_arco = (90, 70, 55)
@@ -1122,6 +1821,7 @@ def dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel, pos_mouse, fuente
     if tiene_fecha_hora:
         y_fila3 = r_card.top + 61
         cur_x3 = x_texto + 4
+        
 
         # 3. Fecha
         if str_fecha:
@@ -1331,12 +2031,20 @@ def main():
     accesorio_p2 = "Ninguno"
     personalizacion_modificada_en_menu = False
     tab_personajes_actual = "colores"
+    pagina_acc_p1 = 0
+    pagina_acc_p2 = 0
 
     W_VOLVER, H_VOLVER = 238, 70
-    btn_volver_personajes = pygame.Rect((ANCHO_MENU - W_VOLVER) // 2, ALTO_MENU - 85, W_VOLVER, H_VOLVER)
+    btn_volver_personajes = pygame.Rect((ANCHO_MENU - W_VOLVER) // 2, ALTO_MENU - 75, W_VOLVER, H_VOLVER)
     btn_guardar = btn_volver_personajes
-    btn_volver_config = pygame.Rect((ANCHO_MENU - W_VOLVER) // 2, ALTO_MENU - 85, W_VOLVER, H_VOLVER)
+    btn_volver_config = pygame.Rect((ANCHO_MENU - W_VOLVER) // 2, ALTO_MENU - 75, W_VOLVER, H_VOLVER)
     btn_volver_creditos = pygame.Rect((ANCHO_MENU - W_VOLVER) // 2, ALTO_MENU - 85, W_VOLVER, H_VOLVER)
+
+    seccion_opciones_actual = "configuracion"
+    rect_btn_sec_cfg = pygame.Rect(70, 120, 240, 64)
+    rect_btn_sec_ctrl = pygame.Rect(70, 200, 240, 64)
+    rect_btn_sec_inst = pygame.Rect(70, 280, 240, 64)
+    rect_btn_x_opciones = pygame.Rect(ANCHO_MENU - 62, 16, 44, 52)
 
     # Iconos superiores exclusivos de Selección de Niveles (Configuración, Casita y X) con proporción nativa 0.8496
     W_ICONO_NIVELES, H_ICONO_NIVELES = 44, 52
@@ -2015,13 +2723,20 @@ def main():
                 intentar_salir()
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-                # El botón X general no actúa en Selección de Niveles ya que esa pantalla tiene sus propios iconos
-                if estado_actual != ESTADO_SELECCION_NIVEL and rect_btn_x.collidepoint(evento.pos):
-                    _asegurar_semi_apretados_menu()
-                    f_limpio = fondo_btn_x_main if fondo_btn_x_main else (30, 30, 30)
-                    if animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, f_limpio, spr_x_normal):
-                        intentar_salir()
-                    break
+                # El botón X general: en Opciones regresa al menú principal; en el resto intenta salir
+                if rect_btn_x.collidepoint(evento.pos):
+                    if estado_actual == ESTADO_CONFIGURACION:
+                        _asegurar_semi_apretados_menu()
+                        f_limpio = fondo_btn_x_main if fondo_btn_x_main else (30, 30, 30)
+                        if animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, f_limpio, spr_x_normal):
+                            estado_actual = ESTADO_MENU_PRINCIPAL
+                        break
+                    elif estado_actual != ESTADO_SELECCION_NIVEL:
+                        _asegurar_semi_apretados_menu()
+                        f_limpio = fondo_btn_x_main if fondo_btn_x_main else (30, 30, 30)
+                        if animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, f_limpio, spr_x_normal):
+                            intentar_salir()
+                        break
 
                 if estado_actual == ESTADO_MENU_PRINCIPAL:
                     _asegurar_semi_apretados_menu()
@@ -2040,13 +2755,20 @@ def main():
                         sp_n = _obtener_boton_menu_principal_estado("personajes", "normal", idm_act)
                         if animar_pulsacion_boton(pantalla, btn_personajes, sp_s, sp_a, f_limp, sp_n):
                             estado_actual = ESTADO_PERSONAJES
+                            acc_list_init = obtener_accesorios_disponibles()
+                            for _ia, _acc in enumerate(acc_list_init):
+                                if _acc["id"] == accesorio_p1:
+                                    pagina_acc_p1 = _ia // 6
+                                if _acc["id"] == accesorio_p2:
+                                    pagina_acc_p2 = _ia // 6
                     elif btn_config.collidepoint(evento.pos):
                         f_limp = gestor_personajes_menu.fondo_estatico.subsurface(btn_config)
                         sp_s = _obtener_boton_menu_principal_estado("opciones", "semi", idm_act)
                         sp_a = _obtener_boton_menu_principal_estado("opciones", "apretado", idm_act)
                         sp_n = _obtener_boton_menu_principal_estado("opciones", "normal", idm_act)
                         if animar_pulsacion_boton(pantalla, btn_config, sp_s, sp_a, f_limp, sp_n):
-                            mostrar_pestana_configuracion(pantalla, reloj)
+                            estado_actual = ESTADO_CONFIGURACION
+                            seccion_opciones_actual = "configuracion"
                             break
                     elif btn_salir.collidepoint(evento.pos):
                         f_limp = gestor_personajes_menu.fondo_estatico.subsurface(btn_salir)
@@ -2356,74 +3078,127 @@ def main():
                         sp_vp_a = _obtener_boton_volver("apretado", idm_act)
                         sp_vp_n = _obtener_boton_volver("normal", idm_act)
                         if sp_vp_s and sp_vp_a and btn_volver_personajes.collidepoint(evento.pos):
-                            pulsado = animar_pulsacion_boton(pantalla, btn_volver_personajes, sp_vp_s, sp_vp_a, (225, 110, 80), sp_vp_n)
+                            pulsado = animar_pulsacion_boton(pantalla, btn_volver_personajes, sp_vp_s, sp_vp_a, _obtener_fondo_personajes(ANCHO_MENU, ALTO_MENU), sp_vp_n)
                         if pulsado:
                             estado_actual = ESTADO_MENU_PRINCIPAL
                             break
 
                     # Pestañas [ COLORES ] y [ ACCESORIOS ]
-                    rect_tab_col = pygame.Rect(418, 106, 210, 44)
-                    rect_tab_acc = pygame.Rect(652, 106, 210, 44)
+                    rect_tab_col = pygame.Rect(388, 100, 240, 50)
+                    rect_tab_acc = pygame.Rect(652, 100, 240, 50)
 
                     if rect_tab_col.collidepoint(evento.pos):
-                        tab_personajes_actual = "colores"
+                        if tab_personajes_actual != "colores":
+                            tab_personajes_actual = "colores"
+                            reproducir_sonido_ui("tab")
                     elif rect_tab_acc.collidepoint(evento.pos):
-                        tab_personajes_actual = "accesorios"
+                        if tab_personajes_actual != "accesorios":
+                            tab_personajes_actual = "accesorios"
+                            reproducir_sonido_ui("tab")
+                        acc_list_tab = obtener_accesorios_disponibles()
+                        for _ia, _acc in enumerate(acc_list_tab):
+                            if _acc["id"] == accesorio_p1:
+                                pagina_acc_p1 = _ia // 6
+                            if _acc["id"] == accesorio_p2:
+                                pagina_acc_p2 = _ia // 6
 
                     # Marcos de selección (Jugador 1: izquierda=125, Jugador 2: izquierda=685)
                     rect_f1_ev = pygame.Rect(125, 295, 470, 276)
                     rect_f2_ev = pygame.Rect(685, 295, 470, 276)
 
                     if tab_personajes_actual == "colores":
-                        w_sw, h_sw, gap_x, gap_y = 68, 44, 14, 12
-                        for idx, p_info in enumerate(PERSONAJES_DISPONIBLES):
-                            if idx < 5:
-                                r, c = 0, idx
-                                x_offset_rel = 37 + c * (w_sw + gap_x)
-                            elif idx < 10:
-                                r, c = 1, idx - 5
-                                x_offset_rel = 37 + c * (w_sw + gap_x)
-                            else:
-                                r, c = 2, idx - 10
-                                x_offset_rel = 119 + c * (w_sw + gap_x)
-                            y_sw = 344 + r * (h_sw + gap_y)
+                        w_sw, h_sw = 80, 45
+                        y_start_sw = 338
+                        h_paso_y = 77
+                        for r_idx, fila in enumerate(FILAS_COLORES_SELECCION):
+                            n = len(fila)
+                            gap_x = 10 if n == 5 else 24
+                            row_w = n * w_sw + (n - 1) * gap_x
+                            x_start_rel = (rect_f1_ev.width - row_w) // 2
+                            y_sw = y_start_sw + r_idx * h_paso_y
+                            for c_idx, color_idx in enumerate(fila):
+                                p_info = PERSONAJES_DISPONIBLES[color_idx]
+                                x_sw_rel = x_start_rel + c_idx * (w_sw + gap_x)
+                                r1 = pygame.Rect(rect_f1_ev.left + x_sw_rel, y_sw, w_sw, h_sw + 28)
+                                r2 = pygame.Rect(rect_f2_ev.left + x_sw_rel, y_sw, w_sw, h_sw + 28)
 
-                            r1 = pygame.Rect(rect_f1_ev.left + x_offset_rel, y_sw, w_sw, h_sw)
-                            r2 = pygame.Rect(rect_f2_ev.left + x_offset_rel, y_sw, w_sw, h_sw)
-
-                            if r1.collidepoint(evento.pos):
-                                if color_p1 != p_info["nombre"]:
-                                    color_p1 = p_info["nombre"]
-                                    personalizacion_modificada_en_menu = True
-                            if r2.collidepoint(evento.pos):
-                                if color_p2 != p_info["nombre"]:
-                                    color_p2 = p_info["nombre"]
-                                    personalizacion_modificada_en_menu = True
+                                if r1.collidepoint(evento.pos):
+                                    if color_p1 != p_info["nombre"]:
+                                        color_p1 = p_info["nombre"]
+                                        personalizacion_modificada_en_menu = True
+                                        reproducir_sonido_ui("select")
+                                        # Respetar accesorios exclusivos: si el equipado no le pertenece, desequipar
+                                        permitidos_p1 = [a["id"] for a in obtener_accesorios_disponibles(color_p1)]
+                                        if accesorio_p1 not in permitidos_p1:
+                                            accesorio_p1 = "Ninguno"
+                                if r2.collidepoint(evento.pos):
+                                    if color_p2 != p_info["nombre"]:
+                                        color_p2 = p_info["nombre"]
+                                        personalizacion_modificada_en_menu = True
+                                        reproducir_sonido_ui("select")
+                                        # Respetar accesorios exclusivos: si el equipado no le pertenece, desequipar
+                                        permitidos_p2 = [a["id"] for a in obtener_accesorios_disponibles(color_p2)]
+                                        if accesorio_p2 not in permitidos_p2:
+                                            accesorio_p2 = "Ninguno"
 
                     elif tab_personajes_actual == "accesorios":
-                        accesorios_disp = obtener_accesorios_disponibles()
-                        w_acc, h_acc, gap_acc_x, gap_acc_y = 126, 88, 16, 14
+                        accesorios_p1_disp = obtener_accesorios_disponibles(color_p1)
+                        accesorios_p2_disp = obtener_accesorios_disponibles(color_p2)
+                        items_por_pag = 6
+                        total_pags_p1 = max(1, (len(accesorios_p1_disp) + items_por_pag - 1) // items_por_pag)
+                        total_pags_p2 = max(1, (len(accesorios_p2_disp) + items_por_pag - 1) // items_por_pag)
+
+                        # Flechas de paginación para Jugador 1
+                        btn_prev_p1 = pygame.Rect(rect_f1_ev.centerx - 72, rect_f1_ev.top + 234, 34, 26)
+                        btn_next_p1 = pygame.Rect(rect_f1_ev.centerx + 38, rect_f1_ev.top + 234, 34, 26)
+                        if btn_prev_p1.collidepoint(evento.pos):
+                            pagina_acc_p1 = (pagina_acc_p1 - 1) % total_pags_p1
+                            reproducir_sonido_ui("pagina")
+                        elif btn_next_p1.collidepoint(evento.pos):
+                            pagina_acc_p1 = (pagina_acc_p1 + 1) % total_pags_p1
+                            reproducir_sonido_ui("pagina")
+
+                        # Flechas de paginación para Jugador 2
+                        btn_prev_p2 = pygame.Rect(rect_f2_ev.centerx - 72, rect_f2_ev.top + 234, 34, 26)
+                        btn_next_p2 = pygame.Rect(rect_f2_ev.centerx + 38, rect_f2_ev.top + 234, 34, 26)
+                        if btn_prev_p2.collidepoint(evento.pos):
+                            pagina_acc_p2 = (pagina_acc_p2 - 1) % total_pags_p2
+                            reproducir_sonido_ui("pagina")
+                        elif btn_next_p2.collidepoint(evento.pos):
+                            pagina_acc_p2 = (pagina_acc_p2 + 1) % total_pags_p2
+                            reproducir_sonido_ui("pagina")
+
+                        w_acc, h_acc, gap_acc_x, gap_acc_y = 126, 82, 16, 10
                         ancho_fila_acc = 3 * w_acc + 2 * gap_acc_x
                         x_offset_acc = (rect_f1_ev.width - ancho_fila_acc) // 2
-                        alto_filas_acc = 2 * h_acc + gap_acc_y
-                        y_offset_acc = 34 + ((rect_f1_ev.height - 34) - alto_filas_acc) // 2
-                        for idx_a, acc in enumerate(accesorios_disp):
-                            r = idx_a // 3
-                            c = idx_a % 3
+
+                        # Selección de accesorios en marco de Jugador 1
+                        inicio_p1 = pagina_acc_p1 * items_por_pag
+                        for idx_rel, acc in enumerate(accesorios_p1_disp[inicio_p1:inicio_p1 + items_por_pag]):
+                            r = idx_rel // 3
+                            c = idx_rel % 3
                             x_offset_rel = x_offset_acc + c * (w_acc + gap_acc_x)
-                            y_card_a = rect_f1_ev.top + y_offset_acc + r * (h_acc + gap_acc_y)
-
+                            y_card_a = rect_f1_ev.top + 42 + r * (h_acc + gap_acc_y)
                             ra1 = pygame.Rect(rect_f1_ev.left + x_offset_rel, y_card_a, w_acc, h_acc)
-                            ra2 = pygame.Rect(rect_f2_ev.left + x_offset_rel, y_card_a, w_acc, h_acc)
-
                             if ra1.collidepoint(evento.pos):
                                 if accesorio_p1 != acc["id"]:
                                     accesorio_p1 = acc["id"]
                                     personalizacion_modificada_en_menu = True
+                                    reproducir_sonido_ui("select")
+
+                        # Selección de accesorios en marco de Jugador 2
+                        inicio_p2 = pagina_acc_p2 * items_por_pag
+                        for idx_rel, acc in enumerate(accesorios_p2_disp[inicio_p2:inicio_p2 + items_por_pag]):
+                            r = idx_rel // 3
+                            c = idx_rel % 3
+                            x_offset_rel = x_offset_acc + c * (w_acc + gap_acc_x)
+                            y_card_a = rect_f2_ev.top + 42 + r * (h_acc + gap_acc_y)
+                            ra2 = pygame.Rect(rect_f2_ev.left + x_offset_rel, y_card_a, w_acc, h_acc)
                             if ra2.collidepoint(evento.pos):
                                 if accesorio_p2 != acc["id"]:
                                     accesorio_p2 = acc["id"]
                                     personalizacion_modificada_en_menu = True
+                                    reproducir_sonido_ui("select")
 
                 elif estado_actual == ESTADO_CONFIGURACION:
                     idm_act = obtener_idioma()
@@ -2434,6 +3209,44 @@ def main():
                         pulsado = animar_pulsacion_boton(pantalla, btn_volver_config, sp_v_s, sp_v_a, (30, 30, 30), sp_v_n)
                         if pulsado:
                             estado_actual = ESTADO_MENU_PRINCIPAL
+                    elif rect_btn_sec_cfg.collidepoint(evento.pos):
+                        seccion_opciones_actual = "configuracion"
+                    elif rect_btn_sec_ctrl.collidepoint(evento.pos):
+                        seccion_opciones_actual = "controles"
+                    elif rect_btn_sec_inst.collidepoint(evento.pos):
+                        seccion_opciones_actual = "instrucciones"
+                    elif seccion_opciones_actual == "configuracion":
+                        rect_panel_ev = pygame.Rect(340, 115, 875, 495)
+                        y_vol_ev = rect_panel_ev.top + 70
+                        r_card_vol_ev = pygame.Rect(rect_panel_ev.left + 45, y_vol_ev + 26, rect_panel_ev.width - 90, 105)
+                        r_menos_ev = pygame.Rect(r_card_vol_ev.left + 30, r_card_vol_ev.top + 28, 54, 48)
+                        r_barra_bg_ev = pygame.Rect(r_menos_ev.right + 25, r_card_vol_ev.top + 32, 450, 40)
+                        r_mas_ev = pygame.Rect(r_barra_bg_ev.right + 25, r_card_vol_ev.top + 28, 54, 48)
+
+                        y_idioma_ev = r_card_vol_ev.bottom + 25
+                        r_card_idm_ev = pygame.Rect(rect_panel_ev.left + 45, y_idioma_ev + 26, rect_panel_ev.width - 90, 140)
+                        w_btn_l_ev = (r_card_idm_ev.width - 60) // 3
+                        r_bl_es = pygame.Rect(r_card_idm_ev.left + 20, r_card_idm_ev.top + 20, w_btn_l_ev, 98)
+                        r_bl_en = pygame.Rect(r_card_idm_ev.left + 20 + (w_btn_l_ev + 10), r_card_idm_ev.top + 20, w_btn_l_ev, 98)
+                        r_bl_zh = pygame.Rect(r_card_idm_ev.left + 20 + 2 * (w_btn_l_ev + 10), r_card_idm_ev.top + 20, w_btn_l_ev, 98)
+
+                        if r_menos_ev.collidepoint(evento.pos):
+                            cambiar_volumen(-10)
+                            reproducir_beep_volumen()
+                        elif r_mas_ev.collidepoint(evento.pos):
+                            cambiar_volumen(+10)
+                            reproducir_beep_volumen()
+                        elif r_barra_bg_ev.collidepoint(evento.pos):
+                            frac = max(0.0, min(1.0, (evento.pos[0] - (r_barra_bg_ev.left + 4)) / float(max(1, r_barra_bg_ev.width - 8))))
+                            nuevo_vol = int(round(frac * 10)) * 10
+                            fijar_volumen(nuevo_vol)
+                            reproducir_beep_volumen()
+                        elif r_bl_es.collidepoint(evento.pos):
+                            cambiar_idioma("es")
+                        elif r_bl_en.collidepoint(evento.pos):
+                            cambiar_idioma("en")
+                        elif r_bl_zh.collidepoint(evento.pos):
+                            cambiar_idioma("zh")
 
                 elif estado_actual == ESTADO_CREDITOS:
                     idm_act = obtener_idioma()
@@ -2511,6 +3324,11 @@ def main():
                             pagina_partidas -= 1
                         elif evento.y < 0 and pagina_partidas < total_pag - 1:
                             pagina_partidas += 1
+
+            elif evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_ESCAPE:
+                    if estado_actual == ESTADO_CONFIGURACION:
+                        estado_actual = ESTADO_MENU_PRINCIPAL
 
         pantalla.fill((30, 30, 30))
 
@@ -2768,9 +3586,8 @@ def main():
             pos_mouse = pygame.mouse.get_pos()
             idm_act = obtener_idioma()
 
-            # 1. Fondo crema cálido y franja de suelo original del juego
-            pantalla.fill((255, 240, 195))
-            pygame.draw.rect(pantalla, (225, 110, 80), pygame.Rect(0, ALTO_MENU - 80, ANCHO_MENU, 80))
+            # 1. Fondo de habitación de vestuario / camerino pixel art
+            pantalla.blit(_obtener_fondo_personajes(ANCHO_MENU, ALTO_MENU), (0, 0))
 
             # 2. Título y subtítulo centrados
             txt_tit_pj = t("personalizacion_personajes")
@@ -2784,8 +3601,8 @@ def main():
             pantalla.blit(subt, subt.get_rect(center=(ANCHO_MENU // 2, 78)))
 
             # 3. Pestañas visuales [ COLORES ] y [ ACCESORIOS ]
-            rect_tab_col = pygame.Rect(418, 106, 210, 44)
-            rect_tab_acc = pygame.Rect(652, 106, 210, 44)
+            rect_tab_col = pygame.Rect(388, 100, 240, 50)
+            rect_tab_acc = pygame.Rect(652, 100, 240, 50)
 
             hov_tab_col = rect_tab_col.collidepoint(pos_mouse)
             hov_tab_acc = rect_tab_acc.collidepoint(pos_mouse)
@@ -2796,19 +3613,17 @@ def main():
             ]:
                 es_activa = (tab_personajes_actual == tab_id)
                 col_tab_bg = (246, 215, 153) if es_activa else ((248, 242, 232) if hov else (238, 226, 210))
-                col_tab_borde = (180, 140, 90) if es_activa else (195, 175, 155)
+                col_tab_borde = (175, 130, 80) if es_activa else (195, 175, 155)
                 ancho_b = 3 if es_activa else 2
                 pygame.draw.rect(pantalla, col_tab_bg, r_tab, border_radius=12)
                 pygame.draw.rect(pantalla, col_tab_borde, r_tab, ancho_b, border_radius=12)
 
                 col_txt = (50, 40, 30) if es_activa else (130, 115, 100)
                 txt_tab_str = t(tab_id).upper()
-                f_tab_str = obtener_fuente_para_texto(txt_tab_str, categoria="card_btn", tamano=TAMANO_CARD, negrita=True)
-                txt_tab = f_tab_str.render(txt_tab_str, True, col_txt)
-                pantalla.blit(txt_tab, txt_tab.get_rect(center=r_tab.center))
+                dibujar_texto_en_rect(pantalla, txt_tab_str, r_tab, categoria="boton", tamano=18, color=col_txt, negrita=True, padding=8)
 
                 if es_activa:
-                    dibujar_mascota_gato(pantalla, r_tab.left + 14, r_tab.top - 18, size=28, color=(246, 215, 153))
+                    dibujar_mascota_gato(pantalla, r_tab.left + 16, r_tab.top - 18, size=28, color=(246, 215, 153))
 
             # 4. Columnas simétricas de Jugador 1 y Jugador 2
             cx_p1 = 360
@@ -2819,32 +3634,32 @@ def main():
             c_p2_val = colores_dict.get(color_p2, (161, 123, 255))
 
             # Badges de encabezado de jugador con ajuste automático para nombres extensos de color
-            r_badge_p1 = pygame.Rect(cx_p1 - 130, 164, 260, 34)
+            r_badge_p1 = pygame.Rect(cx_p1 - 130, 150, 260, 32)
             pygame.draw.rect(pantalla, c_p1_val, r_badge_p1, border_radius=8)
             pygame.draw.rect(pantalla, (60, 45, 35), r_badge_p1, 2, border_radius=8)
-            col_p1_trad = t(color_p1.lower()).upper()
-            dibujar_texto_en_rect(pantalla, f"{t('jugador')} 1  ({col_p1_trad})", r_badge_p1, categoria="boton", tamano=TAMANO_BADGE, color=(35, 30, 25), padding=6)
+            col_p1_trad = _obtener_nombre_color_visible(color_p1, idm_act).upper()
+            dibujar_texto_en_rect(pantalla, f"{t('jugador')} 1  ({col_p1_trad})", r_badge_p1, categoria="boton", tamano=TAMANO_BADGE, color=(35, 30, 25), padding=4)
 
-            r_badge_p2 = pygame.Rect(cx_p2 - 130, 164, 260, 34)
+            r_badge_p2 = pygame.Rect(cx_p2 - 130, 150, 260, 32)
             pygame.draw.rect(pantalla, c_p2_val, r_badge_p2, border_radius=8)
             pygame.draw.rect(pantalla, (60, 45, 35), r_badge_p2, 2, border_radius=8)
-            col_p2_trad = t(color_p2.lower()).upper()
-            dibujar_texto_en_rect(pantalla, f"{t('jugador')} 2  ({col_p2_trad})", r_badge_p2, categoria="boton", tamano=TAMANO_BADGE, color=(35, 30, 25), padding=6)
+            col_p2_trad = _obtener_nombre_color_visible(color_p2, idm_act).upper()
+            dibujar_texto_en_rect(pantalla, f"{t('jugador')} 2  ({col_p2_trad})", r_badge_p2, categoria="boton", tamano=TAMANO_BADGE, color=(35, 30, 25), padding=4)
 
             # Previews de personajes con pedestal y accesorios
             for cx, col_pj, acc_pj in [
                 (cx_p1, color_p1, accesorio_p1),
                 (cx_p2, color_p2, accesorio_p2),
             ]:
-                pygame.draw.ellipse(pantalla, (230, 210, 175), (cx - 50, 272, 100, 16))
+                pygame.draw.ellipse(pantalla, (230, 210, 175), (cx - 50, 276, 100, 16))
 
                 sp_pj = cargar_sprites(col_pj)
                 img_pj = sp_pj.get("quieto", list(sp_pj.values())[0])
-                rect_pj = img_pj.get_rect(center=(cx, 236))
+                rect_pj = img_pj.get_rect(center=(cx, 240))
                 pantalla.blit(img_pj, rect_pj)
 
                 if acc_pj and acc_pj != "Ninguno":
-                    dibujar_accesorio_en_personaje(pantalla, acc_pj, rect_pj, mirando_derecha=True)
+                    dibujar_accesorio_en_personaje(pantalla, acc_pj, sprite_personaje=img_pj, rect_personaje=rect_pj, mirando_derecha=True)
 
             # 5. Marcos rectangulares contenedores de opciones
             w_frame, h_frame = 470, 276
@@ -2864,98 +3679,152 @@ def main():
 
             # 6. Opciones dentro del marco según la pestaña activa
             if tab_personajes_actual == "colores":
-                w_sw, h_sw, gap_x, gap_y = 68, 44, 14, 12
-                for idx, p_info in enumerate(PERSONAJES_DISPONIBLES):
-                    if idx < 5:
-                        r, c = 0, idx
-                        x_offset_rel = 37 + c * (w_sw + gap_x)
-                    elif idx < 10:
-                        r, c = 1, idx - 5
-                        x_offset_rel = 37 + c * (w_sw + gap_x)
-                    else:
-                        r, c = 2, idx - 10
-                        x_offset_rel = 119 + c * (w_sw + gap_x)
-                    y_sw = 344 + r * (h_sw + gap_y)
+                w_sw, h_sw = 80, 45
+                y_start_sw = 338
+                h_paso_y = 77
+                for r_idx, fila in enumerate(FILAS_COLORES_SELECCION):
+                    n = len(fila)
+                    gap_x = 10 if n == 5 else 24
+                    row_w = n * w_sw + (n - 1) * gap_x
+                    x_start_rel = (rect_f1.width - row_w) // 2
+                    y_sw = y_start_sw + r_idx * h_paso_y
 
-                    r1 = pygame.Rect(rect_f1.left + x_offset_rel, y_sw, w_sw, h_sw)
-                    r2 = pygame.Rect(rect_f2.left + x_offset_rel, y_sw, w_sw, h_sw)
+                    for c_idx, color_idx in enumerate(fila):
+                        p_info = PERSONAJES_DISPONIBLES[color_idx]
+                        x_sw_rel = x_start_rel + c_idx * (w_sw + gap_x)
+                        r1 = pygame.Rect(rect_f1.left + x_sw_rel, y_sw, w_sw, h_sw)
+                        r2 = pygame.Rect(rect_f2.left + x_sw_rel, y_sw, w_sw, h_sw)
+                        nom_col = _obtener_nombre_color_visible(p_info["nombre"], idm_act)
+                        f_nom = obtener_fuente_para_texto(nom_col, categoria="dialogos", tamano=22, negrita=True)
 
-                    # P1 swatch
-                    sel1 = (p_info["nombre"] == color_p1)
-                    hov1 = r1.collidepoint(pos_mouse)
-                    pygame.draw.rect(pantalla, p_info["color"], r1, border_radius=8)
-                    if sel1:
-                        pygame.draw.rect(pantalla, (255, 255, 255), r1, 3, border_radius=8)
-                        pygame.draw.rect(pantalla, (40, 30, 25), r1, 1, border_radius=8)
-                        cx_k, cy_k = r1.center
-                        pts_chk = [(cx_k - 7, cy_k), (cx_k - 2, cy_k + 5), (cx_k + 7, cy_k - 5)]
-                        pygame.draw.lines(pantalla, (255, 255, 255), False, pts_chk, 3)
-                    elif hov1:
-                        pygame.draw.rect(pantalla, (255, 255, 255), r1, 2, border_radius=8)
-                    else:
-                        pygame.draw.rect(pantalla, (180, 160, 140), r1, 1, border_radius=8)
+                        # P1 swatch
+                        sel1 = (p_info["nombre"] == color_p1)
+                        hov1 = r1.collidepoint(pos_mouse)
+                        pygame.draw.rect(pantalla, p_info["color"], r1, border_radius=8)
+                        if sel1:
+                            pygame.draw.rect(pantalla, (255, 255, 255), r1, 3, border_radius=8)
+                            pygame.draw.rect(pantalla, (40, 30, 25), r1, 1, border_radius=8)
+                            cx_k, cy_k = r1.center
+                            pts_chk = [(cx_k - 7, cy_k), (cx_k - 2, cy_k + 5), (cx_k + 7, cy_k - 5)]
+                            pts_shadow = [(x + 1, y + 1) for x, y in pts_chk]
+                            pygame.draw.lines(pantalla, (40, 30, 25), False, pts_shadow, 4)
+                            pygame.draw.lines(pantalla, (255, 255, 255), False, pts_chk, 3)
+                        elif hov1:
+                            pygame.draw.rect(pantalla, (255, 255, 255), r1, 2, border_radius=8)
+                        else:
+                            pygame.draw.rect(pantalla, (180, 160, 140), r1, 1, border_radius=8)
 
-                    # P2 swatch
-                    sel2 = (p_info["nombre"] == color_p2)
-                    hov2 = r2.collidepoint(pos_mouse)
-                    pygame.draw.rect(pantalla, p_info["color"], r2, border_radius=8)
-                    if sel2:
-                        pygame.draw.rect(pantalla, (255, 255, 255), r2, 3, border_radius=8)
-                        pygame.draw.rect(pantalla, (40, 30, 25), r2, 1, border_radius=8)
-                        cx_k2, cy_k2 = r2.center
-                        pts_chk2 = [(cx_k2 - 7, cy_k2), (cx_k2 - 2, cy_k2 + 5), (cx_k2 + 7, cy_k2 - 5)]
-                        pygame.draw.lines(pantalla, (255, 255, 255), False, pts_chk2, 3)
-                    elif hov2:
-                        pygame.draw.rect(pantalla, (255, 255, 255), r2, 2, border_radius=8)
-                    else:
-                        pygame.draw.rect(pantalla, (180, 160, 140), r2, 1, border_radius=8)
+                        col_t1 = (25, 15, 8) if sel1 else (50, 34, 22)
+                        ts1 = f_nom.render(nom_col, True, col_t1)
+                        tx1 = r1.centerx - ts1.get_width() // 2
+                        ty1 = r1.bottom + 4
+                        pantalla.blit(ts1, (tx1, ty1))
+                        pantalla.blit(ts1, (tx1 + 1, ty1))
+
+                        # P2 swatch
+                        sel2 = (p_info["nombre"] == color_p2)
+                        hov2 = r2.collidepoint(pos_mouse)
+                        pygame.draw.rect(pantalla, p_info["color"], r2, border_radius=8)
+                        if sel2:
+                            pygame.draw.rect(pantalla, (255, 255, 255), r2, 3, border_radius=8)
+                            pygame.draw.rect(pantalla, (40, 30, 25), r2, 1, border_radius=8)
+                            cx_k2, cy_k2 = r2.center
+                            pts_chk2 = [(cx_k2 - 7, cy_k2), (cx_k2 - 2, cy_k2 + 5), (cx_k2 + 7, cy_k2 - 5)]
+                            pts_shadow2 = [(x + 1, y + 1) for x, y in pts_chk2]
+                            pygame.draw.lines(pantalla, (40, 30, 25), False, pts_shadow2, 4)
+                            pygame.draw.lines(pantalla, (255, 255, 255), False, pts_chk2, 3)
+                        elif hov2:
+                            pygame.draw.rect(pantalla, (255, 255, 255), r2, 2, border_radius=8)
+                        else:
+                            pygame.draw.rect(pantalla, (180, 160, 140), r2, 1, border_radius=8)
+
+                        col_t2 = (25, 15, 8) if sel2 else (50, 34, 22)
+                        ts2 = f_nom.render(nom_col, True, col_t2)
+                        tx2 = r2.centerx - ts2.get_width() // 2
+                        ty2 = r2.bottom + 4
+                        pantalla.blit(ts2, (tx2, ty2))
+                        pantalla.blit(ts2, (tx2 + 1, ty2))
 
             elif tab_personajes_actual == "accesorios":
-                accesorios_disp = obtener_accesorios_disponibles()
-                w_acc, h_acc, gap_acc_x, gap_acc_y = 126, 88, 16, 14
+                items_por_pag = 6
+                w_acc, h_acc, gap_acc_x, gap_acc_y = 126, 82, 16, 10
                 ancho_fila_acc = 3 * w_acc + 2 * gap_acc_x
                 x_offset_acc = (w_frame - ancho_fila_acc) // 2
-                alto_filas_acc = 2 * h_acc + gap_acc_y
-                y_offset_acc = 34 + ((h_frame - 34) - alto_filas_acc) // 2
-                for idx_a, acc in enumerate(accesorios_disp):
-                    r = idx_a // 3
-                    c = idx_a % 3
-                    x_offset_rel = x_offset_acc + c * (w_acc + gap_acc_x)
-                    y_card_a = y_frame + y_offset_acc + r * (h_acc + gap_acc_y)
 
-                    ra1 = pygame.Rect(rect_f1.left + x_offset_rel, y_card_a, w_acc, h_acc)
-                    ra2 = pygame.Rect(rect_f2.left + x_offset_rel, y_card_a, w_acc, h_acc)
+                for rf, acc_actual, pag_num, color_pj_actual in [
+                    (rect_f1, accesorio_p1, pagina_acc_p1, color_p1),
+                    (rect_f2, accesorio_p2, pagina_acc_p2, color_p2),
+                ]:
+                    accesorios_disp = obtener_accesorios_disponibles(color_pj_actual)
+                    total_pags = max(1, (len(accesorios_disp) + items_por_pag - 1) // items_por_pag)
+                    pag_num = min(pag_num, total_pags - 1)
+                    # 1. Controles inferiores de paginación
+                    btn_prev = pygame.Rect(rf.centerx - 72, rf.top + 234, 34, 26)
+                    btn_next = pygame.Rect(rf.centerx + 38, rf.top + 234, 34, 26)
 
-                    for r_card_a, acc_actual in [(ra1, accesorio_p1), (ra2, accesorio_p2)]:
-                        sel = (acc["id"] == acc_actual)
+                    for b_rect, es_izq in [(btn_prev, True), (btn_next, False)]:
+                        hov_b = b_rect.collidepoint(pos_mouse)
+                        col_bg_b = (255, 252, 245) if hov_b else (244, 236, 224)
+                        col_brd_b = (220, 180, 120) if hov_b else (195, 168, 138)
+                        pygame.draw.rect(pantalla, col_bg_b, b_rect, border_radius=6)
+                        pygame.draw.rect(pantalla, col_brd_b, b_rect, 2, border_radius=6)
+
+                        col_arr = (80, 60, 45) if hov_b else (120, 100, 85)
+                        cx_b, cy_b = b_rect.center
+                        if es_izq:
+                            for dy in range(-5, 6):
+                                ancho_f = 5 - abs(dy)
+                                for dx in range(ancho_f + 1):
+                                    pantalla.set_at((cx_b + 2 - dx, cy_b + dy), col_arr)
+                        else:
+                            for dy in range(-5, 6):
+                                ancho_f = 5 - abs(dy)
+                                for dx in range(ancho_f + 1):
+                                    pantalla.set_at((cx_b - 2 + dx, cy_b + dy), col_arr)
+
+                    txt_pag = f"{pag_num + 1} / {total_pags}"
+                    f_pag = obtener_fuente_para_texto(txt_pag, categoria="texto", tamano=TAMANO_BADGE, negrita=True)
+                    t_pag = f_pag.render(txt_pag, True, (115, 95, 80))
+                    pantalla.blit(t_pag, t_pag.get_rect(center=(rf.centerx, rf.top + 247)))
+
+                    # 2. Tarjetas de accesorios de la página activa con fondo crema claro de alto contraste
+                    inicio = pag_num * items_por_pag
+                    for idx_rel, acc in enumerate(accesorios_disp[inicio:inicio + items_por_pag]):
+                        r = idx_rel // 3
+                        c = idx_rel % 3
+                        x_offset_rel = x_offset_acc + c * (w_acc + gap_acc_x)
+                        y_card_a = rf.top + 42 + r * (h_acc + gap_acc_y)
+                        r_card_a = pygame.Rect(rf.left + x_offset_rel, y_card_a, w_acc, h_acc)
+
+                        sel = (acc["id"] == acc_actual or acc["id"].lower() == str(acc_actual).lower())
                         hov = r_card_a.collidepoint(pos_mouse)
 
-                        col_bg_a = (255, 250, 230) if sel else ((255, 252, 245) if hov else (246, 239, 228))
-                        col_brd_a = (82, 194, 114) if sel else ((220, 180, 120) if hov else (195, 168, 138))
+                        col_bg_a = (242, 252, 244) if sel else ((255, 252, 246) if hov else (248, 242, 232))
+                        col_brd_a = (45, 165, 85) if sel else ((180, 145, 110) if hov else (195, 168, 138))
                         pygame.draw.rect(pantalla, col_bg_a, r_card_a, border_radius=10)
                         pygame.draw.rect(pantalla, col_brd_a, r_card_a, 3 if sel else 2, border_radius=10)
 
                         if sel:
-                            cx_ca = r_card_a.right - 12
-                            cy_ca = r_card_a.top + 12
-                            pygame.draw.circle(pantalla, (82, 194, 114), (cx_ca, cy_ca), 8)
+                            cx_ca = r_card_a.right - 14
+                            cy_ca = r_card_a.top + 14
+                            pygame.draw.circle(pantalla, (45, 165, 85), (cx_ca, cy_ca), 9)
                             pts_ca = [(cx_ca - 4, cy_ca), (cx_ca - 1, cy_ca + 3), (cx_ca + 4, cy_ca - 3)]
                             pygame.draw.lines(pantalla, (255, 255, 255), False, pts_ca, 2)
 
                         if acc["id"] == "Ninguno":
-                            cx_ic, cy_ic = r_card_a.centerx, r_card_a.top + 30
-                            pygame.draw.circle(pantalla, (215, 80, 75), (cx_ic, cy_ic), 14, width=2)
-                            pygame.draw.line(pantalla, (215, 80, 75), (cx_ic - 9, cy_ic - 9), (cx_ic + 9, cy_ic + 9), 2)
+                            cx_ic, cy_ic = r_card_a.centerx, r_card_a.top + 25
+                            pygame.draw.circle(pantalla, (220, 80, 75), (cx_ic, cy_ic), 13, width=2)
+                            pygame.draw.line(pantalla, (220, 80, 75), (cx_ic - 8, cy_ic - 8), (cx_ic + 8, cy_ic + 8), 2)
                         else:
-                            surf_mini_acc = cargar_accesorio(acc["id"])
-                            if surf_mini_acc:
-                                r_mini = surf_mini_acc.get_rect(center=(r_card_a.centerx, r_card_a.top + 30))
-                                pantalla.blit(surf_mini_acc, r_mini)
+                            surf_icon = _obtener_preview_accesorio_tarjeta(acc["id"])
+                            if surf_icon:
+                                r_mini = surf_icon.get_rect(center=(r_card_a.centerx, r_card_a.top + 25))
+                                pantalla.blit(surf_icon, r_mini)
 
-                        col_nom = (50, 40, 30) if sel else (95, 80, 70)
-                        rect_nom_acc = pygame.Rect(r_card_a.left + 4, r_card_a.bottom - 26, r_card_a.width - 8, 20)
+                        col_nom = (25, 75, 35) if sel else ((45, 30, 18) if hov else (55, 38, 25))
+                        rect_nom_acc = pygame.Rect(r_card_a.left + 2, r_card_a.bottom - 32, r_card_a.width - 4, 30)
                         nom_acc_trad = t(acc["id"].lower())
-                        dibujar_texto_en_rect(pantalla, nom_acc_trad, rect_nom_acc, categoria="boton", tamano=TAMANO_BADGE, color=col_nom, padding=2)
+                        dibujar_texto_en_rect(pantalla, nom_acc_trad, rect_nom_acc, categoria="boton", tamano=13, color=col_nom, negrita=True, multiline=True, alineacion="centro", padding=0, interlineado=1)
 
             # 7. Botón Volver al Menú
             hov_vpj = btn_volver_personajes.collidepoint(pos_mouse)
@@ -2972,84 +3841,419 @@ def main():
 
         elif estado_actual == ESTADO_CONFIGURACION:
             pos_mouse = pygame.mouse.get_pos()
-
-            titulo = fuente_pixel_titulo.render("CONFIGURACION DE CONTROLES", True, (255, 230, 100))
-            pantalla.blit(titulo, titulo.get_rect(center=(ANCHO_MENU // 2, 55)))
-
-            subt = fuente_subtitulo.render("Teclas de movimiento y acción para cada jugador", True, (215, 215, 225))
-            pantalla.blit(subt, subt.get_rect(center=(ANCHO_MENU // 2, 98)))
-
-            # Ancho y alto de los paneles de cada jugador
-            w_card_cfg = min(460, (ANCHO_MENU // 2) - 50)
-            h_card_cfg = 340
-            y_card_cfg = 135
-            gap_card_cfg = 40
-
-            x_card_p1 = (ANCHO_MENU // 2) - w_card_cfg - (gap_card_cfg // 2)
-            x_card_p2 = (ANCHO_MENU // 2) + (gap_card_cfg // 2)
-
-            rect_card_p1 = pygame.Rect(x_card_p1, y_card_cfg, w_card_cfg, h_card_cfg)
-            rect_card_p2 = pygame.Rect(x_card_p2, y_card_cfg, w_card_cfg, h_card_cfg)
-
-            # --- Panel Jugador 1 ---
-            pygame.draw.rect(pantalla, (42, 45, 58), rect_card_p1, border_radius=16)
-            pygame.draw.rect(pantalla, (124, 231, 255), rect_card_p1, width=3, border_radius=16)
-
-            rect_tit_cp1 = pygame.Rect(rect_card_p1.left + 16, rect_card_p1.top + 16, rect_card_p1.width - 32, 32)
-            dibujar_texto_en_rect(pantalla, f"JUGADOR 1 ({color_p1.upper()})", rect_tit_cp1, categoria="boton", tamano=TAMANO_BOTON_GRANDE, color=(124, 231, 255), padding=2)
-
-            # Teclado WASD centrado con botones oficiales de Controles
-            tc_w, tc_gap = TAM_CTRL, 8
-            x_wasd_centro = rect_card_p1.centerx
-            y_wasd_top = rect_card_p1.top + 65
-
-            r_w = pygame.Rect(x_wasd_centro - (tc_w // 2), y_wasd_top, tc_w, tc_w)
-            r_s = pygame.Rect(x_wasd_centro - (tc_w // 2), y_wasd_top + tc_w + tc_gap, tc_w, tc_w)
-            r_a = pygame.Rect(r_s.left - tc_w - tc_gap, y_wasd_top + tc_w + tc_gap, tc_w, tc_w)
-            r_d = pygame.Rect(r_s.right + tc_gap, y_wasd_top + tc_w + tc_gap, tc_w, tc_w)
-
-            if spr_ctrl_w: pantalla.blit(spr_ctrl_w, r_w)
-            if spr_ctrl_a: pantalla.blit(spr_ctrl_a, r_a)
-            if spr_ctrl_s: pantalla.blit(spr_ctrl_s, r_s)
-            if spr_ctrl_d: pantalla.blit(spr_ctrl_d, r_d)
-
-            dibujar_texto_en_rect(pantalla, "A / D : Moverse", pygame.Rect(rect_card_p1.left + 16, r_s.bottom + 20, rect_card_p1.width - 32, 24), categoria="texto", tamano=TAMANO_TEXTO, color=(230, 230, 230), padding=2)
-            dibujar_texto_en_rect(pantalla, "W : Saltar", pygame.Rect(rect_card_p1.left + 16, r_s.bottom + 48, rect_card_p1.width - 32, 24), categoria="texto", tamano=TAMANO_TEXTO, color=(255, 255, 255), padding=2)
-            dibujar_texto_en_rect(pantalla, "S : Nadar / Sumergirse (Agua)", pygame.Rect(rect_card_p1.left + 16, r_s.bottom + 76, rect_card_p1.width - 32, 24), categoria="texto", tamano=TAMANO_TEXTO, color=(190, 210, 225), padding=2)
-
-            # --- Panel Jugador 2 ---
-            pygame.draw.rect(pantalla, (42, 45, 58), rect_card_p2, border_radius=16)
-            pygame.draw.rect(pantalla, (200, 160, 255), rect_card_p2, width=3, border_radius=16)
-
-            rect_tit_cp2 = pygame.Rect(rect_card_p2.left + 16, rect_card_p2.top + 16, rect_card_p2.width - 32, 32)
-            dibujar_texto_en_rect(pantalla, f"JUGADOR 2 ({color_p2.upper()})", rect_tit_cp2, categoria="boton", tamano=TAMANO_BOTON_GRANDE, color=(200, 160, 255), padding=2)
-
-            # Teclado Flechas centrado con botones oficiales de Controles
-            x_arr_centro = rect_card_p2.centerx
-            y_arr_top = rect_card_p2.top + 65
-
-            r_arr = pygame.Rect(x_arr_centro - (tc_w // 2), y_arr_top, tc_w, tc_w)
-            r_aba = pygame.Rect(x_arr_centro - (tc_w // 2), y_arr_top + tc_w + tc_gap, tc_w, tc_w)
-            r_izq = pygame.Rect(r_aba.left - tc_w - tc_gap, y_arr_top + tc_w + tc_gap, tc_w, tc_w)
-            r_der = pygame.Rect(r_aba.right + tc_gap, y_arr_top + tc_w + tc_gap, tc_w, tc_w)
-
-            if spr_ctrl_arr: pantalla.blit(spr_ctrl_arr, r_arr)
-            if spr_ctrl_izq: pantalla.blit(spr_ctrl_izq, r_izq)
-            if spr_ctrl_aba: pantalla.blit(spr_ctrl_aba, r_aba)
-            if spr_ctrl_der: pantalla.blit(spr_ctrl_der, r_der)
-
-            dibujar_texto_en_rect(pantalla, "Flechas Izq / Der : Moverse", pygame.Rect(rect_card_p2.left + 16, r_aba.bottom + 20, rect_card_p2.width - 32, 24), categoria="texto", tamano=TAMANO_TEXTO, color=(230, 230, 230), padding=2)
-            dibujar_texto_en_rect(pantalla, "Flecha Arriba : Saltar", pygame.Rect(rect_card_p2.left + 16, r_aba.bottom + 48, rect_card_p2.width - 32, 24), categoria="texto", tamano=TAMANO_TEXTO, color=(255, 255, 255), padding=2)
-            dibujar_texto_en_rect(pantalla, "Flecha Abajo : Nadar / Sumergirse (Agua)", pygame.Rect(rect_card_p2.left + 16, r_aba.bottom + 76, rect_card_p2.width - 32, 24), categoria="texto", tamano=TAMANO_TEXTO, color=(220, 205, 235), padding=2)
-
-            # Botón Volver al Menú (mundos/boton-volver)
             idm_act = obtener_idioma()
+
+            # 1. Fondo de paisaje invernal pixel art con copos de nieve cayendo
+            pantalla.blit(_obtener_fondo_opciones(ANCHO_MENU, ALTO_MENU), (0, 0))
+            _dibujar_copos_opciones(pantalla)
+
+            # 2. Título y Subtítulo
+            txt_tit = t("opciones").upper()
+            f_tit = obtener_fuente_para_texto(txt_tit, categoria="titulo", tamano=TAMANO_TITULO + 2, negrita=True)
+            t_tit = f_tit.render(txt_tit, True, (255, 240, 195))
+            t_tit_s = f_tit.render(txt_tit, True, (15, 20, 35))
+            rc_tit = t_tit.get_rect(center=(ANCHO_MENU // 2, 44))
+            pantalla.blit(t_tit_s, (rc_tit.x + 2, rc_tit.y + 2))
+            pantalla.blit(t_tit, rc_tit)
+
+            txt_sub = t("sub_opciones")
+            f_sub = obtener_fuente_para_texto(txt_sub, categoria="subtitulo", tamano=TAMANO_SUBTITULO - 2)
+            t_sub = f_sub.render(txt_sub, True, (215, 230, 255))
+            pantalla.blit(t_sub, t_sub.get_rect(center=(ANCHO_MENU // 2, 78)))
+
+            # 3. Barra lateral izquierda (3 botones de secciones)
+            botones_sec = [
+                ("configuracion", t("configuracion").upper(), rect_btn_sec_cfg),
+                ("controles", t("controles").upper(), rect_btn_sec_ctrl),
+                ("instrucciones", t("instrucciones").upper(), rect_btn_sec_inst),
+            ]
+
+            for sec_id, sec_nom, r_b in botones_sec:
+                es_activa = (seccion_opciones_actual == sec_id)
+                hov_b = r_b.collidepoint(pos_mouse)
+
+                if es_activa:
+                    col_bg = (250, 225, 165)
+                    col_brd = (185, 110, 60)
+                    col_txt = (45, 30, 15)
+                    pygame.draw.rect(pantalla, (140, 80, 40), (r_b.left, r_b.top + 4, r_b.width, r_b.height), border_radius=12)
+                    pygame.draw.rect(pantalla, col_bg, (r_b.left, r_b.top, r_b.width, r_b.height - 2), border_radius=12)
+                    pygame.draw.rect(pantalla, col_brd, (r_b.left, r_b.top, r_b.width, r_b.height - 2), 3, border_radius=12)
+                    # Indicador rombo / gema
+                    cy_g = r_b.centery - 1
+                    pts_gema = [(r_b.left + 16, cy_g), (r_b.left + 22, cy_g - 6), (r_b.left + 28, cy_g), (r_b.left + 22, cy_g + 6)]
+                    pygame.draw.polygon(pantalla, (225, 110, 80), pts_gema)
+                    pygame.draw.polygon(pantalla, (150, 60, 30), pts_gema, 1)
+                else:
+                    col_bg = (38, 52, 82) if hov_b else (28, 38, 62)
+                    col_brd = (110, 140, 185) if hov_b else (85, 110, 150)
+                    col_txt = (255, 255, 255) if hov_b else (220, 230, 245)
+                    pygame.draw.rect(pantalla, (15, 22, 38), (r_b.left, r_b.top + 4, r_b.width, r_b.height), border_radius=12)
+                    pygame.draw.rect(pantalla, col_bg, (r_b.left, r_b.top, r_b.width, r_b.height - 2), border_radius=12)
+                    pygame.draw.rect(pantalla, col_brd, (r_b.left, r_b.top, r_b.width, r_b.height - 2), 2, border_radius=12)
+
+                r_txt_b = pygame.Rect(r_b.left + (36 if es_activa else 12), r_b.top, r_b.width - (44 if es_activa else 24), r_b.height - 2)
+                dibujar_texto_en_rect(pantalla, sec_nom, r_txt_b, categoria="boton", tamano=15, color=col_txt, negrita=True, alineacion="centro")
+
+            # Personajes decorativos en la barra lateral izquierda
+            cx_dec, cy_dec = 190, 430
+            pygame.draw.ellipse(pantalla, (220, 235, 255), (cx_dec - 80, cy_dec + 45, 160, 24))
+            sp_p1_d = cargar_sprites(color_p1).get("quieto")
+            sp_p2_d = cargar_sprites(color_p2).get("quieto")
+            r_mini_p1 = pygame.Rect(cx_dec - 55, cy_dec, 50, 62)
+            r_mini_p2 = pygame.Rect(cx_dec + 5, cy_dec, 50, 62)
+            if sp_p1_d:
+                pantalla.blit(pygame.transform.scale(sp_p1_d, (50, 62)), r_mini_p1)
+                if accesorio_p1:
+                    dibujar_accesorio_en_personaje(pantalla, accesorio_p1, rect_personaje=r_mini_p1)
+            if sp_p2_d:
+                pantalla.blit(pygame.transform.scale(sp_p2_d, (50, 62)), r_mini_p2)
+                if accesorio_p2:
+                    dibujar_accesorio_en_personaje(pantalla, accesorio_p2, rect_personaje=r_mini_p2)
+
+            # 4. Panel central grande de color crema
+            rect_panel = pygame.Rect(340, 115, 875, 495)
+            # Sombra del panel
+            pygame.draw.rect(pantalla, (15, 20, 35), (rect_panel.left + 5, rect_panel.top + 5, rect_panel.width, rect_panel.height), border_radius=18)
+            # Fondo crema
+            pygame.draw.rect(pantalla, (253, 248, 238), rect_panel, border_radius=18)
+            # Borde exterior marrón
+            pygame.draw.rect(pantalla, (115, 75, 48), rect_panel, 4, border_radius=18)
+            # Borde interior coral
+            rect_in = pygame.Rect(rect_panel.left + 6, rect_panel.top + 6, rect_panel.width - 12, rect_panel.height - 12)
+            pygame.draw.rect(pantalla, (225, 115, 85), rect_in, 2, border_radius=14)
+
+            # Cabecera dentro del panel
+            nom_seccion = {
+                "configuracion": t("ajustes_generales"),
+                "controles": t("controles_teclado"),
+                "instrucciones": t("guia_juego"),
+            }.get(seccion_opciones_actual, t("opciones"))
+
+            f_p_tit = obtener_fuente_para_texto(nom_seccion, categoria="titulo", tamano=19, negrita=True)
+            t_p_tit = f_p_tit.render(nom_seccion, True, (60, 42, 30))
+            pantalla.blit(t_p_tit, t_p_tit.get_rect(center=(rect_panel.centerx, rect_panel.top + 28)))
+            # Línea divisoria decorativa
+            pygame.draw.line(pantalla, (225, 115, 85), (rect_panel.left + 35, rect_panel.top + 48), (rect_panel.right - 35, rect_panel.top + 48), 2)
+            pygame.draw.circle(pantalla, (180, 90, 55), (rect_panel.centerx, rect_panel.top + 48), 4)
+
+            # =========================================================================
+            # SECCIÓN: CONFIGURACIÓN
+            # =========================================================================
+            if seccion_opciones_actual == "configuracion":
+                # Bloque A: Volumen
+                y_vol = rect_panel.top + 70
+                txt_vol_b = t("volumen_musica_y_sonido")
+                f_bloq = obtener_fuente_para_texto(txt_vol_b, categoria="texto", tamano=16, negrita=True)
+                pantalla.blit(f_bloq.render(txt_vol_b, True, (65, 45, 32)), (rect_panel.left + 45, y_vol))
+
+                # Tarjeta contenedora de volumen
+                r_card_vol = pygame.Rect(rect_panel.left + 45, y_vol + 26, rect_panel.width - 90, 105)
+                pygame.draw.rect(pantalla, (244, 236, 222), r_card_vol, border_radius=12)
+                pygame.draw.rect(pantalla, (200, 175, 145), r_card_vol, 2, border_radius=12)
+
+                vol_actual = obtener_volumen()
+
+                # Botón [-]
+                r_menos = pygame.Rect(r_card_vol.left + 30, r_card_vol.top + 28, 54, 48)
+                hov_m = r_menos.collidepoint(pos_mouse)
+                col_bm = (235, 115, 85) if hov_m else (215, 105, 75)
+                pygame.draw.rect(pantalla, col_bm, r_menos, border_radius=8)
+                pygame.draw.rect(pantalla, (140, 60, 40), r_menos, 2, border_radius=8)
+                f_btn_v = obtener_fuente_para_texto("-", categoria="boton", tamano=24, negrita=True)
+                pantalla.blit(f_btn_v.render("-", True, (255, 255, 255)), f_btn_v.render("-", True, (255, 255, 255)).get_rect(center=r_menos.center))
+
+                # Barra de volumen
+                r_barra_bg = pygame.Rect(r_menos.right + 25, r_card_vol.top + 32, 450, 40)
+                pygame.draw.rect(pantalla, (40, 46, 62), r_barra_bg, border_radius=8)
+                pygame.draw.rect(pantalla, (150, 160, 185), r_barra_bg, 2, border_radius=8)
+
+                # Relleno de la barra (por bloques de 10%)
+                bloques = vol_actual // 10
+                ancho_bloque = (r_barra_bg.width - 8) / 10.0
+                for b in range(bloques):
+                    bx = r_barra_bg.left + 4 + int(b * ancho_bloque)
+                    bw = int(ancho_bloque) - 3
+                    col_b = (255, 150, 70) if b < 4 else ((255, 195, 65) if b < 8 else (255, 225, 95))
+                    pygame.draw.rect(pantalla, col_b, (bx, r_barra_bg.top + 4, bw, r_barra_bg.height - 8), border_radius=4)
+
+                # Botón [+]
+                r_mas = pygame.Rect(r_barra_bg.right + 25, r_card_vol.top + 28, 54, 48)
+                hov_p = r_mas.collidepoint(pos_mouse)
+                col_bp = (95, 200, 120) if hov_p else (85, 180, 110)
+                pygame.draw.rect(pantalla, col_bp, r_mas, border_radius=8)
+                pygame.draw.rect(pantalla, (45, 120, 65), r_mas, 2, border_radius=8)
+                f_btn_mas = obtener_fuente_para_texto("+", categoria="boton", tamano=22, negrita=True)
+                pantalla.blit(f_btn_mas.render("+", True, (255, 255, 255)), f_btn_mas.render("+", True, (255, 255, 255)).get_rect(center=r_mas.center))
+
+                # Porcentaje numérico badge
+                r_pct = pygame.Rect(r_mas.right + 25, r_card_vol.top + 28, 100, 48)
+                pygame.draw.rect(pantalla, (255, 255, 255), r_pct, border_radius=8)
+                pygame.draw.rect(pantalla, (180, 155, 125), r_pct, 2, border_radius=8)
+                str_pct = f"{vol_actual}%"
+                f_pct = obtener_fuente_para_texto(str_pct, categoria="boton", tamano=17, negrita=True)
+                pantalla.blit(f_pct.render(str_pct, True, (45, 35, 25)), f_pct.render(str_pct, True, (45, 35, 25)).get_rect(center=r_pct.center))
+
+                # Bloque B: Idioma
+                y_idioma = r_card_vol.bottom + 25
+                txt_idm_b = t("seleccion_idioma")
+                pantalla.blit(f_bloq.render(txt_idm_b, True, (65, 45, 32)), (rect_panel.left + 45, y_idioma))
+
+                r_card_idm = pygame.Rect(rect_panel.left + 45, y_idioma + 26, rect_panel.width - 90, 140)
+                pygame.draw.rect(pantalla, (244, 236, 222), r_card_idm, border_radius=12)
+                pygame.draw.rect(pantalla, (200, 175, 145), r_card_idm, 2, border_radius=12)
+
+                langs = [
+                    ("es", "ESPAÑOL", "Español (Latinoamérica / España)"),
+                    ("en", "ENGLISH", "English (United States / UK)"),
+                    ("zh", "中文 (CHINO)", "简体中文 (Simplified Chinese)"),
+                ]
+                w_btn_l = (r_card_idm.width - 60) // 3
+                for l_idx, (l_code, l_tit, l_sub) in enumerate(langs):
+                    rx_l = r_card_idm.left + 20 + l_idx * (w_btn_l + 10)
+                    r_bl = pygame.Rect(rx_l, r_card_idm.top + 20, w_btn_l, 98)
+                    es_sel = (idm_act == l_code)
+                    hov_l = r_bl.collidepoint(pos_mouse)
+
+                    col_l_bg = (255, 250, 235) if es_sel else ((248, 240, 228) if hov_l else (238, 228, 212))
+                    col_l_brd = (225, 110, 80) if es_sel else ((205, 180, 150) if hov_l else (185, 160, 130))
+                    pygame.draw.rect(pantalla, col_l_bg, r_bl, border_radius=10)
+                    pygame.draw.rect(pantalla, col_l_brd, r_bl, 3 if es_sel else 2, border_radius=10)
+
+                    if es_sel:
+                        cx_ck, cy_ck = r_bl.right - 14, r_bl.top + 14
+                        pygame.draw.circle(pantalla, (80, 185, 105), (cx_ck, cy_ck), 9)
+                        pts_ck = [(cx_ck - 4, cy_ck), (cx_ck - 1, cy_ck + 3), (cx_ck + 4, cy_ck - 3)]
+                        pygame.draw.lines(pantalla, (255, 255, 255), False, pts_ck, 2)
+
+                    f_lt = obtener_fuente_para_texto(l_tit, categoria="boton", tamano=18, negrita=True)
+                    t_lt = f_lt.render(l_tit, True, (45, 30, 20) if es_sel else (95, 75, 60))
+                    pantalla.blit(t_lt, t_lt.get_rect(center=(r_bl.centerx, r_bl.top + 34)))
+
+                    f_ls = obtener_fuente_para_texto(l_sub, categoria="texto", tamano=14)
+                    dibujar_texto_en_rect(pantalla, l_sub, pygame.Rect(r_bl.left + 6, r_bl.top + 48, r_bl.width - 12, 44), categoria="texto", tamano=14, color=(80, 60, 45), alineacion="centro", multiline=True, interlineado=2)
+
+                # Nota al pie de ajustes (agrandada y más legible con sombra suave)
+                txt_not = t("cambios_guardados_auto")
+                f_not = obtener_fuente_para_texto(txt_not, categoria="texto", tamano=15, negrita=True)
+                pantalla.blit(f_not.render(txt_not, True, (245, 235, 220)), (rect_panel.left + 51, rect_panel.bottom - 41))
+                pantalla.blit(f_not.render(txt_not, True, (55, 38, 25)), (rect_panel.left + 50, rect_panel.bottom - 42))
+
+            # =========================================================================
+            # SECCIÓN: CONTROLES
+            # =========================================================================
+            elif seccion_opciones_actual == "controles":
+                w_pj_card = (rect_panel.width - 60) // 2
+                h_pj_card = 356
+                y_pj_top = rect_panel.top + 60
+
+                # --- TARJETA JUGADOR 1 ---
+                r_card_p1 = pygame.Rect(rect_panel.left + 22, y_pj_top, w_pj_card, h_pj_card)
+                pygame.draw.rect(pantalla, (244, 238, 226), r_card_p1, border_radius=14)
+                pygame.draw.rect(pantalla, (124, 210, 240), r_card_p1, 3, border_radius=14)
+
+                r_head_p1 = pygame.Rect(r_card_p1.left + 14, r_card_p1.top + 10, r_card_p1.width - 28, 34)
+                pygame.draw.rect(pantalla, (124, 231, 255), r_head_p1, border_radius=8)
+                pygame.draw.rect(pantalla, (50, 40, 30), r_head_p1, 2, border_radius=8)
+                tit_head_p1 = f"{t('jugador_1').upper()}  (WASD)"
+                dibujar_texto_en_rect(pantalla, tit_head_p1, r_head_p1, categoria="boton", tamano=16, color=(35, 30, 25), negrita=True, padding=2)
+
+                filas_p1 = [
+                    (t("accion_moverse"), ["A", "D"], t("desc_moverse")),
+                    (t("accion_saltar"), ["W"], t("desc_saltar")),
+                    (t("accion_nadar"), ["W", "S"], t("desc_nadar_p1")),
+                    (t("accion_empujar"), ["A", "D"], t("desc_empujar")),
+                    (t("accion_linterna"), ["E", "F", "ESP"], t("desc_linterna")),
+                ]
+                for f_idx, (accion, teclas, desc) in enumerate(filas_p1):
+                    yf = r_card_p1.top + 52 + f_idx * 58
+                    # Línea 1: Nombre de la acción a la izquierda y teclas alineadas a la derecha
+                    f_act = obtener_fuente_para_texto(accion, categoria="boton", tamano=15, negrita=True)
+                    pantalla.blit(f_act.render(accion, True, (45, 32, 20)), (r_card_p1.left + 16, yf + 3))
+
+                    xk = r_card_p1.right - 14
+                    for tk in reversed(teclas):
+                        kw = 56 if len(tk) > 2 else 38
+                        xk -= kw
+                        rk = pygame.Rect(xk, yf, kw, 30)
+                        _dibujar_icono_tecla(pantalla, tk, rk, activo=True, tamano_fuente=15)
+                        xk -= 6
+
+                    # Línea 2: Texto descriptivo amplio y claro (completamente separado sin superposición)
+                    f_dsc = obtener_fuente_para_texto(desc, categoria="texto", tamano=14, negrita=False)
+                    pantalla.blit(f_dsc.render(f"• {desc}", True, (80, 60, 45)), (r_card_p1.left + 16, yf + 33))
+
+                    if f_idx < len(filas_p1) - 1:
+                        pygame.draw.line(pantalla, (230, 218, 200), (r_card_p1.left + 14, yf + 54), (r_card_p1.right - 14, yf + 54), 1)
+
+                # --- TARJETA JUGADOR 2 ---
+                r_card_p2 = pygame.Rect(r_card_p1.right + 16, y_pj_top, w_pj_card, h_pj_card)
+                pygame.draw.rect(pantalla, (244, 238, 226), r_card_p2, border_radius=14)
+                pygame.draw.rect(pantalla, (180, 140, 255), r_card_p2, 3, border_radius=14)
+
+                r_head_p2 = pygame.Rect(r_card_p2.left + 14, r_card_p2.top + 10, r_card_p2.width - 28, 34)
+                pygame.draw.rect(pantalla, (180, 140, 255), r_head_p2, border_radius=8)
+                pygame.draw.rect(pantalla, (50, 40, 30), r_head_p2, 2, border_radius=8)
+                tit_head_p2 = f"{t('jugador_2').upper()}  ({t('flechas_direccion')})"
+                dibujar_texto_en_rect(pantalla, tit_head_p2, r_head_p2, categoria="boton", tamano=16, color=(35, 30, 25), negrita=True, padding=2)
+
+                filas_p2 = [
+                    (t("accion_moverse"), ["←", "→"], t("desc_moverse")),
+                    (t("accion_saltar"), ["↑"], t("desc_saltar")),
+                    (t("accion_nadar"), ["↑", "↓"], t("desc_nadar_p2")),
+                    (t("accion_empujar"), ["←", "→"], t("desc_empujar")),
+                    (t("accion_linterna"), ["L", "ENT"], t("desc_linterna")),
+                ]
+                for f_idx, (accion, teclas, desc) in enumerate(filas_p2):
+                    yf = r_card_p2.top + 52 + f_idx * 58
+                    f_act = obtener_fuente_para_texto(accion, categoria="boton", tamano=15, negrita=True)
+                    pantalla.blit(f_act.render(accion, True, (45, 32, 20)), (r_card_p2.left + 16, yf + 3))
+
+                    xk = r_card_p2.right - 14
+                    for tk in reversed(teclas):
+                        kw = 56 if len(tk) > 2 else 38
+                        xk -= kw
+                        rk = pygame.Rect(xk, yf, kw, 30)
+                        _dibujar_icono_tecla(pantalla, tk, rk, activo=True, tamano_fuente=15)
+                        xk -= 6
+
+                    f_dsc = obtener_fuente_para_texto(desc, categoria="texto", tamano=14, negrita=False)
+                    pantalla.blit(f_dsc.render(f"• {desc}", True, (80, 60, 45)), (r_card_p2.left + 16, yf + 33))
+
+                    if f_idx < len(filas_p2) - 1:
+                        pygame.draw.line(pantalla, (230, 218, 200), (r_card_p2.left + 14, yf + 54), (r_card_p2.right - 14, yf + 54), 1)
+
+                # Fila inferior: Tecla R y Menú ESC (Agrandadas y legibles)
+                r_inf_ctrl = pygame.Rect(rect_panel.left + 22, r_card_p1.bottom + 10, rect_panel.width - 44, 52)
+                pygame.draw.rect(pantalla, (238, 230, 215), r_inf_ctrl, border_radius=10)
+                pygame.draw.rect(pantalla, (195, 170, 140), r_inf_ctrl, 2, border_radius=10)
+
+                rk_r = pygame.Rect(r_inf_ctrl.left + 18, r_inf_ctrl.top + 9, 42, 34)
+                _dibujar_icono_tecla(pantalla, "R", rk_r, activo=False, tamano_fuente=16)
+                txt_r = t("reiniciar_nivel_act")
+                f_r = obtener_fuente_para_texto(txt_r, categoria="texto", tamano=15, negrita=True)
+                pantalla.blit(f_r.render(txt_r, True, (55, 40, 30)), (rk_r.right + 12, r_inf_ctrl.top + 16))
+
+                rk_esc = pygame.Rect(r_inf_ctrl.centerx + 20, r_inf_ctrl.top + 9, 58, 34)
+                _dibujar_icono_tecla(pantalla, "ESC", rk_esc, activo=False, tamano_fuente=16)
+                txt_esc = t("pausa_volver_menu")
+                f_esc = obtener_fuente_para_texto(txt_esc, categoria="texto", tamano=15, negrita=True)
+                pantalla.blit(f_esc.render(txt_esc, True, (55, 40, 30)), (rk_esc.right + 12, r_inf_ctrl.top + 16))
+
+            # =========================================================================
+            # SECCIÓN: INSTRUCCIONES
+            # =========================================================================
+            elif seccion_opciones_actual == "instrucciones":
+                w_c = (rect_panel.width - 60) // 2
+                h_c = 202
+
+                tarjetas_inst = [
+                    (
+                        t("inst_tit_1"),
+                        [
+                            t("inst_1_1"),
+                            t("inst_1_2"),
+                            t("inst_1_3"),
+                            t("inst_1_4"),
+                        ],
+                        "llave_puerta"
+                    ),
+                    (
+                        t("inst_tit_2"),
+                        [
+                            t("inst_2_1"),
+                            t("inst_2_2"),
+                            t("inst_2_3"),
+                            t("inst_2_4"),
+                        ],
+                        "caja_boton"
+                    ),
+                    (
+                        t("inst_tit_3"),
+                        [
+                            t("inst_3_1"),
+                            t("inst_3_2"),
+                            t("inst_3_3"),
+                            t("inst_3_4"),
+                        ],
+                        "soga_salto"
+                    ),
+                    (
+                        t("inst_tit_4"),
+                        [
+                            t("inst_4_1"),
+                            t("inst_4_2"),
+                            t("inst_4_3"),
+                            t("inst_4_4"),
+                        ],
+                        "submarino"
+                    ),
+                ]
+
+                for idx_t, (tit_t, lines_t, tipo_ico) in enumerate(tarjetas_inst):
+                    col_idx = idx_t % 2
+                    row_idx = idx_t // 2
+                    x_tc = rect_panel.left + 20 + col_idx * (w_c + 20)
+                    y_tc = rect_panel.top + 58 + row_idx * (h_c + 12)
+                    rtc = pygame.Rect(x_tc, y_tc, w_c, h_c)
+
+                    pygame.draw.rect(pantalla, (246, 240, 228), rtc, border_radius=12)
+                    pygame.draw.rect(pantalla, (215, 175, 140), rtc, 2, border_radius=12)
+
+                    # Encabezado con título centrado y multilínea para que nunca se desborde
+                    r_head_t = pygame.Rect(rtc.left + 8, rtc.top + 8, rtc.width - 16, 36)
+                    pygame.draw.rect(pantalla, (235, 218, 195), r_head_t, border_radius=6)
+                    dibujar_texto_en_rect(pantalla, tit_t, r_head_t, categoria="boton", tamano=13, color=(55, 38, 25), negrita=True, multiline=True, padding=2, alineacion="centro")
+
+                    # Recuadro de ilustración con los sprites reales del juego
+                    r_box_ico = pygame.Rect(rtc.right - 56, rtc.top + 46, 48, 48)
+                    pygame.draw.rect(pantalla, (232, 222, 205), r_box_ico, border_radius=8)
+                    pygame.draw.rect(pantalla, (180, 150, 120), r_box_ico, 1, border_radius=8)
+
+                    cx_i, cy_i = r_box_ico.center
+                    if tipo_ico == "llave_puerta":
+                        spr_ico = _obtener_icono_instruccion("llave", 40, 44)
+                        if spr_ico:
+                            pantalla.blit(spr_ico, spr_ico.get_rect(center=r_box_ico.center))
+                    elif tipo_ico == "caja_boton":
+                        spr_ico = _obtener_icono_instruccion("caja", 44, 42)
+                        if spr_ico:
+                            pantalla.blit(spr_ico, spr_ico.get_rect(center=r_box_ico.center))
+                    elif tipo_ico == "soga_salto":
+                        pts_soga = [(cx_i - 15, cy_i - 8), (cx_i - 5, cy_i + 8), (cx_i + 5, cy_i - 6), (cx_i + 15, cy_i + 8)]
+                        pygame.draw.lines(pantalla, (160, 110, 60), False, pts_soga, 3)
+                        pygame.draw.circle(pantalla, (124, 231, 255), (cx_i - 13, cy_i - 8), 5)
+                        pygame.draw.circle(pantalla, (180, 140, 255), (cx_i + 13, cy_i + 8), 5)
+                    elif tipo_ico == "submarino":
+                        spr_ico = _obtener_icono_instruccion("buceo", 44, 40)
+                        if spr_ico:
+                            pantalla.blit(spr_ico, spr_ico.get_rect(center=r_box_ico.center))
+
+                    for l_num, line_txt in enumerate(lines_t):
+                        yf_l = rtc.top + 50 + l_num * 36
+                        bx = rtc.left + 14
+                        by = yf_l + 6
+                        pygame.draw.rect(pantalla, (215, 175, 140), (bx + 1, by + 1, 4, 4))
+                        pygame.draw.rect(pantalla, (65, 45, 30), (bx, by, 4, 4))
+
+                        clean_txt = line_txt.lstrip("•- \t")
+                        f_lin = obtener_fuente_para_texto(clean_txt, categoria="dialogos", tamano=18, negrita=True)
+                        ts_lin = f_lin.render(clean_txt, True, (45, 32, 20))
+                        pantalla.blit(ts_lin, (rtc.left + 24, yf_l))
+                        pantalla.blit(ts_lin, (rtc.left + 25, yf_l))
+
+            # 5. Botón Volver al Menú (mundos/boton-volver)
             hov_vcfg = btn_volver_config.collidepoint(pos_mouse)
             spr_vcfg_norm = _obtener_boton_volver("normal", idm_act)
             spr_vcfg_hov = _obtener_boton_volver("hover", idm_act)
             spr_vcfg = spr_vcfg_hov if (hov_vcfg and spr_vcfg_hov) else spr_vcfg_norm
             if spr_vcfg:
                 pantalla.blit(spr_vcfg, btn_volver_config)
+            else:
+                col_v = (255, 255, 255) if hov_vcfg else (242, 234, 222)
+                pygame.draw.rect(pantalla, col_v, btn_volver_config, border_radius=10)
+                pygame.draw.rect(pantalla, (185, 155, 125), btn_volver_config, width=2, border_radius=10)
+                dibujar_texto_en_rect(pantalla, t("volver_al_menu"), btn_volver_config, categoria="boton", tamano=TAMANO_BOTONES, color=(60, 45, 35), padding=6)
 
         elif estado_actual == ESTADO_CREDITOS:
             pos_mouse = pygame.mouse.get_pos()

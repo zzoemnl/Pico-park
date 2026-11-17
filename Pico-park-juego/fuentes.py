@@ -87,7 +87,22 @@ def contiene_caracteres_cjk(texto):
     """Retorna True si el texto contiene caracteres CJK / asiáticos que requieren tipografía Unicode."""
     if not texto:
         return False
-    return any(ord(ch) > 255 for ch in str(texto))
+    for ch in str(texto):
+        cp = ord(ch)
+        if (
+            (0x4E00 <= cp <= 0x9FFF)
+            or (0x3400 <= cp <= 0x4DBF)
+            or (0x20000 <= cp <= 0x2A6DF)
+            or (0xF900 <= cp <= 0xFAFF)
+            or (0x2E80 <= cp <= 0x2EFF)
+            or (0x3000 <= cp <= 0x303F)
+            or (0xFF00 <= cp <= 0xFFEF)
+            or (0x3040 <= cp <= 0x309F)
+            or (0x30A0 <= cp <= 0x30FF)
+            or (0xAC00 <= cp <= 0xD7AF)
+        ):
+            return True
+    return False
 
 
 def obtener_fuente_cjk(tamano=18, negrita=False):

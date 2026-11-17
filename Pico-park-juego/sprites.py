@@ -751,65 +751,95 @@ def cargar_sprite_llave():
     return surface
 
 
-def cargar_sprites_puerta():
-    ruta_cerrada = os.path.join(RUTA_OBJETOS, "Puerta", "puerta_cerrada.png")
-    ruta_abierta = os.path.join(RUTA_OBJETOS, "Puerta", "puerta_abierta.png")
+_CACHE_SPRITES_PUERTA = {}
 
-    if not os.path.isfile(ruta_cerrada):
-        ruta_cerrada = os.path.join(RUTA_OBJETOS, "puerta.png")
 
-    sprites = {"cerrada": None, "abierta": None}
+def cargar_sprites_puerta(tamano=(146, 180)):
+    """
+    Carga y cachea los sprites del Portal (animación en bucle de energía verde)
+    y del Candado (secuencia de desbloqueo de 4 fases).
+    Retorna un diccionario estructurado con:
+      - 'portal': lista de 3 superficies [p1, p2, p3] con la energía verde animada
+      - 'candado': lista de 4 superficies [c1, c2, c3, c4] con las fases del candado
+      - 'abierta': superficie activa del portal desbloqueado
+      - 'cerrada': superficie inicial del portal bloqueado con candado cerrado
+    """
+    clave = tamano
+    if clave in _CACHE_SPRITES_PUERTA:
+        return _CACHE_SPRITES_PUERTA[clave]
 
-    if os.path.isfile(ruta_cerrada):
-        try:
-            img = pygame.image.load(ruta_cerrada).convert_alpha()
-            sprites["cerrada"] = pygame.transform.scale(img, (60, 90))
-        except pygame.error:
-            pass
+    ruta_portal_dir = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Objetos", "Portal")
+    if not os.path.isdir(ruta_portal_dir):
+        ruta_portal_dir = os.path.join(RUTA_OBJETOS, "Portal")
 
-    if os.path.isfile(ruta_abierta):
-        try:
-            img = pygame.image.load(ruta_abierta).convert_alpha()
-            sprites["abierta"] = pygame.transform.scale(img, (60, 90))
-        except pygame.error:
-            pass
+    portales = []
+    candados = []
 
-    if sprites["cerrada"] is None:
-        s = pygame.Surface((60, 90), pygame.SRCALPHA)
-        # Marco exterior de la puerta
-        pygame.draw.rect(s, (70, 40, 20), (0, 0, 60, 90), border_radius=4)
-        # Hoja de madera
-        pygame.draw.rect(s, (150, 85, 35), (4, 4, 52, 82), border_radius=2)
-        # Paneles decorativos clásicos de puerta
-        pygame.draw.rect(s, (120, 65, 25), (8, 8, 44, 34), border_radius=2)
-        pygame.draw.rect(s, (135, 75, 30), (10, 10, 40, 30))
-        pygame.draw.rect(s, (120, 65, 25), (8, 48, 44, 34), border_radius=2)
-        pygame.draw.rect(s, (135, 75, 30), (10, 50, 40, 30))
-        # Pomo dorado brillante con relieve y cerradura
-        pygame.draw.circle(s, (255, 225, 60), (48, 45), 6)
-        pygame.draw.circle(s, (200, 160, 20), (48, 45), 6, 1)
-        pygame.draw.circle(s, (255, 255, 180), (46, 43), 2)
-        pygame.draw.rect(s, (40, 25, 10), (46, 54, 4, 7))
-        pygame.draw.circle(s, (40, 25, 10), (48, 54), 3)
-        sprites["cerrada"] = s
+    # 1. Cargar portales 1, 2, 3 (bucle de energía verde)
+    for i in (1, 2, 3):
+        r = os.path.join(ruta_portal_dir, f"portal_{i}.png")
+        if os.path.isfile(r):
+            try:
+                img = pygame.image.load(r).convert_alpha()
+                if img.get_size() != tamano:
+                    img = pygame.transform.scale(img, tamano)
+                portales.append(img)
+            except Exception:
+                pass
 
-    if sprites["abierta"] is None:
-        s = pygame.Surface((60, 90), pygame.SRCALPHA)
-        # Marco exterior de la puerta
-        pygame.draw.rect(s, (70, 40, 20), (0, 0, 60, 90), border_radius=4)
-        # Interior abierto: umbral oscuro con atmósfera de salida Pico Park
-        pygame.draw.rect(s, (15, 22, 38), (4, 4, 52, 82), border_radius=2)
-        pygame.draw.rect(s, (28, 40, 65), (8, 8, 44, 76), border_radius=2)
-        # Umbral brillante dorado/ámbar en la base del portal
-        pygame.draw.rect(s, (255, 225, 120), (8, 80, 44, 4), border_radius=1)
-        # Puerta abierta batida hacia la izquierda
-        pygame.draw.rect(s, (135, 75, 30), (4, 4, 14, 82), border_radius=2)
-        pygame.draw.rect(s, (95, 50, 18), (4, 4, 14, 82), 1, border_radius=2)
-        # Pomo en la puerta abierta
-        pygame.draw.circle(s, (255, 220, 60), (13, 45), 3)
-        sprites["abierta"] = s
+    # 2. Cargar candados 1, 2, 3, 4 (secuencia de desbloqueo)
+    for i in (1, 2, 3, 4):
+        r = os.path.join(ruta_portal_dir, f"candado_{i}.png")
+        if os.path.isfile(r):
+            try:
+                img = pygame.image.load(r).convert_alpha()
+                if img.get_size() != tamano:
+                    img = pygame.transform.scale(img, tamano)
+                candados.append(img)
+            except Exception:
+                pass
 
-    return sprites
+    # Diseños procedimentales de respaldo si faltaran archivos
+    if len(portales) < 3:
+        portales = []
+        for i in range(3):
+            s = pygame.Surface(tamano, pygame.SRCALPHA)
+            w, h = tamano
+            pygame.draw.rect(s, (88, 88, 88), (0, 0, w, h), border_radius=w // 2)
+            pygame.draw.rect(s, (120, 120, 120), (4, 4, w - 8, h - 8), border_radius=(w - 8) // 2)
+            col_v = (95, 215, 60) if i == 0 else ((120, 235, 75) if i == 1 else (80, 195, 50))
+            pygame.draw.ellipse(s, col_v, (8, 12, w - 16, h - 20))
+            portales.append(s)
+
+    if len(candados) < 4:
+        candados = []
+        for i in range(4):
+            s = pygame.Surface(tamano, pygame.SRCALPHA)
+            w, h = tamano
+            if i == 0:
+                pygame.draw.line(s, (215, 175, 40), (4, 15), (w - 4, h - 15), 3)
+                pygame.draw.line(s, (215, 175, 40), (w - 4, 15), (4, h - 15), 3)
+                pygame.draw.circle(s, (245, 205, 50), (w // 2, h // 2), 10)
+            elif i == 1:
+                pygame.draw.circle(s, (255, 225, 70), (w // 2, h // 2), 8)
+            elif i == 2:
+                pygame.draw.circle(s, (215, 175, 40), (w // 2, h - 20), 6)
+            else:
+                pygame.draw.circle(s, (180, 140, 30), (w // 2, h - 10), 3)
+            candados.append(s)
+
+    abierta = portales[0]
+    cerrada = portales[0].copy()
+    cerrada.blit(candados[0], (0, 0))
+
+    resultado = {
+        "portal": portales,
+        "candado": candados,
+        "abierta": abierta,
+        "cerrada": cerrada,
+    }
+    _CACHE_SPRITES_PUERTA[clave] = resultado
+    return resultado
 
 
 def actualizar_temporizadores(p):
@@ -866,6 +896,7 @@ def obtener_estado(p):
 def dibujar_personaje(pantalla, p, zona_agua=None):
     actualizar_temporizadores(p)
     estado = obtener_estado(p)
+    p["estado"] = estado
     sprite_base = p["sprites"].get(estado, p["sprites"]["quieto"])
 
     col = p.get("color")
@@ -882,9 +913,39 @@ def dibujar_personaje(pantalla, p, zona_agua=None):
     if not p["mirando_derecha"]:
         sprite = pygame.transform.flip(sprite, True, False)
 
-    rect_sprite = sprite.get_rect(center=p["hitbox"].center)
-    pantalla.blit(sprite, rect_sprite)
+    if p.get("equipo_buceo"):
+        # Ocultar completamente las piernas y los pies del personaje debajo del equipo
+        sprite_a_dibujar = sprite.copy()
+        w_s, h_s = sprite_a_dibujar.get_size()
+        y_corte = int(h_s * 0.72)
+        for y_px in range(y_corte, h_s):
+            for x_px in range(w_s):
+                sprite_a_dibujar.set_at((x_px, y_px), (0, 0, 0, 0))
+    else:
+        sprite_a_dibujar = sprite
+
+    rect_sprite = sprite_a_dibujar.get_rect(center=p["hitbox"].center)
+    pantalla.blit(sprite_a_dibujar, rect_sprite)
     dibujar_accesorio_en_personaje(pantalla, p, sprite, rect_sprite)
+
+    # Accesorio exclusivo y obligatorio del Mundo 3: Equipo de buceo permanente
+    if p.get("equipo_buceo"):
+        surf_goggles, surf_amarillo = cargar_partes_equipo_buceo()
+        if surf_goggles and surf_amarillo:
+            mirando_der = p.get("mirando_derecha", True)
+            top_cabeza, eye_cy = calcular_anclaje_sprite(sprite)
+
+            # 1. Accesorio amarillo (equipo de buceo): ubicado en la parte superior, sobre la cabeza
+            y_amarillo = rect_sprite.top + top_cabeza - surf_amarillo.get_height() + 5
+            x_amarillo = rect_sprite.centerx - surf_amarillo.get_width() // 2
+            s_amarillo = surf_amarillo if mirando_der else pygame.transform.flip(surf_amarillo, True, False)
+            pantalla.blit(s_amarillo, (x_amarillo, y_amarillo))
+
+            # 2. Antiparras de buceo: centradas sobre los ojos del personaje
+            by_g = rect_sprite.top + int(round(eye_cy - 22))
+            bx_g = (rect_sprite.left - 4) if mirando_der else (rect_sprite.left - 4)
+            s_g = surf_goggles if mirando_der else pygame.transform.flip(surf_goggles, True, False)
+            pantalla.blit(s_g, (bx_g, by_g))
 
     if zona_agua is not None and p.get("en_agua", False):
         sprite_agua = pygame.Surface(sprite.get_size(), pygame.SRCALPHA)
@@ -900,15 +961,38 @@ def dibujar_personaje(pantalla, p, zona_agua=None):
 _ACCESORIOS_REGISTRADOS = [
     {"id": "Ninguno", "nombre": "Ninguno"},
     {"id": "Corona", "nombre": "Corona"},
-    {"id": "Gorro", "nombre": "Gorro"},
-    {"id": "Anteojos", "nombre": "Anteojos"},
-    {"id": "Moño", "nombre": "Moño"},
     {"id": "Sombrero", "nombre": "Sombrero"},
+    {"id": "Gorro Azul", "nombre": "Gorro Azul"},
+    {"id": "Gorro Celeste", "nombre": "Gorro Celeste"},
+    {"id": "Duende", "nombre": "Duende"},
+    {"id": "Papá Noel", "nombre": "Papá Noel"},
+    {"id": "Ángel", "nombre": "Ángel"},
+    {"id": "Hoja", "nombre": "Hoja"},
+    {"id": "Rulo", "nombre": "Rulo"},
+    {"id": "Popó", "nombre": "Popó"},
+    {"id": "Pelo Arcoíris", "nombre": "Pelo Arcoíris"},
+    {"id": "Gorro con Ratón", "nombre": "Gorro con Ratón"},
+    {"id": "Chucky", "nombre": "Chucky"},
+    {"id": "Orejas de Conejo", "nombre": "Orejas de Conejo"},
 ]
 
 
-def obtener_accesorios_disponibles():
-    return list(_ACCESORIOS_REGISTRADOS)
+ACCESORIOS_EXCLUSIVOS_POR_COLOR = {
+    "Gorro Azul": "Azul",
+    "Gorro Celeste": "Celeste",
+}
+
+
+def obtener_accesorios_disponibles(color_personaje=None):
+    if color_personaje is None:
+        return list(_ACCESORIOS_REGISTRADOS)
+    col_str = str(color_personaje).strip().lower()
+    res = []
+    for acc in _ACCESORIOS_REGISTRADOS:
+        req = ACCESORIOS_EXCLUSIVOS_POR_COLOR.get(acc["id"])
+        if req is None or req.strip().lower() == col_str:
+            res.append(acc)
+    return res
 
 
 _CACHE_ACCESORIOS = {}
@@ -916,19 +1000,165 @@ _CACHE_ACCESORIOS = {}
 
 CARPETA_ACCESORIOS = os.path.normpath(os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Accesorios"))
 
-# Mapeo centralizado de archivos para reemplazo futuro transparente
+# Mapeo centralizado de archivos para carga automática transparente
 NOMBRES_ARCHIVOS_ACCESORIOS = {
-    "Corona": ["corona.png", "crown.png"],
-    "Gorro": ["gorro.png", "gorra.png", "cap.png", "beanie.png"],
-    "Anteojos": ["anteojos.png", "gafas.png", "lentes.png", "glasses.png"],
-    "Moño": ["moño.png", "mono.png", "corbatin.png", "bow.png", "bowtie.png"],
-    "Sombrero": ["sombrero.png", "hat.png", "tophat.png"],
+    "Corona": ["corona.png"],
+    "Sombrero": ["sombrero.png"],
+    "Gorro Azul": ["gorro_azul.png"],
+    "Gorro Celeste": ["gorro_celeste.png"],
+    "Duende": ["duende.png"],
+    "Papá Noel": ["papa_noel.png"],
+    "Ángel": ["angel.png"],
+    "Hoja": ["hoja.png"],
+    "Rulo": ["rulo.png"],
+    "Popó": ["popo.png", "caca.png"],
+    "Pelo Arcoíris": ["arcoiris.png"],
+    "Gorro con Ratón": ["gorro_con_raton.png"],
+    "Chucky": ["chucky.png"],
+    "Orejas de Conejo": ["orejas_conejo.png"],
 }
+
+# Metadatos de posicionamiento y tamaño nativo para escala 70x85
+METADATA_ACCESORIOS = {
+    "Corona": {"offset": (21, -8), "size": (28, 18)},
+    "Sombrero": {"offset": (21, -18), "size": (28, 28)},
+    "Gorro Azul": {"offset": (21, -8), "size": (28, 18)},
+    "Gorro Celeste": {"offset": (21, -8), "size": (28, 18)},
+    "Duende": {"offset": (4, -12), "size": (46, 21)},
+    "Papá Noel": {"offset": (3, -10.5), "size": (49, 75)},
+    "Ángel": {"offset": (-2.5, -7), "size": (52, 78)},
+    "Hoja": {"offset": (21, -17), "size": (28, 28)},
+    "Rulo": {"offset": (28, -8), "size": (18, 18)},
+    "Popó": {"offset": (26.5, -8), "size": (21, 18)},
+    "Pelo Arcoíris": {"offset": (0, -17), "size": (70, 32)},
+    "Gorro con Ratón": {"offset": (13.5, -21), "size": (42, 32)},
+    "Chucky": {"offset": (14, 0.5), "size": (46, 53)},
+    "Orejas de Conejo": {"offset": (6, -20), "size": (58, 28)},
+}
+
+
+_CACHE_ANCLAJES = {}
+
+
+def calcular_anclaje_sprite(sprite):
+    """
+    Calcula dinámicamente el anclaje de la cabeza y de los ojos para cualquier frame
+    o animación del personaje. Retorna (top_cabeza, eye_cy).
+    """
+    if sprite in _CACHE_ANCLAJES:
+        return _CACHE_ANCLAJES[sprite]
+
+    w, h = sprite.get_size()
+    top_y = None
+    eye_ys = []
+
+    for y in range(h):
+        for x in range(w):
+            c = sprite.get_at((x, y))
+            if c.a > 30:
+                if top_y is None:
+                    top_y = y
+                if y < h * 0.65 and c.r < 55 and c.g < 55 and c.b < 55:
+                    eye_ys.append(y)
+
+    if top_y is None:
+        top_y = 0
+    eye_cy = (sum(eye_ys) / len(eye_ys)) if eye_ys else (top_y + 39.0)
+
+    res = (top_y, eye_cy)
+    _CACHE_ANCLAJES[sprite] = res
+    return res
+
+
+_SURF_ACCESORIO_BUCEO = None
+_SURF_BUCEO_GOGGLES = None
+_SURF_BUCEO_AMARILLO = None
+
+
+def cargar_partes_equipo_buceo():
+    """
+    Carga el equipo de buceo original (buceo_m3.png) dividiéndolo en sus dos componentes:
+    1. Las antiparras de buceo con esnórquel (ojos / rostro).
+    2. El accesorio amarillo de buceo (ubicado en la parte superior, sobre la cabeza).
+    """
+    global _SURF_BUCEO_GOGGLES, _SURF_BUCEO_AMARILLO
+    if _SURF_BUCEO_GOGGLES is not None and _SURF_BUCEO_AMARILLO is not None:
+        return _SURF_BUCEO_GOGGLES, _SURF_BUCEO_AMARILLO
+    posibles = [
+        os.path.join(CARPETA_ACCESORIOS, "especiales", "buceo_m3.png"),
+        os.path.join(CARPETA_ACCESORIOS, "buceo_m3.png"),
+    ]
+    for r in posibles:
+        if os.path.isfile(r):
+            try:
+                raw_b = pygame.image.load(r).convert_alpha()
+                w_b, h_b = raw_b.get_size()
+                corte_y = int(round(h_b * 0.70))
+                goggles_raw = raw_b.subsurface((0, 0, w_b, corte_y))
+                yellow_raw = raw_b.subsurface((0, corte_y, w_b, h_b - corte_y))
+                _SURF_BUCEO_GOGGLES = pygame.transform.scale(goggles_raw, (78, 50))
+                _SURF_BUCEO_AMARILLO = pygame.transform.scale(yellow_raw, (70, 20))
+                return _SURF_BUCEO_GOGGLES, _SURF_BUCEO_AMARILLO
+            except Exception:
+                pass
+    return None, None
+
+
+def cargar_accesorio_buceo():
+    global _SURF_ACCESORIO_BUCEO
+    if _SURF_ACCESORIO_BUCEO is not None:
+        return _SURF_ACCESORIO_BUCEO
+    posibles = [
+        os.path.join(CARPETA_ACCESORIOS, "especiales", "buceo_m3.png"),
+        os.path.join(CARPETA_ACCESORIOS, "buceo_m3.png"),
+    ]
+    for r in posibles:
+        if os.path.isfile(r):
+            try:
+                img = pygame.image.load(r)
+                try:
+                    img = img.convert_alpha()
+                except pygame.error:
+                    pass
+                img = pygame.transform.scale(img, (78, 68))
+                _SURF_ACCESORIO_BUCEO = img
+                return _SURF_ACCESORIO_BUCEO
+            except Exception:
+                pass
+    return None
 
 
 def recargar_accesorios():
     """Limpia la caché de accesorios para recargar imágenes del disco inmediatamente."""
+    global _SURF_ACCESORIO_BUCEO, _SURF_BUCEO_GOGGLES, _SURF_BUCEO_AMARILLO
     _CACHE_ACCESORIOS.clear()
+    _SURF_ACCESORIO_BUCEO = None
+    _SURF_BUCEO_GOGGLES = None
+    _SURF_BUCEO_AMARILLO = None
+
+
+def agregar_contorno_pixel_art(surf, color_contorno=(65, 45, 30)):
+    """
+    Agrega un contorno sutil de 1 píxel estilo pixel art alrededor del sprite
+    para que destaque perfectamente sobre fondos claros (fondo crema de tarjetas, vestuario, etc.).
+    """
+    w, h = surf.get_size()
+    res = pygame.Surface((w + 2, h + 2), pygame.SRCALPHA)
+    mask = pygame.mask.from_surface(surf, threshold=30)
+    surf_mask = mask.to_surface(setcolor=color_contorno, unsetcolor=(0, 0, 0, 0))
+    for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+        res.blit(surf_mask, (1 + dx, 1 + dy))
+    res.blit(surf, (1, 1))
+    return res
+
+
+ACCESORIOS_CON_CONTORNO = {
+    "Orejas de Conejo",
+    "Ángel",
+    "Papá Noel",
+    "Gorro con Ratón",
+    "Gorro Celeste",
+}
 
 
 def cargar_accesorio(id_accesorio):
@@ -940,18 +1170,26 @@ def cargar_accesorio(id_accesorio):
     # 1. Búsqueda prioritaria en la carpeta centralizada Sprites/Accesorios
     nombres_candidatos = NOMBRES_ARCHIVOS_ACCESORIOS.get(
         id_accesorio,
-        [f"{id_accesorio.lower()}.png", f"{id_accesorio}.png"]
+        [f"{id_accesorio.lower().replace(' ', '_')}.png", f"{id_accesorio.lower()}.png", f"{id_accesorio}.png"]
     )
     for nombre_archivo in nombres_candidatos:
         ruta = os.path.join(CARPETA_ACCESORIOS, nombre_archivo)
         if os.path.isfile(ruta):
             try:
-                surf = pygame.image.load(ruta).convert_alpha()
+                surf = pygame.image.load(ruta)
+                try:
+                    surf = surf.convert_alpha()
+                except pygame.error:
+                    pass
+                meta = METADATA_ACCESORIOS.get(id_accesorio)
+                if meta and "size" in meta and surf.get_size() != meta["size"]:
+                    surf = pygame.transform.scale(surf, meta["size"])
                 _CACHE_ACCESORIOS[id_accesorio] = surf
                 return surf
             except Exception:
                 pass
 
+    # 2. Diseños procedimentales de respaldo si falta el archivo
     surf = pygame.Surface((36, 28), pygame.SRCALPHA)
     if id_accesorio == "Corona":
         pygame.draw.polygon(surf, (255, 215, 0), [(4, 24), (32, 24), (32, 8), (24, 16), (18, 4), (12, 16), (4, 8)])
@@ -976,6 +1214,15 @@ def cargar_accesorio(id_accesorio):
         pygame.draw.rect(surf, (30, 30, 35), (2, 20, 32, 6), border_radius=2)
         pygame.draw.rect(surf, (30, 30, 35), (8, 6, 20, 15))
         pygame.draw.rect(surf, (200, 40, 40), (8, 18, 20, 3))
+    elif id_accesorio == "Gorro Azul":
+        pygame.draw.rect(surf, (41, 64, 140), (6, 8, 24, 14), border_radius=4)
+        pygame.draw.rect(surf, (183, 58, 61), (4, 20, 28, 6), border_radius=2)
+    elif id_accesorio == "Gorro Celeste":
+        pygame.draw.rect(surf, (18, 150, 202), (6, 8, 24, 14), border_radius=4)
+        pygame.draw.rect(surf, (244, 212, 84), (4, 20, 28, 6), border_radius=2)
+    elif id_accesorio == "Hoja":
+        pygame.draw.ellipse(surf, (157, 255, 124), (8, 4, 20, 22))
+        pygame.draw.line(surf, (67, 147, 48), (18, 6), (18, 26), 2)
     else:
         pygame.draw.circle(surf, (255, 200, 50), (18, 14), 10)
 
@@ -1013,22 +1260,30 @@ def dibujar_accesorio_en_personaje(
     else:
         return
 
-    if not mirando_der:
-        surf_acc = pygame.transform.flip(surf_acc, True, False)
-
-    if acc_id in ("Corona", "Gorro", "Gorra", "Sombrero"):
-        x_acc = rect_base.centerx - surf_acc.get_width() // 2
-        y_acc = rect_base.top - surf_acc.get_height() + 8
-    elif acc_id == "Anteojos":
-        x_acc = rect_base.centerx - surf_acc.get_width() // 2 + (2 if mirando_der else -2)
-        y_acc = rect_base.top + 16
-    elif acc_id in ("Moño", "Mono"):
-        x_acc = rect_base.centerx - surf_acc.get_width() // 2
-        y_acc = rect_base.top + 46
+    meta = METADATA_ACCESORIOS.get(acc_id)
+    if meta:
+        off_x, off_y = meta["offset"]
     else:
-        x_acc = rect_base.centerx - surf_acc.get_width() // 2
-        y_acc = rect_base.top - 5
+        off_x = (rect_base.width - surf_acc.get_width()) // 2
+        off_y = -surf_acc.get_height() + 12
 
+    # Anclaje dinámico a la cabeza para todas las animaciones (caminar, saltar, caer, agacharse, etc.)
+    top_cabeza = 0
+    if isinstance(sprite_personaje, pygame.Surface):
+        top_cabeza, _ = calcular_anclaje_sprite(sprite_personaje)
+    elif isinstance(p, dict) and "sprites" in p:
+        est = p.get("estado", "quieto")
+        sp_act = p["sprites"].get(est)
+        if sp_act:
+            top_cabeza, _ = calcular_anclaje_sprite(sp_act)
+
+    if mirando_der:
+        x_acc = rect_base.left + off_x
+    else:
+        surf_acc = pygame.transform.flip(surf_acc, True, False)
+        x_acc = rect_base.left + (rect_base.width - off_x - surf_acc.get_width())
+
+    y_acc = rect_base.top + top_cabeza + off_y
     pantalla.blit(surf_acc, (x_acc, y_acc))
 
 

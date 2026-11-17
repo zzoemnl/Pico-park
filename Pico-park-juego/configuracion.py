@@ -33,9 +33,9 @@ from fuentes import (
 # Puedes colocar los archivos en 'assets/audio/' o 'Sprites/Audio/' (.mp3, .ogg, .wav).
 # ==============================================================================
 AUDIO_MENU = "sonidos/menú/menú.mp3"  # Música del menú principal y pantallas de navegación
-AUDIO_MUNDO_1 = "sonidos/mundo1/mundo 1.mp3"  # Música del Mundo 1
-AUDIO_MUNDO_2 = "mundo2.mp3"     # Música del Mundo 2
-AUDIO_MUNDO_3 = "mundo3.mp3"     # Música del Mundo 3
+AUDIO_MUNDO_1 = "mundo1"  # Música del Mundo 1 (carpeta mundo1/)
+AUDIO_MUNDO_2 = "mundo2"  # Música del Mundo 2 (carpeta mundo2/)
+AUDIO_MUNDO_3 = "mundo3"  # Música del Mundo 3 (carpeta mundo3/)
 
 VOLUMEN_MUSICA = 70             # Volumen general de la música (0 a 100)
 VOLUMEN_EFECTOS = 70            # Volumen general de efectos de sonido (0 a 100)
@@ -44,26 +44,39 @@ _volumen = 70                   # Volumen maestro (sincronizado con música y ef
 _idioma = "es"                  # Idioma actual: "es" | "en" | "zh"
 
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
+DIRECTORIO_RAIZ = os.path.abspath(os.path.join(DIRECTORIO_ACTUAL, ".."))
 RUTA_CONFIG_JSON = os.path.join(DIRECTORIO_ACTUAL, "configuracion.json")
 
+EXTENSIONES_AUDIO_SOPORTADAS = (".mp3", ".wav", ".ogg")
+
 CARPETAS_AUDIO = [
-    os.path.join(DIRECTORIO_ACTUAL, "..", "sonidos", "menú"),
-    os.path.join(DIRECTORIO_ACTUAL, "..", "sonidos", "menu"),
-    os.path.join(DIRECTORIO_ACTUAL, "..", "sonidos", "mundo1"),
-    os.path.join(DIRECTORIO_ACTUAL, "..", "sonidos", "jefe1"),
-    os.path.join(DIRECTORIO_ACTUAL, "..", "sonidos", "ahogamiento"),
-    os.path.join(DIRECTORIO_ACTUAL, "..", "sonidos"),
+    os.path.join(DIRECTORIO_RAIZ, "mundo1"),
+    os.path.join(DIRECTORIO_RAIZ, "mundo2"),
+    os.path.join(DIRECTORIO_RAIZ, "mundo3"),
+    os.path.join(DIRECTORIO_ACTUAL, "mundo1"),
+    os.path.join(DIRECTORIO_ACTUAL, "mundo2"),
+    os.path.join(DIRECTORIO_ACTUAL, "mundo3"),
+    os.path.join(DIRECTORIO_RAIZ, "sonidos", "menú"),
+    os.path.join(DIRECTORIO_RAIZ, "sonidos", "menu"),
+    os.path.join(DIRECTORIO_RAIZ, "sonidos", "mundo1"),
+    os.path.join(DIRECTORIO_RAIZ, "sonidos", "mundo2"),
+    os.path.join(DIRECTORIO_RAIZ, "sonidos", "mundo3"),
+    os.path.join(DIRECTORIO_RAIZ, "sonidos", "jefe1"),
+    os.path.join(DIRECTORIO_RAIZ, "sonidos", "ahogamiento"),
+    os.path.join(DIRECTORIO_RAIZ, "sonidos"),
     os.path.join(DIRECTORIO_ACTUAL, "sonidos", "menú"),
     os.path.join(DIRECTORIO_ACTUAL, "sonidos", "menu"),
     os.path.join(DIRECTORIO_ACTUAL, "sonidos", "mundo1"),
+    os.path.join(DIRECTORIO_ACTUAL, "sonidos", "mundo2"),
+    os.path.join(DIRECTORIO_ACTUAL, "sonidos", "mundo3"),
     os.path.join(DIRECTORIO_ACTUAL, "sonidos", "jefe1"),
     os.path.join(DIRECTORIO_ACTUAL, "sonidos", "ahogamiento"),
     os.path.join(DIRECTORIO_ACTUAL, "sonidos"),
-    os.path.join(DIRECTORIO_ACTUAL, "..", "assets", "audio"),
+    os.path.join(DIRECTORIO_RAIZ, "assets", "audio"),
     os.path.join(DIRECTORIO_ACTUAL, "assets", "audio"),
-    os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Audio"),
+    os.path.join(DIRECTORIO_RAIZ, "Sprites", "Audio"),
     os.path.join(DIRECTORIO_ACTUAL, "Sprites", "Audio"),
-    os.path.join(DIRECTORIO_ACTUAL, "..", "assets"),
+    os.path.join(DIRECTORIO_RAIZ, "assets"),
     os.path.join(DIRECTORIO_ACTUAL, "assets"),
 ]
 
@@ -234,6 +247,21 @@ DICCIONARIO = {
         "es": "OPCIONES",
         "en": "SETTINGS",
         "zh": "设置",
+    },
+    "controles": {
+        "es": "CONTROLES",
+        "en": "CONTROLS",
+        "zh": "操作控制",
+    },
+    "instrucciones": {
+        "es": "INSTRUCCIONES",
+        "en": "INSTRUCTIONS",
+        "zh": "游戏说明",
+    },
+    "sub_opciones": {
+        "es": "Configuración general, controles y guía de aventura",
+        "en": "General settings, controls and adventure guide",
+        "zh": "通用设置、操作控制与冒险指南",
     },
     "modo_juego": {
         "es": "MODO DE JUEGO",
@@ -512,14 +540,17 @@ DICCIONARIO = {
     },
     "blanco": {"es": "Blanco", "en": "White", "zh": "白色"},
     "gris": {"es": "Gris", "en": "Gray", "zh": "灰色"},
-    "negro": {"es": "Negro", "en": "Black", "zh": "黑色"},
+    "gris claro": {"es": "Gris claro", "en": "Light Gray", "zh": "浅灰色"},
+    "gris oscuro": {"es": "Gris oscuro", "en": "Dark Gray", "zh": "深灰色"},
+    "negro": {"es": "Gris oscuro", "en": "Dark Gray", "zh": "深灰色"},
     "marron": {"es": "Marrón", "en": "Brown", "zh": "棕色"},
     "rojo": {"es": "Rojo", "en": "Red", "zh": "红色"},
     "rosa": {"es": "Rosa", "en": "Pink", "zh": "粉色"},
     "naranja": {"es": "Naranja", "en": "Orange", "zh": "橙色"},
     "amarillo": {"es": "Amarillo", "en": "Yellow", "zh": "黄色"},
     "verde": {"es": "Verde", "en": "Green", "zh": "绿色"},
-    "verde oscuro": {"es": "Verde oscuro", "en": "Dark Green", "zh": "深绿色"},
+    "verde claro": {"es": "Verde claro", "en": "Light Green", "zh": "浅绿色"},
+    "verde oscuro": {"es": "Verde", "en": "Green", "zh": "绿色"},
     "celeste": {"es": "Celeste", "en": "Sky Blue", "zh": "天蓝色"},
     "azul": {"es": "Azul", "en": "Blue", "zh": "蓝色"},
     "violeta": {"es": "Violeta", "en": "Purple", "zh": "紫色"},
@@ -531,6 +562,29 @@ DICCIONARIO = {
     "sombrero": {"es": "Sombrero", "en": "Hat", "zh": "礼帽"},
     "marrón": {"es": "Marrón", "en": "Brown", "zh": "棕色"},
     "mono": {"es": "Moño", "en": "Bowtie", "zh": "蝴蝶结"},
+    "gorro azul": {"es": "Gorro Azul", "en": "Blue Beanie", "zh": "蓝帽子"},
+    "gorro_azul": {"es": "Gorro Azul", "en": "Blue Beanie", "zh": "蓝帽子"},
+    "gorro celeste": {"es": "Gorro Celeste", "en": "Cyan Beanie", "zh": "青色帽子"},
+    "gorro_celeste": {"es": "Gorro Celeste", "en": "Cyan Beanie", "zh": "青色帽子"},
+    "duende": {"es": "Duende", "en": "Elf Hat", "zh": "精灵帽"},
+    "papá noel": {"es": "Papá Noel", "en": "Santa", "zh": "圣诞老人"},
+    "papa noel": {"es": "Papá Noel", "en": "Santa", "zh": "圣诞老人"},
+    "papa_noel": {"es": "Papá Noel", "en": "Santa", "zh": "圣诞老人"},
+    "ángel": {"es": "Ángel", "en": "Angel", "zh": "天使"},
+    "angel": {"es": "Ángel", "en": "Angel", "zh": "天使"},
+    "hoja": {"es": "Hoja", "en": "Sprout", "zh": "小树苗"},
+    "rulo": {"es": "Rulo", "en": "Curl", "zh": "卷发"},
+    "popó": {"es": "Popó", "en": "Poop", "zh": "便便"},
+    "popo": {"es": "Popó", "en": "Poop", "zh": "便便"},
+    "caca": {"es": "Popó", "en": "Poop", "zh": "便便"},
+    "pelo arcoíris": {"es": "Pelo Arcoíris", "en": "Rainbow Hair", "zh": "彩虹假发"},
+    "pelo arcoiris": {"es": "Pelo Arcoíris", "en": "Rainbow Hair", "zh": "彩虹假发"},
+    "arcoíris": {"es": "Pelo Arcoíris", "en": "Rainbow Hair", "zh": "彩虹假发"},
+    "arcoiris": {"es": "Pelo Arcoíris", "en": "Rainbow Hair", "zh": "彩虹假发"},
+    "gorro con ratón": {"es": "Gorro con Ratón", "en": "Mouse Hat", "zh": "老鼠帽"},
+    "gorro con raton": {"es": "Gorro con Ratón", "en": "Mouse Hat", "zh": "老鼠帽"},
+    "chucky": {"es": "Chucky", "en": "Chucky", "zh": "恰吉"},
+    "orejas de conejo": {"es": "Orejas de Conejo", "en": "Rabbit Ears", "zh": "兔耳朵"},
     "cambiar_atuendos": {
         "es": "CAMBIAR ATUENDOS",
         "en": "CHANGE OUTFITS",
@@ -580,6 +634,206 @@ DICCIONARIO = {
         "es": "Sin accesorio",
         "en": "No accessory",
         "zh": "无配饰",
+    },
+    "ajustes_generales": {
+        "es": "AJUSTES GENERALES DEL JUEGO",
+        "en": "GENERAL GAME SETTINGS",
+        "zh": "游戏通用设置",
+    },
+    "controles_teclado": {
+        "es": "CONTROLES Y TECLADO DE LOS JUGADORES",
+        "en": "PLAYER CONTROLS & KEYBOARD",
+        "zh": "玩家操作与键盘按键",
+    },
+    "guia_juego": {
+        "es": "GUÍA DE JUEGO Y MECÁNICAS DE LOS MUNDOS",
+        "en": "GAME GUIDE & WORLD MECHANICS",
+        "zh": "游戏指南与关卡机制",
+    },
+    "volumen_musica_y_sonido": {
+        "es": "VOLUMEN DE MÚSICA Y SONIDO",
+        "en": "MUSIC & SOUND VOLUME",
+        "zh": "音乐与音效音量",
+    },
+    "seleccion_idioma": {
+        "es": "SELECCIÓN DE IDIOMA / LANGUAGE",
+        "en": "LANGUAGE SELECTION",
+        "zh": "语言选择",
+    },
+    "cambios_guardados_auto": {
+        "es": "Los cambios se guardan y sincronizan automáticamente.",
+        "en": "Changes are saved and synced automatically.",
+        "zh": "更改将自动保存并同步。",
+    },
+    "flechas_direccion": {
+        "es": "FLECHAS DE DIRECCIÓN",
+        "en": "ARROW KEYS",
+        "zh": "方向键",
+    },
+    "accion_moverse": {
+        "es": "Moverse",
+        "en": "Move",
+        "zh": "移动",
+    },
+    "desc_moverse": {
+        "es": "Izquierda / Derecha",
+        "en": "Left / Right",
+        "zh": "向左 / 向右",
+    },
+    "accion_saltar": {
+        "es": "Saltar",
+        "en": "Jump",
+        "zh": "跳跃",
+    },
+    "desc_saltar": {
+        "es": "Salto normal y rebote",
+        "en": "Normal jump and bounce",
+        "zh": "普通跳跃与弹跳",
+    },
+    "accion_nadar": {
+        "es": "Nadar (Agua)",
+        "en": "Swim (Water)",
+        "zh": "游泳（水下）",
+    },
+    "desc_nadar_p1": {
+        "es": "W: Nadar arriba / S: Sumergirse",
+        "en": "W: Swim up / S: Dive down",
+        "zh": "W: 向上游 / S: 向下潜",
+    },
+    "desc_nadar_p2": {
+        "es": "↑: Nadar arriba / ↓: Sumergirse",
+        "en": "↑: Swim up / ↓: Dive down",
+        "zh": "↑: 向上游 / ↓: 向下潜",
+    },
+    "accion_empujar": {
+        "es": "Empujar",
+        "en": "Push",
+        "zh": "推动",
+    },
+    "desc_empujar": {
+        "es": "Caminar de frente contra cajas",
+        "en": "Walk forward against boxes",
+        "zh": "迎面走向箱子以推动",
+    },
+    "accion_linterna": {
+        "es": "Linterna (M3)",
+        "en": "Flashlight (W3)",
+        "zh": "手电筒（第3世界）",
+    },
+    "desc_linterna": {
+        "es": "Encender / Apagar en oscuridad",
+        "en": "Turn on / off in dark areas",
+        "zh": "在黑暗洞穴中开启/关闭",
+    },
+    "reiniciar_nivel_act": {
+        "es": "Reiniciar nivel actual",
+        "en": "Restart current level",
+        "zh": "重新开始当前关卡",
+    },
+    "pausa_volver_menu": {
+        "es": "Pausa / Volver al menú",
+        "en": "Pause / Return to menu",
+        "zh": "暂停 / 返回主菜单",
+    },
+    "inst_tit_1": {
+        "es": "1. OBJETIVO Y LLAVE DORADA",
+        "en": "1. GOAL & GOLDEN KEY",
+        "zh": "1. 目标与金色钥匙",
+    },
+    "inst_1_1": {
+        "es": "• Cooperen en equipo para guiar a ambos personajes.",
+        "en": "• Cooperate as a team to guide both characters.",
+        "zh": "• 团队协作引导两名角色前进。",
+    },
+    "inst_1_2": {
+        "es": "• Encuentren y recojan la LLAVE DORADA del nivel.",
+        "en": "• Find and collect the level's GOLDEN KEY.",
+        "zh": "• 寻找并拾取关卡中的金色钥匙。",
+    },
+    "inst_1_3": {
+        "es": "• La llave abre el candado de la PUERTA DE SALIDA.",
+        "en": "• The key unlocks the EXIT DOOR lock.",
+        "zh": "• 钥匙可解开终点大门的门锁。",
+    },
+    "inst_1_4": {
+        "es": "• ¡Ambos jugadores deben entrar para ganar!",
+        "en": "• Both players must enter together to win!",
+        "zh": "• 两名玩家必须全部进入方可通关！",
+    },
+    "inst_tit_2": {
+        "es": "2. CAJAS Y BOTONES DE PRESIÓN",
+        "en": "2. CRATES & PRESSURE BUTTONS",
+        "zh": "2. 木箱与压力开关",
+    },
+    "inst_2_1": {
+        "es": "• Empujen cajas juntos caminando hacia ellas.",
+        "en": "• Push crates together by walking into them.",
+        "zh": "• 迎面走向木箱合力将其推动。",
+    },
+    "inst_2_2": {
+        "es": "• Las cajas sirven como escalón o contrapeso.",
+        "en": "• Crates serve as step-ups or counterweights.",
+        "zh": "• 木箱可用作垫脚台阶或重力配重。",
+    },
+    "inst_2_3": {
+        "es": "• Pisen los BOTONES del suelo para abrir compuertas.",
+        "en": "• Step on floor BUTTONS to open gates.",
+        "zh": "• 踩下地面开关以开启机关闸门。",
+    },
+    "inst_2_4": {
+        "es": "• Algunos botones requieren peso continuo encima.",
+        "en": "• Some buttons require continuous weight on them.",
+        "zh": "• 部分开关需要持续保持重压。",
+    },
+    "inst_tit_3": {
+        "es": "3. MUNDOS 1 Y 2: TRABAJO EN EQUIPO",
+        "en": "3. WORLDS 1 & 2: TEAMWORK",
+        "zh": "3. 世界1与2：团队协作",
+    },
+    "inst_3_1": {
+        "es": "• Mundo 1: Suban uno encima de otro para llegar alto.",
+        "en": "• World 1: Climb on each other to reach heights.",
+        "zh": "• 世界1：叠罗汉踩在队友头上跳上高处。",
+    },
+    "inst_3_2": {
+        "es": "• Mundo 2: ¡Están unidos por una SOGA resistente!",
+        "en": "• World 2: Connected by a sturdy ROPE!",
+        "zh": "• 世界2：两名玩家由坚韧绳索相连！",
+    },
+    "inst_3_3": {
+        "es": "• La soga tiene distancia máxima y transmite tirones.",
+        "en": "• The rope has max length and pulls each other.",
+        "zh": "• 绳索有长度上限并会相互拉拽牵引。",
+    },
+    "inst_3_4": {
+        "es": "• Si un jugador cae, tirará de su compañero.",
+        "en": "• If one player falls, they pull their partner.",
+        "zh": "• 一人跌落将会把同伴一同拽下。",
+    },
+    "inst_tit_4": {
+        "es": "4. MUNDO 3: AVENTURA SUBMARINA",
+        "en": "4. WORLD 3: UNDERWATER ADVENTURE",
+        "zh": "4. 世界3：水下奇妙冒险",
+    },
+    "inst_4_1": {
+        "es": "• Zonas sumergidas con físicas de natación y buceo.",
+        "en": "• Underwater zones with swim and dive physics.",
+        "zh": "• 水下区域具有真实游泳与潜水浮力。",
+    },
+    "inst_4_2": {
+        "es": "• Atentos al nivel de OXÍGENO y burbujas de aire.",
+        "en": "• Keep an eye on OXYGEN level and bubbles.",
+        "zh": "• 密切留意氧气存量并及时吸取气泡。",
+    },
+    "inst_4_3": {
+        "es": "• Las CORRIENTES marinas arrastran con fuerza.",
+        "en": "• Ocean CURRENTS push with strong forces.",
+        "zh": "• 强劲的水下暗流会产生推动与阻力。",
+    },
+    "inst_4_4": {
+        "es": "• Usen LINTERNAS en las cavernas oscuras (E / L).",
+        "en": "• Use FLASHLIGHTS in dark caves (E / L).",
+        "zh": "• 在漆黑洞穴中开启手电筒照明 (E / L)。",
     },
 }
 
@@ -670,6 +924,109 @@ _cargar_configuracion_disco()
 # ==============================================================================
 # GESTIÓN Y REPRODUCCIÓN DE MÚSICA Y AUDIO
 # ==============================================================================
+def obtener_audio_mundo(numero_mundo):
+    """
+    Busca automáticamente el primer archivo de audio compatible (.mp3, .wav, .ogg)
+    dentro de la carpeta del mundo correspondiente ('mundo1/', 'mundo2/', 'mundo3/').
+
+    El nombre del archivo puede ser cualquiera (por ejemplo musica.mp3, nivel.wav, bgm.ogg).
+    Explora en orden de prioridad:
+      1. Raíz del proyecto: mundo{N}/
+      2. Directorio del código: Pico-park-juego/mundo{N}/
+      3. Carpeta sonidos: sonidos/mundo{N}/
+      4. Subcarpeta sonidos con espacio o guion: sonidos/mundo {N}/
+      5. Carpeta assets: assets/audio/mundo{N}/
+      6. Directorio de trabajo actual: ./mundo{N}/
+
+    Retorna la ruta absoluta normalizada del archivo, o None si la carpeta no existe,
+    está vacía o no tiene formatos compatibles.
+    """
+    try:
+        num = int(numero_mundo)
+    except (ValueError, TypeError):
+        return None
+
+    formatos = EXTENSIONES_AUDIO_SOPORTADAS
+    nombres_carpeta = [
+        f"mundo{num}",
+        f"mundo_{num}",
+        f"mundo {num}",
+        f"Mundo{num}",
+        f"Mundo_{num}",
+        f"Mundo {num}",
+    ]
+
+    padres = [
+        DIRECTORIO_RAIZ,
+        DIRECTORIO_ACTUAL,
+        os.path.join(DIRECTORIO_RAIZ, "sonidos"),
+        os.path.join(DIRECTORIO_ACTUAL, "sonidos"),
+        os.path.join(DIRECTORIO_RAIZ, "assets", "audio"),
+        os.path.join(DIRECTORIO_ACTUAL, "assets", "audio"),
+        os.getcwd(),
+        os.path.join(os.getcwd(), "sonidos"),
+    ]
+
+    carpetas_vistas = set()
+
+    for p in padres:
+        if not p or not os.path.isdir(p):
+            continue
+        for nom in nombres_carpeta:
+            dir_candidato = os.path.normpath(os.path.abspath(os.path.join(p, nom)))
+            if dir_candidato in carpetas_vistas:
+                continue
+            carpetas_vistas.add(dir_candidato)
+
+            if os.path.isdir(dir_candidato):
+                try:
+                    entradas = sorted(os.listdir(dir_candidato))
+                except Exception:
+                    continue
+                for item in entradas:
+                    ruta_archivo = os.path.join(dir_candidato, item)
+                    if os.path.isfile(ruta_archivo):
+                        _, ext = os.path.splitext(item)
+                        if ext.lower() in formatos:
+                            return os.path.normpath(os.path.abspath(ruta_archivo))
+
+    # Fallback de compatibilidad hacia pistas antiguas directas si existen (evitando recursión si es alias del mismo mundo)
+    alias_mismos = {1: ("mundo1", "mundo_1", "mundo 1"), 2: ("mundo2", "mundo_2", "mundo 2"), 3: ("mundo3", "mundo_3", "mundo 3")}
+    pista_leg = {1: AUDIO_MUNDO_1, 2: AUDIO_MUNDO_2, 3: AUDIO_MUNDO_3}.get(num)
+    if pista_leg and str(pista_leg).lower().strip() not in alias_mismos.get(num, ()):
+        ruta_leg = _resolver_ruta_audio(pista_leg)
+        if ruta_leg:
+            return ruta_leg
+
+    return None
+
+
+def _resolver_audio_menu():
+    """Localiza el archivo de música para los menús comprobando carpetas y rutas directas."""
+    formatos = EXTENSIONES_AUDIO_SOPORTADAS
+    nombres_carpeta = ["menu", "menú", "Menu", "Menú"]
+    padres = [
+        DIRECTORIO_RAIZ,
+        DIRECTORIO_ACTUAL,
+        os.path.join(DIRECTORIO_RAIZ, "sonidos"),
+        os.path.join(DIRECTORIO_ACTUAL, "sonidos"),
+    ]
+    for p in padres:
+        for nom in nombres_carpeta:
+            dir_c = os.path.join(p, nom)
+            if os.path.isdir(dir_c):
+                try:
+                    for item in sorted(os.listdir(dir_c)):
+                        ruta_arch = os.path.join(dir_c, item)
+                        if os.path.isfile(ruta_arch):
+                            _, ext = os.path.splitext(item)
+                            if ext.lower() in formatos:
+                                return os.path.normpath(os.path.abspath(ruta_arch))
+                except Exception:
+                    pass
+    return _resolver_ruta_audio(AUDIO_MENU)
+
+
 def _resolver_ruta_audio(pista_o_nombre):
     """
     Localiza el archivo de audio comprobando rutas absolutas, relativas y carpetas
@@ -678,6 +1035,20 @@ def _resolver_ruta_audio(pista_o_nombre):
     if not pista_o_nombre:
         return None
 
+    pista_str = str(pista_o_nombre).lower().strip()
+    if pista_str in ("mundo1", "mundo_1", "mundo 1"):
+        res_m = obtener_audio_mundo(1)
+        if res_m:
+            return res_m
+    elif pista_str in ("mundo2", "mundo_2", "mundo 2"):
+        res_m = obtener_audio_mundo(2)
+        if res_m:
+            return res_m
+    elif pista_str in ("mundo3", "mundo_3", "mundo 3"):
+        res_m = obtener_audio_mundo(3)
+        if res_m:
+            return res_m
+
     # 1. Comprobar si es ruta absoluta existente
     if os.path.isabs(pista_o_nombre) and os.path.isfile(pista_o_nombre):
         return os.path.normpath(pista_o_nombre)
@@ -685,6 +1056,7 @@ def _resolver_ruta_audio(pista_o_nombre):
     # 2. Comprobar ruta directa o relativa respecto al directorio de trabajo o a la raíz
     candidatos_rel = [
         pista_o_nombre,
+        os.path.join(DIRECTORIO_RAIZ, pista_o_nombre),
         os.path.join(DIRECTORIO_ACTUAL, "..", pista_o_nombre),
         os.path.join(DIRECTORIO_ACTUAL, pista_o_nombre),
     ]
@@ -733,11 +1105,15 @@ def _resolver_ruta_audio(pista_o_nombre):
 
 def reproducir_musica(tipo="menu", forzar=False):
     """
-    Reproduce la pista musical indicada ('menu', 'mundo_1', 'mundo_2', 'mundo_3') en bucle continuo.
-    - Si la misma pista ya está sonando, NO se reinicia (conserva la continuidad).
-    - Navegar entre pantallas de menú o cambiar de nivel dentro del mismo mundo no corta la música.
-    - Si el archivo de audio aún no existe, el juego continúa normalmente sin música ni errores repetidos.
+    Reproduce la pista musical indicada ('menu', 'mundo_1', 'mundo_2', 'mundo_3', o número 1, 2, 3) en bucle continuo.
+    - Busca automáticamente el archivo de audio (.mp3, .wav, .ogg) en la carpeta del mundo ('mundo1/', 'mundo2/', 'mundo3/').
+    - El nombre del archivo puede ser cualquiera (detectado automáticamente).
+    - Si la misma pista ya está sonando, NO se reinicia (conserva la continuidad entre niveles del mismo mundo o reinicios).
+    - Al pasar de un mundo a otro, la música previa se detiene y comienza la del nuevo mundo.
+    - Si una carpeta está vacía o no tiene archivo de audio compatible, detiene la música previa y el juego continúa
+      normalmente en silencio sin ningún error ni excepción.
     - Garantiza que nunca se reproduzcan dos pistas simultáneas.
+    - Aplica estrictamente el volumen fijado en OPCIONES.
     """
     global _pista_activa_tipo, _archivo_musica_actual
 
@@ -749,46 +1125,51 @@ def reproducir_musica(tipo="menu", forzar=False):
 
     # Normalizar identificador del tipo de pista
     tipo_str = str(tipo).lower().strip()
+
     if tipo_str in ("menu", "principal", "navegacion"):
         tipo_normalizado = "menu"
-        pista_config = AUDIO_MENU
-    elif tipo_str in ("mundo_1", "mundo1", "1"):
+        ruta_audio = _resolver_audio_menu()
+    elif tipo_str in ("mundo_1", "mundo1", "1") or tipo == 1:
         tipo_normalizado = "mundo_1"
-        pista_config = AUDIO_MUNDO_1
-    elif tipo_str in ("mundo_2", "mundo2", "2"):
+        ruta_audio = obtener_audio_mundo(1)
+    elif tipo_str in ("mundo_2", "mundo2", "2") or tipo == 2:
         tipo_normalizado = "mundo_2"
-        pista_config = AUDIO_MUNDO_2
-    elif tipo_str in ("mundo_3", "mundo3", "3"):
+        ruta_audio = obtener_audio_mundo(2)
+    elif tipo_str in ("mundo_3", "mundo3", "3") or tipo == 3:
         tipo_normalizado = "mundo_3"
-        pista_config = AUDIO_MUNDO_3
+        ruta_audio = obtener_audio_mundo(3)
     else:
         tipo_normalizado = tipo_str
-        pista_config = tipo
+        ruta_audio = _resolver_ruta_audio(tipo)
 
-    # Si ya está sonando esta misma pista y no se solicita forzar reinicio, conservar reproducción
+    # Si ya está sonando este mismo tipo de pista y no se solicita forzar reinicio:
     if tipo_normalizado == _pista_activa_tipo and not forzar:
-        return
+        # Si el archivo resuelto en disco no ha cambiado, mantener la reproducción continua sin interrupción
+        if ruta_audio == _archivo_musica_actual:
+            return
 
-    ruta_audio = _resolver_ruta_audio(pista_config)
+    # Actualizar el tipo de pista activa
     _pista_activa_tipo = tipo_normalizado
 
-    if not ruta_audio:
-        # Si no existe archivo para esta pista, detener cualquier música previa y continuar en silencio
-        try:
-            pygame.mixer.music.stop()
-        except Exception:
-            pass
+    # Detener la música anterior para evitar cualquier superposición
+    try:
+        pygame.mixer.music.stop()
+    except Exception:
+        pass
+
+    if not ruta_audio or not os.path.isfile(ruta_audio):
+        # Si la carpeta está vacía o no contiene audio compatible, continuar en silencio sin fallar
         _archivo_musica_actual = None
         return
 
     try:
-        pygame.mixer.music.stop()
         pygame.mixer.music.load(ruta_audio)
         vol_float = max(0.0, min(1.0, VOLUMEN_MUSICA / 100.0))
         pygame.mixer.music.set_volume(vol_float)
         pygame.mixer.music.play(-1)
         _archivo_musica_actual = ruta_audio
     except Exception:
+        # En caso de cualquier error con el formato de audio, continuar normalmente sin cerrar el juego
         _archivo_musica_actual = None
 
 
@@ -911,6 +1292,61 @@ def reproducir_beep_volumen():
             buf += struct.pack('<h', val)
 
         snd = pygame.mixer.Sound(buffer=bytes(buf))
+        snd.set_volume(vol_float)
+        snd.play()
+    except Exception:
+        pass
+
+
+_CACHE_SONIDOS_UI = {}
+
+
+def reproducir_sonido_ui(tipo="select"):
+    """
+    Reproduce un efecto de sonido retro/pixel art suave para acciones de la interfaz:
+    - 'tab': cambio de pestaña (COLORES <-> ACCESORIOS)
+    - 'select': selección de color o accesorio
+    - 'pagina': navegación entre páginas
+    Respeta el volumen general de efectos y no interfiere con la música de fondo.
+    """
+    try:
+        if not pygame.mixer.get_init():
+            pygame.mixer.init()
+        vol_float = max(0.0, min(1.0, VOLUMEN_EFECTOS / 100.0))
+        if vol_float <= 0.001:
+            return
+
+        if tipo not in _CACHE_SONIDOS_UI:
+            sample_rate = 22050
+            buf = bytearray()
+            if tipo == "tab":
+                dur = 0.06
+                n = int(sample_rate * dur)
+                half = n // 2
+                for i in range(n):
+                    freq = 480 if i < half else 640
+                    envelope = 1.0 - (i / n) * 0.7
+                    val = int(32767 * 0.22 * envelope * math.sin(2 * math.pi * freq * i / sample_rate))
+                    buf += struct.pack('<h', val)
+            elif tipo == "pagina":
+                dur = 0.04
+                n = int(sample_rate * dur)
+                for i in range(n):
+                    envelope = max(0.0, 1.0 - (i / n) ** 0.8)
+                    val = int(32767 * 0.20 * envelope * math.sin(2 * math.pi * 380 * i / sample_rate))
+                    buf += struct.pack('<h', val)
+            else:  # "select"
+                dur = 0.05
+                n = int(sample_rate * dur)
+                for i in range(n):
+                    freq = 580 + int(240 * (i / n))
+                    envelope = max(0.0, 1.0 - (i / n) ** 0.5)
+                    val = int(32767 * 0.24 * envelope * math.sin(2 * math.pi * freq * i / sample_rate))
+                    buf += struct.pack('<h', val)
+
+            _CACHE_SONIDOS_UI[tipo] = pygame.mixer.Sound(buffer=bytes(buf))
+
+        snd = _CACHE_SONIDOS_UI[tipo]
         snd.set_volume(vol_float)
         snd.play()
     except Exception:
