@@ -307,90 +307,30 @@ def obtener_rect_franja_apertura(franja, t_sec, duracion, ancho, alto):
 
 def animar_cierre_puerta(pantalla, reloj, mundo, puerta, cam_x, ancho_mundo_nivel):
     """
-    Animación visual de cierre de la puerta utilizando exclusivamente su sprite original:
-    La hoja se despliega desde su estado abierto (ancho 15) hasta cerrarse por completo (ancho 60),
-    revelando el pomo dorado original y un sutil destello de sellado sin alterar su diseño.
+    Pausa limpia y fluida tras ingresar al portal antes de iniciar la transición
+    geométrica de franjas, manteniendo intacto el escenario y el portal sin recuadros ni destellos blancos.
     """
     if puerta is None or mundo is None:
         return
 
-    rect_p = puerta["rect"]
-    ancho_p = rect_p.width
-    alto_p = rect_p.height
-
-    sprite_cerrada = puerta["sprites"]["cerrada"]
-
-    frames_cierre = 20
-    for f in range(frames_cierre + 1):
+    # Pausa breve (~0.2s / 14 frames) para apreciar la entrada al portal limpiamente
+    for _ in range(14):
         reloj.tick(FPS)
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
 
-        t = f / frames_cierre
-        factor = t * t
-
-        # Redibujar fondo original del escenario detrás de la puerta (sin tapar el suelo de apoyo)
-        pygame.draw.rect(mundo, (255, 240, 195), (rect_p.x, rect_p.y, ancho_p, alto_p - 4))
-
-        # Animar el desplazamiento de la hoja usando directamente el sprite original cerrado
-        w_actual = max(15, min(ancho_p, int(15 + (ancho_p - 15) * factor)))
-        sub_hoja = sprite_cerrada.subsurface((0, 0, w_actual, alto_p))
-        mundo.blit(sub_hoja, rect_p.topleft)
-
-        pantalla.blit(mundo, (0, 0), pygame.Rect(cam_x, 0, pantalla.get_width(), pantalla.get_height()))
-        pygame.display.flip()
-
-    # Destello sutil de absorción/cierre aplicado directamente sobre la puerta original cerrada
-    frames_brillo = 14
-    for fb in range(frames_brillo):
-        reloj.tick(FPS)
-        for evento in pygame.event.get():
-            if evento.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-
-        p_b = fb / frames_brillo
-        alpha_b = int(75 * math.sin(p_b * math.pi))
-
-        pygame.draw.rect(mundo, (255, 240, 195), (rect_p.x, rect_p.y, ancho_p, alto_p - 4))
-        mundo.blit(sprite_cerrada, rect_p.topleft)
-
-        if alpha_b > 0:
-            surf_brillo = pygame.Surface((ancho_p, alto_p), pygame.SRCALPHA)
-            surf_brillo.fill((255, 255, 255, alpha_b // 2))
-            y_luz = int(alto_p * p_b)
-            pygame.draw.line(surf_brillo, (255, 255, 255, alpha_b), (0, y_luz), (ancho_p, y_luz), 2)
-            mundo.blit(surf_brillo, rect_p.topleft)
-
-        pantalla.blit(mundo, (0, 0), pygame.Rect(cam_x, 0, pantalla.get_width(), pantalla.get_height()))
-        pygame.display.flip()
-
-    # Dejar el escenario en mundo con la puerta cerrada original limpia
-    pygame.draw.rect(mundo, (255, 240, 195), (rect_p.x, rect_p.y, ancho_p, alto_p - 4))
-    mundo.blit(sprite_cerrada, rect_p.topleft)
-    pantalla.blit(mundo, (0, 0), pygame.Rect(cam_x, 0, pantalla.get_width(), pantalla.get_height()))
-    pygame.display.flip()
-
-    # Pausa breve (~0.12s) con la puerta cerrada
-    for _ in range(7):
-        reloj.tick(FPS)
-        for evento in pygame.event.get():
-            if evento.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
         pantalla.blit(mundo, (0, 0), pygame.Rect(cam_x, 0, pantalla.get_width(), pantalla.get_height()))
         pygame.display.flip()
 
 
 def animar_salida_franjas(pantalla, reloj, captura_escenario, puerta=None, cam_x=0):
     """
-    Transición geométrica multicapa integrada con la puerta original:
-    - Capa 1 (Detrás de la puerta): Escenario base y halo de absorción oscura expandiéndose detrás de ella.
-    - Capa 2 (La puerta): Sprite original de la puerta conservando diseño, pomo, colores y posición exactos.
-    - Capa 3 (Por delante de la puerta): Bandas geométricas que nacen de la puerta y la cruzan por delante
-      hacia afuera, junto a las franjas que entran desde los bordes, acelerando hasta cubrir la pantalla (~1.13s).
+    Transición geométrica limpia de franjas negras:
+    - Capa 1: Escenario base capturado de forma limpia e intacta, con el portal en su posición natural.
+    - Capa 2: Bandas geométricas negras que nacen del centro del portal y se expanden hacia afuera,
+      junto a las franjas rectangulares que entran desde los bordes hasta cubrir la pantalla en negro absoluto (~1.13s).
     """
     ancho = pantalla.get_width()
     alto = pantalla.get_height()
@@ -399,7 +339,6 @@ def animar_salida_franjas(pantalla, reloj, captura_escenario, puerta=None, cam_x
     frames_totales = 68
     duracion = 1.13
 
-    sprite_cerrada = puerta["sprites"]["cerrada"] if (puerta and "sprites" in puerta and "cerrada" in puerta["sprites"]) else None
     rect_p = puerta["rect"] if puerta else None
     pos_puerta = (rect_p.x - cam_x, rect_p.y) if rect_p else None
 
@@ -418,24 +357,10 @@ def animar_salida_franjas(pantalla, reloj, captura_escenario, puerta=None, cam_x
         t_sec = (f / frames_totales) * duracion
         progreso = f / frames_totales
 
-        # --- CAPA 1: Escenario base y aura de absorción DETRÁS de la puerta ---
+        # --- CAPA 1: Escenario base capturado limpio (con el portal ya integrado naturalmente) ---
         pantalla.blit(captura_escenario, (0, 0))
 
-        if sprite_cerrada is not None and pos_puerta is not None:
-            radio_w = int(door_w // 2 + 180 * (progreso ** 1.6))
-            radio_h = int(door_h // 2 + 130 * (progreso ** 1.6))
-            alpha_aura = max(0, min(180, int(220 * math.sin(min(1.0, progreso * 1.4) * math.pi))))
-            if alpha_aura > 0:
-                surf_aura = pygame.Surface((radio_w * 2, radio_h * 2), pygame.SRCALPHA)
-                pygame.draw.ellipse(surf_aura, (0, 0, 0, alpha_aura), (0, 0, radio_w * 2, radio_h * 2))
-                pantalla.blit(surf_aura, (door_cx - radio_w, door_cy - radio_h))
-
-        # --- CAPA 2: La puerta original del juego ---
-        if sprite_cerrada is not None and pos_puerta is not None:
-            pantalla.blit(sprite_cerrada, pos_puerta)
-
-        # --- CAPA 3: Efecto de transición visible POR DELANTE de la puerta ---
-        # 1. Bandas geométricas negras que nacen de la puerta y se expanden por delante de ella
+        # --- CAPA 2: Bandas geométricas negras que nacen de la puerta y se expanden ---
         if pos_puerta is not None:
             factor_door = (progreso ** 2.2)
             w_exp = int(ancho * factor_door)
@@ -1001,19 +926,18 @@ def animar_transicion_nivel_completado(
     3. Construcción interactiva del panel de victoria en bloques y menú de selección.
     4. Desarmado y retorno de la acción elegida («siguiente», «menu» o «salir»).
     """
-    # 1. Animación de cierre de puerta en el escenario actual
+    # 1. Animación y pausa limpia en el escenario actual
     if puerta is not None and mundo_surface is not None:
         animar_cierre_puerta(pantalla, reloj, mundo_surface, puerta, cam_x, ancho_mundo_nivel)
 
-    # 2. Captura del escenario base detrás de la puerta para el sistema multicapa
-    mundo_fondo = mundo_surface.copy()
-    if puerta is not None:
-        rp = puerta["rect"]
-        pygame.draw.rect(mundo_fondo, (255, 240, 195), (rp.x, rp.y, rp.width, rp.height - 4))
+    # 2. Captura limpia del escenario base para la transición geométrica (sin recuadros ni bordes artificiales)
     captura_escenario = pygame.Surface((pantalla.get_width(), pantalla.get_height()))
-    captura_escenario.blit(mundo_fondo, (0, 0), pygame.Rect(cam_x, 0, pantalla.get_width(), pantalla.get_height()))
+    if mundo_surface is not None:
+        captura_escenario.blit(mundo_surface, (0, 0), pygame.Rect(cam_x, 0, pantalla.get_width(), pantalla.get_height()))
+    else:
+        captura_escenario.blit(pantalla, (0, 0))
 
-    # 3. Franjas y transición multicapa generada desde la puerta
+    # 3. Franjas y transición geométrica generada desde el portal
     animar_salida_franjas(pantalla, reloj, captura_escenario, puerta=puerta, cam_x=cam_x)
 
     # 4. Pantalla de victoria con ensamblaje, interacción y desarmado
