@@ -16,7 +16,7 @@ from sprites import (
     cargar_boton_escalado,
     precargar_botones_comunes,
     animar_pulsacion_boton,
-    aclarar_boton,
+    aclarar_boton, 
     generar_boton_con_texto,
     obtener_accesorios_disponibles,
     cargar_accesorio,
