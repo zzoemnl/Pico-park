@@ -1,6 +1,7 @@
 import os
 import sys
 import copy
+import random
 import pygame
 
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
@@ -20,8 +21,6 @@ from sprites import (
     obtener_accesorios_disponibles,
     cargar_accesorio,
     dibujar_accesorio_en_personaje,
-    agregar_contorno_pixel_art,
-    ACCESORIOS_CON_CONTORNO,
 )
 from pantalla import iniciar_mundo
 from configuracion import (
@@ -1424,9 +1423,9 @@ _cache_previews_accesorios = {}
 
 def _obtener_preview_accesorio_tarjeta(acc_id: str) -> "pygame.Surface | None":
     """
-    Genera y cachea una previsualización de alta nitidez y tamaño óptimo
-    para las tarjetas de selección de accesorios en la pantalla de personalización.
-    Optimiza especialmente Papá Noel, Ángel y Orejas de Conejo para una visibilidad perfecta.
+    Obtiene la miniatura oficial del accesorio para la cuadrícula de selección.
+    Reutiliza directamente el sprite original de imagen existente en el proyecto,
+    manteniendo sus proporciones exactas sin dibujos inventados ni alteraciones por código.
     """
     if not acc_id or acc_id == "Ninguno":
         return None
@@ -1438,44 +1437,14 @@ def _obtener_preview_accesorio_tarjeta(acc_id: str) -> "pygame.Surface | None":
         return None
 
     w, h = surf.get_size()
-
-    if acc_id == "Ángel":
-        try:
-            halo = surf.subsurface((0, 0, w, min(18, h)))
-            wing_y = min(64, h - 16)
-            wing = surf.subsurface((0, wing_y, w, min(16, h - wing_y)))
-            comp = pygame.Surface((w, 36), pygame.SRCALPHA)
-            comp.blit(halo, (0, 0))
-            comp.blit(wing, (0, 18))
-            res = pygame.transform.scale(comp, (46, 32))
-        except Exception:
-            res = surf
-    elif acc_id == "Papá Noel":
-        try:
-            gorro = surf.subsurface((0, 0, w, min(24, h)))
-            barba_y = min(54, h - 23)
-            barba = surf.subsurface((0, barba_y, w, min(23, h - barba_y)))
-            comp = pygame.Surface((w, 44), pygame.SRCALPHA)
-            comp.blit(gorro, (0, 0))
-            comp.blit(barba, (0, 21))
-            res = pygame.transform.scale(comp, (44, 34))
-        except Exception:
-            res = surf
-    elif acc_id == "Orejas de Conejo":
-        res = pygame.transform.scale(surf, (50, 26))
+    max_w, max_h = 44, 36
+    if w > max_w or h > max_h:
+        ratio = min(max_w / float(w), max_h / float(h))
+        nw = max(1, int(round(w * ratio)))
+        nh = max(1, int(round(h * ratio)))
+        res = pygame.transform.scale(surf, (nw, nh))
     else:
-        # Escalado proporcional estándar para los demás accesorios (máx 44x36)
-        max_w, max_h = 44, 36
-        if w > max_w or h > max_h:
-            ratio = min(max_w / float(w), max_h / float(h))
-            nw = max(1, int(round(w * ratio)))
-            nh = max(1, int(round(h * ratio)))
-            res = pygame.transform.scale(surf, (nw, nh))
-        else:
-            res = surf
-
-    if acc_id in ACCESORIOS_CON_CONTORNO and res is not None:
-        res = agregar_contorno_pixel_art(res, (65, 45, 30))
+        res = surf
 
     _cache_previews_accesorios[acc_id] = res
     return res
@@ -1935,6 +1904,26 @@ def jugar_niveles_desde(
     return "menu", mundo_sel
 
 
+def _seleccionar_accesorios_sesion_aleatorios(color_p1="Celeste", color_p2="Violeta"):
+    """
+    Selecciona aleatoriamente al iniciar una nueva sesión del juego los accesorios que llevan los personajes:
+    - Utiliza exclusivamente los accesorios existentes con sprites reales en el proyecto.
+    - La selección se realiza una sola vez al iniciar la sesión.
+    - Los dos personajes tienen combinaciones diferentes sin accesorios duplicados.
+    - Respeta la disponibilidad de accesorios para cada personaje.
+    """
+    disp_p1 = [a["id"] for a in obtener_accesorios_disponibles(color_p1) if a["id"] != "Ninguno"]
+    disp_p2 = [a["id"] for a in obtener_accesorios_disponibles(color_p2) if a["id"] != "Ninguno"]
+
+    if not disp_p1 or not disp_p2:
+        return "Ninguno", "Ninguno"
+
+    acc_p1 = random.choice(disp_p1)
+    candidatos_p2 = [a for a in disp_p2 if a != acc_p1]
+    acc_p2 = random.choice(candidatos_p2) if candidatos_p2 else random.choice(disp_p2)
+    return acc_p1, acc_p2
+
+
 def main():
     import os
     os.environ['SDL_VIDEO_CENTERED'] = '1'
@@ -2029,12 +2018,14 @@ def main():
 
     color_p1 = "Celeste"
     color_p2 = "Violeta"
-    accesorio_p1 = "Ninguno"
-    accesorio_p2 = "Ninguno"
+    accesorio_p1, accesorio_p2 = _seleccionar_accesorios_sesion_aleatorios(color_p1, color_p2)
     personalizacion_modificada_en_menu = False
     tab_personajes_actual = "colores"
-    pagina_acc_p1 = 0
-    pagina_acc_p2 = 0
+    items_por_pag = 6
+    disp_p1_todos = [a["id"] for a in obtener_accesorios_disponibles(color_p1)]
+    disp_p2_todos = [a["id"] for a in obtener_accesorios_disponibles(color_p2)]
+    pagina_acc_p1 = (disp_p1_todos.index(accesorio_p1) // items_por_pag) if accesorio_p1 in disp_p1_todos else 0
+    pagina_acc_p2 = (disp_p2_todos.index(accesorio_p2) // items_por_pag) if accesorio_p2 in disp_p2_todos else 0
 
     W_VOLVER, H_VOLVER = 238, 70
     btn_volver_personajes = pygame.Rect((ANCHO_MENU - W_VOLVER) // 2, ALTO_MENU - 75, W_VOLVER, H_VOLVER)

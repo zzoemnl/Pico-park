@@ -43,6 +43,8 @@ from sprites import (
     dibujar_personaje,
     cargar_sprites,
     cargar_accesorio,
+    obtener_accesorios_disponibles,
+    METADATA_ACCESORIOS,
     aplicar_tinta,
     actualizar_temporizadores,
     obtener_estado,
@@ -182,18 +184,14 @@ def dibujar_personaje_rotado(pantalla, p):
         if surf_acc:
             if not mirando_der:
                 surf_acc = pygame.transform.flip(surf_acc, True, False)
-            if acc_id in ("Corona", "Gorro", "Gorra", "Sombrero"):
-                x_acc = (w_base - surf_acc.get_width()) // 2
-                y_acc = extra_h - surf_acc.get_height() + 8
-            elif acc_id == "Anteojos":
-                x_acc = (w_base - surf_acc.get_width()) // 2 + (2 if mirando_der else -2)
-                y_acc = extra_h + 16
-            elif acc_id in ("Moño", "Mono"):
-                x_acc = (w_base - surf_acc.get_width()) // 2
-                y_acc = extra_h + 46
+            meta = METADATA_ACCESORIOS.get(acc_id)
+            if meta:
+                off_x, off_y = meta["offset"]
+                x_acc = off_x if mirando_der else (w_base - off_x - surf_acc.get_width())
+                y_acc = extra_h + off_y
             else:
                 x_acc = (w_base - surf_acc.get_width()) // 2
-                y_acc = extra_h - 5
+                y_acc = extra_h - surf_acc.get_height() + 8
             comp.blit(surf_acc, (x_acc, y_acc))
 
     rot_surf = pygame.transform.rotate(comp, angulo)
@@ -492,16 +490,20 @@ class GestorPersonajesMenu:
         restantes = [c for c in COLOR_POOL if c not in usados]
         colores = [col1, col2, restantes[0], restantes[1], restantes[2]]
 
-        acc_predeterminados = ["Gorro", "Anteojos", "Sombrero", "Corona", "Moño"]
+        # Utilizar exclusivamente accesorios existentes con sprites en el proyecto
+        pool_reales = [
+            a["id"] for a in obtener_accesorios_disponibles()
+            if a["id"] != "Ninguno" and a["id"] not in (acc1, acc2)
+        ]
         acc_usados = [acc1, acc2]
-        acc_restantes = [a for a in acc_predeterminados if a not in acc_usados]
+        acc_restantes = [a for a in pool_reales if a not in acc_usados]
 
         accesorios = [
             acc1,
             acc2,
-            acc_restantes[0] if len(acc_restantes) > 0 else "Gorro",
-            acc_restantes[1] if len(acc_restantes) > 1 else "Anteojos",
-            acc_restantes[2] if len(acc_restantes) > 2 else "Sombrero",
+            acc_restantes[0] if len(acc_restantes) > 0 else "Corona",
+            acc_restantes[1] if len(acc_restantes) > 1 else "Sombrero",
+            acc_restantes[2] if len(acc_restantes) > 2 else "Duende",
         ]
         return colores, accesorios
 

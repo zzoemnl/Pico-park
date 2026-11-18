@@ -1055,7 +1055,7 @@ METADATA_ACCESORIOS = {
     "Pelo Arcoíris": {"offset": (0, -17), "size": (70, 32)},
     "Gorro con Ratón": {"offset": (13.5, -21), "size": (42, 32)},
     "Chucky": {"offset": (14, 0.5), "size": (46, 53)},
-    "Orejas de Conejo": {"offset": (6, -20), "size": (58, 28)},
+    "Orejas de Conejo": {"offset": (12, -22), "size": (46, 32)},
 }
 
 
@@ -1211,45 +1211,7 @@ def cargar_accesorio(id_accesorio):
             except Exception:
                 pass
 
-    # 2. Diseños procedimentales de respaldo si falta el archivo
-    surf = pygame.Surface((36, 28), pygame.SRCALPHA)
-    if id_accesorio == "Corona":
-        pygame.draw.polygon(surf, (255, 215, 0), [(4, 24), (32, 24), (32, 8), (24, 16), (18, 4), (12, 16), (4, 8)])
-        pygame.draw.polygon(surf, (180, 140, 0), [(4, 24), (32, 24), (32, 8), (24, 16), (18, 4), (12, 16), (4, 8)], 2)
-        pygame.draw.circle(surf, (255, 50, 50), (18, 16), 3)
-    elif id_accesorio in ("Gorro", "Gorra"):
-        pygame.draw.polygon(surf, (230, 60, 60), [(6, 24), (30, 24), (18, 4)])
-        pygame.draw.polygon(surf, (160, 30, 30), [(6, 24), (30, 24), (18, 4)], 2)
-        pygame.draw.circle(surf, (255, 255, 255), (18, 4), 5)
-        pygame.draw.rect(surf, (255, 255, 255), (4, 22, 28, 5), border_radius=2)
-    elif id_accesorio == "Anteojos":
-        pygame.draw.rect(surf, (25, 25, 25), (4, 10, 12, 10), border_radius=3)
-        pygame.draw.rect(surf, (25, 25, 25), (20, 10, 12, 10), border_radius=3)
-        pygame.draw.rect(surf, (25, 25, 25), (14, 12, 8, 3))
-        pygame.draw.line(surf, (25, 25, 25), (4, 12), (0, 12), 2)
-        pygame.draw.line(surf, (25, 25, 25), (32, 12), (36, 12), 2)
-    elif id_accesorio in ("Moño", "Mono"):
-        pygame.draw.polygon(surf, (255, 90, 130), [(6, 8), (18, 14), (6, 20)])
-        pygame.draw.polygon(surf, (255, 90, 130), [(30, 8), (18, 14), (30, 20)])
-        pygame.draw.circle(surf, (230, 50, 90), (18, 14), 4)
-    elif id_accesorio == "Sombrero":
-        pygame.draw.rect(surf, (30, 30, 35), (2, 20, 32, 6), border_radius=2)
-        pygame.draw.rect(surf, (30, 30, 35), (8, 6, 20, 15))
-        pygame.draw.rect(surf, (200, 40, 40), (8, 18, 20, 3))
-    elif id_accesorio == "Gorro Azul":
-        pygame.draw.rect(surf, (41, 64, 140), (6, 8, 24, 14), border_radius=4)
-        pygame.draw.rect(surf, (183, 58, 61), (4, 20, 28, 6), border_radius=2)
-    elif id_accesorio == "Gorro Celeste":
-        pygame.draw.rect(surf, (18, 150, 202), (6, 8, 24, 14), border_radius=4)
-        pygame.draw.rect(surf, (244, 212, 84), (4, 20, 28, 6), border_radius=2)
-    elif id_accesorio == "Hoja":
-        pygame.draw.ellipse(surf, (157, 255, 124), (8, 4, 20, 22))
-        pygame.draw.line(surf, (67, 147, 48), (18, 6), (18, 26), 2)
-    else:
-        pygame.draw.circle(surf, (255, 200, 50), (18, 14), 10)
-
-    _CACHE_ACCESORIOS[id_accesorio] = surf
-    return surf
+    return None
 
 
 def dibujar_accesorio_en_personaje(
