@@ -6,9 +6,12 @@ permitiendo cambiarlas de manera global desde un único lugar sin modificar cada
 """
 
 import os
+import sys
 import pygame
 
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
+if DIRECTORIO_ACTUAL not in sys.path:
+    sys.path.insert(0, DIRECTORIO_ACTUAL)
 RUTA_FUENTE_PIXEL = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Fuentes", "04B_30__.TTF")
 CARPETAS_FUENTES = [
     os.path.join(DIRECTORIO_ACTUAL, "..", "assets", "fuentes"),
@@ -468,15 +471,28 @@ def ajustar_tamano_fuente(texto, categoria="texto", tamano_inicial=None, ancho_m
     return f_actual, t_actual
 
 
+_CACHE_RENDERIZADO_AJUSTADO = {}
+_MAX_CACHE_TEXTO = 1000
+
+_CACHE_RENDERIZADO_MULTILINEA = {}
+_MAX_CACHE_MULTILINEA = 500
+
+
 def renderizar_texto_ajustado(texto, categoria="texto", tamano=None, ancho_max=None, alto_max=None, color=(255, 255, 255), tamano_min=10, negrita=False):
     """
     Renderiza un texto en una superficie ajustando automáticamente su tamaño de fuente para no desbordar.
     Si incluso en el tamaño mínimo supera los límites, escala proporcionalmente de forma suave.
+    Utiliza caché en memoria para reutilizar superficies renderizadas estáticas en bucles de juego.
     Retorna la tupla (superficie_renderizada, fuente_utilizada).
     """
     str_txt = str(texto if texto is not None else "")
     if not str_txt:
         return pygame.Surface((0, 0), pygame.SRCALPHA), obtener_fuente(categoria, tamano=tamano, negrita=negrita)
+
+    color_tupla = tuple(color) if isinstance(color, (list, tuple)) else color
+    clave = (str_txt, categoria, tamano, ancho_max, alto_max, color_tupla, tamano_min, negrita)
+    if clave in _CACHE_RENDERIZADO_AJUSTADO:
+        return _CACHE_RENDERIZADO_AJUSTADO[clave]
 
     fuente_opt, _ = ajustar_tamano_fuente(
         texto=str_txt,
@@ -503,6 +519,9 @@ def renderizar_texto_ajustado(texto, categoria="texto", tamano=None, ancho_max=N
         except Exception:
             surf = pygame.transform.scale(surf, (nuevo_w, nuevo_h))
 
+    if len(_CACHE_RENDERIZADO_AJUSTADO) >= _MAX_CACHE_TEXTO:
+        _CACHE_RENDERIZADO_AJUSTADO.clear()
+    _CACHE_RENDERIZADO_AJUSTADO[clave] = (surf, fuente_opt)
     return surf, fuente_opt
 
 
@@ -521,11 +540,17 @@ def renderizar_texto_multilinea(
     """
     Distribuye y renderiza un texto en múltiples líneas dentro de ancho_max.
     Si se especifica alto_max y las líneas no caben, reduce la fuente gradualmente hasta tamano_min.
+    Utiliza caché en memoria para evitar recalcular divisiones y renders estáticos en cada fotograma.
     Retorna la superficie compuesta transparente (pygame.SRCALPHA).
     """
     str_txt = str(texto if texto is not None else "")
     if not str_txt:
         return pygame.Surface((0, 0), pygame.SRCALPHA)
+
+    color_tupla = tuple(color) if isinstance(color, (list, tuple)) else color
+    clave = (str_txt, categoria, tamano, ancho_max, alto_max, color_tupla, alineacion, interlineado, negrita, tamano_min)
+    if clave in _CACHE_RENDERIZADO_MULTILINEA:
+        return _CACHE_RENDERIZADO_MULTILINEA[clave]
 
     if tamano is None:
         cat = str(categoria).lower().strip()
@@ -593,6 +618,9 @@ def renderizar_texto_multilinea(
         except Exception:
             surf_resultado = pygame.transform.scale(surf_resultado, (nuevo_w, nuevo_h))
 
+    if len(_CACHE_RENDERIZADO_MULTILINEA) >= _MAX_CACHE_MULTILINEA:
+        _CACHE_RENDERIZADO_MULTILINEA.clear()
+    _CACHE_RENDERIZADO_MULTILINEA[clave] = surf_resultado
     return surf_resultado
 
 

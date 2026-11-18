@@ -1,9 +1,15 @@
 import os
+import sys
 import copy
 import datetime
 import hashlib
 import secrets
 import pygame
+
+DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
+if DIRECTORIO_ACTUAL not in sys.path:
+    sys.path.insert(0, DIRECTORIO_ACTUAL)
+RUTA_PARTIDAS = os.path.join(DIRECTORIO_ACTUAL, "partidas.txt")
 
 from sprites import (
     cargar_boton_escalado,
@@ -12,9 +18,6 @@ from sprites import (
     generar_boton_con_texto,
 )
 from configuracion import t, obtener_idioma
-
-DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
-RUTA_PARTIDAS = os.path.join(DIRECTORIO_ACTUAL, "partidas.txt")
 
 import re
 

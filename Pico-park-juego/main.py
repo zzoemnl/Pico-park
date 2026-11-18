@@ -4,6 +4,8 @@ import copy
 import pygame
 
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
+if DIRECTORIO_ACTUAL not in sys.path:
+    sys.path.insert(0, DIRECTORIO_ACTUAL)
 
 from sprites import (
     ANCHO,

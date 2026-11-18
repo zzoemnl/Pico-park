@@ -1,7 +1,12 @@
+import os
 import sys
 import math
 import random
 import pygame
+
+DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
+if DIRECTORIO_ACTUAL not in sys.path:
+    sys.path.insert(0, DIRECTORIO_ACTUAL)
 
 from fuentes import (
     obtener_fuente_titulo,
@@ -29,6 +34,7 @@ from sprites import (
     cargar_boton_escalado,
     animar_pulsacion_boton,
     aclarar_boton,
+    generar_boton_con_texto,
 )
 from movimientos import (
     crear_personaje,
@@ -88,13 +94,14 @@ def pantalla_muerte(pantalla, reloj):
         boton_reiniciar_semi = cargar_boton_escalado("Ventanas/boton-reiniciar-semiapretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-reiniciar-semiapretado.png", w_btn, h_btn)
         boton_reiniciar_apretado = cargar_boton_escalado("Ventanas/boton-reiniciar-apretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-reiniciar-apretado.png", w_btn, h_btn)
     else:
-        boton_menu_normal = generar_boton_con_texto("Ventanas/boton-menu.png", w_btn, h_btn, t("menu"), (255, 255, 255), 24, 0, idm_muerte)
-        boton_menu_semi = generar_boton_con_texto("Ventanas/boton-menu-semiapretado.png", w_btn, h_btn, t("menu"), (255, 255, 255), 24, 1, idm_muerte)
-        boton_menu_apretado = generar_boton_con_texto("Ventanas/boton-menu-apretado.png", w_btn, h_btn, t("menu"), (255, 255, 255), 24, 2, idm_muerte)
+        col_btn_muerte = (45, 30, 20)
+        boton_menu_normal = generar_boton_con_texto("Ventanas/boton-menu.png", w_btn, h_btn, t("menu"), col_btn_muerte, 24, 0, idm_muerte)
+        boton_menu_semi = generar_boton_con_texto("Ventanas/boton-menu-semiapretado.png", w_btn, h_btn, t("menu"), col_btn_muerte, 24, 1, idm_muerte)
+        boton_menu_apretado = generar_boton_con_texto("Ventanas/boton-menu-apretado.png", w_btn, h_btn, t("menu"), col_btn_muerte, 24, 2, idm_muerte)
 
-        boton_reiniciar_normal = generar_boton_con_texto("Ventanas/boton-reiniciar.png", w_btn, h_btn, t("reiniciar"), (255, 255, 255), 24, 0, idm_muerte)
-        boton_reiniciar_semi = generar_boton_con_texto("Ventanas/boton-reiniciar-semiapretado.png", w_btn, h_btn, t("reiniciar"), (255, 255, 255), 24, 1, idm_muerte)
-        boton_reiniciar_apretado = generar_boton_con_texto("Ventanas/boton-reiniciar-apretado.png", w_btn, h_btn, t("reiniciar"), (255, 255, 255), 24, 2, idm_muerte)
+        boton_reiniciar_normal = generar_boton_con_texto("Ventanas/boton-reiniciar.png", w_btn, h_btn, t("reiniciar"), col_btn_muerte, 24, 0, idm_muerte)
+        boton_reiniciar_semi = generar_boton_con_texto("Ventanas/boton-reiniciar-semiapretado.png", w_btn, h_btn, t("reiniciar"), col_btn_muerte, 24, 1, idm_muerte)
+        boton_reiniciar_apretado = generar_boton_con_texto("Ventanas/boton-reiniciar-apretado.png", w_btn, h_btn, t("reiniciar"), col_btn_muerte, 24, 2, idm_muerte)
 
     # Botón X pixel art para salir completamente del juego
     w_x, h_x = 44, 52
@@ -712,13 +719,14 @@ def mostrar_pantalla_victoria(
         spr_menu_semi = cargar_boton_escalado("Ventanas/boton-menu-semiapretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu-semiapretado.png", w_btn, h_btn)
         spr_menu_apretado = cargar_boton_escalado("Ventanas/boton-menu-apretado.png", w_btn, h_btn) or cargar_boton_escalado("boton-menu-apretado.png", w_btn, h_btn)
     else:
-        spr_sig_normal = generar_boton_con_texto("Ventanas/boton-siguiente.png", w_btn, h_btn, txt_btn1, (255, 255, 255), 24, 0, idm_vic)
-        spr_sig_semi = generar_boton_con_texto("Ventanas/boton-siguiente-semiapretado.png", w_btn, h_btn, txt_btn1, (255, 255, 255), 24, 1, idm_vic)
-        spr_sig_apretado = generar_boton_con_texto("Ventanas/boton-siguiente-apretado.png", w_btn, h_btn, txt_btn1, (255, 255, 255), 24, 2, idm_vic)
+        col_btn_vic = (45, 30, 20)
+        spr_sig_normal = generar_boton_con_texto("Ventanas/boton-siguiente.png", w_btn, h_btn, txt_btn1, col_btn_vic, 24, 0, idm_vic)
+        spr_sig_semi = generar_boton_con_texto("Ventanas/boton-siguiente-semiapretado.png", w_btn, h_btn, txt_btn1, col_btn_vic, 24, 1, idm_vic)
+        spr_sig_apretado = generar_boton_con_texto("Ventanas/boton-siguiente-apretado.png", w_btn, h_btn, txt_btn1, col_btn_vic, 24, 2, idm_vic)
 
-        spr_menu_normal = generar_boton_con_texto("Ventanas/boton-menu.png", w_btn, h_btn, txt_btn2, (255, 255, 255), 20 if idm_vic == "en" else 22, 0, idm_vic)
-        spr_menu_semi = generar_boton_con_texto("Ventanas/boton-menu-semiapretado.png", w_btn, h_btn, txt_btn2, (255, 255, 255), 20 if idm_vic == "en" else 22, 1, idm_vic)
-        spr_menu_apretado = generar_boton_con_texto("Ventanas/boton-menu-apretado.png", w_btn, h_btn, txt_btn2, (255, 255, 255), 20 if idm_vic == "en" else 22, 2, idm_vic)
+        spr_menu_normal = generar_boton_con_texto("Ventanas/boton-menu.png", w_btn, h_btn, txt_btn2, col_btn_vic, 20 if idm_vic == "en" else 22, 0, idm_vic)
+        spr_menu_semi = generar_boton_con_texto("Ventanas/boton-menu-semiapretado.png", w_btn, h_btn, txt_btn2, col_btn_vic, 20 if idm_vic == "en" else 22, 1, idm_vic)
+        spr_menu_apretado = generar_boton_con_texto("Ventanas/boton-menu-apretado.png", w_btn, h_btn, txt_btn2, col_btn_vic, 20 if idm_vic == "en" else 22, 2, idm_vic)
 
     spr_sig_hover = aclarar_boton(spr_sig_normal) if spr_sig_normal else None
     spr_menu_hover = aclarar_boton(spr_menu_normal) if spr_menu_normal else None
@@ -1090,9 +1098,11 @@ def dibujar_pendulo_escenario(superficie, plataformas, plat_elevada=None, pozo_i
     if pozo_info is not None:
         pz = pozo_info
         # Fondo sombreado de profundidad peligrosa sobre el abismo de pinchos
-        s_abismo = pygame.Surface((pz["ancho"], pz["alto"]), pygame.SRCALPHA)
-        s_abismo.fill((40, 25, 25, 110))
-        superficie.blit(s_abismo, (pz["x"], pz["y"]))
+        if "_surf_abismo" not in pz:
+            s_abismo = pygame.Surface((pz["ancho"], pz["alto"]), pygame.SRCALPHA)
+            s_abismo.fill((40, 25, 25, 110))
+            pz["_surf_abismo"] = s_abismo
+        superficie.blit(pz["_surf_abismo"], (pz["x"], pz["y"]))
 
     if bloque_peligroso is not None:
         br = bloque_peligroso["rect"] if isinstance(bloque_peligroso, dict) else bloque_peligroso
@@ -1123,9 +1133,11 @@ def dibujar_plataformas_derrumbables_escenario(superficie, plataformas_derrumbab
     """
     if pozo_info is not None:
         pz = pozo_info
-        s_abismo = pygame.Surface((pz["ancho"], pz["alto"]), pygame.SRCALPHA)
-        s_abismo.fill((40, 25, 25, 120))
-        superficie.blit(s_abismo, (pz["x"], pz["y"]))
+        if "_surf_abismo_derr" not in pz:
+            s_abismo = pygame.Surface((pz["ancho"], pz["alto"]), pygame.SRCALPHA)
+            s_abismo.fill((40, 25, 25, 120))
+            pz["_surf_abismo_derr"] = s_abismo
+        superficie.blit(pz["_surf_abismo_derr"], (pz["x"], pz["y"]))
 
     if plataformas_derrumbables is None:
         return
@@ -1196,9 +1208,11 @@ def dibujar_plataformas_alternadas_escenario(superficie, plataformas_alternadas,
     """
     if pozo_info is not None:
         pz = pozo_info
-        s_abismo = pygame.Surface((pz["ancho"], pz["alto"]), pygame.SRCALPHA)
-        s_abismo.fill((40, 25, 25, 120))
-        superficie.blit(s_abismo, (pz["x"], pz["y"]))
+        if "_surf_abismo_derr" not in pz:
+            s_abismo = pygame.Surface((pz["ancho"], pz["alto"]), pygame.SRCALPHA)
+            s_abismo.fill((40, 25, 25, 120))
+            pz["_surf_abismo_derr"] = s_abismo
+        superficie.blit(pz["_surf_abismo_derr"], (pz["x"], pz["y"]))
 
     if not plataformas_alternadas:
         return
@@ -1556,6 +1570,8 @@ def dibujar_soga_escenario(superficie, p1, p2, estado_soga=None, d_reposo=DISTAN
 # ==============================================================================
 
 _CACHE_FONDO_MUNDO3 = {}
+_SURF_RAYOS_SOL = None
+_CACHE_BURBUJAS_M3 = {}
 
 
 def dibujar_submarino_fondo_escenario(superficie, ancho_mundo, tick=0):
@@ -1594,7 +1610,13 @@ def dibujar_submarino_fondo_escenario(superficie, ancho_mundo, tick=0):
 
     superficie.blit(_CACHE_FONDO_MUNDO3[ancho_mundo], (0, 0))
 
-    # Rayos de sol volumétricos que filtran desde la superficie
+    # Rayos de sol volumétricos que filtran desde la superficie (reutiliza superficie para evitar sobrecarga de memoria)
+    global _SURF_RAYOS_SOL
+    if _SURF_RAYOS_SOL is None or _SURF_RAYOS_SOL.get_width() != ancho_mundo:
+        _SURF_RAYOS_SOL = pygame.Surface((ancho_mundo, 520), pygame.SRCALPHA)
+    else:
+        _SURF_RAYOS_SOL.fill((0, 0, 0, 0))
+
     paso_rayo = 380
     for rx in range(80, ancho_mundo + 200, paso_rayo):
         oscilacion = math.sin((tick * 0.02) + (rx * 0.005)) * 25.0
@@ -1606,10 +1628,10 @@ def dibujar_submarino_fondo_escenario(superficie, ancho_mundo, tick=0):
             (x_base + ancho_rayo - 120, 520),
             (x_base - 140, 520),
         ]
-        s_rayo = pygame.Surface((ancho_mundo, 520), pygame.SRCALPHA)
         alpha_rayo = int(20 + 8 * math.sin(tick * 0.03 + rx))
-        pygame.draw.polygon(s_rayo, (220, 245, 255, max(10, alpha_rayo)), poly_pts)
-        superficie.blit(s_rayo, (0, 0))
+        pygame.draw.polygon(_SURF_RAYOS_SOL, (220, 245, 255, max(10, alpha_rayo)), poly_pts)
+
+    superficie.blit(_SURF_RAYOS_SOL, (0, 0))
 
     # Ondulación translúcida en la superficie superior del agua (y = 0..25)
     for wx in range(0, ancho_mundo, 24):
@@ -1841,11 +1863,13 @@ def actualizar_y_dibujar_burbujas_m3(superficie, burbujas, jugadores, tick=0):
             b["vy"] = random.uniform(0.9, 2.2)
 
         bx, by, br = int(b["x"]), int(b["y"]), b["radio"]
-        s_burb = pygame.Surface((br * 2 + 2, br * 2 + 2), pygame.SRCALPHA)
-        pygame.draw.circle(s_burb, (180, 235, 255, 140), (br + 1, br + 1), br)
-        pygame.draw.circle(s_burb, (255, 255, 255, 210), (br + 1, br + 1), br, width=1)
-        pygame.draw.circle(s_burb, (255, 255, 255, 240), (br - 1, br - 1), max(1, br // 3))
-        superficie.blit(s_burb, (bx - br - 1, by - br - 1))
+        if br not in _CACHE_BURBUJAS_M3:
+            s_burb = pygame.Surface((br * 2 + 2, br * 2 + 2), pygame.SRCALPHA)
+            pygame.draw.circle(s_burb, (180, 235, 255, 140), (br + 1, br + 1), br)
+            pygame.draw.circle(s_burb, (255, 255, 255, 210), (br + 1, br + 1), br, width=1)
+            pygame.draw.circle(s_burb, (255, 255, 255, 240), (br - 1, br - 1), max(1, br // 3))
+            _CACHE_BURBUJAS_M3[br] = s_burb
+        superficie.blit(_CACHE_BURBUJAS_M3[br], (bx - br - 1, by - br - 1))
 
     for p in jugadores:
         if not p.get("muerto", False) and p.get("moviendo", False) and random.random() < 0.25:
@@ -3023,19 +3047,25 @@ def _dibujar_hud_oxigeno_m3_n5(pantalla_surf, oxigeno_p1, oxigeno_p2, p1_color, 
         pantalla_surf.blit(s_hud, (bx, by))
 
 
+_SURF_ALERTA_O2 = None
+
+
 def dibujar_alerta_oxigeno_personaje(superficie, jugador, oxigeno, tick):
     """Muestra un icono flotante de advertencia cuando el personaje está a punto de ahogarse."""
+    global _SURF_ALERTA_O2
     if jugador.get("muerto", False) or oxigeno >= 22.0:
         return
     if (tick // 12) % 2 == 0:
         hx = jugador["hitbox"].centerx
         hy = jugador["hitbox"].top - 18
-        s_alerta = pygame.Surface((38, 16), pygame.SRCALPHA)
-        pygame.draw.rect(s_alerta, (230, 40, 50, 220), (0, 0, 38, 16), border_radius=8)
-        fuente_aviso = obtener_fuente_pequena(10, negrita=True)
-        lbl = fuente_aviso.render("! O2", True, (255, 255, 255))
-        s_alerta.blit(lbl, ((38 - lbl.get_width()) // 2, (16 - lbl.get_height()) // 2))
-        superficie.blit(s_alerta, (hx - 19, hy))
+        if _SURF_ALERTA_O2 is None:
+            s_alerta = pygame.Surface((38, 16), pygame.SRCALPHA)
+            pygame.draw.rect(s_alerta, (230, 40, 50, 220), (0, 0, 38, 16), border_radius=8)
+            fuente_aviso = obtener_fuente_pequena(10, negrita=True)
+            lbl = fuente_aviso.render("! O2", True, (255, 255, 255))
+            s_alerta.blit(lbl, ((38 - lbl.get_width()) // 2, (16 - lbl.get_height()) // 2))
+            _SURF_ALERTA_O2 = s_alerta
+        superficie.blit(_SURF_ALERTA_O2, (hx - 19, hy))
 
 
 def iniciar_mundo(

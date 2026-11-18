@@ -1,6 +1,11 @@
 import os
+import sys
 import math
 import pygame
+
+DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
+if DIRECTORIO_ACTUAL not in sys.path:
+    sys.path.insert(0, DIRECTORIO_ACTUAL)
 
 from fuentes import (
     obtener_fuente_titulo,
@@ -310,6 +315,8 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
 # ==============================================================================
 
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
+if DIRECTORIO_ACTUAL not in sys.path:
+    sys.path.insert(0, DIRECTORIO_ACTUAL)
 RUTA_SPRITES = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites")
 RUTA_PERSONAJES = os.path.join(RUTA_SPRITES, "Personajes")
 RUTA_OBJETOS = os.path.join(RUTA_SPRITES, "Objetos")
@@ -326,21 +333,29 @@ ANCHO_MINI = 176
 ALTO_MINI = 112
 
 _CACHE_MINIATURAS = None
+_CACHE_RECURSOS_ORIGINALES = {}
 
 
 def _cargar_recurso_original(ruta, tamano):
-    """Carga una imagen y la escala al tamaño requerido manteniendo transparencia."""
+    """Carga una imagen y la escala al tamaño requerido manteniendo transparencia con caché en memoria."""
+    clave = (ruta, tamano)
+    if clave in _CACHE_RECURSOS_ORIGINALES:
+        return _CACHE_RECURSOS_ORIGINALES[clave]
     if os.path.isfile(ruta):
         try:
             img = pygame.image.load(ruta).convert_alpha()
-            return pygame.transform.scale(img, tamano)
+            res = pygame.transform.scale(img, tamano)
+            _CACHE_RECURSOS_ORIGINALES[clave] = res
+            return res
         except Exception:
             pass
     # Fallback si el display aún no se inicializó
     if os.path.isfile(ruta):
         try:
             img = pygame.image.load(ruta)
-            return pygame.transform.scale(img, tamano)
+            res = pygame.transform.scale(img, tamano)
+            _CACHE_RECURSOS_ORIGINALES[clave] = res
+            return res
         except Exception:
             pass
     return None

@@ -1,4 +1,5 @@
 import os
+import sys
 import weakref
 import pygame
 
@@ -11,6 +12,8 @@ COLOR_JUGADOR1 = "Celeste"
 COLOR_JUGADOR2 = "Violeta"
 
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
+if DIRECTORIO_ACTUAL not in sys.path:
+    sys.path.insert(0, DIRECTORIO_ACTUAL)
 RUTA_BASE = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Personajes")
 RUTA_BOTONES = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Botones")
 RUTA_CAJA = os.path.join(DIRECTORIO_ACTUAL, "caja.png")
@@ -715,31 +718,45 @@ def cargar_sprites(nombre_color="Celeste"):
     return sprites
 
 
+_CACHE_SPRITE_CAJA = {}
+_CACHE_SPRITE_LLAVE = None
+
+
 def cargar_sprite_caja(tamano):
+    if tamano in _CACHE_SPRITE_CAJA:
+        return _CACHE_SPRITE_CAJA[tamano]
     rutas = [
-        RUTA_CAJA,
-        os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Caja", "caja.png"),
         os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Objetos", "caja.png"),
+        os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Caja", "caja.png"),
+        RUTA_CAJA,
     ]
     for ruta in rutas:
         if os.path.isfile(ruta):
             try:
                 img = pygame.image.load(ruta).convert_alpha()
-                return pygame.transform.scale(img, (tamano, tamano))
+                res = pygame.transform.scale(img, (tamano, tamano))
+                _CACHE_SPRITE_CAJA[tamano] = res
+                return res
             except pygame.error:
                 pass
 
     sprite = pygame.Surface((tamano, tamano), pygame.SRCALPHA)
     sprite.fill((139, 69, 19))
+    _CACHE_SPRITE_CAJA[tamano] = sprite
     return sprite
 
 
 def cargar_sprite_llave():
+    global _CACHE_SPRITE_LLAVE
+    if _CACHE_SPRITE_LLAVE is not None:
+        return _CACHE_SPRITE_LLAVE
+
     ruta_llave = os.path.join(RUTA_OBJETOS, "llave.png")
     if os.path.isfile(ruta_llave):
         try:
             img = pygame.image.load(ruta_llave).convert_alpha()
-            return pygame.transform.scale(img, (25, 46))
+            _CACHE_SPRITE_LLAVE = pygame.transform.scale(img, (25, 46))
+            return _CACHE_SPRITE_LLAVE
         except pygame.error:
             pass
 
@@ -748,6 +765,7 @@ def cargar_sprite_llave():
     pygame.draw.rect(surface, (255, 215, 0), (10, 12, 5, 30))
     pygame.draw.rect(surface, (255, 215, 0), (15, 32, 6, 4))
     pygame.draw.rect(surface, (255, 215, 0), (15, 38, 6, 4))
+    _CACHE_SPRITE_LLAVE = surface
     return surface
 
 
@@ -788,13 +806,25 @@ def cargar_sprites_puerta(tamano=(146, 180)):
                 pass
 
     # 2. Cargar candados 1, 2, 3, 4 (secuencia de desbloqueo)
+    # El candado tiene el mismo tamaño total que el portal (tamano) y sus cadenas se ajustan
+    # proporcionalmente para apoyarse en los pilares de piedra sin sobresalir hacia afuera.
+    factor_candado = 0.87
+    cx_orig, cy_orig = 330, 467
     for i in (1, 2, 3, 4):
         r = os.path.join(ruta_portal_dir, f"candado_{i}.png")
         if os.path.isfile(r):
             try:
-                img = pygame.image.load(r).convert_alpha()
-                if img.get_size() != tamano:
-                    img = pygame.transform.scale(img, tamano)
+                img_raw = pygame.image.load(r).convert_alpha()
+                ow, oh = img_raw.get_size()
+                nw, nh = int(ow * factor_candado), int(oh * factor_candado)
+                scaled_tmp = pygame.transform.smoothscale(img_raw, (nw, nh))
+
+                surf_full = pygame.Surface((ow, oh), pygame.SRCALPHA)
+                dx = cx_orig - int(cx_orig * factor_candado)
+                dy = cy_orig - int(cy_orig * factor_candado)
+                surf_full.blit(scaled_tmp, (dx, dy))
+
+                img = pygame.transform.scale(surf_full, tamano)
                 candados.append(img)
             except Exception:
                 pass
@@ -977,22 +1007,14 @@ _ACCESORIOS_REGISTRADOS = [
 ]
 
 
-ACCESORIOS_EXCLUSIVOS_POR_COLOR = {
-    "Gorro Azul": "Azul",
-    "Gorro Celeste": "Celeste",
-}
-
-
 def obtener_accesorios_disponibles(color_personaje=None):
-    if color_personaje is None:
-        return list(_ACCESORIOS_REGISTRADOS)
-    col_str = str(color_personaje).strip().lower()
-    res = []
-    for acc in _ACCESORIOS_REGISTRADOS:
-        req = ACCESORIOS_EXCLUSIVOS_POR_COLOR.get(acc["id"])
-        if req is None or req.strip().lower() == col_str:
-            res.append(acc)
-    return res
+    """
+    Retorna la lista completa de todos los accesorios registrados en el juego.
+    Conserva todas las opciones de forma independiente (incluyendo ambos gorritos:
+    Gorro Celeste y Gorro Azul) para ambos personajes, asegurando que ninguno pierda
+    opciones y que cada accesorio se pueda seleccionar, equipar y desequipar individualmente.
+    """
+    return list(_ACCESORIOS_REGISTRADOS)
 
 
 _CACHE_ACCESORIOS = {}

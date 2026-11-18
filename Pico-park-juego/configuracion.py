@@ -8,10 +8,15 @@ Gestiona:
 """
 
 import os
+import sys
 import json
 import math
 import struct
 import pygame
+
+DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
+if DIRECTORIO_ACTUAL not in sys.path:
+    sys.path.insert(0, DIRECTORIO_ACTUAL)
 
 from sprites import (
     cargar_boton_escalado,
@@ -44,6 +49,8 @@ _volumen = 70                   # Volumen maestro (sincronizado con música y ef
 _idioma = "es"                  # Idioma actual: "es" | "en" | "zh"
 
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
+if DIRECTORIO_ACTUAL not in sys.path:
+    sys.path.insert(0, DIRECTORIO_ACTUAL)
 DIRECTORIO_RAIZ = os.path.abspath(os.path.join(DIRECTORIO_ACTUAL, ".."))
 RUTA_CONFIG_JSON = os.path.join(DIRECTORIO_ACTUAL, "configuracion.json")
 
@@ -1274,8 +1281,12 @@ def cambiar_volumen(delta):
     reproducir_beep_volumen()
 
 
+_SND_BEEP_VOLUMEN = None
+
+
 def reproducir_beep_volumen():
     """Genera y reproduce un tono suave de retroalimentación para escuchar el cambio de volumen."""
+    global _SND_BEEP_VOLUMEN
     try:
         if not pygame.mixer.get_init():
             pygame.mixer.init()
@@ -1283,17 +1294,18 @@ def reproducir_beep_volumen():
         if vol_float <= 0.001:
             return
 
-        sample_rate = 22050
-        duration = 0.05
-        n_samples = int(sample_rate * duration)
-        buf = bytearray()
-        for i in range(n_samples):
-            val = int(32767 * 0.28 * math.sin(2 * math.pi * 520 * i / sample_rate))
-            buf += struct.pack('<h', val)
+        if _SND_BEEP_VOLUMEN is None:
+            sample_rate = 22050
+            duration = 0.05
+            n_samples = int(sample_rate * duration)
+            buf = bytearray()
+            for i in range(n_samples):
+                val = int(32767 * 0.28 * math.sin(2 * math.pi * 520 * i / sample_rate))
+                buf += struct.pack('<h', val)
+            _SND_BEEP_VOLUMEN = pygame.mixer.Sound(buffer=bytes(buf))
 
-        snd = pygame.mixer.Sound(buffer=bytes(buf))
-        snd.set_volume(vol_float)
-        snd.play()
+        _SND_BEEP_VOLUMEN.set_volume(vol_float)
+        _SND_BEEP_VOLUMEN.play()
     except Exception:
         pass
 
