@@ -1566,6 +1566,484 @@ def dibujar_soga_escenario(superficie, p1, p2, estado_soga=None, d_reposo=DISTAN
 
 
 # ==============================================================================
+# ELEMENTOS VISUALES INVERNALES Y NAVIDEÑOS — MUNDO 1: BOSQUE NEVADO
+# ==============================================================================
+
+_CACHE_FONDO_MUNDO1 = {}
+_PARTICULAS_NIEVE_M1 = None
+
+
+def generar_fondo_mundo1(ancho_mundo, alto=ALTO):
+    """
+    Genera y cachea el fondo invernal y navideño pixel art para Mundo 1:
+    cielo crepuscular frío, estrellas sutiles, luna llena y cordillera
+    de montañas nevadas facetadas con treeline de pinos.
+    """
+    if ancho_mundo in _CACHE_FONDO_MUNDO1:
+        return _CACHE_FONDO_MUNDO1[ancho_mundo]
+
+    w_low = ancho_mundo // 2
+    h_low = alto // 2
+    surf_low = pygame.Surface((w_low, h_low))
+
+    # 1. Cielo crepuscular invernal frío
+    bandas = [
+        (0,   65,  (14, 20, 42)),   # Azul medianoche invernal
+        (65,  130, (22, 34, 65)),   # Azul zafiro frío
+        (130, 195, (38, 56, 92)),   # Azul crepúsculo
+        (195, 255, (58, 82, 125)),  # Azul frío suave
+        (255, 360, (92, 120, 164)), # Resplandor helado sobre montañas
+    ]
+    for y1, y2, col in bandas:
+        pygame.draw.rect(surf_low, col, (0, y1, w_low, y2 - y1))
+
+    # Difuminado dither suave entre bandas del cielo
+    for i in range(len(bandas) - 1):
+        yt = bandas[i][1]
+        c1, c2 = bandas[i][2], bandas[i + 1][2]
+        for dy in range(-2, 3):
+            y = yt + dy
+            if 0 <= y < h_low:
+                for x in range(w_low):
+                    if dy == -2 and (x + y) % 4 == 0: surf_low.set_at((x, y), c2)
+                    elif dy == -1 and (x % 2 == 0 and y % 2 == 0): surf_low.set_at((x, y), c2)
+                    elif dy == 0 and (x + y) % 2 == 0: surf_low.set_at((x, y), c2)
+                    elif dy == 1 and (x % 2 == 0 and y % 2 == 0): surf_low.set_at((x, y), c1)
+                    elif dy == 2 and (x + y) % 4 == 0: surf_low.set_at((x, y), c1)
+
+    # 2. Estrellas nocturnas discretas
+    rnd_est = random.Random(2025)
+    for _ in range(w_low // 9):
+        sx = rnd_est.randint(5, w_low - 5)
+        sy = rnd_est.randint(4, 175)
+        c_star = rnd_est.choice([(255, 255, 255), (210, 235, 255), (240, 245, 255), (180, 210, 250)])
+        surf_low.set_at((sx, sy), c_star)
+        if rnd_est.random() < 0.12:
+            surf_low.set_at((sx + 1, sy), (170, 200, 245))
+            surf_low.set_at((sx, sy + 1), (170, 200, 245))
+
+    # Luna llena invernal
+    lx, ly, lr = w_low - 110, 46, 16
+    for dy in range(-lr, lr + 1):
+        for dx in range(-lr, lr + 1):
+            d2 = dx * dx + dy * dy
+            if d2 <= lr * lr:
+                surf_low.set_at((lx + dx, ly + dy), (250, 252, 255))
+            elif d2 <= (lr + 2) * (lr + 2):
+                surf_low.set_at((lx + dx, ly + dy), (100, 130, 175))
+
+    # 3. Cordillera de montañas nevadas facetadas estilo pixel art
+    y_base = 275
+    rnd_p = random.Random(888)
+    paso_pico = 110
+    for px in range(-60, w_low + 120, paso_pico):
+        py = rnd_p.randint(95, 140)
+        wm = rnd_p.randint(160, 220)
+        h_snow = int((y_base - py) * 0.32)
+        for y in range(py, y_base):
+            prog = (y - py) / float(y_base - py)
+            half = int((wm // 2) * prog)
+            for x in range(px - half, px):
+                if 0 <= x < w_low:
+                    es_nieve = (y - py < h_snow + (x % 3))
+                    col = (252, 254, 255) if es_nieve else (72, 92, 130)
+                    surf_low.set_at((x, y), col)
+            for x in range(px, px + half + 1):
+                if 0 <= x < w_low:
+                    es_nieve = (y - py < h_snow + ((x + 1) % 3))
+                    col = (205, 224, 248) if es_nieve else (48, 64, 96)
+                    surf_low.set_at((x, y), col)
+
+    # 4. Colinas nevadas intermedias
+    for x in range(w_low):
+        y_hill = 238 + int(14 * math.sin(x * 0.015 + 0.8))
+        for y in range(y_hill, h_low):
+            surf_low.set_at((x, y), (185, 208, 238) if y < y_hill + 8 else (132, 158, 196))
+
+    # Siluetas de pinos en la colina nevada lejana
+    for x_tree in range(12, w_low - 10, 18):
+        y_tree = 238 + int(14 * math.sin(x_tree * 0.015 + 0.8))
+        h_t = 11 + (x_tree % 6)
+        pygame.draw.polygon(surf_low, (22, 48, 38), [(x_tree, y_tree - h_t), (x_tree - 4, y_tree), (x_tree + 4, y_tree)])
+        surf_low.set_at((x_tree, y_tree - h_t), (250, 252, 255))
+
+    surf_final = pygame.transform.scale(surf_low, (ancho_mundo, alto))
+    _CACHE_FONDO_MUNDO1[ancho_mundo] = surf_final
+    return surf_final
+
+
+def dibujar_fondo_mundo1_invierno(superficie, ancho_mundo):
+    superficie.blit(generar_fondo_mundo1(ancho_mundo, superficie.get_height()), (0, 0))
+
+
+def dibujar_escenario_mundo1(superficie, suelo, plataformas, pozo_nivel=None):
+    """
+    Dibuja el suelo y las plataformas con manto de nieve y relieve invernal.
+    """
+    col_tierra = (65, 80, 105)
+    col_nieve_sombra = (210, 230, 250)
+    col_nieve_pura = (252, 254, 255)
+    col_plat_cuerpo = (82, 105, 134)
+    col_plat_borde = (52, 68, 90)
+
+    if pozo_nivel is not None:
+        pz = pozo_nivel
+        pygame.draw.rect(superficie, (38, 50, 72), (pz["x"], pz["y"], pz["ancho"], pz["alto"]))
+        pygame.draw.line(superficie, col_plat_borde, (pz["x"], pz["y"]), (pz["x"], pz["y"] + pz["alto"]), 2)
+        pygame.draw.line(superficie, col_plat_borde, (pz["x"] + pz["ancho"], pz["y"]), (pz["x"] + pz["ancho"], pz["y"] + pz["alto"]), 2)
+
+    for plat in plataformas:
+        if plat.bottom >= suelo.top:
+            rect_torre = pygame.Rect(plat.x, plat.y, plat.width, plat.height + 4)
+            pygame.draw.rect(superficie, col_plat_cuerpo, rect_torre, border_top_left_radius=4, border_top_right_radius=4)
+            pygame.draw.rect(superficie, col_plat_borde, rect_torre, width=2, border_top_left_radius=4, border_top_right_radius=4)
+        else:
+            pygame.draw.rect(superficie, col_plat_cuerpo, plat, border_radius=4)
+            pygame.draw.rect(superficie, col_plat_borde, plat, width=2, border_radius=4)
+
+        # Capa fina de nieve en la parte superior (sin alterar colisiones ni hitboxes)
+        h_nieve = min(6, max(3, plat.height // 3))
+        r_nieve = pygame.Rect(plat.x + 2, plat.y + 1, plat.width - 4, h_nieve)
+        pygame.draw.rect(superficie, col_nieve_pura, r_nieve, border_top_left_radius=3, border_top_right_radius=3)
+        pygame.draw.line(superficie, col_nieve_sombra, (plat.x + 3, plat.y + h_nieve), (plat.right - 4, plat.y + h_nieve), 1)
+
+        # Si es una plataforma flotante en el aire, pequeños carámbanos de hielo abajo
+        if plat.bottom < suelo.top - 20 and plat.width >= 30:
+            paso_hielo = 22
+            for ix in range(plat.x + 8, plat.right - 8, paso_hielo):
+                len_h = 4 + (ix % 5)
+                pts_hielo = [(ix, plat.bottom - 1), (ix + 2, plat.bottom + len_h), (ix + 4, plat.bottom - 1)]
+                pygame.draw.polygon(superficie, (215, 240, 255), pts_hielo)
+
+    # Suelo principal con manto de nieve
+    pygame.draw.rect(superficie, col_tierra, suelo)
+    pygame.draw.rect(superficie, col_nieve_sombra, (suelo.x, suelo.y, suelo.width, 14))
+    pygame.draw.rect(superficie, col_nieve_pura, (suelo.x, suelo.y, suelo.width, 8))
+    for sx in range(0, suelo.width, 32):
+        pygame.draw.circle(superficie, col_nieve_pura, (sx + 16, suelo.y), 4)
+
+    if pozo_nivel is not None:
+        pygame.draw.line(superficie, col_plat_borde, (pz["x"], pz["y"] + pz["alto"]), (pz["x"] + pz["ancho"], pz["y"] + pz["alto"]), 2)
+
+
+def dibujar_decoraciones_mundo1(superficie, suelo, ancho_mundo, tick=0):
+    """
+    Dibuja árboles de Navidad decorados con luces titilantes y paquetes de regalos.
+    """
+    col_luces = [(255, 60, 60), (255, 220, 50), (60, 210, 255), (80, 240, 90)]
+    py = suelo.top
+
+    # Pinos navideños decorados
+    for px in range(280, ancho_mundo - 160, 360):
+        pygame.draw.rect(superficie, (52, 36, 24), (px + 18, py - 32, 8, 32))
+        capas = [(48, 38, py - 62), (38, 34, py - 92), (28, 28, py - 116)]
+        for w_p, h_p, y_p in capas:
+            pts_pino = [(px + 22 - w_p // 2, y_p + h_p), (px + 22, y_p), (px + 22 + w_p // 2, y_p + h_p)]
+            pygame.draw.polygon(superficie, (22, 68, 38), pts_pino)
+            pygame.draw.line(superficie, (248, 252, 255), (px + 22 - w_p // 2, y_p + h_p), (px + 22 - w_p // 4, y_p + h_p - 3), 3)
+            pygame.draw.line(superficie, (248, 252, 255), (px + 22 + w_p // 2, y_p + h_p), (px + 22 + w_p // 4, y_p + h_p - 3), 3)
+
+        # Estrella dorada en la cima
+        pygame.draw.circle(superficie, (255, 225, 60), (px + 22, py - 120), 5)
+        pygame.draw.circle(superficie, (255, 245, 160), (px + 22, py - 120), 2)
+
+        # Luces festivas titilantes
+        offsets_luces = [(-10, -50), (8, -55), (-6, -75), (10, -80), (0, -100)]
+        for i_l, (lx_off, ly_off) in enumerate(offsets_luces):
+            fase = (tick // 15 + i_l) % len(col_luces)
+            pygame.draw.circle(superficie, col_luces[fase], (px + 22 + lx_off, py + ly_off), 2)
+
+    # Pequeños regalos decorativos sin obstaculizar
+    for gx in range(410, ancho_mundo - 120, 480):
+        gy = py - 16
+        c_box = (220, 45, 45) if (gx % 2 == 0) else (38, 142, 64)
+        c_ribbon = (255, 215, 60) if (gx % 2 == 0) else (235, 55, 55)
+        pygame.draw.rect(superficie, c_box, (gx, gy, 14, 16), border_radius=2)
+        pygame.draw.line(superficie, c_ribbon, (gx + 7, gy), (gx + 7, gy + 15), 2)
+        pygame.draw.line(superficie, c_ribbon, (gx, gy + 8), (gx + 13, gy + 8), 2)
+        pygame.draw.circle(superficie, c_ribbon, (gx + 7, gy - 1), 3)
+
+
+def actualizar_y_dibujar_nieve_mundo1(superficie, ancho_mundo, tick=0):
+    """
+    Simula partículas de nieve animada cayendo suavemente en Mundo 1.
+    """
+    global _PARTICULAS_NIEVE_M1
+    alto = superficie.get_height()
+    if _PARTICULAS_NIEVE_M1 is None:
+        rnd = random.Random(101)
+        _PARTICULAS_NIEVE_M1 = [
+            {
+                'x': rnd.uniform(0, ancho_mundo),
+                'y': rnd.uniform(0, alto),
+                'vy': rnd.uniform(1.0, 1.8),
+                'tam': rnd.choice([2, 2, 3]),
+                'seed': rnd.uniform(0, 10)
+            }
+            for _ in range(50)
+        ]
+    for c in _PARTICULAS_NIEVE_M1:
+        c['y'] += c['vy']
+        c['x'] += math.sin(tick * 0.03 + c['seed']) * 0.45
+        if c['y'] > alto - 10:
+            c['y'] = -5
+            c['x'] = (c['x'] + random.uniform(-20, 20)) % ancho_mundo
+        col = (255, 255, 255) if c['tam'] > 2 else (220, 240, 255)
+        pygame.draw.rect(superficie, col, (int(c['x']), int(c['y']), c['tam'], c['tam']))
+
+
+# ==============================================================================
+# ELEMENTOS VISUALES RUINAS ANTIGUAS Y TEMPLO ABANDONADO — MUNDO 2
+# ==============================================================================
+
+_CACHE_FONDO_MUNDO2 = {}
+_PARTICULAS_POLVO_M2 = None
+
+
+def generar_fondo_mundo2(ancho_mundo, alto=ALTO):
+    """
+    Genera y cachea el fondo de ruinas antiguas y templo abandonado para Mundo 2:
+    cielo crepuscular de desierto cálido, sol abrasador suave, siluetas de pirámides
+    escalonadas ancestrales (zigurats), obeliscos y muro de cantería con hornacinas.
+    """
+    if ancho_mundo in _CACHE_FONDO_MUNDO2:
+        return _CACHE_FONDO_MUNDO2[ancho_mundo]
+
+    w_low = ancho_mundo // 2
+    h_low = alto // 2
+    surf_low = pygame.Surface((w_low, h_low))
+
+    # 1. Cielo crepuscular cálido de desierto
+    bandas = [
+        (0,   60,  (145, 105, 68)),   # Ámbar oscuro ancestral
+        (60,  125, (175, 132, 92)),   # Ocre cálido
+        (125, 195, (205, 165, 122)),  # Arena dorada
+        (195, 255, (226, 192, 150)),  # Resplandor crepuscular cálido
+        (255, 360, (238, 212, 175)),  # Horizonte dorado
+    ]
+    for y1, y2, col in bandas:
+        pygame.draw.rect(surf_low, col, (0, y1, w_low, y2 - y1))
+
+    # Dither suave entre bandas del cielo
+    for i in range(len(bandas) - 1):
+        yt = bandas[i][1]
+        c1, c2 = bandas[i][2], bandas[i + 1][2]
+        for dy in range(-2, 3):
+            y = yt + dy
+            if 0 <= y < h_low:
+                for x in range(w_low):
+                    if dy == -2 and (x + y) % 4 == 0: surf_low.set_at((x, y), c2)
+                    elif dy == -1 and (x % 2 == 0 and y % 2 == 0): surf_low.set_at((x, y), c2)
+                    elif dy == 0 and (x + y) % 2 == 0: surf_low.set_at((x, y), c2)
+                    elif dy == 1 and (x % 2 == 0 and y % 2 == 0): surf_low.set_at((x, y), c1)
+                    elif dy == 2 and (x + y) % 4 == 0: surf_low.set_at((x, y), c1)
+
+    # Sol suave en la lejanía
+    sx, sy, sr = 120, 55, 16
+    for dy in range(-sr, sr + 1):
+        for dx in range(-sr, sr + 1):
+            d2 = dx * dx + dy * dy
+            if d2 <= sr * sr:
+                surf_low.set_at((sx + dx, sy + dy), (255, 248, 220))
+            elif d2 <= (sr + 2) * (sr + 2):
+                surf_low.set_at((sx + dx, sy + dy), (235, 195, 135))
+
+    # 2. Siluetas de pirámides escalonadas ancestrales (zigurats) y obeliscos
+    col_pyr_luz = (158, 118, 85)
+    col_pyr_sombra = (128, 92, 62)
+    col_obelisco = (142, 104, 74)
+
+    paso_zigurat = 320
+    for cx in range(160, w_low + 200, paso_zigurat):
+        top_y = 135
+        n_steps = 6
+        for stp in range(n_steps):
+            sy_cur = top_y + stp * 13
+            sw = 18 + stp * 22
+            pygame.draw.rect(surf_low, col_pyr_luz, (cx - sw, sy_cur, sw, 13))
+            pygame.draw.rect(surf_low, col_pyr_sombra, (cx, sy_cur, sw, 13))
+            if stp == 0:
+                pygame.draw.rect(surf_low, col_pyr_luz, (cx - 10, sy_cur - 10, 10, 10))
+                pygame.draw.rect(surf_low, col_pyr_sombra, (cx, sy_cur - 10, 10, 10))
+
+    # Obeliscos entre los templos
+    for ox in range(60, w_low + 100, 260):
+        oy, oh = 175, 42
+        pts_ob_luz = [(ox - 4, oy + oh), (ox - 3, oy + 8), (ox, oy), (ox, oy + oh)]
+        pts_ob_sombra = [(ox, oy), (ox + 3, oy + 8), (ox + 4, oy + oh), (ox, oy + oh)]
+        pygame.draw.polygon(surf_low, col_obelisco, pts_ob_luz)
+        pygame.draw.polygon(surf_low, col_pyr_sombra, pts_ob_sombra)
+
+    # 3. Muro / terraza de cantería de piedra en el plano medio
+    y_mesa = 228
+    col_mesa_top = (198, 164, 124)
+    col_mesa_face = (168, 132, 94)
+    col_mortero_bg = (135, 100, 68)
+
+    pygame.draw.rect(surf_low, col_mesa_face, (0, y_mesa, w_low, h_low - y_mesa))
+    pygame.draw.rect(surf_low, col_mesa_top, (0, y_mesa, w_low, 6))
+
+    # Bloques de cantería de piedra del templo antiguo
+    for bx in range(0, w_low, 48):
+        for by in range(y_mesa + 6, h_low, 22):
+            off = 24 if ((by // 22) % 2 == 1) else 0
+            x_line = bx + off
+            pygame.draw.line(surf_low, col_mortero_bg, (0, by), (w_low, by), 1)
+            pygame.draw.line(surf_low, col_mortero_bg, (x_line, by), (x_line, by + 22), 1)
+
+    # Hornacinas y arcos en el muro de fondo
+    for ax in range(40, w_low, 110):
+        ay = y_mesa + 12
+        pygame.draw.rect(surf_low, (110, 78, 52), (ax, ay, 20, 32), border_top_left_radius=10, border_top_right_radius=10)
+
+    surf_final = pygame.transform.scale(surf_low, (ancho_mundo, alto))
+    _CACHE_FONDO_MUNDO2[ancho_mundo] = surf_final
+    return surf_final
+
+
+def dibujar_fondo_mundo2_ruinas(superficie, ancho_mundo):
+    superficie.blit(generar_fondo_mundo2(ancho_mundo, superficie.get_height()), (0, 0))
+
+
+def dibujar_escenario_mundo2(superficie, suelo, plataformas, pozo_nivel=None):
+    """
+    Dibuja el suelo y las plataformas con apariencia de bloques de templo esculpidos y lajas de arenisca.
+    """
+    col_base_suelo = (142, 112, 78)
+    col_laja_arenisca = (188, 158, 118)
+    col_mortero = (115, 88, 58)
+    col_musgo = (55, 95, 45)
+
+    if pozo_nivel is not None:
+        pz = pozo_nivel
+        pygame.draw.rect(superficie, (75, 54, 38), (pz["x"], pz["y"], pz["ancho"], pz["alto"]))
+        pygame.draw.line(superficie, col_mortero, (pz["x"], pz["y"]), (pz["x"], pz["y"] + pz["alto"]), 2)
+        pygame.draw.line(superficie, col_mortero, (pz["x"] + pz["ancho"], pz["y"]), (pz["x"] + pz["ancho"], pz["y"] + pz["alto"]), 2)
+
+    for plat in plataformas:
+        if plat.bottom >= suelo.top:
+            rect_torre = pygame.Rect(plat.x, plat.y, plat.width, plat.height + 4)
+            pygame.draw.rect(superficie, col_laja_arenisca, rect_torre, border_top_left_radius=4, border_top_right_radius=4)
+            pygame.draw.rect(superficie, col_mortero, rect_torre, width=2, border_top_left_radius=4, border_top_right_radius=4)
+        else:
+            pygame.draw.rect(superficie, col_laja_arenisca, plat, border_radius=4)
+            pygame.draw.rect(superficie, col_mortero, plat, width=2, border_radius=4)
+
+        # División en bloques de cantería
+        paso_bloque = 60
+        for bx in range(plat.x + paso_bloque, plat.right - 10, paso_bloque):
+            pygame.draw.line(superficie, col_mortero, (bx, plat.y + 2), (bx, plat.bottom - 2), 2)
+
+        # Grieta sutil decorativa en plataformas anchas
+        if plat.width >= 100:
+            gx = plat.x + 35
+            gy = plat.y + 6
+            pygame.draw.line(superficie, col_mortero, (gx, gy), (gx + 6, gy + 8), 1)
+            pygame.draw.line(superficie, col_mortero, (gx + 6, gy + 8), (gx + 12, gy + 14), 1)
+
+        # Detalles de musgo en esquinas
+        pygame.draw.rect(superficie, col_musgo, (plat.x + 2, plat.bottom - 6, 12, 4), border_radius=2)
+        pygame.draw.rect(superficie, col_musgo, (plat.right - 14, plat.y + 2, 10, 4), border_radius=2)
+
+    # Suelo principal de grandes lajas de arenisca antigua tallada
+    pygame.draw.rect(superficie, col_base_suelo, suelo)
+    pygame.draw.rect(superficie, col_laja_arenisca, (suelo.x, suelo.y, suelo.width, 24))
+    for lx in range(suelo.x, suelo.right, 80):
+        pygame.draw.line(superficie, col_mortero, (lx, suelo.y), (lx, suelo.y + 24), 2)
+        if (lx // 80) % 2 == 0:
+            pygame.draw.rect(superficie, col_musgo, (lx - 6, suelo.y + 1, 12, 4), border_radius=2)
+
+    if pozo_nivel is not None:
+        pygame.draw.line(superficie, col_mortero, (pz["x"], pz["y"] + pz["alto"]), (pz["x"] + pz["ancho"], pz["y"] + pz["alto"]), 2)
+
+
+def dibujar_decoraciones_mundo2(superficie, suelo, ancho_mundo, tick=0, pozo_nivel=None):
+    """
+    Dibuja columnas de piedra antiguas (enteras y rotas) con enredaderas y antorchas con llamas animadas.
+    """
+    col_columna = (175, 145, 108)
+    col_columna_sombra = (130, 100, 70)
+    col_musgo = (48, 88, 40)
+    cy_base = suelo.top
+
+    # Columnas de piedra
+    for cx in range(260, ancho_mundo - 120, 320):
+        if pozo_nivel and (pozo_nivel["x"] - 20 <= cx <= pozo_nivel["x"] + pozo_nivel["ancho"] + 20):
+            continue
+
+        entera = ((cx // 320) % 2 == 0)
+        w_col = 32
+        h_col = 220 if entera else 130
+
+        pygame.draw.rect(superficie, col_columna_sombra, (cx - 4, cy_base - 14, w_col + 8, 14))
+        pygame.draw.rect(superficie, col_columna, (cx - 2, cy_base - 12, w_col + 4, 10))
+
+        pygame.draw.rect(superficie, col_columna, (cx, cy_base - h_col, w_col, h_col - 14))
+        pygame.draw.line(superficie, col_columna_sombra, (cx + 8, cy_base - h_col), (cx + 8, cy_base - 14), 2)
+        pygame.draw.line(superficie, col_columna_sombra, (cx + 22, cy_base - h_col), (cx + 22, cy_base - 14), 2)
+
+        if entera:
+            pygame.draw.rect(superficie, col_columna_sombra, (cx - 6, cy_base - h_col - 12, w_col + 12, 12))
+            pygame.draw.rect(superficie, col_columna, (cx - 4, cy_base - h_col - 10, w_col + 8, 8))
+        else:
+            pygame.draw.polygon(superficie, (200, 170, 130), [
+                (cx, cy_base - h_col), (cx + 8, cy_base - h_col + 8),
+                (cx + 18, cy_base - h_col - 4), (cx + w_col, cy_base - h_col + 10),
+                (cx + w_col, cy_base - h_col),
+            ])
+
+        for vy in range(cy_base - 20, cy_base - h_col + 20, -25):
+            pygame.draw.circle(superficie, col_musgo, (cx + 2, vy), 4)
+            pygame.draw.circle(superficie, (65, 110, 50), (cx + 6, vy + 4), 3)
+
+    # Antorchas con llamas animadas sutiles en la pared
+    frame_fuego = (tick // 10) % 3
+    col_llama_ext = (245, 130, 30)
+    col_llama_int = (255, 220, 70)
+
+    for tx in range(180, ancho_mundo - 80, 380):
+        ty = cy_base - 140
+        pygame.draw.rect(superficie, (85, 60, 42), (tx - 3, ty, 6, 18))
+        pygame.draw.rect(superficie, (110, 80, 55), (tx - 5, ty - 4, 10, 5))
+
+        s_glow = pygame.Surface((44, 44), pygame.SRCALPHA)
+        pygame.draw.circle(s_glow, (255, 180, 50, 22), (22, 22), 20)
+        superficie.blit(s_glow, (tx - 22, ty - 22))
+
+        off_fuego = [(0, -10), (1, -12), (-1, -11)][frame_fuego]
+        pygame.draw.polygon(superficie, col_llama_ext, [
+            (tx - 4, ty - 4), (tx, ty + off_fuego[1]), (tx + 4, ty - 4)
+        ])
+        pygame.draw.circle(superficie, col_llama_int, (tx + off_fuego[0], ty - 6), 3)
+
+
+def actualizar_y_dibujar_polvo_mundo2(superficie, ancho_mundo, tick=0):
+    """
+    Simula partículas sutiles de polvo dorado flotando en las ruinas de Mundo 2.
+    """
+    global _PARTICULAS_POLVO_M2
+    alto = superficie.get_height()
+    if _PARTICULAS_POLVO_M2 is None:
+        rnd = random.Random(202)
+        _PARTICULAS_POLVO_M2 = [
+            {
+                'x': rnd.uniform(0, ancho_mundo),
+                'y': rnd.uniform(200, alto - 90),
+                'vy': rnd.uniform(-0.4, -0.9),
+                'seed': rnd.uniform(0, 10)
+            }
+            for _ in range(30)
+        ]
+    for p in _PARTICULAS_POLVO_M2:
+        p['y'] += p['vy']
+        p['x'] += math.sin(tick * 0.02 + p['seed']) * 0.35
+        if p['y'] < 190:
+            p['y'] = alto - 90
+            p['x'] = (p['x'] + random.uniform(-30, 30)) % ancho_mundo
+        pygame.draw.rect(superficie, (235, 195, 120), (int(p['x']), int(p['y']), 2, 2))
+
+
+# ==============================================================================
 # ELEMENTOS VISUALES SUBMARINOS — MUNDO 3: EL JARDÍN DE ALGAS
 # ==============================================================================
 
@@ -3496,6 +3974,8 @@ def iniciar_mundo(
     algas_decorativas = None
     burbujas_m3 = None
     tick_m3 = 0
+    tick_m1 = 0
+    tick_m2 = 0
     estado_soga = crear_estado_soga()
 
     if numero_mundo == 1 and numero_nivel == 1:
@@ -4847,6 +5327,46 @@ def iniciar_mundo(
             dibujar_peligros_marinos_escenario(mundo_inicio, pinchos)
         if burbujas_m3:
             actualizar_y_dibujar_burbujas_m3(mundo_inicio, burbujas_m3, [jugador1, jugador2], 0)
+    elif numero_mundo == 1:
+        dibujar_fondo_mundo1_invierno(mundo_inicio, ancho_mundo_nivel)
+        dibujar_decoraciones_mundo1(mundo_inicio, suelo, ancho_mundo_nivel, 0)
+        plats_dibujar_ini = plataformas_base if (paredes_colores is not None and plataformas_base is not None) else plataformas
+        plats_estaticas_ini = [p for p in plats_dibujar_ini if not (
+            (barrera_l_horiz is not None and (p is barrera_l_horiz or p is barrera_l_vert)) or
+            (bloque_central is not None and p is bloque_central["rect"]) or
+            (plataforma_movil is not None and p is plataforma_movil["rect"]) or
+            (compuerta is not None and p is compuerta["rect"]) or
+            (plataformas_derrumbables is not None and any(p is p_d["rect"] for p_d in plataformas_derrumbables))
+        )]
+        dibujar_escenario_mundo1(mundo_inicio, suelo, plats_estaticas_ini, pozo_nivel)
+        if barrera_l_horiz is not None and barrera_l_vert is not None:
+            dibujar_barrera_l_escenario(mundo_inicio, barrera_l_horiz, barrera_l_vert)
+        if pinchos:
+            dibujar_pinchos_escenario(mundo_inicio, pinchos)
+        actualizar_y_dibujar_nieve_mundo1(mundo_inicio, ancho_mundo_nivel, 0)
+    elif numero_mundo == 2:
+        dibujar_fondo_mundo2_ruinas(mundo_inicio, ancho_mundo_nivel)
+        dibujar_decoraciones_mundo2(mundo_inicio, suelo, ancho_mundo_nivel, 0, pozo_nivel)
+        plats_dibujar_ini = plataformas_base if (paredes_colores is not None and plataformas_base is not None) else plataformas
+        plats_estaticas_ini = [p for p in plats_dibujar_ini if not (
+            (barrera_l_horiz is not None and (p is barrera_l_horiz or p is barrera_l_vert)) or
+            (bloque_central is not None and p is bloque_central["rect"]) or
+            (plataforma_movil is not None and p is plataforma_movil["rect"]) or
+            (compuerta is not None and p is compuerta["rect"]) or
+            (plataformas_derrumbables is not None and any(p is p_d["rect"] for p_d in plataformas_derrumbables))
+        )]
+        dibujar_escenario_mundo2(mundo_inicio, suelo, plats_estaticas_ini, pozo_nivel)
+        if barrera_l_horiz is not None and barrera_l_vert is not None:
+            dibujar_barrera_l_escenario(mundo_inicio, barrera_l_horiz, barrera_l_vert)
+        if pinchos:
+            dibujar_pinchos_escenario(mundo_inicio, pinchos)
+        if numero_nivel == 3:
+            dibujar_pendulo_escenario(mundo_inicio, plataformas, plat_elevada, pozo_nivel)
+        if numero_nivel == 4 and plataformas_derrumbables is not None:
+            dibujar_plataformas_derrumbables_escenario(mundo_inicio, plataformas_derrumbables, pozo_nivel)
+        if numero_nivel == 5 and plataformas_alternadas is not None:
+            dibujar_plataformas_alternadas_escenario(mundo_inicio, plataformas_alternadas, pozo_nivel)
+        actualizar_y_dibujar_polvo_mundo2(mundo_inicio, ancho_mundo_nivel, 0)
     else:
         mundo_inicio.fill((255, 240, 195))
 
@@ -5891,6 +6411,50 @@ def iniciar_mundo(
                 dibujar_peligros_marinos_escenario(mundo, pinchos)
             if burbujas_m3:
                 actualizar_y_dibujar_burbujas_m3(mundo, burbujas_m3, [jugador1, jugador2], tick_m3)
+        elif numero_mundo == 1:
+            tick_m1 += 1
+            dibujar_fondo_mundo1_invierno(mundo, ancho_mundo_nivel)
+            dibujar_decoraciones_mundo1(mundo, suelo, ancho_mundo_nivel, tick_m1)
+            plats_dibujar = plataformas_base if (paredes_colores is not None and plataformas_base is not None) else plataformas
+            plats_estaticas = [p for p in plats_dibujar if not (
+                (barrera_l_horiz is not None and (p is barrera_l_horiz or p is barrera_l_vert)) or
+                (compuerta is not None and p is compuerta["rect"]) or
+                (bloque_central is not None and p is bloque_central["rect"]) or
+                (bloque_peligroso is not None and p is bloque_peligroso["rect"]) or
+                (plataforma_movil is not None and p is plataforma_movil["rect"]) or
+                (plataformas_derrumbables is not None and any(p is p_d["rect"] for p_d in plataformas_derrumbables))
+            )]
+            dibujar_escenario_mundo1(mundo, suelo, plats_estaticas, pozo_nivel)
+            if barrera_l_horiz is not None and barrera_l_vert is not None:
+                dibujar_barrera_l_escenario(mundo, barrera_l_horiz, barrera_l_vert)
+            if pinchos:
+                dibujar_pinchos_escenario(mundo, pinchos)
+            actualizar_y_dibujar_nieve_mundo1(mundo, ancho_mundo_nivel, tick_m1)
+        elif numero_mundo == 2:
+            tick_m2 += 1
+            dibujar_fondo_mundo2_ruinas(mundo, ancho_mundo_nivel)
+            dibujar_decoraciones_mundo2(mundo, suelo, ancho_mundo_nivel, tick_m2, pozo_nivel)
+            plats_dibujar = plataformas_base if (paredes_colores is not None and plataformas_base is not None) else plataformas
+            plats_estaticas = [p for p in plats_dibujar if not (
+                (barrera_l_horiz is not None and (p is barrera_l_horiz or p is barrera_l_vert)) or
+                (compuerta is not None and p is compuerta["rect"]) or
+                (bloque_central is not None and p is bloque_central["rect"]) or
+                (bloque_peligroso is not None and p is bloque_peligroso["rect"]) or
+                (plataforma_movil is not None and p is plataforma_movil["rect"]) or
+                (plataformas_derrumbables is not None and any(p is p_d["rect"] for p_d in plataformas_derrumbables))
+            )]
+            dibujar_escenario_mundo2(mundo, suelo, plats_estaticas, pozo_nivel)
+            if barrera_l_horiz is not None and barrera_l_vert is not None:
+                dibujar_barrera_l_escenario(mundo, barrera_l_horiz, barrera_l_vert)
+            if pinchos:
+                dibujar_pinchos_escenario(mundo, pinchos)
+            if numero_nivel == 3:
+                dibujar_pendulo_escenario(mundo, plataformas, plat_elevada, pozo_nivel, bloque_peligroso)
+            if numero_nivel == 4 and plataformas_derrumbables is not None:
+                dibujar_plataformas_derrumbables_escenario(mundo, plataformas_derrumbables, pozo_nivel)
+            if numero_nivel == 5 and plataformas_alternadas is not None:
+                dibujar_plataformas_alternadas_escenario(mundo, plataformas_alternadas, pozo_nivel)
+            actualizar_y_dibujar_polvo_mundo2(mundo, ancho_mundo_nivel, tick_m2)
         else:
             mundo.fill((255, 240, 195))
 
