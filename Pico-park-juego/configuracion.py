@@ -158,6 +158,11 @@ DICCIONARIO = {
         "en": "LEVEL COMPLETED!",
         "zh": "关卡完成！",
     },
+    "jefe_pista": {
+        "es": "¡Pisen los dos botones al mismo tiempo!",
+        "en": "Step on both buttons at the same time!",
+        "zh": "同时踩下两个按钮！",
+    },
     "buen_trabajo": {
         "es": "¡Buen trabajo!",
         "en": "Good job!",
