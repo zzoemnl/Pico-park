@@ -977,16 +977,17 @@ def dibujar_personaje(pantalla, p, zona_agua=None):
             mirando_der = p.get("mirando_derecha", True)
             top_cabeza, eye_cy = calcular_anclaje_sprite(sprite)
 
-            # 1. Accesorio amarillo (equipo de buceo): ubicado en la parte superior, sobre la cabeza
-            y_amarillo = rect_sprite.top + top_cabeza - surf_amarillo.get_height() + 5
+            # 1. Antiparras de buceo (lentes): centradas respecto de la cabeza y los ojos
+            by_g = rect_sprite.top + int(round(eye_cy - 22))
+            bx_g = rect_sprite.centerx - surf_goggles.get_width() // 2
+            s_g = surf_goggles if mirando_der else pygame.transform.flip(surf_goggles, True, False)
+
+            # 2. Parte amarilla (base del submarino): ubicada en la zona inferior, debajo de los lentes
+            y_amarillo = by_g + surf_goggles.get_height() - 2
             x_amarillo = rect_sprite.centerx - surf_amarillo.get_width() // 2
             s_amarillo = surf_amarillo if mirando_der else pygame.transform.flip(surf_amarillo, True, False)
-            pantalla.blit(s_amarillo, (x_amarillo, y_amarillo))
 
-            # 2. Antiparras de buceo: centradas sobre los ojos del personaje
-            by_g = rect_sprite.top + int(round(eye_cy - 22))
-            bx_g = (rect_sprite.left - 4) if mirando_der else (rect_sprite.left - 4)
-            s_g = surf_goggles if mirando_der else pygame.transform.flip(surf_goggles, True, False)
+            pantalla.blit(s_amarillo, (x_amarillo, y_amarillo))
             pantalla.blit(s_g, (bx_g, by_g))
 
     if zona_agua is not None and p.get("en_agua", False):
@@ -1113,7 +1114,7 @@ def cargar_partes_equipo_buceo():
     """
     Carga el equipo de buceo original (buceo_m3.png) dividiéndolo en sus dos componentes:
     1. Las antiparras de buceo con esnórquel (ojos / rostro).
-    2. El accesorio amarillo de buceo (ubicado en la parte superior, sobre la cabeza).
+    2. El accesorio amarillo de buceo (base del submarino, ubicado en la zona inferior debajo de los lentes).
     """
     global _SURF_BUCEO_GOGGLES, _SURF_BUCEO_AMARILLO
     if _SURF_BUCEO_GOGGLES is not None and _SURF_BUCEO_AMARILLO is not None:

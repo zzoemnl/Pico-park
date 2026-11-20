@@ -1236,11 +1236,18 @@ def matar_personaje(p):
     Aplica el estado de muerte al personaje con el impulso vertical característico.
     Si ya está muerto, no se vuelve a activar ni se reinicia el impulso.
     Desvincula inmediatamente al personaje de cualquier velocidad residual o física de agua.
+    Conserva la posición horizontal exacta donde se produjo la muerte sin desplazamientos.
+    En escenarios acuáticos (Mundo 3), aplica una reacción vertical suave (-3.5) para que
+    el personaje comience la animación de caída exactamente donde perdió la vida sin atravesar techos.
     """
     if p.get("muerto", False):
         return
     p["muerto"] = True
-    p["vel_y"] = VELOCIDAD_MUERTE
+    es_acuatico = p.get("equipo_buceo", False) or p.get("en_agua", False)
+    if es_acuatico:
+        p["vel_y"] = -3.5
+    else:
+        p["vel_y"] = VELOCIDAD_MUERTE
     p["vel_x"] = 0
     p["moviendo"] = False
     p["en_agua"] = False
@@ -1256,11 +1263,18 @@ def comprobar_pinchos(p, pinchos):
     if hb is None:
         return False
     vy = p.get("vel_y", 0)
+    vx = p.get("vel_x", 0)
 
     for pincho in pinchos:
-        # Colisión directa adaptada a las púas visuales reales (margen de 2px en laterales/base
-        # para que no mate al rozar zonas visualmente seguras fuera de las puntas)
-        c_rect = pincho.inflate(-4, -2) if (pincho.width > 12 and pincho.height > 6) else pincho
+        # Colisión directa adaptada al tipo de obstáculo
+        # En entornos acuáticos o con pinchos laterales (izq/der), se evalúa colisión precisa completa
+        es_acuatico = p.get("equipo_buceo", False) or p.get("en_agua", False)
+        dir_p = getattr(pincho, "direccion", "arriba")
+        if es_acuatico or dir_p in ("izquierda", "derecha"):
+            c_rect = pincho
+        else:
+            c_rect = pincho.inflate(-4, -2) if (pincho.width > 12 and pincho.height > 6) else pincho
+
         if hb.colliderect(c_rect):
             matar_personaje(p)
             return True
@@ -1279,15 +1293,46 @@ def comprobar_pinchos(p, pinchos):
                 if y_prev_top >= pincho.bottom - 4 and hb.top <= pincho.bottom:
                     matar_personaje(p)
                     return True
+
+        # Detección continua anti-túnel horizontal (desplazamiento en nado o corrientes)
+        if vx > 0:
+            if hb.bottom > pincho.top + 2 and hb.top < pincho.bottom - 2:
+                x_prev_right = hb.right - int(vx)
+                if x_prev_right <= pincho.left + 4 and hb.right >= pincho.left:
+                    matar_personaje(p)
+                    return True
+        elif vx < 0:
+            if hb.bottom > pincho.top + 2 and hb.top < pincho.bottom - 2:
+                x_prev_left = hb.left - int(vx)
+                if x_prev_left >= pincho.right - 4 and hb.left <= pincho.right:
+                    matar_personaje(p)
+                    return True
     return False
 
 
-def actualizar_muerte(p, duracion_max=None):
+def actualizar_muerte(p, duracion_max=None, limites_mundo=None):
     if not p["muerto"]:
         return
     p["tiempo_muerte"] += 1
     p["vel_y"] += GRAVEDAD
     p["hitbox"].y += int(p["vel_y"])
+
+    # Mantener al personaje en animación de muerte dentro de los límites físicos del escenario
+    if limites_mundo is not None:
+        y_min = limites_mundo.top if hasattr(limites_mundo, "top") else 0
+        if p["hitbox"].top < y_min:
+            p["hitbox"].top = y_min
+            p["vel_y"] = max(0.0, p["vel_y"])
+        x_min = limites_mundo.left if hasattr(limites_mundo, "left") else 0
+        x_max = limites_mundo.right if hasattr(limites_mundo, "right") else 3000
+        if p["hitbox"].left < x_min:
+            p["hitbox"].left = x_min
+        elif p["hitbox"].right > x_max:
+            p["hitbox"].right = x_max
+    elif p["hitbox"].top < 0 and (p.get("equipo_buceo", False) or p.get("en_agua", False)):
+        p["hitbox"].top = 0
+        p["vel_y"] = max(0.0, p["vel_y"])
+
     d_max = duracion_max if duracion_max is not None else p.get("duracion_muerte_max", None)
     if p["hitbox"].top > 720 or (d_max is not None and p["tiempo_muerte"] >= d_max):
         p["muerte_terminada"] = True

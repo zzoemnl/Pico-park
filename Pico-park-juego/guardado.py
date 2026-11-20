@@ -687,11 +687,12 @@ def solicitar_texto_modal(pantalla, reloj, titulo, subtitulo, valor_inicial="", 
         pygame.draw.rect(pantalla, (195, 168, 138), rect_card, width=3, border_radius=16)
 
         # Título centrado seguro
-        rect_tit = pygame.Rect(rect_card.left + 30, rect_card.top + 16, rect_card.width - 60, 32)
-        dibujar_texto_en_rect(pantalla, titulo, rect_tit, categoria="dialogos", tamano=TAMANO_TITULO_MODAL, color=(60, 45, 35))
+        tamano_tit = 30 if titulo == "PERFIL PROTEGIDO" else TAMANO_TITULO_MODAL
+        rect_tit = pygame.Rect(rect_card.left + 30, rect_card.top + 14, rect_card.width - 60, 36)
+        dibujar_texto_en_rect(pantalla, titulo, rect_tit, categoria="dialogos", tamano=tamano_tit, color=(60, 45, 35), padding=2)
 
         # Subtítulo multilínea con autoajuste para nombres largos
-        rect_sub = pygame.Rect(rect_card.left + 24, rect_card.top + 52, rect_card.width - 48, 54)
+        rect_sub = pygame.Rect(rect_card.left + 24, rect_card.top + 54, rect_card.width - 48, 52)
         dibujar_texto_en_rect(pantalla, subtitulo, rect_sub, categoria="subtitulo", tamano=15, color=(115, 95, 80), multiline=True, padding=2)
 
         # Caja de texto
@@ -772,8 +773,7 @@ def pedir_password_modal(pantalla, reloj, partida):
 
         # Mostrar aviso de contraseña incorrecta
         ancho, alto = pantalla.get_width(), pantalla.get_height()
-        fuente_tit = obtener_fuente_dialogos(TAMANO_TITULO_MODAL, tamano_fallback=28)
-        fuente_txt = obtener_fuente_texto(TAMANO_TEXTO)
+        fuente_tit = obtener_fuente_dialogos(32, tamano_fallback=32)
         fuente_btn = obtener_fuente_boton(TAMANO_BOTON_MODAL, tamano_fallback=22)
 
         w_a, h_a = 480, 230
@@ -828,8 +828,20 @@ def pedir_password_modal(pantalla, reloj, partida):
             t_err_tit = fuente_tit.render("ACCESO DENEGADO", True, (215, 50, 50))
             pantalla.blit(t_err_tit, t_err_tit.get_rect(center=(r_a.centerx, r_a.top + 38)))
 
-            t_err_desc = fuente_txt.render("La contraseña introducida es incorrecta.", True, (70, 55, 45))
-            pantalla.blit(t_err_desc, t_err_desc.get_rect(center=(r_a.centerx, r_a.top + 80)))
+            rect_err_desc = pygame.Rect(r_a.left + 30, r_a.top + 64, r_a.width - 60, 80)
+            dibujar_texto_en_rect(
+                pantalla,
+                "La contraseña introducida\nes incorrecta.",
+                rect_err_desc,
+                categoria="texto",
+                tamano=17,
+                color=(70, 55, 45),
+                multiline=True,
+                alineacion="centro",
+                alineacion_v="centro",
+                padding=2,
+                interlineado=4
+            )
 
             pygame.draw.rect(pantalla, (82, 194, 114) if h_rein else (68, 172, 98), b_rein, border_radius=8)
             t_br = fuente_btn.render("REINTENTAR", True, (255, 255, 255))

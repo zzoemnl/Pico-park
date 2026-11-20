@@ -3229,7 +3229,7 @@ def main():
                         sp_v_s = _obtener_boton_volver("semi", idm_act)
                         sp_v_a = _obtener_boton_volver("apretado", idm_act)
                         sp_v_n = _obtener_boton_volver("normal", idm_act)
-                        pulsado = animar_pulsacion_boton(pantalla, btn_volver_config, sp_v_s, sp_v_a, (30, 30, 30), sp_v_n)
+                        pulsado = animar_pulsacion_boton(pantalla, btn_volver_config, sp_v_s, sp_v_a, _obtener_fondo_opciones(ANCHO_MENU, ALTO_MENU), sp_v_n)
                         if pulsado:
                             estado_actual = ESTADO_MENU_PRINCIPAL
                     elif rect_btn_sec_cfg.collidepoint(evento.pos):

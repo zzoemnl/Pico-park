@@ -990,6 +990,47 @@ def dibujar_pinchos_escenario(superficie, pinchos):
         pygame.draw.polygon(superficie, col_borde, puntos, 2)
 
 
+def dibujar_bloque_peligroso(superficie, bloque_peligroso):
+    """Dibuja un bloque peligroso rojo con textura metálica de alerta, remaches y ranuras."""
+    if bloque_peligroso is None:
+        return
+    br = bloque_peligroso["rect"] if isinstance(bloque_peligroso, dict) else bloque_peligroso
+    pygame.draw.rect(superficie, (220, 50, 50), br, border_radius=4)
+    pygame.draw.rect(superficie, (140, 25, 25), br, width=2, border_radius=4)
+    for by in range(br.top + 14, br.bottom - 8, 14):
+        pygame.draw.line(superficie, (160, 30, 30), (br.left + 4, by), (br.right - 4, by), 2)
+    for rx, ry in [(br.left + 6, br.top + 6), (br.right - 6, br.top + 6), (br.left + 6, br.bottom - 6), (br.right - 6, br.bottom - 6)]:
+        pygame.draw.circle(superficie, (255, 180, 180), (rx, ry), 2)
+        pygame.draw.circle(superficie, (110, 20, 20), (rx, ry), 1)
+
+
+def crear_bloque_con_pinchos(bx, by, bw=60, bh=60):
+    """
+    Crea un bloque cuadrado peligroso con puntas triangulares sobresaliendo por sus 4 lados (arriba, abajo, izq, der).
+    Reutiliza exactamente el modelo y proporciones de Nivel 3.
+    """
+    bloque = {
+        "rect": pygame.Rect(bx, by, bw, bh),
+        "x": bx,
+        "y": by,
+        "ancho": bw,
+        "alto": bh,
+    }
+    w_top = (bw - 10) // 2
+    h_side = (bh - 10) // 2
+    spikes = [
+        crear_pincho(bx + 4, by - 22, w_top, 22, direccion="arriba"),
+        crear_pincho(bx + w_top + 6, by - 22, w_top, 22, direccion="arriba"),
+        crear_pincho(bx + 4, by + bh, w_top, 22, direccion="abajo"),
+        crear_pincho(bx + w_top + 6, by + bh, w_top, 22, direccion="abajo"),
+        crear_pincho(bx - 22, by + 4, 22, h_side, direccion="izquierda"),
+        crear_pincho(bx - 22, by + h_side + 6, 22, h_side, direccion="izquierda"),
+        crear_pincho(bx + bw, by + 4, 22, h_side, direccion="derecha"),
+        crear_pincho(bx + bw, by + h_side + 6, 22, h_side, direccion="derecha"),
+    ]
+    return bloque, spikes
+
+
 def dibujar_pendulo_escenario(superficie, plataformas, plat_elevada=None, pozo_info=None, bloque_peligroso=None):
     """
     Dibuja los elementos visuales específicos de «Mundo 2 — Nivel 3: El péndulo»:
@@ -1034,14 +1075,7 @@ def dibujar_pendulo_escenario(superficie, plataformas, plat_elevada=None, pozo_i
         superficie.blit(pz["_surf_abismo"], (pz["x"], pz["y"]))
 
     if bloque_peligroso is not None:
-        br = bloque_peligroso["rect"] if isinstance(bloque_peligroso, dict) else bloque_peligroso
-        pygame.draw.rect(superficie, (220, 50, 50), br, border_radius=4)
-        pygame.draw.rect(superficie, (140, 25, 25), br, width=2, border_radius=4)
-        for by in range(br.top + 14, br.bottom - 8, 14):
-            pygame.draw.line(superficie, (160, 30, 30), (br.left + 4, by), (br.right - 4, by), 2)
-        for rx, ry in [(br.left + 6, br.top + 6), (br.right - 6, br.top + 6), (br.left + 6, br.bottom - 6), (br.right - 6, br.bottom - 6)]:
-            pygame.draw.circle(superficie, (255, 180, 180), (rx, ry), 2)
-            pygame.draw.circle(superficie, (110, 20, 20), (rx, ry), 1)
+        dibujar_bloque_peligroso(superficie, bloque_peligroso)
 
     # Detalles rocosos en formaciones intermedias
     col_fisura = (150, 65, 45)
@@ -3901,6 +3935,7 @@ def iniciar_mundo(
     plataforma_movil = None
     bloque_central = None
     bloque_peligroso = None
+    bloques_peligrosos = []
     plat_elevada = None
     jefe = None
     plataformas_derrumbables = None
@@ -4340,14 +4375,20 @@ def iniciar_mundo(
         # Las plataformas transitables son las elevadas (sin plataforma de retorno segura)
         plataformas = [escalon_1, escalon_2, plat_salto_1, plat_salto_2, plat_destino]
 
-        # Pozo y pinchos mortales debajo de la zona aérea extendidos de forma continua hasta el final del nivel
+        # Pozo y pinchos mortales debajo de la zona aérea extendidos de forma continua dentro de la abertura
         pozo_nivel = {
             "x": 920,
             "y": 570,
             "ancho": ancho_mundo_nivel - 920,
             "alto": 70,
         }
-        pinchos = [pygame.Rect(x, suelo.top - 24, 32, 24) for x in range(926, ancho_mundo_nivel - 20, 35)]
+        pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(926, ancho_mundo_nivel - 32, 35)]
+
+        # Bloque cuadrado con pinchos alrededor para aumentar moderadamente la dificultad
+        b_pel_1, s_pel_1 = crear_bloque_con_pinchos(1070, 180, 60, 60)
+        bloques_peligrosos.append(b_pel_1)
+        plataformas.append(b_pel_1["rect"])
+        pinchos.extend(s_pel_1)
 
         # Llave cerca del final del recorrido sobre la plataforma de destino
         llave = crear_llave(1820, plat_destino.top - 46)
@@ -4377,14 +4418,19 @@ def iniciar_mundo(
 
         caja = None
 
-        # Abismo continuo con pinchos mortales cubriendo todo el recorrido debajo de la plataforma móvil
+        # Abismo continuo con pinchos mortales cubriendo exactamente el espacio de la abertura (x: 360..1940)
         pozo_nivel = {
             "x": 360,
             "y": 570,
-            "ancho": ancho_mundo_nivel - 360,
+            "ancho": 1940 - 360,
             "alto": 70,
         }
-        pinchos = [pygame.Rect(x, suelo.top - 24, 32, 24) for x in range(366, ancho_mundo_nivel - 20, 35)]
+        # Pinchos delimitados exactamente a la abertura del pozo sin superponerse con las paredes
+        pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(366, 1940 - 32, 35)]
+
+        # Bloque cuadrado con pinchos a lo largo del recorrido de la plataforma móvil
+        b_pel_2, s_pel_2 = crear_bloque_con_pinchos(740, 190, 60, 60)
+        bloques_peligrosos.append(b_pel_2)
 
         # Plataforma móvil para cruzar el abismo
         plataforma_movil = {
@@ -4419,8 +4465,9 @@ def iniciar_mundo(
         plat_llegada = pygame.Rect(1940, 460, 260, 26)
         plat_llegada_base = pygame.Rect(1940, 486, 260, suelo.top - 486 + 80)
 
-        plataformas_base = [plat_inicio, plat_inicio_base, plat_llegada, plat_llegada_base, bloque_central["rect"]]
+        plataformas_base = [plat_inicio, plat_inicio_base, plat_llegada, plat_llegada_base, bloque_central["rect"], b_pel_2["rect"]]
         plataformas = list(plataformas_base) + [plataforma_movil["rect"]]
+        pinchos.extend(s_pel_2)
 
         # Llave accesible tras superar el bloque central
         llave = crear_llave(1420, 460 - 46)
@@ -4459,24 +4506,22 @@ def iniciar_mundo(
         # Accesible limpiamente de un salto desde plat_inicio (diferencia de 110 px, salto normal alcanza 141 px)
         plat_elevada = pygame.Rect(310, 250, 1080, 26)
 
-        # 3. Abismo de pinchos mortales continuo y denso en el fondo del pozo (x: 260 a 1430)
+        # 3. Abismo de pinchos mortales continuo y denso en el fondo del pozo (x: 260 a 1380)
         pozo_nivel = {
             "x": 260,
             "y": 570,
-            "ancho": 1170,
+            "ancho": 1380 - 260,
             "alto": 70,
         }
-        # Hilera continua de pinchos más juntos (separación reducida a 22px, sin huecos entre ellos)
-        pinchos = [crear_pincho(x, suelo.top - 28, 25, 28, direccion="arriba") for x in range(262, 1420, 22)]
+        # Hilera continua de pinchos en el fondo de la abertura (terminando exactamente antes de la pared derecha)
+        pinchos = [crear_pincho(x, suelo.top - 28, 25, 28, direccion="arriba") for x in range(264, 1380 - 25, 22)]
+        pinchos = [p for p in pinchos if p.right <= 1380]
 
         # Pinchos laterales en las paredes del abismo (aumentan la dificultad si el péndulo se acerca a los extremos)
+        # La pared izquierda conserva todos sus pinchos; en la pared derecha se despeja la zona superior para facilitar el salto y el paso de ambos personajes
         pinchos_pared_izq = [crear_pincho(260, y, 22, 26, direccion="derecha") for y in range(390, 600, 32)]
-        pinchos_pared_der = [crear_pincho(1380 - 22, y, 22, 26, direccion="izquierda") for y in range(390, 600, 32)]
+        pinchos_pared_der = [crear_pincho(1380 - 22, y, 22, 26, direccion="izquierda") for y in range(518, 600, 32)]
         pinchos.extend(pinchos_pared_izq + pinchos_pared_der)
-
-        # Lecho elevado de pinchos más cerca de la trayectoria del balanceo (acerca el peligro verticalmente)
-        pinchos_elevados = [crear_pincho(x, 520, 24, 26, direccion="arriba") for x in range(560, 800, 24)]
-        pinchos.extend(pinchos_elevados)
 
         # 4. Bloque peligroso rojo y pinchos dobles arriba, abajo y alrededor
         # Ubicado en la zona del abismo como obstáculo central que desafía el balanceo sin bloquearlo
@@ -4488,6 +4533,7 @@ def iniciar_mundo(
             "ancho": bw,
             "alto": bh,
         }
+        bloques_peligrosos.append(bloque_peligroso)
 
         # Pinchos dobles y más cerrados alrededor del bloque rojo
         pinchos.extend([
@@ -4554,13 +4600,18 @@ def iniciar_mundo(
             "ancho": 1990,
             "alto": 70,
         }
-        pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(205, 2185, 35)]
+        # Pinchos ajustados para que no atraviesen ni sobresalgan de la pared derecha
+        pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(205, 2190 - 32, 35)]
+
+        # Bloque cuadrado con pinchos estratégicamente suspendido en la sección de plataformas que se derrumban
+        b_pel_4, s_pel_4 = crear_bloque_con_pinchos(1380, 180, 60, 60)
+        bloques_peligrosos.append(b_pel_4)
 
         # Plataforma final de llegada con la puerta (x: 2190..2600, y=460)
         plat_llegada = pygame.Rect(2190, 460, 410, 26)
         plat_llegada_base = pygame.Rect(2190, 486, 410, suelo.top - 486 + 80)
 
-        plataformas_base = [plat_inicio, plat_inicio_base, plat_llegada, plat_llegada_base]
+        plataformas_base = [plat_inicio, plat_inicio_base, plat_llegada, plat_llegada_base, b_pel_4["rect"]]
 
         # Serie de 8 plataformas pequeñas que se derrumban 1.0 segundo (60 frames) tras pisarlas
         # Separación horizontal moderada (gaps de 120-125px) para exigir saltos reales y coordinación
@@ -4591,6 +4642,7 @@ def iniciar_mundo(
         ]
         plataformas_derrumbables = [_crear_p_derrumbable(px, py) for px, py in coords_plats]
         plataformas = list(plataformas_base) + [p["rect"] for p in plataformas_derrumbables]
+        pinchos.extend(s_pel_4)
 
         # Llave a mitad del recorrido sobre la 4ta plataforma
         llave = crear_llave(1075, 420 - 46)
@@ -4637,13 +4689,18 @@ def iniciar_mundo(
             "ancho": 570,
             "alto": 70,
         }
-        pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(165, 725, 32)]
+        # Pinchos ajustados exactamente dentro de la abertura sin penetrar en la pared de llegada
+        pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(165, 730 - 32, 32)]
+
+        # Bloque cuadrado con pinchos en el hueco superior para sumar dificultad a la escalada
+        b_pel_5, s_pel_5 = crear_bloque_con_pinchos(395, 100, 50, 50)
+        bloques_peligrosos.append(b_pel_5)
 
         # Plataforma de llegada segura a la derecha en la cima con la puerta de salida (x: 730..1400, y=130)
         plat_llegada = pygame.Rect(730, 130, 670, 26)
         plat_llegada_base = pygame.Rect(730, 156, 670, suelo.top - 156 + 80)
 
-        plataformas_base = [plat_inicio, plat_inicio_base, plat_llegada, plat_llegada_base]
+        plataformas_base = [plat_inicio, plat_inicio_base, plat_llegada, plat_llegada_base, b_pel_5["rect"]]
 
         # Plataformas en ZIGZAG lateral con amplio despeje vertical (headroom > 70px) para saltar libremente:
         # P1: Izquierda (x: 180..410, y: 480) - Centro 295
@@ -4658,6 +4715,7 @@ def iniciar_mundo(
             pygame.Rect(480, 210, 230, 24),  # P4: Derecha   (y=210, cumbre con pedestal y llave)
         ]
         plataformas = list(plataformas_base) + list(plataformas_alternadas)
+        pinchos.extend(s_pel_5)
 
         # Llave dorada en el pedestal de la cumbre derecha (P4, centro 595, y=210)
         llave = crear_llave(595 - 12, 210 - 46)
@@ -6375,12 +6433,19 @@ def iniciar_mundo(
         ]:
             if not comp and not p.get("muerto", False):
                 hb = p["hitbox"]
-                # En Mundo 3 la detección es inmediata al alcanzar los límites del escenario
-                # sin esperar a que el personaje desaparezca por completo de la pantalla.
-                caida_abajo = (hb.bottom >= ALTO if numero_mundo == 3 else hb.top >= ALTO)
-                salida_izq = (hb.left <= 0 if numero_mundo == 3 else hb.right <= 0)
-                salida_der = (hb.right >= ancho_mundo_nivel if numero_mundo == 3 else hb.left >= ancho_mundo_nivel)
-                salida_arriba = (hb.top <= -10 if numero_mundo == 3 else hb.bottom <= -50)
+                if numero_mundo == 3:
+                    # En Mundo 3 todos los bordes (izquierdo x=0, derecho x=ancho, techo y=0, suelo marino)
+                    # son límites físicos sólidos infranqueables, no zonas mortales ni abismos.
+                    # Tocarlos nunca causa daño ni muerte a los personajes.
+                    caida_abajo = False
+                    salida_izq = False
+                    salida_der = False
+                    salida_arriba = False
+                else:
+                    caida_abajo = (hb.top >= ALTO)
+                    salida_izq = (hb.right <= 0)
+                    salida_der = (hb.left >= ancho_mundo_nivel)
+                    salida_arriba = (hb.bottom <= -50)
 
                 if caida_abajo or salida_izq or salida_der or salida_arriba:
                     if caida_abajo and numero_mundo != 3:
@@ -6405,9 +6470,9 @@ def iniciar_mundo(
                         if not comp_otro and not otro.get("muerto", False):
                             matar_personaje(otro)
 
-        dur_max_muerte = 28 if numero_mundo == 3 else None
-        actualizar_muerte(jugador1, duracion_max=dur_max_muerte)
-        actualizar_muerte(jugador2, duracion_max=dur_max_muerte)
+        dur_max_muerte = 36 if numero_mundo == 3 else None
+        actualizar_muerte(jugador1, duracion_max=dur_max_muerte, limites_mundo=mundo_rect if numero_mundo == 3 else None)
+        actualizar_muerte(jugador2, duracion_max=dur_max_muerte, limites_mundo=mundo_rect if numero_mundo == 3 else None)
 
         # Limitar horizontalmente y techo para personajes vivos, permitiendo caída libre por el fondo
         for p, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]:
@@ -6714,19 +6779,6 @@ def iniciar_mundo(
         elif (p1_completado and p2_completado) or (numero_mundo == 3 and ((jugador1["muerto"] and p2_completado) or (jugador2["muerto"] and p1_completado))):
             # Nivel completado: cámara fija centrada en la puerta de salida
             cam_x = max(0, min(puerta["rect"].centerx - ANCHO // 2, ancho_mundo_nivel - ANCHO))
-            pantalla.blit(mundo, (0, 0), pygame.Rect(cam_x, 0, ANCHO, ALTO))
-        elif numero_mundo == 3 and jugador1["muerto"] and not jugador2["muerto"]:
-            # En Mundo 3, P1 murió: la cámara sigue completamente al sobreviviente P2
-            cam_x = max(0, min(jugador2["hitbox"].centerx - ANCHO // 2, ancho_mundo_nivel - ANCHO))
-            pantalla.blit(mundo, (0, 0), pygame.Rect(cam_x, 0, ANCHO, ALTO))
-        elif numero_mundo == 3 and jugador2["muerto"] and not jugador1["muerto"]:
-            # En Mundo 3, P2 murió: la cámara sigue completamente al sobreviviente P1
-            cam_x = max(0, min(jugador1["hitbox"].centerx - ANCHO // 2, ancho_mundo_nivel - ANCHO))
-            pantalla.blit(mundo, (0, 0), pygame.Rect(cam_x, 0, ANCHO, ALTO))
-        elif numero_mundo == 3 and jugador1["muerto"] and jugador2["muerto"]:
-            # Ambos murieron en Mundo 3: mantener la cámara en el centro promedio
-            centro = (jugador1["hitbox"].centerx + jugador2["hitbox"].centerx) // 2
-            cam_x = max(0, min(centro - ANCHO // 2, ancho_mundo_nivel - ANCHO))
             pantalla.blit(mundo, (0, 0), pygame.Rect(cam_x, 0, ANCHO, ALTO))
         else:
             # Ambos personajes están en juego
