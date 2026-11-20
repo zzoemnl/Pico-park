@@ -113,13 +113,16 @@ def decode_desbloqueados(s):
         except (ValueError, IndexError):
             pass
     # Compatibilidad con partidas guardadas antes de agregar niveles a un mundo:
-    # se rellenan los bits faltantes. Si el mundo siguiente ya estaba abierto,
-    # el jugador ya había terminado ese mundo y los niveles nuevos quedan abiertos.
+    # se rellenan los bits faltantes. Si el jugador ya había terminado ese mundo
+    # (todos sus niveles abiertos y, si existe, el mundo siguiente también),
+    # los niveles nuevos quedan abiertos.
     for m, cantidad in NIVELES_POR_MUNDO.items():
         bits = res.get(m, [])[:cantidad]
         if len(bits) < cantidad:
-            siguiente_abierto = bool(res.get(m + 1, [False])[0])
-            bits += [siguiente_abierto] * (cantidad - len(bits))
+            mundo_terminado = bool(bits) and all(bits)
+            if m + 1 in NIVELES_POR_MUNDO:
+                mundo_terminado = mundo_terminado and bool(res.get(m + 1, [False])[0])
+            bits += [mundo_terminado] * (cantidad - len(bits))
         res[m] = bits
     return res
 
