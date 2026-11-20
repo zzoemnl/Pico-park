@@ -79,13 +79,14 @@ from fuentes import (
 
 
 
+# Cantidad de niveles de cada mundo. El mundo 1 tiene un sexto nivel (jefe).
+NIVELES_POR_MUNDO = {1: 6, 2: 5, 3: 5}
+TOTAL_NIVELES = sum(NIVELES_POR_MUNDO.values())
+
+
 def crear_desbloqueados_inicial():
     """Retorna la estructura inicial con solo el Nivel 1 del Mundo 1 desbloqueado."""
-    return {
-        1: [True, False, False, False, False],
-        2: [False, False, False, False, False],
-        3: [False, False, False, False, False],
-    }
+    return {m: [i == 0 and m == 1 for i in range(n)] for m, n in NIVELES_POR_MUNDO.items()}
 
 
 def encode_desbloqueados(d):
@@ -111,6 +112,15 @@ def decode_desbloqueados(s):
             res[m] = [c == "1" for c in bits]
         except (ValueError, IndexError):
             pass
+    # Compatibilidad con partidas guardadas antes de agregar niveles a un mundo:
+    # se rellenan los bits faltantes. Si el mundo siguiente ya estaba abierto,
+    # el jugador ya había terminado ese mundo y los niveles nuevos quedan abiertos.
+    for m, cantidad in NIVELES_POR_MUNDO.items():
+        bits = res.get(m, [])[:cantidad]
+        if len(bits) < cantidad:
+            siguiente_abierto = bool(res.get(m + 1, [False])[0])
+            bits += [siguiente_abierto] * (cantidad - len(bits))
+        res[m] = bits
     return res
 
 
@@ -134,7 +144,7 @@ def calcular_niveles_completados(niveles_desbloqueados):
     if not niveles_desbloqueados:
         return 0
     total_desbloq = sum(sum(1 for x in bits if x) for bits in niveles_desbloqueados.values())
-    return max(0, min(15, total_desbloq - 1))
+    return max(0, min(TOTAL_NIVELES, total_desbloq - 1))
 
 
 def obtener_ultimo_nivel_completado(niveles_desbloqueados):
@@ -146,9 +156,13 @@ def obtener_ultimo_nivel_completado(niveles_desbloqueados):
     completados = calcular_niveles_completados(niveles_desbloqueados)
     if completados == 0:
         return None
-    m = (completados - 1) // 5 + 1
-    n = (completados - 1) % 5 + 1
-    return m, n
+    restantes = completados
+    for m in sorted(NIVELES_POR_MUNDO):
+        if restantes <= NIVELES_POR_MUNDO[m]:
+            return m, restantes
+        restantes -= NIVELES_POR_MUNDO[m]
+    ultimo = max(NIVELES_POR_MUNDO)
+    return ultimo, NIVELES_POR_MUNDO[ultimo]
 
 
 def hay_progreso_sin_guardar(niveles_desbloqueados, snapshot_guardado=None, id_partida=None):

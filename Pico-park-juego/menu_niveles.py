@@ -15,6 +15,7 @@ from fuentes import (
     TAMANO_CARD,
 )
 from configuracion import t
+from guardado import NIVELES_POR_MUNDO
 from sprites import generar_boton_con_texto, aclarar_boton
 
 # Paletas de colores del menú
@@ -50,6 +51,8 @@ def obtener_mecanicas_nivel(mundo, nivel):
             return ["caja"]
         elif nivel == 5:
             return []
+        elif nivel == 6:
+            return ["jefe"]
     elif mundo == 2:
         return ["soga", "pinchos"]
     elif mundo == 3:
@@ -114,7 +117,7 @@ def _obtener_thumb_escalada(mundo, nivel, thumb_orig, w_target=196, h_target=125
     return surf
 
 
-def obtener_geometria_menu(ancho_pantalla, alto_pantalla):
+def obtener_geometria_menu(ancho_pantalla, alto_pantalla, cantidad_niveles=5):
     """
     Calcula dinámicamente los rectángulos interactivos del menú
     adaptados a la resolución actual del juego con botones grandes y cómodos.
@@ -143,15 +146,15 @@ def obtener_geometria_menu(ancho_pantalla, alto_pantalla):
             "h_inactiva": h_tab_inactiva,
         }
 
-    # Tarjetas de nivel (5 columnas en una sola fila con proporciones amplias)
+    # Tarjetas de nivel (una sola fila; 220 px con 5 tarjetas, 180 px con 6)
     pad_x = 20
     pad_y = 18
     gap_cards = 15
-    w_card = (w_panel - 2 * pad_x - 4 * gap_cards) // 5  # 220 px a 1200px de panel
+    w_card = (w_panel - 2 * pad_x - (cantidad_niveles - 1) * gap_cards) // cantidad_niveles
     h_card = h_panel - 2 * pad_y                         # 389 px
 
     rects_cards = []
-    for i in range(5):
+    for i in range(cantidad_niveles):
         x_c = x_panel + pad_x + i * (w_card + gap_cards)
         y_c = y_panel + pad_y
         rects_cards.append(pygame.Rect(x_c, y_c, w_card, h_card))
@@ -168,7 +171,7 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
     - Panel contenedor con 5 botones/tarjetas grandes, miniaturas ampliadas, nombres, estrellas y botón de acción.
     """
     ancho, alto = pantalla.get_size()
-    rect_panel, tabs_info, rects_cards = obtener_geometria_menu(ancho, alto)
+    rect_panel, tabs_info, rects_cards = obtener_geometria_menu(ancho, alto, NIVELES_POR_MUNDO[mundo_actual])
     thumbs = obtener_thumbnails()
 
     fuente_titulo = obtener_fuente_titulo(TAMANO_TITULO, tamano_fallback=55)
@@ -253,9 +256,10 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
                 border_bottom_right_radius=10,
             )
 
-        # Miniatura ampliada del escenario (196x125 para encajar perfectamente con 12px de margen)
+        # Miniatura ampliada del escenario (196x125 con 5 tarjetas; se achica si hay 6)
         thumb_orig = thumbs[mundo_actual][nivel_num]
-        w_th, h_th = 196, 125
+        w_th = min(196, r_card.width - 24)
+        h_th = round(w_th * 125 / 196)
         thumb_img = _obtener_thumb_escalada(mundo_actual, nivel_num, thumb_orig, w_th, h_th)
         x_th = r_card.centerx - w_th // 2
         y_th = r_card.top + 16
@@ -445,6 +449,42 @@ def _dibujar_soga(surf, p1, p2):
 # ==============================================================================
 # MUNDO 1: BÁSICO (Fondo cálido original, sin soga)
 # ==============================================================================
+
+def _crear_m1_n6():
+    """1-6: Jefe. Muñeco de nieve gigante a la derecha, bola rodando, botones de colores."""
+    s = pygame.Surface((ANCHO_MINI, ALTO_MINI))
+    s.fill(COL_FONDO_M1)
+    y_suelo = 88
+    pygame.draw.rect(s, COL_SUELO_M1, (0, y_suelo, ANCHO_MINI, ALTO_MINI - y_suelo))
+
+    # Muñeco de nieve: tres bolas apiladas, sombrero, cara y botones
+    cx = 143
+    for cy, r in ((y_suelo - 14, 15), (y_suelo - 38, 12), (y_suelo - 57, 9)):
+        pygame.draw.circle(s, (248, 250, 255), (cx, cy), r)
+        pygame.draw.circle(s, (170, 190, 215), (cx, cy), r, 1)
+    pygame.draw.rect(s, (40, 40, 50), (cx - 10, y_suelo - 67, 20, 3))
+    pygame.draw.rect(s, (40, 40, 50), (cx - 6, y_suelo - 78, 12, 12))
+    pygame.draw.circle(s, (30, 30, 30), (cx - 3, y_suelo - 59), 1)
+    pygame.draw.circle(s, (30, 30, 30), (cx + 3, y_suelo - 59), 1)
+    pygame.draw.polygon(s, (245, 140, 40), [(cx, y_suelo - 57), (cx + 8, y_suelo - 55), (cx, y_suelo - 53)])
+    for i, col in enumerate(((220, 60, 60), (60, 110, 220), (220, 60, 60))):
+        pygame.draw.circle(s, col, (cx, y_suelo - 44 + i * 9), 2)
+    pygame.draw.line(s, (120, 80, 40), (cx - 12, y_suelo - 40), (cx - 26, y_suelo - 52), 2)
+
+    # Bola de nieve rodando hacia los jugadores
+    pygame.draw.circle(s, (248, 250, 255), (100, y_suelo - 8), 8)
+    pygame.draw.circle(s, (170, 190, 215), (100, y_suelo - 8), 8, 1)
+
+    # Botones de colores en el suelo
+    pygame.draw.rect(s, (220, 60, 60), (58, y_suelo - 3, 12, 3))
+    pygame.draw.rect(s, (60, 110, 220), (80, y_suelo - 3, 12, 3))
+
+    pj1 = _cargar_personaje("Celeste")
+    pj2 = _cargar_personaje("Violeta")
+    s.blit(pj1, (14, y_suelo - 20))
+    s.blit(pj2, (34, y_suelo - 20))
+    return s
+
 
 def _crear_m1_n1():
     """1-1: Tutorial (Suelo continuo con torres/columnas, 2 personajes, llave y puerta)."""
@@ -1168,6 +1208,7 @@ CREADORES_MINIATURAS = {
         3: _crear_m1_n3,
         4: _crear_m1_n4,
         5: _crear_m1_n5,
+        6: _crear_m1_n6,
     },
     2: {
         1: _crear_m2_n1,
@@ -1198,7 +1239,7 @@ def generar_todas_las_miniaturas(guardar_en_disco=True):
     resultado = {}
     for mundo in (1, 2, 3):
         resultado[mundo] = {}
-        for nivel in range(1, 6):
+        for nivel in range(1, NIVELES_POR_MUNDO[mundo] + 1):
             creador = CREADORES_MINIATURAS[mundo][nivel]
             surf = creador()
 
@@ -1231,7 +1272,7 @@ def obtener_miniaturas():
 
     for mundo in (1, 2, 3):
         _CACHE_MINIATURAS[mundo] = {}
-        for nivel in range(1, 6):
+        for nivel in range(1, NIVELES_POR_MUNDO[mundo] + 1):
             ruta_img = os.path.join(RUTA_MINIATURAS, f"nivel_{mundo}_{nivel}.png")
             if os.path.isfile(ruta_img):
                 try:

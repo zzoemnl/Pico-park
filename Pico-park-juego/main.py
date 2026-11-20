@@ -40,6 +40,8 @@ from menu_niveles import (
 )
 from personajes_menu import GestorPersonajesMenu
 from guardado import (
+    NIVELES_POR_MUNDO,
+    TOTAL_NIVELES,
     crear_desbloqueados_inicial,
     cargar_partidas,
     guardar_partida,
@@ -1786,7 +1788,7 @@ def dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel, pos_mouse, fuente
     # 2. Niveles completados
     _dibujar_icono_trofeo(pantalla, cur_x2 + 6, y_fila2 + 14)
     cur_x2 += 18
-    str_comp = f"{cant_comp}/15 {t('completados')}"
+    str_comp = f"{cant_comp}/{TOTAL_NIVELES} {t('completados')}"
     f_comp = obtener_fuente_cjk(16, negrita=False) if contiene_caracteres_cjk(str_comp) else (fuentes.get("sub_card") or obtener_fuente_pequena(28))
     t_comp = f_comp.render(str_comp, True, (90, 65, 45))
     pantalla.blit(t_comp, (cur_x2, y_fila2))
@@ -1888,7 +1890,7 @@ def jugar_niveles_desde(
             partida_password=partida_actual_password,
         )
         if res == "siguiente":
-            if n_idx + 1 < 5:
+            if n_idx + 1 < NIVELES_POR_MUNDO[m_idx]:
                 n_idx += 1
                 niveles_desbloqueados[m_idx][n_idx] = True
             elif m_idx + 1 <= 3:
@@ -3281,7 +3283,7 @@ def main():
                             intentar_salir()
                             break
 
-                    rect_panel, tabs_info, rects_cards = obtener_geometria_menu(ANCHO_MENU, ALTO_MENU)
+                    rect_panel, tabs_info, rects_cards = obtener_geometria_menu(ANCHO_MENU, ALTO_MENU, NIVELES_POR_MUNDO[mundo_seleccionado])
                     tab_presionada = False
                     for m, t_data in tabs_info.items():
                         if t_data["rect_click"].collidepoint(evento.pos):
