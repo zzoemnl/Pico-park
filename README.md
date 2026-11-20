@@ -10,6 +10,14 @@ El juego arranca en pantalla completa y se adapta a cualquier resolución de mon
 
 ● Reglas: El grupo debe conseguir la llave del mapa y entrar todos los jugadores por la puerta de salida. Si alguien se queda afuera, no se gana.
 
+● Niveles: 3 mundos (nieve, ruinas y submarino). El mundo 1 tiene 6 niveles y los mundos 2 y 3 tienen 5.
+El nivel 1-6 es el jefe del mundo 1, el Muñeco de Nieve: lanza bolas que ruedan y matan al tocarlas.
+Para golpearlo hay que pisar los dos botones de colores AL MISMO TIEMPO y mantenerlos un instante;
+con cada golpe los botones cambian de lugar y las bolas se aceleran. Al tercer golpe se derrite y
+aparecen la llave y la puerta. La lógica y el dibujo del jefe están en Pico-park-juego\jefe_nieve.py
+(todo dibujado con código, como los fondos; se puede reemplazar por sprites a mano).
+La cantidad de niveles por mundo se define en NIVELES_POR_MUNDO (Pico-park-juego\guardado.py).
+
 Si un solo jugador muere (cae a los picos, toca un láser o queda atrapado en el mapa), todo el equipo pierde y el nivel se reinicia desde el principio.
 
 ● Instrucciones de instalación y ejecución:
