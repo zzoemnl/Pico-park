@@ -62,3 +62,7 @@ enviar la carpeta dist\PicoPark completa (comprimida en zip), no solo el .exe.
 Las rutas de recursos se resuelven en Pico-park-juego\rutas.py: en desarrollo
 apuntan a la raíz del repo y dentro del .exe a la carpeta _internal. Las partidas
 (partidas.txt) y la configuración (configuracion.json) se guardan al lado del .exe.
+
+Si el juego falla con un error inesperado, se cierra mostrando un aviso y deja el
+detalle en errores.log al lado del .exe (Pico-park-juego\errores.py). Pedirle ese
+archivo a quien reporte el problema.

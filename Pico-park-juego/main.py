@@ -4314,4 +4314,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    from errores import ejecutar_protegido
+    ejecutar_protegido(main)
