@@ -4,7 +4,9 @@
 
 ● Descripción y objetivo: trabajar en equipo para conseguir la llave de cada nivel y hacer que todos los jugadores crucen la puerta de salida.
 
-● Controles: 1° jugardor WASD y 2° jugador flechitas.
+● Controles: 1° jugardor WASD y 2° jugador flechitas. F11 alterna entre pantalla completa y ventana.
+
+El juego arranca en pantalla completa y se adapta a cualquier resolución de monitor: se dibuja a 1280x720 y pygame lo escala al tamaño real de la pantalla (con bandas negras si la proporción no es 16:9).
 
 ● Reglas: El grupo debe conseguir la llave del mapa y entrar todos los jugadores por la puerta de salida. Si alguien se queda afuera, no se gana.
 

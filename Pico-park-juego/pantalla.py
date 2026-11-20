@@ -3520,7 +3520,8 @@ def iniciar_mundo(
 
     pantalla = pygame.display.get_surface()
     if pantalla is None:
-        pantalla = pygame.display.set_mode((ANCHO, ALTO))
+        from ventana import crear_ventana
+        pantalla = crear_ventana()
 
     mundo_rect = pygame.Rect(0, 0, ANCHO_MUNDO, ALTO)
     reloj = pygame.time.Clock()

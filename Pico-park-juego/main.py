@@ -5,6 +5,7 @@ import random
 import pygame
 
 from rutas import ruta_recurso
+from ventana import crear_ventana
 
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 if DIRECTORIO_ACTUAL not in sys.path:
@@ -1931,7 +1932,7 @@ def main():
     os.environ['SDL_VIDEO_CENTERED'] = '1'
     pygame.init()
 
-    pantalla = pygame.display.set_mode((ANCHO, ALTO))
+    pantalla = crear_ventana()
     pygame.display.set_caption("Pico Park")
     precargar_botones_comunes()
     reloj = pygame.time.Clock()
