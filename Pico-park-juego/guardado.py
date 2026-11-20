@@ -6,10 +6,12 @@ import hashlib
 import secrets
 import pygame
 
+from rutas import ruta_datos
+
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 if DIRECTORIO_ACTUAL not in sys.path:
     sys.path.insert(0, DIRECTORIO_ACTUAL)
-RUTA_PARTIDAS = os.path.join(DIRECTORIO_ACTUAL, "partidas.txt")
+RUTA_PARTIDAS = ruta_datos("partidas.txt")
 
 from sprites import (
     cargar_boton_escalado,

@@ -3,6 +3,8 @@ import sys
 import weakref
 import pygame
 
+from rutas import ruta_recurso
+
 ANCHO, ALTO = 1280, 720
 FPS = 60
 ANCHO_PERSONAJE = 70
@@ -14,10 +16,10 @@ COLOR_JUGADOR2 = "Violeta"
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 if DIRECTORIO_ACTUAL not in sys.path:
     sys.path.insert(0, DIRECTORIO_ACTUAL)
-RUTA_BASE = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Personajes")
-RUTA_BOTONES = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Botones")
+RUTA_BASE = ruta_recurso("Sprites", "Personajes")
+RUTA_BOTONES = ruta_recurso("Sprites", "Botones")
 RUTA_CAJA = os.path.join(DIRECTORIO_ACTUAL, "caja.png")
-RUTA_OBJETOS = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Objetos")
+RUTA_OBJETOS = ruta_recurso("Sprites", "Objetos")
 
 ESTADOS_PERSONAJE = [
     "quieto", "muerto",
@@ -36,6 +38,8 @@ _CACHE_BOTONES_ACLARADOS = weakref.WeakKeyDictionary()
 _CACHE_MARCOS_BOTONES = {}
 _CACHE_BOTONES_PERSONALIZADOS = {}
 _MAPA_BOTONES = None
+# Ancho máximo al que se retiene un botón en caché (4x el tamaño de dibujo de 272 px).
+ANCHO_MAX_BOTON = 1088
 
 
 def _obtener_mapa_botones():
@@ -64,9 +68,17 @@ def cargar_boton(nombre):
         try:
             img = pygame.image.load(ruta_archivo)
             try:
-                return img.convert_alpha()
+                img = img.convert_alpha()
             except pygame.error:
-                return img
+                pass
+            # Los botones se dibujan como máximo a ~272 px de ancho. Si el PNG es
+            # más grande que ANCHO_MAX_BOTON se reduce al cargarlo para no retener
+            # en caché superficies de decenas de MB que nunca se usan a ese tamaño.
+            w, h = img.get_size()
+            if w > ANCHO_MAX_BOTON:
+                nh = max(1, round(h * ANCHO_MAX_BOTON / w))
+                img = pygame.transform.smoothscale(img, (ANCHO_MAX_BOTON, nh))
+            return img
         except (FileNotFoundError, pygame.error):
             return None
 
@@ -689,7 +701,7 @@ def cargar_sprites(nombre_color="Celeste"):
             os.path.join(ruta_carpeta, "quieto.png"),
             os.path.join(RUTA_BASE, "Blanco", f"{estado}.png"),
             os.path.join(DIRECTORIO_ACTUAL, f"{estado}.png"),
-            os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", f"{estado}.png")
+            ruta_recurso("Sprites", f"{estado}.png")
         ]
 
         for r in posibles_rutas:
@@ -726,8 +738,8 @@ def cargar_sprite_caja(tamano):
     if tamano in _CACHE_SPRITE_CAJA:
         return _CACHE_SPRITE_CAJA[tamano]
     rutas = [
-        os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Objetos", "caja.png"),
-        os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Caja", "caja.png"),
+        ruta_recurso("Sprites", "Objetos", "caja.png"),
+        ruta_recurso("Sprites", "Caja", "caja.png"),
         RUTA_CAJA,
     ]
     for ruta in rutas:
@@ -786,7 +798,7 @@ def cargar_sprites_puerta(tamano=(146, 180)):
     if clave in _CACHE_SPRITES_PUERTA:
         return _CACHE_SPRITES_PUERTA[clave]
 
-    ruta_portal_dir = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Objetos", "Portal")
+    ruta_portal_dir = ruta_recurso("Sprites", "Objetos", "Portal")
     if not os.path.isdir(ruta_portal_dir):
         ruta_portal_dir = os.path.join(RUTA_OBJETOS, "Portal")
 
@@ -1020,7 +1032,7 @@ def obtener_accesorios_disponibles(color_personaje=None):
 _CACHE_ACCESORIOS = {}
 
 
-CARPETA_ACCESORIOS = os.path.normpath(os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Accesorios"))
+CARPETA_ACCESORIOS = os.path.normpath(ruta_recurso("Sprites", "Accesorios"))
 
 # Mapeo centralizado de archivos para carga automática transparente
 NOMBRES_ARCHIVOS_ACCESORIOS = {

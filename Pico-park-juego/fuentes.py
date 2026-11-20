@@ -9,14 +9,16 @@ import os
 import sys
 import pygame
 
+from rutas import ruta_recurso
+
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 if DIRECTORIO_ACTUAL not in sys.path:
     sys.path.insert(0, DIRECTORIO_ACTUAL)
-RUTA_FUENTE_PIXEL = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Fuentes", "04B_30__.TTF")
+RUTA_FUENTE_PIXEL = ruta_recurso("Sprites", "Fuentes", "04B_30__.TTF")
 CARPETAS_FUENTES = [
-    os.path.join(DIRECTORIO_ACTUAL, "..", "assets", "fuentes"),
+    ruta_recurso("assets", "fuentes"),
     os.path.join(DIRECTORIO_ACTUAL, "assets", "fuentes"),
-    os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Fuentes"),
+    ruta_recurso("Sprites", "Fuentes"),
     os.path.join(DIRECTORIO_ACTUAL, "Sprites", "Fuentes"),
 ]
 

@@ -4,6 +4,8 @@ import copy
 import random
 import pygame
 
+from rutas import ruta_recurso
+
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 if DIRECTORIO_ACTUAL not in sys.path:
     sys.path.insert(0, DIRECTORIO_ACTUAL)
@@ -1393,11 +1395,11 @@ def _obtener_icono_instruccion(tipo: str, max_w: int = 48, max_h: int = 46) -> "
 
     ruta = None
     if tipo == "llave":
-        ruta = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Objetos", "llave.png")
+        ruta = ruta_recurso("Sprites", "Objetos", "llave.png")
     elif tipo == "caja":
-        ruta = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Objetos", "caja.png")
+        ruta = ruta_recurso("Sprites", "Objetos", "caja.png")
     elif tipo == "buceo":
-        ruta = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Accesorios", "buceo_m3.png")
+        ruta = ruta_recurso("Sprites", "Accesorios", "buceo_m3.png")
 
     if not ruta or not os.path.isfile(ruta):
         return None

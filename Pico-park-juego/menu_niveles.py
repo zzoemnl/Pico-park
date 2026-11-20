@@ -317,7 +317,9 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 if DIRECTORIO_ACTUAL not in sys.path:
     sys.path.insert(0, DIRECTORIO_ACTUAL)
-RUTA_SPRITES = os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites")
+from rutas import ruta_recurso
+
+RUTA_SPRITES = ruta_recurso("Sprites")
 RUTA_PERSONAJES = os.path.join(RUTA_SPRITES, "Personajes")
 RUTA_OBJETOS = os.path.join(RUTA_SPRITES, "Objetos")
 RUTA_MINIATURAS = os.path.join(RUTA_SPRITES, "Miniaturas")

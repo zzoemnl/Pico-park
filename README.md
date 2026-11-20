@@ -47,21 +47,16 @@ Instalar dependencias:
 python -m pip install -r requirements.txt
 python -m pip install pyinstaller
 
-Empaquetar:
-pyinstaller --noconfirm --clean --windowed --name PicoPark_empujar `
-  --add-data "Personajes;Personajes" `
-  --add-data "Fuentes;Fuentes" `
-  empujar.py
+Empaquetar (desde la raíz del repositorio):
+python -m PyInstaller --noconfirm --clean --windowed --name PicoPark `
+  --add-data "Sprites;Sprites" `
+  --add-data "sonidos;sonidos" `
+  --add-data "assets;assets" `
+  Pico-park-juego\main.py
 
-pyinstaller --noconfirm --clean --windowed --name PicoPark_sin_caja `
-  --add-data "Personajes;Personajes" `
-  --add-data "Fuentes;Fuentes" `
-  basico_sin_caja.py
+El ejecutable queda en dist\PicoPark\PicoPark.exe. Para compartirlo hay que
+enviar la carpeta dist\PicoPark completa (comprimida en zip), no solo el .exe.
 
-pyinstaller --noconfirm --clean --windowed --name PicoPark_muerte `
-  --add-data "Personajes;Personajes" `
-  --add-data "Fuentes;Fuentes" `
-  muerte.py
-
-Los ejecutables estan en:
-dist\PicoPark\
+Las rutas de recursos se resuelven en Pico-park-juego\rutas.py: en desarrollo
+apuntan a la raíz del repo y dentro del .exe a la carpeta _internal. Las partidas
+(partidas.txt) y la configuración (configuracion.json) se guardan al lado del .exe.

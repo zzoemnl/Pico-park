@@ -35,6 +35,8 @@ import math
 import random
 import pygame
 
+from rutas import directorio_base as _directorio_base
+
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 if DIRECTORIO_ACTUAL not in sys.path:
     sys.path.insert(0, DIRECTORIO_ACTUAL)
@@ -2022,7 +2024,7 @@ class GestorPersonajesMenu:
 
         base_dir = os.path.dirname(os.path.abspath(__file__))
         posibles_rutas = [
-            os.path.join(base_dir, "..", "Sprites", "Objetos", "gorro_navideno_original.png"),
+            os.path.join(_directorio_base(), "Sprites", "Objetos", "gorro_navideno_original.png"),
             os.path.join(base_dir, "Sprites", "Objetos", "gorro_navideno_original.png"),
         ]
 

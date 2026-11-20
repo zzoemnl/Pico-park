@@ -14,6 +14,8 @@ import math
 import struct
 import pygame
 
+from rutas import directorio_base, ruta_datos
+
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 if DIRECTORIO_ACTUAL not in sys.path:
     sys.path.insert(0, DIRECTORIO_ACTUAL)
@@ -51,8 +53,8 @@ _idioma = "es"                  # Idioma actual: "es" | "en" | "zh"
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 if DIRECTORIO_ACTUAL not in sys.path:
     sys.path.insert(0, DIRECTORIO_ACTUAL)
-DIRECTORIO_RAIZ = os.path.abspath(os.path.join(DIRECTORIO_ACTUAL, ".."))
-RUTA_CONFIG_JSON = os.path.join(DIRECTORIO_ACTUAL, "configuracion.json")
+DIRECTORIO_RAIZ = directorio_base()
+RUTA_CONFIG_JSON = ruta_datos("configuracion.json")
 
 EXTENSIONES_AUDIO_SOPORTADAS = (".mp3", ".wav", ".ogg")
 
