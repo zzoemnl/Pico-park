@@ -10,12 +10,14 @@ if DIRECTORIO_ACTUAL not in sys.path:
 from fuentes import (
     obtener_fuente_titulo,
     obtener_fuente_boton,
+    obtener_fuente_cjk,
+    contiene_caracteres_cjk,
     TAMANO_TITULO,
     TAMANO_TITULO_MODAL,
     TAMANO_CARD,
 )
 from configuracion import t
-from guardado import NIVELES_POR_MUNDO
+from guardado import NIVELES_POR_MUNDO, es_nivel_jefe
 from sprites import generar_boton_con_texto, aclarar_boton
 
 # Paletas de colores del menú
@@ -167,12 +169,14 @@ def obtener_geometria_menu(ancho_pantalla, alto_pantalla, cantidad_niveles=5):
     return rect_panel, rects_tabs, rects_cards
 
 
-def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mouse, fuentes=None):
+def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mouse, fuentes=None, es_admin=False):
     """
     Dibuja la pantalla completa de selección de niveles con estética pixel art Pico Park:
     - Fondo de paisaje pastel con nubes y cactus.
     - Pestañas superiores estilizadas para cada mundo con mascota de gato.
-    - Panel contenedor con 5 botones/tarjetas grandes, miniaturas ampliadas, nombres, estrellas y botón de acción.
+    - Panel contenedor con tarjetas/botones, miniaturas ampliadas, nombres, estrellas y botón de acción.
+    - Identificación especial «EN PROCESO» para niveles de jefes.
+    - Acceso exclusivo para el administrador en los niveles de jefes.
     """
     ancho, alto = pantalla.get_size()
     rect_panel, tabs_info, rects_cards = obtener_geometria_menu(ancho, alto, NIVELES_POR_MUNDO[mundo_actual])
@@ -231,17 +235,31 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
     pygame.draw.rect(pantalla, COL_PANEL, rect_panel, border_radius=18)
     pygame.draw.rect(pantalla, COL_BORDE_PANEL, rect_panel, 3, border_radius=18)
 
-    # 4. TARJETAS DE NIVEL (5 BOTONES EN FILA)
+    # 4. TARJETAS DE NIVEL (EN FILA)
     for idx, r_card in enumerate(rects_cards):
         nivel_num = idx + 1
-        desbloqueado = niveles_desbloqueados[mundo_actual][idx]
-        mouse_encima = r_card.collidepoint(pos_mouse)
+        es_jefe = es_nivel_jefe(mundo_actual, nivel_num)
+
+        # En partidas normales, los jefes no se pueden jugar (en proceso)
+        # En la partida especial del administrador, todos los niveles son accesibles
+        if es_jefe:
+            jugable = es_admin
+            desbloqueado = es_admin
+        else:
+            desbloqueado = bool(niveles_desbloqueados.get(mundo_actual, [])[idx]) if idx < len(niveles_desbloqueados.get(mundo_actual, [])) else False
+            jugable = desbloqueado
+
+        mouse_encima = r_card.collidepoint(pos_mouse) and jugable
 
         # Fondo individual de la tarjeta botón
-        if desbloqueado:
+        if jugable:
             col_fondo_card = (255, 255, 255) if mouse_encima else (255, 252, 246)
             col_borde_card = (235, 165, 60) if mouse_encima else (210, 185, 155)
             ancho_borde = 3 if mouse_encima else 2
+        elif es_jefe:
+            col_fondo_card = (248, 243, 235)
+            col_borde_card = (215, 185, 150)
+            ancho_borde = 2
         else:
             col_fondo_card = (248, 244, 236) if mouse_encima else (244, 237, 226)
             col_borde_card = (195, 180, 165)
@@ -251,7 +269,7 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
         pygame.draw.rect(pantalla, col_borde_card, r_card, ancho_borde, border_radius=14)
 
         # Sombra sutil en la base de la tarjeta para efecto botón
-        if desbloqueado and not mouse_encima:
+        if jugable and not mouse_encima:
             pygame.draw.rect(
                 pantalla,
                 (230, 210, 185),
@@ -260,7 +278,7 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
                 border_bottom_right_radius=10,
             )
 
-        # Miniatura ampliada del escenario (196x125 con 5 tarjetas; se achica si hay 6)
+        # Miniatura ampliada del escenario
         thumb_orig = thumbs[mundo_actual][nivel_num]
         w_th = min(196, r_card.width - 24)
         h_th = round(w_th * 125 / 196)
@@ -269,15 +287,35 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
         y_th = r_card.top + 16
         r_th = pygame.Rect(x_th, y_th, w_th, h_th)
 
-        # Elevación al hacer hover si el nivel está desbloqueado
-        y_draw_th = y_th - (3 if mouse_encima and desbloqueado else 0)
+        # Elevación al hacer hover si el nivel es jugable
+        y_draw_th = y_th - (3 if mouse_encima and jugable else 0)
         pantalla.blit(thumb_img, (x_th, y_draw_th))
 
         # Borde decorativo de la miniatura
         pygame.draw.rect(pantalla, (165, 140, 115), (x_th, y_draw_th, w_th, h_th), 2, border_radius=6)
 
-        # Overlay de bloqueo si está bloqueado
-        if not desbloqueado:
+        # Distintivo EN PROCESO o candado de bloqueo
+        if es_jefe:
+            if not es_admin:
+                # Capa translúcida sutil para indicar que está en desarrollo
+                lock_mask = pygame.Surface((w_th, h_th), pygame.SRCALPHA)
+                lock_mask.fill((35, 25, 20, 95))
+                pantalla.blit(lock_mask, (x_th, y_draw_th))
+
+            # Distintivo / Etiqueta "EN PROCESO" en la miniatura
+            str_en_proc = t("en_proceso")
+            if contiene_caracteres_cjk(str_en_proc):
+                f_proc = obtener_fuente_cjk(11, negrita=True)
+            else:
+                f_proc = pygame.font.SysFont("Arial", 11, bold=True)
+            txt_proc = f_proc.render(str_en_proc, True, (255, 255, 255))
+            w_badge = max(txt_proc.get_width() + 14, 96)
+            h_badge = 20
+            r_badge_proc = pygame.Rect(x_th + (w_th - w_badge) // 2, y_draw_th + h_th - h_badge - 5, w_badge, h_badge)
+            pygame.draw.rect(pantalla, (220, 120, 20), r_badge_proc, border_radius=4)
+            pygame.draw.rect(pantalla, (255, 220, 160), r_badge_proc, 1, border_radius=4)
+            pantalla.blit(txt_proc, txt_proc.get_rect(center=r_badge_proc.center))
+        elif not desbloqueado:
             lock_mask = pygame.Surface((w_th, h_th), pygame.SRCALPHA)
             lock_mask.fill((30, 20, 20, 160))
             pantalla.blit(lock_mask, (x_th, y_draw_th))
@@ -287,14 +325,14 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
 
         # Texto "NIVEL X"
         if fuente_card:
-            col_texto_n = (55, 45, 35) if desbloqueado else (150, 140, 130)
+            col_texto_n = (55, 45, 35) if jugable else (150, 140, 130)
             txt_n = fuente_card.render(f"{t('nivel')} {nivel_num}", True, col_texto_n)
             rect_txt_n = txt_n.get_rect(center=(r_card.centerx, r_th.bottom + 26))
             pantalla.blit(txt_n, rect_txt_n)
 
         # Estrella decorativa debajo
         y_star = r_th.bottom + 66
-        if desbloqueado:
+        if jugable:
             dibujar_estrella(pantalla, (r_card.centerx, y_star), r_exterior=16, r_interior=7)
         else:
             dibujar_estrella(
@@ -306,12 +344,15 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
                 col_borde=(180, 170, 160),
             )
 
-        # Botón / Badge de estado inferior ("JUGAR" o "BLOQUEADO")
+        # Botón / Badge de estado inferior ("JUGAR >", "EN PROCESO" o "BLOQUEADO")
         r_btn_status = pygame.Rect(r_card.centerx - 70, r_card.bottom - 44, 140, 32)
-        if desbloqueado:
+        if jugable:
             spr_btn = generar_boton_con_texto("mundos/boton-cargar.png", 140, 32, f"{t('jugar')} >", (26, 83, 29), 13, 0)
             if mouse_encima:
                 spr_btn = aclarar_boton(spr_btn)
+            pantalla.blit(spr_btn, r_btn_status)
+        elif es_jefe:
+            spr_btn = generar_boton_con_texto("Menu/boton-cancelar.png", 140, 32, t("en_proceso"), (200, 115, 25), 11, 0)
             pantalla.blit(spr_btn, r_btn_status)
         else:
             spr_btn = generar_boton_con_texto("Menu/boton-cancelar.png", 140, 32, t("bloqueado"), (70, 65, 60), 13, 0)

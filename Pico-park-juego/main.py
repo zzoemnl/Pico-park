@@ -42,6 +42,8 @@ from personajes_menu import GestorPersonajesMenu
 from guardado import (
     NIVELES_POR_MUNDO,
     TOTAL_NIVELES,
+    TOTAL_NIVELES_NORMALES,
+    TOTAL_NIVELES_ADMIN,
     crear_desbloqueados_inicial,
     cargar_partidas,
     guardar_partida,
@@ -55,6 +57,8 @@ from guardado import (
     modal_administrar_perfil,
     flujo_crear_nueva_partida,
     obtener_nombre_partida_visible,
+    es_partida_admin,
+    es_nivel_jefe,
 )
 from fuentes import (
     contiene_caracteres_cjk,
@@ -1738,10 +1742,11 @@ def dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel, pos_mouse, fuente
 
     # 3. Metadatos de la aventura
     nombre = obtener_nombre_partida_visible(p)
+    es_adm = es_partida_admin(p)
     mundo_max = p.get("mundo_max", 1)
     nivel_max = p.get("nivel_max", 1)
     fecha = p.get("fecha", "")
-    cant_comp = calcular_niveles_completados(p.get("niveles_desbloqueados", {}))
+    cant_comp = calcular_niveles_completados(p.get("niveles_desbloqueados", {}), es_admin=es_adm)
     tiene_pwd = p.get("tiene_password", False)
 
     # Símbolo decorativo de aventura: diamante / gema dorada pixel art
@@ -1788,7 +1793,8 @@ def dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel, pos_mouse, fuente
     # 2. Niveles completados
     _dibujar_icono_trofeo(pantalla, cur_x2 + 6, y_fila2 + 14)
     cur_x2 += 18
-    str_comp = f"{cant_comp}/{TOTAL_NIVELES} {t('completados')}"
+    tot_niv = TOTAL_NIVELES_ADMIN if es_adm else TOTAL_NIVELES_NORMALES
+    str_comp = f"{cant_comp}/{tot_niv} {t('completados')}"
     f_comp = obtener_fuente_cjk(16, negrita=False) if contiene_caracteres_cjk(str_comp) else (fuentes.get("sub_card") or obtener_fuente_pequena(28))
     t_comp = f_comp.render(str_comp, True, (90, 65, 45))
     pantalla.blit(t_comp, (cur_x2, y_fila2))
@@ -1840,17 +1846,20 @@ def dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel, pos_mouse, fuente
         pygame.draw.rect(pantalla, borde_bg, r_btn_gestionar, width=2, border_radius=8)
         dibujar_texto_en_rect(pantalla, t("gestionar"), r_btn_gestionar, categoria="boton", tamano=13, color=(65, 45, 30), padding=4)
 
-    # 6. Botón «BORRAR» (Terracota cálido suave - Sprite oficial)
-    if sprites_botones and sprites_botones.get("borrar_normal"):
-        spr_bn = sprites_botones["borrar_normal"]
-        spr_bh = sprites_botones.get("borrar_hover")
-        pantalla.blit(spr_bh if (hov_borrar and spr_bh) else spr_bn, r_btn_borrar)
+    # 6. Botón «BORRAR» (Terracota cálido suave - Sprite oficial) - Oculto y protegido para la partida especial de Administrador
+    if not es_adm:
+        if sprites_botones and sprites_botones.get("borrar_normal"):
+            spr_bn = sprites_botones["borrar_normal"]
+            spr_bh = sprites_botones.get("borrar_hover")
+            pantalla.blit(spr_bh if (hov_borrar and spr_bh) else spr_bn, r_btn_borrar)
+        else:
+            col_bb = (235, 95, 85) if hov_borrar else (205, 80, 70)
+            borde_bb = (255, 255, 255) if hov_borrar else (150, 50, 45)
+            pygame.draw.rect(pantalla, col_bb, r_btn_borrar, border_radius=8)
+            pygame.draw.rect(pantalla, borde_bb, r_btn_borrar, width=2, border_radius=8)
+            dibujar_texto_en_rect(pantalla, t("borrar"), r_btn_borrar, categoria="boton", tamano=14, color=(255, 250, 245), padding=4)
     else:
-        col_bb = (235, 95, 85) if hov_borrar else (205, 80, 70)
-        borde_bb = (255, 255, 255) if hov_borrar else (150, 50, 45)
-        pygame.draw.rect(pantalla, col_bb, r_btn_borrar, border_radius=8)
-        pygame.draw.rect(pantalla, borde_bb, r_btn_borrar, width=2, border_radius=8)
-        dibujar_texto_en_rect(pantalla, t("borrar"), r_btn_borrar, categoria="boton", tamano=14, color=(255, 250, 245), padding=4)
+        r_btn_borrar = pygame.Rect(0, 0, 0, 0)
 
     return r_card, r_btn_cargar, r_btn_gestionar, r_btn_borrar
 
@@ -1873,6 +1882,7 @@ def jugar_niveles_desde(
     m_idx, n_idx = m_inicial, n_inicial
     mundo_sel = m_idx
     mantenimiento = True
+    es_admin = es_partida_admin(partida_actual_nombre, partida_actual_id)
     while mantenimiento:
         mecanicas = obtener_mecanicas_nivel(m_idx, n_idx + 1)
         res = iniciar_mundo(
@@ -1890,16 +1900,31 @@ def jugar_niveles_desde(
             partida_password=partida_actual_password,
         )
         if res == "siguiente":
-            if n_idx + 1 < NIVELES_POR_MUNDO[m_idx]:
-                n_idx += 1
-                niveles_desbloqueados[m_idx][n_idx] = True
-            elif m_idx + 1 <= 3:
-                m_idx += 1
-                n_idx = 0
-                niveles_desbloqueados[m_idx][n_idx] = True
-                mundo_sel = m_idx
+            if es_admin:
+                if n_idx + 1 < NIVELES_POR_MUNDO[m_idx]:
+                    n_idx += 1
+                    niveles_desbloqueados[m_idx][n_idx] = True
+                elif m_idx + 1 <= 3:
+                    m_idx += 1
+                    n_idx = 0
+                    niveles_desbloqueados[m_idx][n_idx] = True
+                    mundo_sel = m_idx
+                else:
+                    return "menu", mundo_sel
             else:
-                return "menu", mundo_sel
+                # Partidas normales: los jefes (nivel 6) están en proceso.
+                # Al completar el último nivel normal (nivel 5), se salta automáticamente el jefe
+                # y se avanza directamente al siguiente mundo disponible sin bloquear al jugador.
+                if n_idx < 4:
+                    n_idx += 1
+                    niveles_desbloqueados[m_idx][n_idx] = True
+                elif m_idx + 1 <= 3:
+                    m_idx += 1
+                    n_idx = 0
+                    niveles_desbloqueados[m_idx][n_idx] = True
+                    mundo_sel = m_idx
+                else:
+                    return "menu", mundo_sel
         elif res == "reiniciar":
             continue
         elif res == "menu":
@@ -3292,27 +3317,33 @@ def main():
                             break
 
                     if not tab_presionada:
+                        es_admin_partida = es_partida_admin(partida_actual_nombre, partida_actual_id)
                         for idx_nivel, rect_c in enumerate(rects_cards):
                             desbloqueado = niveles_desbloqueados[mundo_seleccionado][idx_nivel]
-                            if desbloqueado and rect_c.collidepoint(evento.pos):
-                                fin_acc, mundo_seleccionado = jugar_niveles_desde(
-                                    mundo_seleccionado,
-                                    idx_nivel,
-                                    color_p1,
-                                    color_p2,
-                                    niveles_desbloqueados,
-                                    partida_actual_id,
-                                    partida_actual_nombre,
-                                    snapshot_guardado,
-                                    accesorio_p1=accesorio_p1,
-                                    accesorio_p2=accesorio_p2,
-                                    partida_actual_password=partida_actual_password,
-                                )
-                                if fin_acc == "menu":
-                                    estado_actual = ESTADO_SELECCION_NIVEL
-                                else:
-                                    ejecutando = False
-                                break
+                            if rect_c.collidepoint(evento.pos):
+                                if es_nivel_jefe(mundo_seleccionado, idx_nivel + 1) and not es_admin_partida:
+                                    # Nivel de jefe en proceso: no jugable en partidas normales
+                                    reproducir_sonido_ui("click")
+                                    break
+                                if desbloqueado or es_admin_partida:
+                                    fin_acc, mundo_seleccionado = jugar_niveles_desde(
+                                        mundo_seleccionado,
+                                        idx_nivel,
+                                        color_p1,
+                                        color_p2,
+                                        niveles_desbloqueados,
+                                        partida_actual_id,
+                                        partida_actual_nombre,
+                                        snapshot_guardado,
+                                        accesorio_p1=accesorio_p1,
+                                        accesorio_p2=accesorio_p2,
+                                        partida_actual_password=partida_actual_password,
+                                    )
+                                    if fin_acc == "menu":
+                                        estado_actual = ESTADO_SELECCION_NIVEL
+                                    else:
+                                        ejecutando = False
+                                    break
 
             elif evento.type == pygame.MOUSEWHEEL:
                 if estado_actual == ESTADO_LISTA_PARTIDAS:
@@ -4278,6 +4309,7 @@ def main():
                 niveles_desbloqueados,
                 pos_mouse,
                 fuentes_menu,
+                es_admin=es_partida_admin(partida_actual_nombre, partida_actual_id),
             )
 
             # Capturar fondo limpio de los iconos antes de dibujarlos sobre la pantalla

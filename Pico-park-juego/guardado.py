@@ -81,12 +81,38 @@ from fuentes import (
 
 # Cantidad de niveles de cada mundo. El sexto nivel de cada mundo es el jefe.
 NIVELES_POR_MUNDO = {1: 6, 2: 6, 3: 6}
-TOTAL_NIVELES = sum(NIVELES_POR_MUNDO.values())
+TOTAL_NIVELES_NORMALES = 15
+TOTAL_NIVELES_ADMIN = sum(NIVELES_POR_MUNDO.values())  # 18
+TOTAL_NIVELES = TOTAL_NIVELES_NORMALES
 
 
-def crear_desbloqueados_inicial():
-    """Retorna la estructura inicial con solo el Nivel 1 del Mundo 1 desbloqueado."""
-    return {m: [i == 0 and m == 1 for i in range(n)] for m, n in NIVELES_POR_MUNDO.items()}
+def es_partida_admin(partida_o_nombre, id_partida=None):
+    """Determina si una partida dada es la partida especial de administrador."""
+    if isinstance(partida_o_nombre, dict):
+        if partida_o_nombre.get("es_admin", False):
+            return True
+        nom = partida_o_nombre.get("nombre", "")
+    else:
+        nom = str(partida_o_nombre or "")
+    nom_clean = nom.strip().lower()
+    return nom_clean in ("admin", "administrador", "administrator", "partida admin", "admin profile")
+
+
+def es_nivel_jefe(mundo, nivel):
+    """Determina si un nivel dado corresponde al jefe del mundo (Nivel 6)."""
+    return int(nivel) == 6
+
+
+def crear_desbloqueados_inicial(es_admin=False):
+    """
+    Retorna la estructura inicial de niveles desbloqueados:
+    - Para partida de administrador: todos los niveles desbloqueados (1-1 a 3-6).
+    - Para partidas normales: primer nivel desbloqueado de cada mundo (1-1, 2-1, 3-1),
+      respetando el sistema de progresión del juego.
+    """
+    if es_admin:
+        return {m: [True] * n for m, n in NIVELES_POR_MUNDO.items()}
+    return {m: [i == 0 for i in range(n)] for m, n in NIVELES_POR_MUNDO.items()}
 
 
 def encode_desbloqueados(d):
@@ -98,9 +124,11 @@ def encode_desbloqueados(d):
     return ",".join(partes)
 
 
-def decode_desbloqueados(s):
+def decode_desbloqueados(s, es_admin=False):
     """Convierte la cadena guardada de nuevo a diccionario de booleanos."""
-    res = crear_desbloqueados_inicial()
+    if es_admin:
+        return {m: [True] * n for m, n in NIVELES_POR_MUNDO.items()}
+    res = crear_desbloqueados_inicial(es_admin=False)
     if not s:
         return res
     for item in s.strip().split(","):
@@ -113,9 +141,6 @@ def decode_desbloqueados(s):
         except (ValueError, IndexError):
             pass
     # Compatibilidad con partidas guardadas antes de agregar niveles a un mundo:
-    # se rellenan los bits faltantes. Si el jugador ya había terminado ese mundo
-    # (todos sus niveles abiertos y, si existe, el mundo siguiente también),
-    # los niveles nuevos quedan abiertos.
     for m, cantidad in NIVELES_POR_MUNDO.items():
         bits = res.get(m, [])[:cantidad]
         if len(bits) < cantidad:
@@ -123,49 +148,75 @@ def decode_desbloqueados(s):
             if m + 1 in NIVELES_POR_MUNDO:
                 mundo_terminado = mundo_terminado and bool(res.get(m + 1, [False])[0])
             bits += [mundo_terminado] * (cantidad - len(bits))
+        # Asegurar que el primer nivel de cada mundo esté siempre desbloqueado
+        if bits:
+            bits[0] = True
         res[m] = bits
     return res
 
 
-def obtener_maximo_alcanzado(niveles_desbloqueados):
-    """Retorna (mundo_max, nivel_max) indicando el nivel más alto alcanzado/desbloqueado."""
+def obtener_maximo_alcanzado(niveles_desbloqueados, es_admin=False):
+    """
+    Retorna (mundo_max, nivel_max) indicando el nivel más alto alcanzado/desbloqueado:
+    - En partida admin: retorna (3, 6).
+    - En partidas normales: como 1-1, 2-1 y 3-1 inician desbloqueados, busca el mundo más alto
+      con progreso efectivo (nivel > 1). Si aún no hay progreso en ningún mundo, retorna (1, 1).
+    """
     if not niveles_desbloqueados:
         return 1, 1
+    if es_admin:
+        return 3, 6
+
     for m in (3, 2, 1):
-        if m in niveles_desbloqueados:
-            for idx in range(len(niveles_desbloqueados[m]) - 1, -1, -1):
-                if niveles_desbloqueados[m][idx]:
-                    return m, idx + 1
+        bits = niveles_desbloqueados.get(m, [])
+        # Niveles normales son índices 0 a 4 (niveles 1 a 5)
+        for idx in range(min(5, len(bits)) - 1, 0, -1):
+            if bits[idx]:
+                return m, idx + 1
+
     return 1, 1
 
 
-def calcular_niveles_completados(niveles_desbloqueados):
+def calcular_niveles_completados(niveles_desbloqueados, es_admin=False):
     """
-    Calcula la cantidad real de niveles completados en base a los datos registrados.
-    Cada nivel desbloqueado adicional al inicial (1-1) representa un nivel completado con éxito.
+    Calcula la cantidad real de niveles normales completados (excluyendo jefes).
+    Cada mundo tiene 5 niveles normales jugables. Total: 15 niveles.
+    Los jefes están en desarrollo y no se cuentan como completados.
     """
     if not niveles_desbloqueados:
         return 0
-    total_desbloq = sum(sum(1 for x in bits if x) for bits in niveles_desbloqueados.values())
-    return max(0, min(TOTAL_NIVELES, total_desbloq - 1))
+    if es_admin:
+        return TOTAL_NIVELES_ADMIN
+    total_completados = 0
+    for m in (1, 2, 3):
+        bits = niveles_desbloqueados.get(m, [])
+        # Nivel 1 desbloqueado = inicial (0 completados)
+        # Nivel 2 desbloqueado = Nivel 1 completado (+1)
+        # Nivel 3 desbloqueado = Nivel 2 completado (+1)
+        # Nivel 4 desbloqueado = Nivel 3 completado (+1)
+        # Nivel 5 desbloqueado = Nivel 4 completado (+1)
+        # Nivel 5 completado (registrado en bits[5]) = (+1)
+        for idx in range(1, min(6, len(bits))):
+            if bits[idx]:
+                total_completados += 1
+    return max(0, min(TOTAL_NIVELES_NORMALES, total_completados))
 
 
-def obtener_ultimo_nivel_completado(niveles_desbloqueados):
+def obtener_ultimo_nivel_completado(niveles_desbloqueados, es_admin=False):
     """
     Retorna (mundo, nivel) del último nivel completado, o None si no se ha completado ninguno.
     """
     if not niveles_desbloqueados:
         return None
-    completados = calcular_niveles_completados(niveles_desbloqueados)
+    completados = calcular_niveles_completados(niveles_desbloqueados, es_admin=es_admin)
     if completados == 0:
         return None
     restantes = completados
-    for m in sorted(NIVELES_POR_MUNDO):
-        if restantes <= NIVELES_POR_MUNDO[m]:
+    for m in (1, 2, 3):
+        if restantes <= 5:
             return m, restantes
-        restantes -= NIVELES_POR_MUNDO[m]
-    ultimo = max(NIVELES_POR_MUNDO)
-    return ultimo, NIVELES_POR_MUNDO[ultimo]
+        restantes -= 5
+    return 3, 5
 
 
 def hay_progreso_sin_guardar(niveles_desbloqueados, snapshot_guardado=None, id_partida=None):
@@ -269,13 +320,16 @@ def cargar_partidas():
                                 a_p1 = pers_partes[2]
                             if len(pers_partes) >= 4 and pers_partes[3]:
                                 a_p2 = pers_partes[3]
+                        nom = partes[1]
+                        es_adm = es_partida_admin(nom)
+                        desbloq = {m: [True] * n for m, n in NIVELES_POR_MUNDO.items()} if es_adm else decode_desbloqueados(partes[5], es_admin=False)
                         p = {
                             "id": int(partes[0]),
-                            "nombre": partes[1],
-                            "mundo_max": int(partes[2]),
-                            "nivel_max": int(partes[3]),
+                            "nombre": nom,
+                            "mundo_max": 3 if es_adm else int(partes[2]),
+                            "nivel_max": 6 if es_adm else int(partes[3]),
                             "fecha": partes[4],
-                            "niveles_desbloqueados": decode_desbloqueados(partes[5]),
+                            "niveles_desbloqueados": desbloq,
                             "password_hash": pwd_hash,
                             "password_salt": pwd_salt,
                             "tiene_password": bool(pwd_hash and pwd_salt),
@@ -283,6 +337,7 @@ def cargar_partidas():
                             "color_p2": c_p2,
                             "accesorio_p1": a_p1,
                             "accesorio_p2": a_p2,
+                            "es_admin": es_adm,
                         }
                         partidas.append(p)
                     except (ValueError, IndexError):
@@ -290,6 +345,28 @@ def cargar_partidas():
     except Exception as e:
         print(f"Error al leer partidas.txt: {e}")
         return []
+
+    # Asegurar que siempre exista la partida especial del administrador
+    if not any(es_partida_admin(p) for p in partidas):
+        admin_id = max([p["id"] for p in partidas], default=0) + 1
+        admin_p = {
+            "id": admin_id,
+            "nombre": "Administrador",
+            "mundo_max": 3,
+            "nivel_max": 6,
+            "fecha": datetime.datetime.now().strftime("%d/%m/%Y %H:%M"),
+            "niveles_desbloqueados": {m: [True] * n for m, n in NIVELES_POR_MUNDO.items()},
+            "password_hash": "",
+            "password_salt": "",
+            "tiene_password": False,
+            "color_p1": "Celeste",
+            "color_p2": "Violeta",
+            "accesorio_p1": "Ninguno",
+            "accesorio_p2": "Ninguno",
+            "es_admin": True,
+        }
+        partidas.append(admin_p)
+        guardar_partidas_seguras(partidas)
 
     _CACHE_PARTIDAS = partidas
     _CACHE_MTIME = mtime
@@ -355,7 +432,6 @@ def guardar_partida(
     Retorna la partida guardada si tuvo éxito, o None si falló.
     """
     partidas = cargar_partidas()
-    mundo_max, nivel_max = obtener_maximo_alcanzado(niveles_desbloqueados)
     fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
 
     partida_encontrada = None
@@ -364,6 +440,15 @@ def guardar_partida(
             if p["id"] == id_partida:
                 partida_encontrada = p
                 break
+
+    nom_eval = (nombre_partida or (partida_encontrada.get("nombre") if partida_encontrada else "")).strip()
+    es_adm = es_partida_admin(nom_eval) or (partida_encontrada and es_partida_admin(partida_encontrada))
+    if es_adm:
+        mundo_max, nivel_max = 3, 6
+        desbloq_guardar = {m: [True] * n for m, n in NIVELES_POR_MUNDO.items()}
+    else:
+        desbloq_guardar = copy.deepcopy(niveles_desbloqueados)
+        mundo_max, nivel_max = obtener_maximo_alcanzado(desbloq_guardar, es_admin=False)
 
     # Resolver contraseña
     if password is not None:
@@ -382,7 +467,8 @@ def guardar_partida(
         partida_encontrada["mundo_max"] = mundo_max
         partida_encontrada["nivel_max"] = nivel_max
         partida_encontrada["fecha"] = fecha_actual
-        partida_encontrada["niveles_desbloqueados"] = copy.deepcopy(niveles_desbloqueados)
+        partida_encontrada["niveles_desbloqueados"] = copy.deepcopy(desbloq_guardar)
+        partida_encontrada["es_admin"] = es_adm
         if nombre_partida:
             partida_encontrada["nombre"] = nombre_partida.replace("|", "-").strip()
         partida_encontrada["password_hash"] = p_hash
@@ -421,7 +507,8 @@ def guardar_partida(
             "mundo_max": mundo_max,
             "nivel_max": nivel_max,
             "fecha": fecha_actual,
-            "niveles_desbloqueados": copy.deepcopy(niveles_desbloqueados),
+            "niveles_desbloqueados": copy.deepcopy(desbloq_guardar),
+            "es_admin": es_adm,
             "password_hash": p_hash,
             "password_salt": p_salt,
             "tiene_password": bool(p_hash and p_salt),
@@ -440,10 +527,13 @@ def guardar_partida(
 def eliminar_partida(id_partida):
     """
     Elimina del archivo partidas.txt la partida que tenga el ID especificado.
-    Conserva intactas las demás partidas.
+    Conserva intactas las demás partidas. La partida del Administrador está protegida.
     Retorna True si fue eliminada con éxito, o False en caso contrario.
     """
     partidas = cargar_partidas()
+    for p in partidas:
+        if p.get("id") == id_partida and es_partida_admin(p):
+            return False
     partidas_restantes = [p for p in partidas if p["id"] != id_partida]
     if len(partidas_restantes) == len(partidas):
         return False
@@ -1102,7 +1192,8 @@ def flujo_crear_nueva_partida(
     if pwd is None:
         return None
 
-    desbloqueados_nuevos = crear_desbloqueados_inicial()
+    es_adm = es_partida_admin(nombre_final)
+    desbloqueados_nuevos = crear_desbloqueados_inicial(es_admin=es_adm)
     partida_creada = guardar_partida(
         desbloqueados_nuevos,
         id_partida=id_sobrescribir,
@@ -1116,6 +1207,7 @@ def flujo_crear_nueva_partida(
     if partida_creada is None:
         return None
     partida_creada["password_plain"] = pwd or ""
+    partida_creada["es_admin"] = es_adm
     return partida_creada
 
 
@@ -1368,8 +1460,11 @@ def modal_flujo_guardar_perfil(
                 r_nom_s = pygame.Rect(r_s.left + 16, r_s.top + 8, r_s.width - 55, 22)
                 dibujar_texto_en_rect(pantalla, txt_nom, r_nom_s, categoria="subtitulo", tamano=16, color=(40, 115, 60) if es_actual else (55, 45, 35), alineacion="izquierda", padding=0)
 
-                cant_comp = calcular_niveles_completados(p.get("niveles_desbloqueados", {}))
-                det = f"{t('niveles_completados')}: {cant_comp}/15  •  {t('guardado')}: {p.get('fecha', '')}"
+                if es_partida_admin(p):
+                    det = f"{t('todos_desbloqueados')}  •  {t('guardado')}: {p.get('fecha', '')}"
+                else:
+                    cant_comp = calcular_niveles_completados(p.get("niveles_desbloqueados", {}))
+                    det = f"{t('niveles_completados')}: {cant_comp}/15  •  {t('guardado')}: {p.get('fecha', '')}"
                 r_det_s = pygame.Rect(r_s.left + 16, r_s.top + 32, r_s.width - 55, 20)
                 dibujar_texto_en_rect(pantalla, det, r_det_s, categoria="pequena", tamano=13, color=(115, 100, 85), alineacion="izquierda", padding=0)
 

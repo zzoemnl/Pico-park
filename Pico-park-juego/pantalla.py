@@ -72,6 +72,7 @@ from guardado import (
     crear_desbloqueados_inicial,
     mostrar_dialogo_guardar_salir,
     hay_progreso_sin_guardar,
+    es_partida_admin,
 )
 
 COLOR_SOGA = (200, 160, 100)
@@ -3502,7 +3503,11 @@ def iniciar_mundo(
     es_nivel_jefe = (numero_nivel == 6 and tipo_jefe is not None)
     reproducir_musica(MUSICA_JEFES[tipo_jefe] if es_nivel_jefe else f"mundo_{numero_mundo}")
 
-    hay_siguiente_nivel = not (numero_mundo >= 3 and numero_nivel >= 6)
+    es_admin = es_partida_admin(partida_nombre, partida_id)
+    if es_admin:
+        hay_siguiente_nivel = not (numero_mundo >= 3 and numero_nivel >= 6)
+    else:
+        hay_siguiente_nivel = not (numero_mundo >= 3 and numero_nivel >= 5)
 
     usar_caja = "caja" in mecanicas
     usar_soga = "soga" in mecanicas

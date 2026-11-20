@@ -262,6 +262,11 @@ DICCIONARIO = {
         "en": "LOCKED",
         "zh": "未解锁",
     },
+    "en_proceso": {
+        "es": "EN PROCESO",
+        "en": "IN PROGRESS",
+        "zh": "开发中",
+    },
     "deseas_guardar_sub": {
         "es": "Puedes guardar tu partida en un perfil antes de salir.",
         "en": "You can save your game before exiting.",
