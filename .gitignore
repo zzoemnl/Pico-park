@@ -11,3 +11,7 @@ __pycache__/
 scratch/
 
 _backup_auditoria/
+
+# Datos de usuario generados por el juego
+Pico-park-juego/partidas.txt
+Pico-park-juego/configuracion.json
