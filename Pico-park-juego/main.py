@@ -1447,7 +1447,7 @@ def _obtener_preview_accesorio_tarjeta(acc_id: str) -> "pygame.Surface | None":
         return None
 
     w, h = surf.get_size()
-    max_w, max_h = 44, 36
+    max_w, max_h = 48, 38
     if w > max_w or h > max_h:
         ratio = min(max_w / float(w), max_h / float(h))
         nw = max(1, int(round(w * ratio)))
