@@ -163,6 +163,16 @@ DICCIONARIO = {
         "en": "Step on both buttons at the same time!",
         "zh": "同时踩下两个按钮！",
     },
+    "jefe_pista_ruinas": {
+        "es": "Cuando quede aturdido, hagan una torre y toquen la runa de su pecho",
+        "en": "When it is stunned, stack up and touch the rune on its chest",
+        "zh": "它眩晕时，叠罗汉触碰它胸口的符文",
+    },
+    "jefe_pista_kraken": {
+        "es": "¡Métanse los dos dentro del orbe de luz y aguanten!",
+        "en": "Both of you get inside the light orb and hold on!",
+        "zh": "两人一起进入光球并坚持住！",
+    },
     "buen_trabajo": {
         "es": "¡Buen trabajo!",
         "en": "Good job!",

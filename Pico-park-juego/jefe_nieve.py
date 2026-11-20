@@ -19,6 +19,7 @@ import pygame
 
 from movimientos import GRAVEDAD
 
+CLAVE_PISTA = "jefe_pista"
 GOLPES_PARA_VENCER = 3
 FRAMES_CARGA_GOLPE = 45          # cuánto hay que mantener los dos botones (0,75 s)
 FRAMES_PAUSA_TRAS_GOLPE = 70
@@ -184,7 +185,7 @@ def _circulo_nieve(surf, cx, cy, r):
     pygame.draw.circle(surf, (255, 255, 255), (cx - r // 3, cy - r // 3), max(3, r // 5))
 
 
-def dibujar_bolas(surf, jefe):
+def dibujar_proyectiles(surf, jefe):
     for bola in jefe["bolas"]:
         r = bola["rect"]
         _circulo_nieve(surf, r.centerx, r.centery, r.width // 2)
@@ -288,27 +289,6 @@ def dibujar_jefe(surf, jefe, suelo):
         pygame.draw.rect(surf, (60, 60, 70), barra, border_radius=5)
         pygame.draw.rect(surf, (255, 215, 70), (barra.x, barra.y, int(ancho * progreso), 12), border_radius=5)
         pygame.draw.rect(surf, COL_CARBON, barra, 2, border_radius=5)
-
-
-FRAMES_PISTA = 420   # la pista se muestra los primeros 7 s, hasta el primer golpe
-
-
-def dibujar_pista_jefe(surf, jefe, ancho_mundo):
-    """Cartel con la instrucción del jefe, traducido, centrado sobre el refugio."""
-    if jefe["derrotado"] or jefe["fase"] > 0 or jefe["tick"] > FRAMES_PISTA:
-        return
-    from configuracion import t
-    from fuentes import obtener_fuente_para_texto
-    texto = t("jefe_pista")
-    fuente = obtener_fuente_para_texto(texto, categoria="texto", tamano=26, tamano_fallback=26)
-    render = fuente.render(texto, True, (255, 255, 255))
-    alpha = 255 if jefe["tick"] < FRAMES_PISTA - 60 else int(255 * (FRAMES_PISTA - jefe["tick"]) / 60)
-    render.set_alpha(alpha)
-    caja = render.get_rect(center=(ancho_mundo // 2, 440)).inflate(28, 16)
-    fondo = pygame.Surface(caja.size, pygame.SRCALPHA)
-    pygame.draw.rect(fondo, (30, 40, 70, int(alpha * 0.8)), fondo.get_rect(), border_radius=10)
-    surf.blit(fondo, caja.topleft)
-    surf.blit(render, render.get_rect(center=caja.center))
 
 
 def _dibujar_copo(surf, x, y, lleno):

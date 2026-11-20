@@ -54,8 +54,12 @@ def obtener_mecanicas_nivel(mundo, nivel):
         elif nivel == 6:
             return ["jefe"]
     elif mundo == 2:
+        if nivel == 6:
+            return ["soga", "jefe"]
         return ["soga", "pinchos"]
     elif mundo == 3:
+        if nivel == 6:
+            return ["agua", "jefe"]
         return ["agua"]
     return []
 
@@ -1197,6 +1201,89 @@ def _crear_m3_n5():
     return s
 
 
+
+def _crear_m2_n6():
+    """2-6: Jefe. Guardián de piedra de las ruinas, rocas cayendo, personajes unidos por la soga."""
+    s = pygame.Surface((ANCHO_MINI, ALTO_MINI))
+    s.fill(COL_FONDO_M1)
+    y_suelo = 94
+    pygame.draw.rect(s, COL_SUELO_M1, (0, y_suelo, ANCHO_MINI, ALTO_MINI - y_suelo))
+    pygame.draw.rect(s, COL_BORDE_PLAT, (0, y_suelo, ANCHO_MINI, ALTO_MINI - y_suelo), 1)
+
+    # Columnas de ruinas al fondo
+    for x in (8, 150):
+        pygame.draw.rect(s, (205, 190, 165), (x, 30, 14, y_suelo - 30))
+        pygame.draw.rect(s, (160, 145, 120), (x, 30, 14, y_suelo - 30), 1)
+        pygame.draw.rect(s, (205, 190, 165), (x - 3, 26, 20, 6))
+
+    # Guardián: bloques de piedra apilados, runa brillante en el pecho
+    col_piedra, col_borde = (120, 125, 135), (70, 72, 82)
+    cx = 122
+    cuerpo = pygame.Rect(cx - 18, y_suelo - 52, 36, 36)
+    cabeza = pygame.Rect(cx - 12, y_suelo - 70, 24, 20)
+    pierna_i = pygame.Rect(cx - 16, y_suelo - 18, 12, 18)
+    pierna_d = pygame.Rect(cx + 4, y_suelo - 18, 12, 18)
+    brazo_i = pygame.Rect(cx - 30, y_suelo - 50, 11, 30)
+    brazo_d = pygame.Rect(cx + 19, y_suelo - 50, 11, 30)
+    for r in (pierna_i, pierna_d, brazo_i, brazo_d, cuerpo, cabeza):
+        pygame.draw.rect(s, col_piedra, r, border_radius=3)
+        pygame.draw.rect(s, col_borde, r, 1, border_radius=3)
+    pygame.draw.circle(s, (120, 220, 255), (cx, y_suelo - 36), 5)
+    pygame.draw.circle(s, (230, 250, 255), (cx, y_suelo - 36), 2)
+    pygame.draw.rect(s, (255, 200, 60), (cx - 8, y_suelo - 64, 5, 4))
+    pygame.draw.rect(s, (255, 200, 60), (cx + 3, y_suelo - 64, 5, 4))
+
+    # Rocas cayendo
+    for (rx, ry) in ((60, 20), (88, 42)):
+        pygame.draw.rect(s, col_piedra, (rx, ry, 12, 12), border_radius=3)
+        pygame.draw.rect(s, col_borde, (rx, ry, 12, 12), 1, border_radius=3)
+
+    pj1 = _cargar_personaje("Celeste")
+    pj2 = _cargar_personaje("Violeta")
+    pos_c = (18, y_suelo - 20)
+    pos_v = (44, y_suelo - 20)
+    _dibujar_soga(s, (pos_c[0] + 12, pos_c[1] + 14), (pos_v[0] + 6, pos_v[1] + 14))
+    s.blit(pj1, pos_c)
+    s.blit(pj2, pos_v)
+    return s
+
+
+def _crear_m3_n6():
+    """3-6: Jefe final. Kraken con tentáculos, orbe de luz que hay que cargar entre los dos."""
+    s = _crear_fondo_submarino()
+    y_lecho = 96
+    pygame.draw.rect(s, (45, 75, 105), (0, y_lecho, ANCHO_MINI, ALTO_MINI - y_lecho))
+
+    # Kraken: cabeza violeta, ojos amarillos, tentáculos que suben del lecho
+    col_k, col_kb = (110, 60, 150), (70, 35, 100)
+    cx = 128
+    pygame.draw.ellipse(s, col_kb, (cx - 30, 22, 60, 50))
+    pygame.draw.ellipse(s, col_k, (cx - 28, 24, 56, 46))
+    for ex in (cx - 12, cx + 12):
+        pygame.draw.circle(s, (255, 220, 60), (ex, 44), 6)
+        pygame.draw.circle(s, (30, 20, 40), (ex, 45), 3)
+    for i, tx in enumerate((52, 78, 104, 130, 156)):
+        alto = 26 + (i % 3) * 12
+        pygame.draw.rect(s, col_k, (tx, y_lecho - alto, 10, alto), border_top_left_radius=5, border_top_right_radius=5)
+        pygame.draw.rect(s, col_kb, (tx, y_lecho - alto, 10, alto), 1, border_top_left_radius=5, border_top_right_radius=5)
+        for vy in range(y_lecho - alto + 6, y_lecho - 4, 7):
+            pygame.draw.circle(s, (200, 140, 220), (tx + 5, vy), 2)
+
+    # Orbe de luz entre los personajes
+    orbe = pygame.Surface((40, 40), pygame.SRCALPHA)
+    pygame.draw.circle(orbe, (255, 240, 150, 90), (20, 20), 20)
+    pygame.draw.circle(orbe, (255, 250, 200, 200), (20, 20), 9)
+    s.blit(orbe, (26, 36))
+
+    pj1 = _cargar_personaje("Celeste", tinte_agua=True)
+    pj2 = _cargar_personaje("Violeta", tinte_agua=True)
+    s.blit(pj1, (14, 52))
+    s.blit(pj2, (48, 44))
+    _dibujar_alga(s, 8, y_lecho, alto=24)
+    _dibujar_coral(s, 170, y_lecho, (240, 110, 130))
+    return s
+
+
 # ==============================================================================
 # DICCIONARIO Y GENERADOR PRINCIPAL
 # ==============================================================================
@@ -1216,6 +1303,7 @@ CREADORES_MINIATURAS = {
         3: _crear_m2_n3,
         4: _crear_m2_n4,
         5: _crear_m2_n5,
+        6: _crear_m2_n6,
     },
     3: {
         1: _crear_m3_n1,
@@ -1223,6 +1311,7 @@ CREADORES_MINIATURAS = {
         3: _crear_m3_n3,
         4: _crear_m3_n4,
         5: _crear_m3_n5,
+        6: _crear_m3_n6,
     },
 }
 

@@ -10,13 +10,25 @@ El juego arranca en pantalla completa y se adapta a cualquier resolución de mon
 
 ● Reglas: El grupo debe conseguir la llave del mapa y entrar todos los jugadores por la puerta de salida. Si alguien se queda afuera, no se gana.
 
-● Niveles: 3 mundos (nieve, ruinas y submarino). El mundo 1 tiene 6 niveles y los mundos 2 y 3 tienen 5.
-El nivel 1-6 es el jefe del mundo 1, el Muñeco de Nieve: lanza bolas que ruedan y matan al tocarlas.
-Para golpearlo hay que pisar los dos botones de colores AL MISMO TIEMPO y mantenerlos un instante;
-con cada golpe los botones cambian de lugar y las bolas se aceleran. Al tercer golpe se derrite y
-aparecen la llave y la puerta. La lógica y el dibujo del jefe están en Pico-park-juego\jefe_nieve.py
-(todo dibujado con código, como los fondos; se puede reemplazar por sprites a mano).
-La cantidad de niveles por mundo se define en NIVELES_POR_MUNDO (Pico-park-juego\guardado.py).
+● Niveles: 3 mundos (nieve, ruinas y submarino) de 6 niveles cada uno. El sexto nivel de cada mundo es un jefe:
+
+- 1-6 El Muñeco de Nieve: lanza bolas que ruedan y matan al tocarlas. Para golpearlo hay que pisar los dos
+  botones de colores AL MISMO TIEMPO y mantenerlos un instante; con cada golpe los botones cambian de lugar
+  y las bolas se aceleran. Al tercer golpe se derrite y aparecen la llave y la puerta.
+- 2-6 El Guardián de piedra (con soga): golpea el suelo y lanza una onda expansiva que hay que saltar, más
+  rocas que caen sobre cada jugador (avisadas por una sombra). Después queda aturdido unos segundos con la
+  runa del pecho brillando: está demasiado alta para un salto, hay que hacer la torre humana (uno salta
+  desde la cabeza del otro) y tocarla. Tres toques y se desmorona.
+- 3-6 El Kraken (jefe final, nadando, con oxígeno y cámaras de aire): tentáculos que suben del lecho
+  (avisados con burbujas) y tinta a partir del segundo golpe. Aparece un orbe de luz: los dos jugadores
+  tienen que meterse adentro al mismo tiempo y aguantar un segundo para cargarlo; el orbe vuela al ojo
+  del Kraken. Tres golpes y se hunde.
+
+La lógica y el dibujo de cada jefe están en Pico-park-juego\jefe_nieve.py, jefe_ruinas.py y jefe_kraken.py
+(todo dibujado con código, como los fondos; se puede reemplazar por sprites a mano). jefes.py es el punto
+de entrada común que usa pantalla.py. Las constantes de dificultad (tiempos, velocidades, posiciones) están
+al principio de cada módulo. La cantidad de niveles por mundo se define en NIVELES_POR_MUNDO
+(Pico-park-juego\guardado.py).
 
 Si un solo jugador muere (cae a los picos, toca un láser o queda atrapado en el mapa), todo el equipo pierde y el nivel se reinicia desde el principio.
 

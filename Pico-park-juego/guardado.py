@@ -79,8 +79,8 @@ from fuentes import (
 
 
 
-# Cantidad de niveles de cada mundo. El mundo 1 tiene un sexto nivel (jefe).
-NIVELES_POR_MUNDO = {1: 6, 2: 5, 3: 5}
+# Cantidad de niveles de cada mundo. El sexto nivel de cada mundo es el jefe.
+NIVELES_POR_MUNDO = {1: 6, 2: 6, 3: 6}
 TOTAL_NIVELES = sum(NIVELES_POR_MUNDO.values())
 
 
