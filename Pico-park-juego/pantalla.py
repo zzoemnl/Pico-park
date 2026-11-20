@@ -23,7 +23,14 @@ from fuentes import (
     TAMANO_BADGE,
     dibujar_texto_en_rect,
 )
-from configuracion import t,mostrar_pestana_configuracion, reproducir_musica,obtener_idioma
+from configuracion import (
+    t,
+    mostrar_pestana_configuracion,
+    reproducir_musica,
+    obtener_idioma,
+    reproducir_sonido_ahogamiento,
+    detener_sonido_ahogamiento,
+)
 
 from sprites import (
     ANCHO, ALTO, FPS,
@@ -4384,12 +4391,6 @@ def iniciar_mundo(
         }
         pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(926, ancho_mundo_nivel - 32, 35)]
 
-        # Bloque cuadrado con pinchos alrededor para aumentar moderadamente la dificultad
-        b_pel_1, s_pel_1 = crear_bloque_con_pinchos(1070, 180, 60, 60)
-        bloques_peligrosos.append(b_pel_1)
-        plataformas.append(b_pel_1["rect"])
-        pinchos.extend(s_pel_1)
-
         # Llave cerca del final del recorrido sobre la plataforma de destino
         llave = crear_llave(1820, plat_destino.top - 46)
 
@@ -4428,10 +4429,6 @@ def iniciar_mundo(
         # Pinchos delimitados exactamente a la abertura del pozo sin superponerse con las paredes
         pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(366, 1940 - 32, 35)]
 
-        # Bloque cuadrado con pinchos a lo largo del recorrido de la plataforma móvil
-        b_pel_2, s_pel_2 = crear_bloque_con_pinchos(740, 190, 60, 60)
-        bloques_peligrosos.append(b_pel_2)
-
         # Plataforma móvil para cruzar el abismo
         plataforma_movil = {
             "rect": pygame.Rect(370, 460, 220, 24),
@@ -4465,9 +4462,8 @@ def iniciar_mundo(
         plat_llegada = pygame.Rect(1940, 460, 260, 26)
         plat_llegada_base = pygame.Rect(1940, 486, 260, suelo.top - 486 + 80)
 
-        plataformas_base = [plat_inicio, plat_inicio_base, plat_llegada, plat_llegada_base, bloque_central["rect"], b_pel_2["rect"]]
+        plataformas_base = [plat_inicio, plat_inicio_base, plat_llegada, plat_llegada_base, bloque_central["rect"]]
         plataformas = list(plataformas_base) + [plataforma_movil["rect"]]
-        pinchos.extend(s_pel_2)
 
         # Llave accesible tras superar el bloque central
         llave = crear_llave(1420, 460 - 46)
@@ -4518,13 +4514,25 @@ def iniciar_mundo(
         pinchos = [p for p in pinchos if p.right <= 1380]
 
         # Pinchos laterales en las paredes del abismo (aumentan la dificultad si el péndulo se acerca a los extremos)
-        # La pared izquierda conserva todos sus pinchos; en la pared derecha se despeja la zona superior para facilitar el salto y el paso de ambos personajes
-        pinchos_pared_izq = [crear_pincho(260, y, 22, 26, direccion="derecha") for y in range(390, 600, 32)]
+        # Se despeja la parte superior de la pared izquierda (quitando el par de pinchos más altos) y de la pared derecha para facilitar el salto y el paso de ambos personajes
+        pinchos_pared_izq = [crear_pincho(260, y, 22, 26, direccion="derecha") for y in range(454, 600, 32)]
         pinchos_pared_der = [crear_pincho(1380 - 22, y, 22, 26, direccion="izquierda") for y in range(518, 600, 32)]
         pinchos.extend(pinchos_pared_izq + pinchos_pared_der)
 
-        # 4. Bloque peligroso rojo y pinchos dobles arriba, abajo y alrededor
-        # Ubicado en la zona del abismo como obstáculo central que desafía el balanceo sin bloquearlo
+        # Pinchos en el borde inferior de la plataforma elevada (zona de la viga roja)
+        # El personaje suspendido que oscila en el péndulo debe controlar el balanceo con precisión
+        # para no tocar estos pinchos por arriba
+        pinchos_techo_pendulo = [crear_pincho(x, plat_elevada.bottom, 28, 20, direccion="abajo") for x in range(400, 1260, 32)]
+        pinchos.extend(pinchos_techo_pendulo)
+
+        # 4. Secuencia de bloques cuadrados con pinchos para aumentar la dificultad del péndulo
+        # Se conserva el obstáculo original (880, 440) y se agrega un par de obstáculos seguidos (660, 440 y 770, 440)
+        # formando una secuencia horizontal que los personajes deben superar con coordinación
+        b_pel_0, s_pel_0 = crear_bloque_con_pinchos(660, 440, 60, 60)
+        b_pel_1, s_pel_1 = crear_bloque_con_pinchos(770, 440, 60, 60)
+        bloques_peligrosos.extend([b_pel_0, b_pel_1])
+        pinchos.extend(s_pel_0 + s_pel_1)
+
         bx, by, bw, bh = 880, 440, 70, 60
         bloque_peligroso = {
             "rect": pygame.Rect(bx, by, bw, bh),
@@ -4535,7 +4543,7 @@ def iniciar_mundo(
         }
         bloques_peligrosos.append(bloque_peligroso)
 
-        # Pinchos dobles y más cerrados alrededor del bloque rojo
+        # Pinchos dobles y más cerrados alrededor del bloque rojo original
         pinchos.extend([
             crear_pincho(bx + 4, by - 22, 30, 22, direccion="arriba"),
             crear_pincho(bx + 36, by - 22, 30, 22, direccion="arriba"),
@@ -4555,6 +4563,8 @@ def iniciar_mundo(
             plat_inicio,
             plat_inicio_base,
             plat_elevada,
+            b_pel_0["rect"],
+            b_pel_1["rect"],
             bloque_peligroso["rect"],
             plat_llegada,
             plat_llegada_base,
@@ -4603,15 +4613,11 @@ def iniciar_mundo(
         # Pinchos ajustados para que no atraviesen ni sobresalgan de la pared derecha
         pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(205, 2190 - 32, 35)]
 
-        # Bloque cuadrado con pinchos estratégicamente suspendido en la sección de plataformas que se derrumban
-        b_pel_4, s_pel_4 = crear_bloque_con_pinchos(1380, 180, 60, 60)
-        bloques_peligrosos.append(b_pel_4)
-
         # Plataforma final de llegada con la puerta (x: 2190..2600, y=460)
         plat_llegada = pygame.Rect(2190, 460, 410, 26)
         plat_llegada_base = pygame.Rect(2190, 486, 410, suelo.top - 486 + 80)
 
-        plataformas_base = [plat_inicio, plat_inicio_base, plat_llegada, plat_llegada_base, b_pel_4["rect"]]
+        plataformas_base = [plat_inicio, plat_inicio_base, plat_llegada, plat_llegada_base]
 
         # Serie de 8 plataformas pequeñas que se derrumban 1.0 segundo (60 frames) tras pisarlas
         # Separación horizontal moderada (gaps de 120-125px) para exigir saltos reales y coordinación
@@ -4642,7 +4648,6 @@ def iniciar_mundo(
         ]
         plataformas_derrumbables = [_crear_p_derrumbable(px, py) for px, py in coords_plats]
         plataformas = list(plataformas_base) + [p["rect"] for p in plataformas_derrumbables]
-        pinchos.extend(s_pel_4)
 
         # Llave a mitad del recorrido sobre la 4ta plataforma
         llave = crear_llave(1075, 420 - 46)
@@ -4692,15 +4697,11 @@ def iniciar_mundo(
         # Pinchos ajustados exactamente dentro de la abertura sin penetrar en la pared de llegada
         pinchos = [crear_pincho(x, suelo.top - 24, 32, 24, direccion="arriba") for x in range(165, 730 - 32, 32)]
 
-        # Bloque cuadrado con pinchos en el hueco superior para sumar dificultad a la escalada
-        b_pel_5, s_pel_5 = crear_bloque_con_pinchos(395, 100, 50, 50)
-        bloques_peligrosos.append(b_pel_5)
-
         # Plataforma de llegada segura a la derecha en la cima con la puerta de salida (x: 730..1400, y=130)
         plat_llegada = pygame.Rect(730, 130, 670, 26)
         plat_llegada_base = pygame.Rect(730, 156, 670, suelo.top - 156 + 80)
 
-        plataformas_base = [plat_inicio, plat_inicio_base, plat_llegada, plat_llegada_base, b_pel_5["rect"]]
+        plataformas_base = [plat_inicio, plat_inicio_base, plat_llegada, plat_llegada_base]
 
         # Plataformas en ZIGZAG lateral con amplio despeje vertical (headroom > 70px) para saltar libremente:
         # P1: Izquierda (x: 180..410, y: 480) - Centro 295
@@ -4715,7 +4716,6 @@ def iniciar_mundo(
             pygame.Rect(480, 210, 230, 24),  # P4: Derecha   (y=210, cumbre con pedestal y llave)
         ]
         plataformas = list(plataformas_base) + list(plataformas_alternadas)
-        pinchos.extend(s_pel_5)
 
         # Llave dorada en el pedestal de la cumbre derecha (P4, centro 595, y=210)
         llave = crear_llave(595 - 12, 210 - 46)
@@ -5825,6 +5825,7 @@ def iniciar_mundo(
             oxigeno_p2 = 100.0
             jugador1["en_agua"] = True
             jugador2["en_agua"] = True
+            detener_sonido_ahogamiento()
             if burbujas_m3:
                 burbujas_m3[:] = crear_sistema_burbujas_m3(ancho_mundo_nivel, cantidad=45)
 
@@ -6380,6 +6381,15 @@ def iniciar_mundo(
                         if numero_mundo != 3 and not jugador1["muerto"] and not p1_completado:
                             matar_personaje(jugador1)
 
+            # 4. Gestión del sonido de ahogamiento (se activa cuando la barra de oxígeno entra en rojo < 25%)
+            p1_ahogandose = (not p1_completado and not jugador1["muerto"] and oxigeno_p1 < 25.0)
+            p2_ahogandose = (not p2_completado and not jugador2["muerto"] and oxigeno_p2 < 25.0)
+
+            if p1_ahogandose or p2_ahogandose:
+                reproducir_sonido_ahogamiento()
+            else:
+                detener_sonido_ahogamiento()
+
         if usar_soga and not p1_completado and not p2_completado:
             aplicar_restriccion_soga(jugador1, jugador2, DISTANCIA_SOGA_MAXIMA, plataformas, suelo, estado_soga)
         if usar_llave:
@@ -6581,16 +6591,20 @@ def iniciar_mundo(
                 (compuerta is not None and p is compuerta["rect"]) or
                 (bloque_central is not None and p is bloque_central["rect"]) or
                 (bloque_peligroso is not None and p is bloque_peligroso["rect"]) or
+                (bloques_peligrosos and any(p is bp["rect"] for bp in bloques_peligrosos)) or
                 (plataforma_movil is not None and p is plataforma_movil["rect"]) or
                 (plataformas_derrumbables is not None and any(p is p_d["rect"] for p_d in plataformas_derrumbables))
             )]
             dibujar_escenario_mundo2(mundo, suelo, plats_estaticas, pozo_nivel)
             if barrera_l_horiz is not None and barrera_l_vert is not None:
                 dibujar_barrera_l_escenario(mundo, barrera_l_horiz, barrera_l_vert)
-            if pinchos:
-                dibujar_pinchos_escenario(mundo, pinchos)
             if numero_nivel == 3:
                 dibujar_pendulo_escenario(mundo, plataformas, plat_elevada, pozo_nivel, bloque_peligroso)
+            if pinchos:
+                dibujar_pinchos_escenario(mundo, pinchos)
+            for bp in bloques_peligrosos:
+                if bp is not bloque_peligroso:
+                    dibujar_bloque_peligroso(mundo, bp)
             if numero_nivel == 4 and plataformas_derrumbables is not None:
                 dibujar_plataformas_derrumbables_escenario(mundo, plataformas_derrumbables, pozo_nivel)
             if numero_nivel == 5 and plataformas_alternadas is not None:
@@ -6638,6 +6652,9 @@ def iniciar_mundo(
                 dibujar_pinchos_escenario(mundo, pinchos)
             if numero_mundo == 2 and numero_nivel == 3:
                 dibujar_pendulo_escenario(mundo, plataformas, plat_elevada, pozo_nivel, bloque_peligroso)
+            for bp in bloques_peligrosos:
+                if bp is not bloque_peligroso:
+                    dibujar_bloque_peligroso(mundo, bp)
             if numero_mundo == 2 and numero_nivel == 4 and plataformas_derrumbables is not None:
                 dibujar_plataformas_derrumbables_escenario(mundo, plataformas_derrumbables, pozo_nivel)
             if numero_mundo == 2 and numero_nivel == 5 and plataformas_alternadas is not None:
@@ -6842,6 +6859,7 @@ def iniciar_mundo(
                 debe_mostrar_muerte = True
 
         if debe_mostrar_muerte:
+            detener_sonido_ahogamiento()
             resultado = pantalla_muerte(pantalla, reloj)
             if resultado == "salir": return "salir"
             if resultado == "menu": return "menu"
@@ -6860,6 +6878,7 @@ def iniciar_mundo(
                 nivel_superado = True
 
         if nivel_superado:
+            detener_sonido_ahogamiento()
             cam_puerta_x = max(0, min(puerta["rect"].centerx - ANCHO // 2, ancho_mundo_nivel - ANCHO)) if puerta else 0
             return animar_transicion_nivel_completado(
                 pantalla=pantalla,
@@ -6879,4 +6898,5 @@ def iniciar_mundo(
                 snapshot_guardado=snapshot_guardado,
             )
 
+    detener_sonido_ahogamiento()
     return "salir"

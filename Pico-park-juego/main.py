@@ -30,6 +30,7 @@ from configuracion import (
     t, mostrar_pestana_configuracion, reproducir_musica, detener_musica,
     obtener_idioma, cambiar_idioma, obtener_volumen, fijar_volumen,
     cambiar_volumen, reproducir_beep_volumen, reproducir_sonido_ui,
+    seleccionar_musica_menu_aleatoria,
 )
 from menu_niveles import (
     dibujar_menu_niveles,
@@ -1963,6 +1964,7 @@ def main():
     pygame.display.set_caption("Pico Park")
     precargar_botones_comunes()
     reloj = pygame.time.Clock()
+    seleccionar_musica_menu_aleatoria()
     reproducir_musica("menu")
     fuente_pixel_titulo = obtener_fuente_titulo(TAMANO_TITULO, tamano_fallback=55)
     fuente_pixel_btn_grande = obtener_fuente_botones(TAMANO_BOTON_GRANDE, tamano_fallback=32)

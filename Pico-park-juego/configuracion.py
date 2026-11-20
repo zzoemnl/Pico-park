@@ -12,6 +12,8 @@ import sys
 import json
 import math
 import struct
+import random
+import unicodedata
 import pygame
 
 from rutas import directorio_base, ruta_datos
@@ -39,10 +41,11 @@ from fuentes import (
 # Configura aquí las rutas o nombres de archivo de cada pista de música y el volumen.
 # Puedes colocar los archivos en 'assets/audio/' o 'Sprites/Audio/' (.mp3, .ogg, .wav).
 # ==============================================================================
-AUDIO_MENU = "sonidos/menú/menú.mp3"  # Música del menú principal y pantallas de navegación
-AUDIO_MUNDO_1 = "mundo1"  # Música del Mundo 1 (carpeta mundo1/)
-AUDIO_MUNDO_2 = "mundo2"  # Música del Mundo 2 (carpeta mundo2/)
-AUDIO_MUNDO_3 = "mundo3"  # Música del Mundo 3 (carpeta mundo3/)
+AUDIO_MENU = "sonidos/menú/menú.mp3"  # Música del menú principal (menú.mp3 o Caillou aleatorio)
+AUDIO_MUNDO_1 = "mundo1"  # Música del Mundo 1 (carpeta sonidos/mundo1/)
+AUDIO_MUNDO_2 = "mundo2"  # Música del Mundo 2 (carpeta sonidos/mundo2/)
+AUDIO_MUNDO_3 = "mundo3"  # Música del Mundo 3 (carpeta sonidos/mundo3/)
+AUDIO_AHOGAMIENTO = "sonidos/ahogamiento/ahogamiento.mp3"  # Efecto de sonido de ahogamiento (Mundo 3 niveles 5 y 6)
 
 VOLUMEN_MUSICA = 70             # Volumen general de la música (0 a 100)
 VOLUMEN_EFECTOS = 70            # Volumen general de efectos de sonido (0 a 100)
@@ -89,9 +92,12 @@ CARPETAS_AUDIO = [
     os.path.join(DIRECTORIO_ACTUAL, "assets"),
 ]
 
-# Estado interno del reproductor de música
+# Estado interno del reproductor de música y efectos
 _pista_activa_tipo = None
 _archivo_musica_actual = None
+_musica_menu_sesion = None
+_CANAL_AHOGAMIENTO = None
+_SONIDO_AHOGAMIENTO = None
 
 
 # ==============================================================================
@@ -1030,30 +1036,81 @@ def obtener_audio_mundo(numero_mundo):
     return None
 
 
-def _resolver_audio_menu():
-    """Localiza el archivo de música para los menús comprobando carpetas y rutas directas."""
+def obtener_pistas_musica_menu():
+    """
+    Retorna la lista de rutas absolutas de todos los archivos de música disponibles para el menú principal.
+    Busca en carpetas de menús soportadas ('sonidos/menú/', 'sonidos/menu/', 'assets/audio/menu/', etc.).
+    """
     formatos = EXTENSIONES_AUDIO_SOPORTADAS
-    nombres_carpeta = ["menu", "menú", "Menu", "Menú"]
     padres = [
         DIRECTORIO_RAIZ,
         DIRECTORIO_ACTUAL,
         os.path.join(DIRECTORIO_RAIZ, "sonidos"),
         os.path.join(DIRECTORIO_ACTUAL, "sonidos"),
     ]
+    pistas_encontradas = []
+    rutas_vistas = set()
+
     for p in padres:
-        for nom in nombres_carpeta:
-            dir_c = os.path.join(p, nom)
-            if os.path.isdir(dir_c):
-                try:
-                    for item in sorted(os.listdir(dir_c)):
-                        ruta_arch = os.path.join(dir_c, item)
-                        if os.path.isfile(ruta_arch):
-                            _, ext = os.path.splitext(item)
-                            if ext.lower() in formatos:
-                                return os.path.normpath(os.path.abspath(ruta_arch))
-                except Exception:
-                    pass
-    return _resolver_ruta_audio(AUDIO_MENU)
+        if not p or not os.path.isdir(p):
+            continue
+        try:
+            entradas_p = os.listdir(p)
+        except Exception:
+            continue
+        for nom in entradas_p:
+            norm_nom = unicodedata.normalize('NFD', nom).encode('ascii', 'ignore').decode('utf-8').lower()
+            if "menu" in norm_nom:
+                dir_c = os.path.join(p, nom)
+                if os.path.isdir(dir_c):
+                    try:
+                        for item in sorted(os.listdir(dir_c)):
+                            ruta_arch = os.path.normpath(os.path.abspath(os.path.join(dir_c, item)))
+                            if os.path.isfile(ruta_arch) and ruta_arch not in rutas_vistas:
+                                _, ext = os.path.splitext(item)
+                                if ext.lower() in formatos:
+                                    rutas_vistas.add(ruta_arch)
+                                    pistas_encontradas.append(ruta_arch)
+                    except Exception:
+                        pass
+
+    # Incluir AUDIO_MENU si existe en disco y no fue agregado aún
+    ruta_leg = _resolver_ruta_audio(AUDIO_MENU)
+    if ruta_leg and os.path.isfile(ruta_leg) and ruta_leg not in rutas_vistas:
+        pistas_encontradas.append(ruta_leg)
+
+    return pistas_encontradas
+
+
+def seleccionar_musica_menu_aleatoria(forzar_nueva_eleccion=False):
+    """
+    Selecciona aleatoriamente una de las pistas de música disponibles para el menú principal
+    (por ejemplo 'Caillou' o 'menú.mp3') para la sesión de juego.
+    - La elección se realiza una única vez al iniciar el juego/sesión.
+    - Permanece fija durante la navegación por los menús para evitar cambios constantes.
+    - Si forzar_nueva_eleccion es True, vuelve a elegir aleatoriamente.
+    """
+    global _musica_menu_sesion
+    if _musica_menu_sesion is not None and not forzar_nueva_eleccion and os.path.isfile(_musica_menu_sesion):
+        return _musica_menu_sesion
+
+    pistas = obtener_pistas_musica_menu()
+    if pistas:
+        _musica_menu_sesion = random.choice(pistas)
+    else:
+        _musica_menu_sesion = _resolver_ruta_audio(AUDIO_MENU)
+    return _musica_menu_sesion
+
+
+def _resolver_audio_menu():
+    """
+    Retorna la ruta del archivo de audio del menú principal seleccionado para la sesión actual.
+    Si aún no ha sido seleccionado, realiza la selección aleatoria inicial.
+    """
+    global _musica_menu_sesion
+    if _musica_menu_sesion is None or not os.path.isfile(_musica_menu_sesion):
+        return seleccionar_musica_menu_aleatoria()
+    return _musica_menu_sesion
 
 
 def _resolver_ruta_audio(pista_o_nombre):
@@ -1155,7 +1212,7 @@ def reproducir_musica(tipo="menu", forzar=False):
     # Normalizar identificador del tipo de pista
     tipo_str = str(tipo).lower().strip()
 
-    if tipo_str in ("menu", "principal", "navegacion"):
+    if tipo_str in ("menu", "principal", "navegacion", "menu_1", "menu1", "menu 1", "menú 1", "menú_1"):
         tipo_normalizado = "menu"
         ruta_audio = _resolver_audio_menu()
     elif tipo_str in ("mundo_1", "mundo1", "1") or tipo == 1:
@@ -1203,13 +1260,80 @@ def reproducir_musica(tipo="menu", forzar=False):
 
 
 def detener_musica():
-    """Detiene la música actual de forma segura."""
+    """Detiene la música actual de forma segura y cualquier efecto en bucle."""
     global _pista_activa_tipo, _archivo_musica_actual
     _pista_activa_tipo = None
     _archivo_musica_actual = None
+    detener_sonido_ahogamiento()
     try:
         if pygame.mixer.get_init():
             pygame.mixer.music.stop()
+    except Exception:
+        pass
+
+
+def _obtener_sonido_ahogamiento():
+    """Carga y retorna el objeto pygame.mixer.Sound del efecto de ahogamiento."""
+    global _SONIDO_AHOGAMIENTO
+    if _SONIDO_AHOGAMIENTO is not None:
+        return _SONIDO_AHOGAMIENTO
+
+    ruta = _resolver_ruta_audio(AUDIO_AHOGAMIENTO)
+    if not ruta or not os.path.isfile(ruta):
+        ruta = _resolver_ruta_audio("ahogamiento")
+    if ruta and os.path.isfile(ruta):
+        try:
+            if not pygame.mixer.get_init():
+                pygame.mixer.init()
+            _SONIDO_AHOGAMIENTO = pygame.mixer.Sound(ruta)
+        except Exception:
+            _SONIDO_AHOGAMIENTO = None
+    return _SONIDO_AHOGAMIENTO
+
+
+def reproducir_sonido_ahogamiento():
+    """
+    Reproduce en bucle el efecto de sonido de ahogamiento ('sonidos/ahogamiento/ahogamiento.mp3')
+    en un canal de audio dedicado cuando algún personaje entra en estado crítico de oxígeno (< 25%).
+    - Si el sonido ya está activo y reproduciéndose, NO reinicia ni superpone canales.
+    - Aplica estrictamente el volumen configurado para efectos de sonido.
+    - Garantiza que ambos personajes utilicen el mismo canal limpio sin cacofonías ni desincronización.
+    """
+    global _CANAL_AHOGAMIENTO
+    try:
+        if not pygame.mixer.get_init():
+            pygame.mixer.init()
+
+        snd = _obtener_sonido_ahogamiento()
+        if snd is None:
+            return
+
+        vol_e = max(0.0, min(1.0, VOLUMEN_EFECTOS / 100.0))
+
+        # Asignar canal dedicado (canal 7 si está disponible, o reservar canal libre)
+        if _CANAL_AHOGAMIENTO is None:
+            try:
+                _CANAL_AHOGAMIENTO = pygame.mixer.Channel(7)
+            except Exception:
+                _CANAL_AHOGAMIENTO = pygame.mixer.find_channel(force=True)
+
+        if _CANAL_AHOGAMIENTO is not None:
+            _CANAL_AHOGAMIENTO.set_volume(vol_e)
+            if not _CANAL_AHOGAMIENTO.get_busy():
+                _CANAL_AHOGAMIENTO.play(snd, loops=-1)
+    except Exception:
+        pass
+
+
+def detener_sonido_ahogamiento():
+    """
+    Detiene de inmediato el efecto de sonido de ahogamiento cuando los personajes
+    recuperan el oxígeno, mueren, reinician o cambian de nivel o pantalla.
+    """
+    global _CANAL_AHOGAMIENTO
+    try:
+        if _CANAL_AHOGAMIENTO is not None and _CANAL_AHOGAMIENTO.get_busy():
+            _CANAL_AHOGAMIENTO.stop()
     except Exception:
         pass
 
@@ -1267,6 +1391,8 @@ def _aplicar_volumen_audio():
         num_canales = pygame.mixer.get_num_channels()
         for i in range(num_canales):
             pygame.mixer.Channel(i).set_volume(vol_e)
+        if _CANAL_AHOGAMIENTO is not None:
+            _CANAL_AHOGAMIENTO.set_volume(vol_e)
     except Exception:
         pass
 
