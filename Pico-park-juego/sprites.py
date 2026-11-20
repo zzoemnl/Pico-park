@@ -1017,6 +1017,22 @@ _ACCESORIOS_REGISTRADOS = [
     {"id": "Gorro con Ratón", "nombre": "Gorro con Ratón"},
     {"id": "Chucky", "nombre": "Chucky"},
     {"id": "Orejas de Conejo", "nombre": "Orejas de Conejo"},
+    {"id": "Among Us", "nombre": "Among Us"},
+    {"id": "Argentina", "nombre": "Argentina"},
+    {"id": "Bigote", "nombre": "Bigote"},
+    {"id": "Diablo", "nombre": "Diablo"},
+    {"id": "Elegante", "nombre": "Elegante"},
+    {"id": "EXE", "nombre": "EXE"},
+    {"id": "Gorra urbana dorada", "nombre": "Gorra urbana dorada"},
+    {"id": "Gorra urbana plateada", "nombre": "Gorra urbana plateada"},
+    {"id": "Kenny", "nombre": "Kenny"},
+    {"id": "Kyle", "nombre": "Kyle"},
+    {"id": "Moño Bi", "nombre": "Moño Bi"},
+    {"id": "Moño G", "nombre": "Moño G"},
+    {"id": "Moño L", "nombre": "Moño L"},
+    {"id": "Moño trans", "nombre": "Moño trans"},
+    {"id": "Nerd", "nombre": "Nerd"},
+    {"id": "Tatoo", "nombre": "Tatoo"},
 ]
 
 
@@ -1051,6 +1067,22 @@ NOMBRES_ARCHIVOS_ACCESORIOS = {
     "Gorro con Ratón": ["gorro_con_raton.png"],
     "Chucky": ["chucky.png"],
     "Orejas de Conejo": ["orejas_conejo.png"],
+    "Among Us": ["among-us.png", "among_us.png"],
+    "Argentina": ["argentina.png"],
+    "Bigote": ["bigote.png"],
+    "Diablo": ["diablo.png"],
+    "Elegante": ["elegante.png"],
+    "EXE": ["exe.png", "EXE.png"],
+    "Gorra urbana dorada": ["gorra-urbana-dorada.png", "gorra_urbana_dorada.png"],
+    "Gorra urbana plateada": ["gorra-urbana-plateada.png", "gorra_urbana_plateada.png"],
+    "Kenny": ["kenny.png"],
+    "Kyle": ["kyle.png"],
+    "Moño Bi": ["moño-bi.png", "mo\u00f1o-bi.png", "moño_bi.png", "mono-bi.png", "mono_bi.png"],
+    "Moño G": ["moño-g.png", "mo\u00f1o-g.png", "moño_g.png", "mono-g.png", "mono_g.png"],
+    "Moño L": ["moño-l.png", "mo\u00f1o-l.png", "moño_l.png", "mono-l.png", "mono_l.png"],
+    "Moño trans": ["moño-trans.png", "mo\u00f1o-trans.png", "moño_trans.png", "mono-trans.png", "mono_trans.png"],
+    "Nerd": ["nerd.png"],
+    "Tatoo": ["tatoo.png", "tattoo.png"],
 }
 
 # Metadatos de posicionamiento y tamaño nativo para escala 70x85
@@ -1069,6 +1101,22 @@ METADATA_ACCESORIOS = {
     "Gorro con Ratón": {"offset": (13.5, -21), "size": (42, 32)},
     "Chucky": {"offset": (14, 0.5), "size": (46, 53)},
     "Orejas de Conejo": {"offset": (12, -22), "size": (46, 32)},
+    "Among Us": {"offset": (12, 22), "size": (60, 34)},
+    "Argentina": {"offset": (3, 23), "size": (64, 10)},
+    "Bigote": {"offset": (21, 46), "size": (42, 12)},
+    "Diablo": {"offset": (1, -22), "size": (68, 98)},
+    "Elegante": {"offset": (6, -30), "size": (58, 95)},
+    "EXE": {"offset": (13, 27), "size": (58, 24)},
+    "Gorra urbana dorada": {"offset": (-1, -18), "size": (72, 65)},
+    "Gorra urbana plateada": {"offset": (-1, -18), "size": (72, 65)},
+    "Kenny": {"offset": (-2, -8), "size": (74, 59)},
+    "Kyle": {"offset": (-2, -18), "size": (74, 55)},
+    "Moño Bi": {"offset": (38, -6), "size": (26, 21)},
+    "Moño G": {"offset": (38, -6), "size": (26, 21)},
+    "Moño L": {"offset": (38, -6), "size": (26, 21)},
+    "Moño trans": {"offset": (38, -6), "size": (26, 21)},
+    "Nerd": {"offset": (13, 28), "size": (58, 22)},
+    "Tatoo": {"offset": (13, 22), "size": (58, 32)},
 }
 
 
@@ -1209,6 +1257,14 @@ def cargar_accesorio(id_accesorio):
     )
     for nombre_archivo in nombres_candidatos:
         ruta = os.path.join(CARPETA_ACCESORIOS, nombre_archivo)
+        if not os.path.isfile(ruta):
+            if os.path.isdir(CARPETA_ACCESORIOS):
+                target_norm = nombre_archivo.lower().replace("-", "_").replace("ñ", "n")
+                for f_disk in os.listdir(CARPETA_ACCESORIOS):
+                    if f_disk.lower().replace("-", "_").replace("ñ", "n") == target_norm:
+                        ruta = os.path.join(CARPETA_ACCESORIOS, f_disk)
+                        break
+
         if os.path.isfile(ruta):
             try:
                 surf = pygame.image.load(ruta)
@@ -1216,6 +1272,11 @@ def cargar_accesorio(id_accesorio):
                     surf = surf.convert_alpha()
                 except pygame.error:
                     pass
+                # Recorte automático si la imagen tiene márgenes transparentes (canvas extendido)
+                bbox = surf.get_bounding_rect()
+                if 0 < bbox.w < surf.get_width() or 0 < bbox.h < surf.get_height():
+                    surf = surf.subsurface(bbox).copy()
+
                 meta = METADATA_ACCESORIOS.get(id_accesorio)
                 if meta and "size" in meta and surf.get_size() != meta["size"]:
                     surf = pygame.transform.scale(surf, meta["size"])
