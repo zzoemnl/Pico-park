@@ -1107,9 +1107,9 @@ METADATA_ACCESORIOS = {
     "Diablo": {"offset": (-1, -18), "size": (70, 100)},
     "Elegante": {"offset": (0, -38), "size": (70, 105)},
     "EXE": {"offset": (18, 34), "size": (48, 20)},
-    "Gorra urbana dorada": {"offset": (1, -12), "size": (68, 38)},
-    "Gorra urbana plateada": {"offset": (1, -12), "size": (68, 38)},
-    "Kenny": {"offset": (-4, -5), "size": (80, 58)},
+    "Gorra urbana dorada": {"offset": (-7, -7), "size": (76, 69)},
+    "Gorra urbana plateada": {"offset": (-7, -7), "size": (76, 69)},
+    "Kenny": {"offset": (0, 0.5), "size": (70, 56)},
     "Kyle": {"offset": (-4, -5), "size": (80, 58)},
     "Moño Bi": {"offset": (38, -6), "size": (26, 21)},
     "Moño G": {"offset": (38, -6), "size": (26, 21)},
@@ -1273,14 +1273,6 @@ def cargar_accesorio(id_accesorio):
                 except pygame.error:
                     pass
                 # Tratamiento específico para accesorios compuestos o con elementos aislados
-                if id_accesorio in ("Gorra urbana dorada", "Gorra urbana plateada"):
-                    # Extraer domo simétrico de la gorra (rect: 231, 143, 330, 154) sin artefactos
-                    cap_raw = surf.subsurface((231, 143, 330, 154)).copy()
-                    meta = METADATA_ACCESORIOS.get(id_accesorio, {"size": (68, 38)})
-                    surf = pygame.transform.scale(cap_raw, meta["size"])
-                    _CACHE_ACCESORIOS[id_accesorio] = surf
-                    return surf
-
                 if id_accesorio == "Elegante":
                     # Galera perfectamente centrada en la cabeza (x=35) y monóculo centrado en el ojo derecho (x=59.5, y=39)
                     hat_raw = surf.subsurface((297, 77, 176, 176))
