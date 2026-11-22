@@ -182,11 +182,16 @@ def dibujar_personaje_rotado(pantalla, p):
 
     acc_id = p.get("accesorio", "Ninguno")
     if acc_id and acc_id != "Ninguno":
-        surf_acc = cargar_accesorio(acc_id)
+        sprite_acc_id = acc_id
+        if acc_id == "Minion" and (p.get("mostrando_pestañeo") or p.get("estado") == "pestañear"):
+            sprite_acc_id = "Minion cerrado"
+        elif acc_id == "Pou" and (p.get("muerto") or p.get("estado") == "muerto"):
+            sprite_acc_id = "Pou-muerto"
+        surf_acc = cargar_accesorio(sprite_acc_id)
         if surf_acc:
             if not mirando_der:
                 surf_acc = pygame.transform.flip(surf_acc, True, False)
-            meta = METADATA_ACCESORIOS.get(acc_id)
+            meta = METADATA_ACCESORIOS.get(sprite_acc_id) or METADATA_ACCESORIOS.get(acc_id)
             if meta:
                 off_x, off_y = meta["offset"]
                 x_acc = off_x if mirando_der else (w_base - off_x - surf_acc.get_width())

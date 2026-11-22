@@ -1032,6 +1032,8 @@ _ACCESORIOS_REGISTRADOS = [
     {"id": "Moño trans", "nombre": "Moño trans"},
     {"id": "Nerd", "nombre": "Nerd"},
     {"id": "Tatoo", "nombre": "Tatoo"},
+    {"id": "Minion", "nombre": "Minion"},
+    {"id": "Pou", "nombre": "Pou"},
 ]
 
 
@@ -1082,6 +1084,10 @@ NOMBRES_ARCHIVOS_ACCESORIOS = {
     "Moño trans": ["moño-trans.png", "mo\u00f1o-trans.png", "moño_trans.png", "mono-trans.png", "mono_trans.png"],
     "Nerd": ["nerd.png"],
     "Tatoo": ["tatoo.png", "tattoo.png"],
+    "Minion": ["minion.png"],
+    "Minion cerrado": ["minion-cerrado.png", "minion_cerrado.png"],
+    "Pou": ["pou.png"],
+    "Pou-muerto": ["pou-muerto.png", "pou_muerto.png"],
 }
 
 # Metadatos de posicionamiento y tamaño nativo para escala 70x85
@@ -1117,6 +1123,10 @@ METADATA_ACCESORIOS = {
     "Moño trans": {"offset": (38, -6), "size": (26, 21)},
     "Nerd": {"offset": (0, 27), "size": (70, 27)},
     "Tatoo": {"offset": (6, 18), "size": (62, 35)},
+    "Minion": {"offset": (0, 24), "size": (70, 31)},
+    "Minion cerrado": {"offset": (0, 24), "size": (70, 31)},
+    "Pou": {"offset": (17, -22), "size": (36, 37)},
+    "Pou-muerto": {"offset": (17, -22), "size": (36, 37)},
 }
 
 
@@ -1329,7 +1339,17 @@ def dibujar_accesorio_en_personaje(
 
     if not acc_id or acc_id == "Ninguno":
         return
-    surf_acc = cargar_accesorio(acc_id)
+
+    # Determinar el sprite dinámico del accesorio según el estado del personaje
+    sprite_acc_id = acc_id
+    if acc_id == "Minion" and isinstance(p, dict):
+        if p.get("mostrando_pestañeo", False) or p.get("estado") == "pestañear":
+            sprite_acc_id = "Minion cerrado"
+    elif acc_id == "Pou" and isinstance(p, dict):
+        if p.get("muerto", False) or p.get("estado") == "muerto":
+            sprite_acc_id = "Pou-muerto"
+
+    surf_acc = cargar_accesorio(sprite_acc_id)
     if not surf_acc:
         return
 
@@ -1343,7 +1363,7 @@ def dibujar_accesorio_en_personaje(
     else:
         return
 
-    meta = METADATA_ACCESORIOS.get(acc_id)
+    meta = METADATA_ACCESORIOS.get(sprite_acc_id) or METADATA_ACCESORIOS.get(acc_id)
     if meta:
         off_x, off_y = meta["offset"]
     else:

@@ -652,6 +652,8 @@ DICCIONARIO = {
     "nerd": {"es": "Nerd", "en": "Nerd", "zh": "书呆子"},
     "tatoo": {"es": "Tatoo", "en": "Tattoo", "zh": "纹身"},
     "tattoo": {"es": "Tatoo", "en": "Tattoo", "zh": "纹身"},
+    "minion": {"es": "Minion", "en": "Minion", "zh": "小黄人"},
+    "pou": {"es": "Pou", "en": "Pou", "zh": "外星宠物Pou"},
     "cambiar_atuendos": {
         "es": "CAMBIAR ATUENDOS",
         "en": "CHANGE OUTFITS",
