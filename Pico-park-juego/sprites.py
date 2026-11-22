@@ -1004,7 +1004,6 @@ def dibujar_personaje(pantalla, p, zona_agua=None):
 _ACCESORIOS_REGISTRADOS = [
     {"id": "Ninguno", "nombre": "Ninguno"},
     {"id": "Corona", "nombre": "Corona"},
-    {"id": "Sombrero", "nombre": "Sombrero"},
     {"id": "Gorro Azul", "nombre": "Gorro Azul"},
     {"id": "Gorro Celeste", "nombre": "Gorro Celeste"},
     {"id": "Duende", "nombre": "Duende"},
@@ -1100,23 +1099,23 @@ METADATA_ACCESORIOS = {
     "Pelo Arcoíris": {"offset": (0, -17), "size": (70, 32)},
     "Gorro con Ratón": {"offset": (13.5, -21), "size": (42, 32)},
     "Chucky": {"offset": (14, 0.5), "size": (46, 53)},
-    "Orejas de Conejo": {"offset": (12, -22), "size": (46, 32)},
+    "Orejas de Conejo": {"offset": (12, -23), "size": (46, 32)},
     
-    "Among Us": {"offset": (10, 18), "size": (60, 32)},
-    "Argentina": {"offset": (1, 41), "size": (68, 11)},
+    "Among Us": {"offset": (15, 24), "size": (52, 29)},
+    "Argentina": {"offset": (9, 45), "size": (58, 9)},
     "Bigote": {"offset": (19, 45), "size": (46, 13)},
-    "Diablo": {"offset": (-5, -18), "size": (62, 93)},
-    "Elegante": {"offset": (20, -25), "size": (58, 99)},
+    "Diablo": {"offset": (-1, -18), "size": (70, 100)},
+    "Elegante": {"offset": (0, -38), "size": (70, 105)},
     "EXE": {"offset": (18, 34), "size": (48, 20)},
-    "Gorra urbana dorada": {"offset": (-7, -10), "size": (76, 79)},
-    "Gorra urbana plateada": {"offset": (-7, -10), "size": (76, 79)},
-    "Kenny": {"offset": (-2, 0), "size": (73, 57)},
-    "Kyle": {"offset": (-4, -5), "size": (78, 58)},
+    "Gorra urbana dorada": {"offset": (1, -12), "size": (68, 38)},
+    "Gorra urbana plateada": {"offset": (1, -12), "size": (68, 38)},
+    "Kenny": {"offset": (-4, -5), "size": (80, 58)},
+    "Kyle": {"offset": (-4, -5), "size": (80, 58)},
     "Moño Bi": {"offset": (38, -6), "size": (26, 21)},
     "Moño G": {"offset": (38, -6), "size": (26, 21)},
     "Moño L": {"offset": (38, -6), "size": (26, 21)},
     "Moño trans": {"offset": (38, -6), "size": (26, 21)},
-    "Nerd": {"offset": (6, 30), "size": (62, 24)},
+    "Nerd": {"offset": (0, 27), "size": (70, 27)},
     "Tatoo": {"offset": (6, 18), "size": (62, 35)},
 }
 
@@ -1273,6 +1272,39 @@ def cargar_accesorio(id_accesorio):
                     surf = surf.convert_alpha()
                 except pygame.error:
                     pass
+                # Tratamiento específico para accesorios compuestos o con elementos aislados
+                if id_accesorio in ("Gorra urbana dorada", "Gorra urbana plateada"):
+                    # Extraer domo simétrico de la gorra (rect: 231, 143, 330, 154) sin artefactos
+                    cap_raw = surf.subsurface((231, 143, 330, 154)).copy()
+                    meta = METADATA_ACCESORIOS.get(id_accesorio, {"size": (68, 38)})
+                    surf = pygame.transform.scale(cap_raw, meta["size"])
+                    _CACHE_ACCESORIOS[id_accesorio] = surf
+                    return surf
+
+                if id_accesorio == "Elegante":
+                    # Galera perfectamente centrada en la cabeza (x=35) y monóculo centrado en el ojo derecho (x=59.5, y=39)
+                    hat_raw = surf.subsurface((297, 77, 176, 176))
+                    mono_raw = surf.subsurface((473, 341, 132, 242))
+                    hat_scaled = pygame.transform.scale(hat_raw, (46, 44))
+                    mono_scaled = pygame.transform.scale(mono_raw, (22, 40))
+                    comp = pygame.Surface((70, 105), pygame.SRCALPHA)
+                    comp.blit(hat_scaled, (12, 0))
+                    comp.blit(mono_scaled, (48, 63))
+                    _CACHE_ACCESORIOS[id_accesorio] = comp
+                    return comp
+
+                if id_accesorio == "Diablo":
+                    # Cuernos perfectamente simétricos centrados en la cabeza (x=35) y colita en la parte inferior trasera
+                    horns_raw = surf.subsurface((275, 121, 220, 132))
+                    tail_raw = surf.subsurface((143, 539, 132, 88))
+                    horns_scaled = pygame.transform.scale(horns_raw, (48, 29))
+                    tail_scaled = pygame.transform.scale(tail_raw, (24, 16))
+                    comp = pygame.Surface((70, 100), pygame.SRCALPHA)
+                    comp.blit(horns_scaled, (11, 0))
+                    comp.blit(tail_scaled, (0, 84))
+                    _CACHE_ACCESORIOS[id_accesorio] = comp
+                    return comp
+
                 # Recorte automático si la imagen tiene márgenes transparentes (canvas extendido)
                 bbox = surf.get_bounding_rect()
                 if 0 < bbox.w < surf.get_width() or 0 < bbox.h < surf.get_height():
