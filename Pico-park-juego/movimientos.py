@@ -286,6 +286,21 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, 
 
     if caja is not None:
         empujar_caja(p1, caja, p2, pantalla_rect, plataformas)
+        # Si la caja actúa como obstáculo sólido y el personaje no la empuja, evitar penetración lateral
+        caja_rect = caja["rect"]
+        if hb1.colliderect(caja_rect) and hb1.bottom > caja_rect.top + 10 and hb1.top < caja_rect.bottom - 10:
+            if x_inicio + hb1.width <= caja_rect.left + max(8, abs(int(p1["vel_x"])) + 2) or hb1.centerx < caja_rect.centerx:
+                hb1.right = caja_rect.left
+                if p1["vel_x"] > 0:
+                    p1["vel_x"] = 0
+                p1["empujando"] = True
+                p1["direccion_empuje"] = 1
+            else:
+                hb1.left = caja_rect.right
+                if p1["vel_x"] < 0:
+                    p1["vel_x"] = 0
+                p1["empujando"] = True
+                p1["direccion_empuje"] = -1
 
     # Empuje y colisión lateral entre personajes (solo si están al mismo nivel lateral, no si uno está encima del otro)
     if hb2 is not None and not p2_encima and hb1.colliderect(hb2):
@@ -306,6 +321,10 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, 
                                 max_desp = min(max_desp, max(0, plat.left - hb2.right))
                     if pantalla_rect:
                         max_desp = min(max_desp, max(0, pantalla_rect.right - hb2.right))
+                    if caja is not None:
+                        caja_rect = caja["rect"]
+                        if hb2.bottom > caja_rect.top + 10 and hb2.top < caja_rect.bottom - 10 and caja_rect.left >= hb2.left:
+                            max_desp = min(max_desp, max(0, caja_rect.left - hb2.right))
 
                     if max_desp > 0:
                         hb2.x += max_desp
@@ -315,6 +334,8 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, 
                         p2["moviendo"] = True
                         p2["mirando_derecha"] = True
                     else:
+                        if caja is not None and hb2.bottom > caja_rect.top + 10 and hb2.top < caja_rect.bottom - 10 and caja_rect.left >= hb2.left:
+                            hb2.right = min(hb2.right, caja_rect.left)
                         hb1.right = hb2.left
                         p1["vel_x"] = 0
                         p1["empujando"] = True
@@ -336,6 +357,10 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, 
                                 max_desp = min(max_desp, max(0, hb2.left - plat.right))
                     if pantalla_rect:
                         max_desp = min(max_desp, max(0, hb2.left - pantalla_rect.left))
+                    if caja is not None:
+                        caja_rect = caja["rect"]
+                        if hb2.bottom > caja_rect.top + 10 and hb2.top < caja_rect.bottom - 10 and caja_rect.right <= hb2.right:
+                            max_desp = min(max_desp, max(0, hb2.left - caja_rect.right))
 
                     if max_desp > 0:
                         hb2.x -= max_desp
@@ -345,6 +370,8 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, 
                         p2["moviendo"] = True
                         p2["mirando_derecha"] = False
                     else:
+                        if caja is not None and hb2.bottom > caja_rect.top + 10 and hb2.top < caja_rect.bottom - 10 and caja_rect.right <= hb2.right:
+                            hb2.left = max(hb2.left, caja_rect.right)
                         hb1.left = hb2.right
                         p1["vel_x"] = 0
                         p1["empujando"] = True
@@ -509,19 +536,25 @@ def empujar_caja(p, caja, otro=None, pantalla_rect=None, plataformas=None):
                     if rect_futuro.colliderect(plat) and (caja_rect.bottom > plat.top + 8 and caja_rect.top < plat.bottom - 8):
                         caja_rect.right = plat.left
                         jugador.right = caja_rect.left
+                        if p["vel_x"] > 0:
+                            p["vel_x"] = 0
                         bloqueado = True
                         break
 
             # 2. Otro personaje como obstáculo sólido
-            if not bloqueado and otro_obstaculo_lateral and rect_futuro.colliderect(hb_otro):
+            if not bloqueado and otro_obstaculo_lateral and rect_futuro.colliderect(hb_otro) and hb_otro.left >= caja_rect.left:
                 caja_rect.right = hb_otro.left
                 jugador.right = caja_rect.left
+                if p["vel_x"] > 0:
+                    p["vel_x"] = 0
                 bloqueado = True
 
             # 3. Límite de pantalla
             if not bloqueado and pantalla_rect and rect_futuro.right > pantalla_rect.right:
                 caja_rect.right = pantalla_rect.right
                 jugador.right = caja_rect.left
+                if p["vel_x"] > 0:
+                    p["vel_x"] = 0
                 bloqueado = True
 
             if not bloqueado:
@@ -550,19 +583,25 @@ def empujar_caja(p, caja, otro=None, pantalla_rect=None, plataformas=None):
                     if rect_futuro.colliderect(plat) and (caja_rect.bottom > plat.top + 8 and caja_rect.top < plat.bottom - 8):
                         caja_rect.left = plat.right
                         jugador.left = caja_rect.right
+                        if p["vel_x"] < 0:
+                            p["vel_x"] = 0
                         bloqueado = True
                         break
 
             # 2. Otro personaje como obstáculo sólido
-            if not bloqueado and otro_obstaculo_lateral and rect_futuro.colliderect(hb_otro):
+            if not bloqueado and otro_obstaculo_lateral and rect_futuro.colliderect(hb_otro) and hb_otro.right <= caja_rect.right:
                 caja_rect.left = hb_otro.right
                 jugador.left = caja_rect.right
+                if p["vel_x"] < 0:
+                    p["vel_x"] = 0
                 bloqueado = True
 
             # 3. Límite de pantalla
             if not bloqueado and pantalla_rect and rect_futuro.left < pantalla_rect.left:
                 caja_rect.left = pantalla_rect.left
                 jugador.left = caja_rect.right
+                if p["vel_x"] < 0:
+                    p["vel_x"] = 0
                 bloqueado = True
 
             if not bloqueado:
