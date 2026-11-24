@@ -295,6 +295,16 @@ COLORES_INTERIORES_BOTONES = {
     "Ventanas/boton-reiniciar-apretado.png": (223, 132, 79),
     "boton-reiniciar-apretado.png": (223, 132, 79),
 
+    "Ventanas/boton-reintentar.png": (254, 137, 134),
+    "Menu/boton-reintentar.png": (254, 137, 134),
+    "boton-reintentar.png": (254, 137, 134),
+    "Ventanas/boton-reintentar-semiapretado.png": (242, 126, 123),
+    "Menu/boton-reintentar-semiapretado.png": (242, 126, 123),
+    "boton-reintentar-semiapretado.png": (242, 126, 123),
+    "Ventanas/boton-reintentar-apretado.png": (225, 114, 112),
+    "Menu/boton-reintentar-apretado.png": (225, 114, 112),
+    "boton-reintentar-apretado.png": (225, 114, 112),
+
     "Ventanas/boton-siguiente.png": (255, 159, 99),
     "boton-siguiente.png": (255, 159, 99),
     "Ventanas/boton-siguiente-semiapretado.png": (242, 148, 91),
@@ -360,6 +370,7 @@ def generar_boton_con_texto(sprite_base, w, h, texto=None, color_texto=(60, 45, 
         elif "cancelar" in base_lower and t_clean == "CANCELAR": es_nativo = True
         elif "nueva-partida" in base_lower and t_clean == "NUEVA PARTIDA": es_nativo = True
         elif "reiniciar" in base_lower and t_clean == "REINICIAR": es_nativo = True
+        elif "reintentar" in base_lower and t_clean == "REINTENTAR": es_nativo = True
         elif "siguiente" in base_lower and t_clean == "SIGUIENTE": es_nativo = True
         elif "menu" in base_lower and t_clean in ("MENÚ", "MENU"): es_nativo = True
         if es_nativo:

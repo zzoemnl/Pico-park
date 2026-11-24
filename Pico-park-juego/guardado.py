@@ -783,6 +783,11 @@ def pedir_password_modal(pantalla, reloj, partida):
         b_canc = pygame.Rect(r_a.centerx + 12, r_a.bottom - 68, w_btn, h_btn)
 
         idm_g = obtener_idioma()
+        spr_rein_norm = generar_boton_con_texto("Ventanas/boton-reintentar.png", w_btn, h_btn, t("reintentar", "REINTENTAR"), (60, 45, 35), TAMANO_BOTON_MODAL, 0, idm_g)
+        spr_rein_semi = generar_boton_con_texto("Ventanas/boton-reintentar-semiapretado.png", w_btn, h_btn, t("reintentar", "REINTENTAR"), (60, 45, 35), TAMANO_BOTON_MODAL, 1, idm_g)
+        spr_rein_apret = generar_boton_con_texto("Ventanas/boton-reintentar-apretado.png", w_btn, h_btn, t("reintentar", "REINTENTAR"), (60, 45, 35), TAMANO_BOTON_MODAL, 2, idm_g)
+        spr_rein_hover = aclarar_boton(spr_rein_norm) if spr_rein_norm else None
+
         spr_canc_norm = generar_boton_con_texto("Menu/boton-cancelar.png", w_btn, h_btn, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 0, idm_g)
         spr_canc_semi = generar_boton_con_texto("Menu/boton-cancelar-semiapretado.png", w_btn, h_btn, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 1, idm_g)
         spr_canc_apret = generar_boton_con_texto("Menu/boton-cancelar-apretado.png", w_btn, h_btn, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 2, idm_g)
@@ -810,9 +815,13 @@ def pedir_password_modal(pantalla, reloj, partida):
                     pygame.event.clear()
                 if ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
                     if b_rein.collidepoint(ev.pos):
-                        esperando = False
-                        reintentar = True
-                        pygame.event.clear()
+                        pulsado = True
+                        if spr_rein_semi and spr_rein_apret:
+                            pulsado = animar_pulsacion_boton(pantalla, b_rein, spr_rein_semi, spr_rein_apret, (253, 246, 233), spr_rein_norm)
+                        if pulsado:
+                            esperando = False
+                            reintentar = True
+                            pygame.event.clear()
                     elif b_canc.collidepoint(ev.pos):
                         pulsado = True
                         if spr_canc_semi and spr_canc_apret:
@@ -843,9 +852,12 @@ def pedir_password_modal(pantalla, reloj, partida):
                 interlineado=4
             )
 
-            pygame.draw.rect(pantalla, (82, 194, 114) if h_rein else (68, 172, 98), b_rein, border_radius=8)
-            t_br = fuente_btn.render("REINTENTAR", True, (255, 255, 255))
-            pantalla.blit(t_br, t_br.get_rect(center=b_rein.center))
+            if spr_rein_norm:
+                pantalla.blit(spr_rein_hover if (h_rein and spr_rein_hover) else spr_rein_norm, b_rein)
+            else:
+                pygame.draw.rect(pantalla, (82, 194, 114) if h_rein else (68, 172, 98), b_rein, border_radius=8)
+                t_br = fuente_btn.render("REINTENTAR", True, (255, 255, 255))
+                pantalla.blit(t_br, t_br.get_rect(center=b_rein.center))
 
             if spr_canc_norm:
                 pantalla.blit(spr_canc_hover if (h_canc and spr_canc_hover) else spr_canc_norm, b_canc)
