@@ -741,9 +741,9 @@ DICCIONARIO = {
         "zh": "随机",
     },
     "desc_aleatorio": {
-        "es": "Aleatorio (50% Caillou / 50% Christmas)",
-        "en": "Random (50% Caillou / 50% Christmas)",
-        "zh": "随机 (50% 卡由 / 50% 圣诞)",
+        "es": "Mezcla\n(Caillou / Christmas)",
+        "en": "Mix\n(Caillou / Christmas)",
+        "zh": "随机混合\n(卡由 / 圣诞)",
     },
     "modo_caillou": {
         "es": "CAILLOU",
@@ -751,9 +751,9 @@ DICCIONARIO = {
         "zh": "卡由",
     },
     "desc_caillou": {
-        "es": "Caillou Theme [8-bit]",
-        "en": "Caillou Theme [8-bit]",
-        "zh": "卡由主题曲 [8-bit]",
+        "es": "Tema de Caillou\n[Versión 8-bit]",
+        "en": "Caillou Theme\n[8-bit Tribute]",
+        "zh": "卡由主题曲\n[8位像素音乐]",
     },
     "modo_christmas": {
         "es": "CHRISTMAS",
@@ -761,9 +761,9 @@ DICCIONARIO = {
         "zh": "圣诞 (CHRISTMAS)",
     },
     "desc_christmas": {
-        "es": "Christmas / Navidad [menú.mp3]",
-        "en": "Christmas [menú.mp3]",
-        "zh": "圣诞主题 [menú.mp3]",
+        "es": "Música Navideña\n[menú.mp3]",
+        "en": "Christmas Music\n[menú.mp3]",
+        "zh": "圣诞节日音乐\n[menú.mp3]",
     },
     "cambios_guardados_auto": {
         "es": "Los cambios se guardan y sincronizan automáticamente.",

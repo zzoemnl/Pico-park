@@ -3280,11 +3280,11 @@ def main():
                         r_bl_zh = pygame.Rect(r_card_idm_ev.left + 20 + 2 * (w_btn_l_ev + 10), r_card_idm_ev.top + 11, w_btn_l_ev, 72)
 
                         y_musica_ev = r_card_idm_ev.bottom + 12
-                        r_card_mus_ev = pygame.Rect(rect_panel_ev.left + 45, y_musica_ev + 24, rect_panel_ev.width - 90, 94)
+                        r_card_mus_ev = pygame.Rect(rect_panel_ev.left + 45, y_musica_ev + 24, rect_panel_ev.width - 90, 102)
                         w_btn_m_ev = (r_card_mus_ev.width - 60) // 3
-                        r_bm_rnd = pygame.Rect(r_card_mus_ev.left + 20, r_card_mus_ev.top + 11, w_btn_m_ev, 72)
-                        r_bm_cai = pygame.Rect(r_card_mus_ev.left + 20 + (w_btn_m_ev + 10), r_card_mus_ev.top + 11, w_btn_m_ev, 72)
-                        r_bm_chr = pygame.Rect(r_card_mus_ev.left + 20 + 2 * (w_btn_m_ev + 10), r_card_mus_ev.top + 11, w_btn_m_ev, 72)
+                        r_bm_rnd = pygame.Rect(r_card_mus_ev.left + 20, r_card_mus_ev.top + 10, w_btn_m_ev, 82)
+                        r_bm_cai = pygame.Rect(r_card_mus_ev.left + 20 + (w_btn_m_ev + 10), r_card_mus_ev.top + 10, w_btn_m_ev, 82)
+                        r_bm_chr = pygame.Rect(r_card_mus_ev.left + 20 + 2 * (w_btn_m_ev + 10), r_card_mus_ev.top + 10, w_btn_m_ev, 82)
 
                         if r_menos_ev.collidepoint(evento.pos):
                             cambiar_volumen(-10)
@@ -4139,7 +4139,7 @@ def main():
                 txt_mus_b = t("musica_menu_titulo")
                 pantalla.blit(f_bloq.render(txt_mus_b, True, (65, 45, 32)), (rect_panel.left + 45, y_musica))
 
-                r_card_musica = pygame.Rect(rect_panel.left + 45, y_musica + 24, rect_panel.width - 90, 94)
+                r_card_musica = pygame.Rect(rect_panel.left + 45, y_musica + 24, rect_panel.width - 90, 102)
                 pygame.draw.rect(pantalla, (244, 236, 222), r_card_musica, border_radius=12)
                 pygame.draw.rect(pantalla, (200, 175, 145), r_card_musica, 2, border_radius=12)
 
@@ -4152,7 +4152,7 @@ def main():
                 w_btn_m = (r_card_musica.width - 60) // 3
                 for m_idx, (m_code, m_tit, m_sub) in enumerate(opciones_musica):
                     rx_m = r_card_musica.left + 20 + m_idx * (w_btn_m + 10)
-                    r_bm = pygame.Rect(rx_m, r_card_musica.top + 11, w_btn_m, 72)
+                    r_bm = pygame.Rect(rx_m, r_card_musica.top + 10, w_btn_m, 82)
                     es_sel_m = (modo_musica_act == m_code)
                     hov_m = r_bm.collidepoint(pos_mouse)
 
@@ -4169,15 +4169,16 @@ def main():
 
                     f_mt = obtener_fuente_para_texto(m_tit, categoria="boton", tamano=16, negrita=True)
                     t_mt = f_mt.render(m_tit, True, (45, 30, 20) if es_sel_m else (95, 75, 60))
-                    pantalla.blit(t_mt, t_mt.get_rect(center=(r_bm.centerx, r_bm.top + 23)))
+                    pantalla.blit(t_mt, t_mt.get_rect(center=(r_bm.centerx, r_bm.top + 20)))
 
-                    dibujar_texto_en_rect(pantalla, m_sub, pygame.Rect(r_bm.left + 6, r_bm.top + 36, r_bm.width - 12, 32), categoria="texto", tamano=12, color=(80, 60, 45), alineacion="centro", multiline=True, interlineado=1)
+                    r_sub_m = pygame.Rect(r_bm.left + 4, r_bm.top + 34, r_bm.width - 8, 44)
+                    dibujar_texto_en_rect(pantalla, m_sub, r_sub_m, categoria="texto", tamano=15, color=(80, 60, 45), alineacion="centro", multiline=True, interlineado=2, padding=1)
 
                 # Nota al pie de ajustes (agrandada y más legible con sombra suave)
                 txt_not = t("cambios_guardados_auto")
                 f_not = obtener_fuente_para_texto(txt_not, categoria="texto", tamano=14, negrita=True)
-                pantalla.blit(f_not.render(txt_not, True, (245, 235, 220)), (rect_panel.left + 51, rect_panel.bottom - 35))
-                pantalla.blit(f_not.render(txt_not, True, (55, 38, 25)), (rect_panel.left + 50, rect_panel.bottom - 36))
+                pantalla.blit(f_not.render(txt_not, True, (245, 235, 220)), (rect_panel.left + 51, rect_panel.bottom - 32))
+                pantalla.blit(f_not.render(txt_not, True, (55, 38, 25)), (rect_panel.left + 50, rect_panel.bottom - 33))
 
             # =========================================================================
             # SECCIÓN: CONTROLES
