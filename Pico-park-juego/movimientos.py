@@ -121,23 +121,6 @@ def coordinar_movimiento_soga(p1, p2, d_max=DISTANCIA_SOGA_MAXIMA):
     v = c2 - c1
     d = v.length()
 
-    # Si por alguna colisión previa la distancia supera d_max, corregir suavemente antes de mover
-    if d > d_max and d > 0.001:
-        exceso = d - d_max
-        u = v / d
-        if p1.get("en_suelo", False) and not p2.get("en_suelo", False):
-            p2["hitbox"].x -= int(round(u.x * exceso))
-            p2["hitbox"].y -= int(round(u.y * exceso))
-        elif p2.get("en_suelo", False) and not p1.get("en_suelo", False):
-            p1["hitbox"].x += int(round(u.x * exceso))
-            p1["hitbox"].y += int(round(u.y * exceso))
-        else:
-            p1["hitbox"].x += int(round(u.x * exceso * 0.5))
-            p1["hitbox"].y += int(round(u.y * exceso * 0.5))
-            p2["hitbox"].x -= int(round(u.x * exceso * 0.5))
-            p2["hitbox"].y -= int(round(u.y * exceso * 0.5))
-        c1 = pygame.Vector2(p1["hitbox"].centerx, p1["hitbox"].centery + 4)
-        c2 = pygame.Vector2(p2["hitbox"].centerx, p2["hitbox"].centery + 4)
 
     p1_suelo = p1.get("en_suelo", False)
     p2_suelo = p2.get("en_suelo", False)
@@ -165,42 +148,57 @@ def coordinar_movimiento_soga(p1, p2, d_max=DISTANCIA_SOGA_MAXIMA):
     new_rel_x = (c2.x + dx2) - (c1.x + dx1)
     if new_rel_x > x_max:
         excess = new_rel_x - x_max
-        s1 = max(0, -dx1)
-        s2 = max(0, dx2)
-        s_tot = s1 + s2
-        reduce = int(math.ceil(excess))
-        if s1 > 0 and s2 == 0:
-            dx1 += reduce
-            p1["vel_x"] = float(dx1)
-        elif s2 > 0 and s1 == 0:
-            dx2 -= reduce
+        if dx1 > 0 and dx2 > 0:
+            dx2 = max(0, dx1)
             p2["vel_x"] = float(dx2)
-        elif s_tot > 0:
-            r1 = int(round(reduce * (s1 / s_tot)))
-            r2 = reduce - r1
-            dx1 += r1
-            dx2 -= r2
+        elif dx1 < 0 and dx2 < 0:
+            dx1 = min(0, dx2)
             p1["vel_x"] = float(dx1)
-            p2["vel_x"] = float(dx2)
+        else:
+            s1 = max(0, -dx1)
+            s2 = max(0, dx2)
+            s_tot = s1 + s2
+            reduce = int(math.ceil(excess))
+            if s1 > 0 and s2 == 0:
+                dx1 += reduce
+                p1["vel_x"] = float(dx1)
+            elif s2 > 0 and s1 == 0:
+                dx2 -= reduce
+                p2["vel_x"] = float(dx2)
+            elif s_tot > 0:
+                r1 = int(round(reduce * (s1 / s_tot)))
+                r2 = reduce - r1
+                dx1 += r1
+                dx2 -= r2
+                p1["vel_x"] = float(dx1)
+                p2["vel_x"] = float(dx2)
+
     elif new_rel_x < -x_max:
         excess = -x_max - new_rel_x
-        s1 = max(0, dx1)
-        s2 = max(0, -dx2)
-        s_tot = s1 + s2
-        reduce = int(math.ceil(excess))
-        if s1 > 0 and s2 == 0:
-            dx1 -= reduce
+        if dx1 > 0 and dx2 > 0:
+            dx1 = max(0, dx2)
             p1["vel_x"] = float(dx1)
-        elif s2 > 0 and s1 == 0:
-            dx2 += reduce
+        elif dx1 < 0 and dx2 < 0:
+            dx2 = min(0, dx1)
             p2["vel_x"] = float(dx2)
-        elif s_tot > 0:
-            r1 = int(round(reduce * (s1 / s_tot)))
-            r2 = reduce - r1
-            dx1 -= r1
-            dx2 += r2
-            p1["vel_x"] = float(dx1)
-            p2["vel_x"] = float(dx2)
+        else:
+            s1 = max(0, dx1)
+            s2 = max(0, -dx2)
+            s_tot = s1 + s2
+            reduce = int(math.ceil(excess))
+            if s1 > 0 and s2 == 0:
+                dx1 -= reduce
+                p1["vel_x"] = float(dx1)
+            elif s2 > 0 and s1 == 0:
+                dx2 += reduce
+                p2["vel_x"] = float(dx2)
+            elif s_tot > 0:
+                r1 = int(round(reduce * (s1 / s_tot)))
+                r2 = reduce - r1
+                dx1 -= r1
+                dx2 -= r2
+                p1["vel_x"] = float(dx1)
+                p2["vel_x"] = float(dx2)
 
 
 def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, plataformas=None, usar_soga=False, d_max=DISTANCIA_SOGA_MAXIMA):
@@ -305,77 +303,89 @@ def resolver_colisiones(p1, p2, suelo, pantalla_rect, caja=None, en_agua=False, 
     # Empuje y colisión lateral entre personajes (solo si están al mismo nivel lateral, no si uno está encima del otro)
     if hb2 is not None and not p2_encima and hb1.colliderect(hb2):
         if hb1.bottom > hb2.top + 10 and hb1.top < hb2.bottom - 10:
-            if p1["vel_x"] > 0:
-                penetracion = hb1.right - hb2.left
-                p2_resiste = (p2.get("vel_x", 0) < 0 and p2.get("moviendo", False)) or (p2.get("empujando", False) and p2.get("direccion_empuje", 0) == -1)
-                if p2_resiste:
+            # Determinación direccional estricta para evitar intercambio anómalo de posiciones (teletransporte)
+            p1_a_la_izq = (x_inicio + hb1.width <= hb2.left + max(8, abs(dx) + 2)) or (hb1.centerx < hb2.centerx)
+
+            if p1_a_la_izq:
+                # P1 está a la izquierda de P2
+                if p1["vel_x"] > 0:
+                    penetracion = hb1.right - hb2.left
+                    p2_resiste = (p2.get("vel_x", 0) < 0 and p2.get("moviendo", False)) or (p2.get("empujando", False) and p2.get("direccion_empuje", 0) == -1)
+                    if p2_resiste:
+                        hb1.right = hb2.left
+                        p1["vel_x"] = 0
+                        p1["empujando"] = True
+                        p1["direccion_empuje"] = 1
+                    else:
+                        max_desp = penetracion
+                        if plataformas:
+                            for plat in plataformas:
+                                if hb2.bottom > plat.top + 2 and hb2.top < plat.bottom - 2 and plat.left >= hb2.left:
+                                    max_desp = min(max_desp, max(0, plat.left - hb2.right))
+                        if pantalla_rect:
+                            max_desp = min(max_desp, max(0, pantalla_rect.right - hb2.right))
+                        if caja is not None:
+                            caja_rect = caja["rect"]
+                            if hb2.bottom > caja_rect.top + 10 and hb2.top < caja_rect.bottom - 10 and caja_rect.left >= hb2.left:
+                                max_desp = min(max_desp, max(0, caja_rect.left - hb2.right))
+
+                        if max_desp > 0:
+                            hb2.x += max_desp
+                            hb1.right = hb2.left
+                            p1["empujando"] = True
+                            p1["direccion_empuje"] = 1
+                            p2["moviendo"] = True
+                            p2["mirando_derecha"] = True
+                        else:
+                            if caja is not None and hb2.bottom > caja_rect.top + 10 and hb2.top < caja_rect.bottom - 10 and caja_rect.left >= hb2.left:
+                                hb2.right = min(hb2.right, caja_rect.left)
+                            hb1.right = hb2.left
+                            p1["vel_x"] = 0
+                            p1["empujando"] = True
+                            p1["direccion_empuje"] = 1
+                else:
+                    # P1 está a la izquierda pero no avanza sobre P2: mantener separación limpia
                     hb1.right = hb2.left
-                    p1["vel_x"] = 0
-                    p1["empujando"] = True
-                    p1["direccion_empuje"] = 1
-                else:
-                    max_desp = penetracion
-                    if plataformas:
-                        for plat in plataformas:
-                            if hb2.bottom > plat.top + 2 and hb2.top < plat.bottom - 2 and plat.left >= hb2.left:
-                                max_desp = min(max_desp, max(0, plat.left - hb2.right))
-                    if pantalla_rect:
-                        max_desp = min(max_desp, max(0, pantalla_rect.right - hb2.right))
-                    if caja is not None:
-                        caja_rect = caja["rect"]
-                        if hb2.bottom > caja_rect.top + 10 and hb2.top < caja_rect.bottom - 10 and caja_rect.left >= hb2.left:
-                            max_desp = min(max_desp, max(0, caja_rect.left - hb2.right))
-
-                    if max_desp > 0:
-                        hb2.x += max_desp
-                        hb1.right = hb2.left
-                        p1["empujando"] = True
-                        p1["direccion_empuje"] = 1
-                        p2["moviendo"] = True
-                        p2["mirando_derecha"] = True
-                    else:
-                        if caja is not None and hb2.bottom > caja_rect.top + 10 and hb2.top < caja_rect.bottom - 10 and caja_rect.left >= hb2.left:
-                            hb2.right = min(hb2.right, caja_rect.left)
-                        hb1.right = hb2.left
+            else:
+                # P1 está a la derecha de P2
+                if p1["vel_x"] < 0:
+                    penetracion = hb2.right - hb1.left
+                    p2_resiste = (p2.get("vel_x", 0) > 0 and p2.get("moviendo", False)) or (p2.get("empujando", False) and p2.get("direccion_empuje", 0) == 1)
+                    if p2_resiste:
+                        hb1.left = hb2.right
                         p1["vel_x"] = 0
                         p1["empujando"] = True
-                        p1["direccion_empuje"] = 1
+                        p1["direccion_empuje"] = -1
+                    else:
+                        max_desp = penetracion
+                        if plataformas:
+                            for plat in plataformas:
+                                if hb2.bottom > plat.top + 2 and hb2.top < plat.bottom - 2 and plat.right <= hb2.right:
+                                    max_desp = min(max_desp, max(0, hb2.left - plat.right))
+                        if pantalla_rect:
+                            max_desp = min(max_desp, max(0, hb2.left - pantalla_rect.left))
+                        if caja is not None:
+                            caja_rect = caja["rect"]
+                            if hb2.bottom > caja_rect.top + 10 and hb2.top < caja_rect.bottom - 10 and caja_rect.right <= hb2.right:
+                                max_desp = min(max_desp, max(0, hb2.left - caja_rect.right))
 
-            elif p1["vel_x"] < 0:
-                penetracion = hb2.right - hb1.left
-                p2_resiste = (p2.get("vel_x", 0) > 0 and p2.get("moviendo", False)) or (p2.get("empujando", False) and p2.get("direccion_empuje", 0) == 1)
-                if p2_resiste:
+                        if max_desp > 0:
+                            hb2.x -= max_desp
+                            hb1.left = hb2.right
+                            p1["empujando"] = True
+                            p1["direccion_empuje"] = -1
+                            p2["moviendo"] = True
+                            p2["mirando_derecha"] = False
+                        else:
+                            if caja is not None and hb2.bottom > caja_rect.top + 10 and hb2.top < caja_rect.bottom - 10 and caja_rect.right <= hb2.right:
+                                hb2.left = max(hb2.left, caja_rect.right)
+                            hb1.left = hb2.right
+                            p1["vel_x"] = 0
+                            p1["empujando"] = True
+                            p1["direccion_empuje"] = -1
+                else:
+                    # P1 está a la derecha y se mueve alejándose (o quieto): mantener separación limpia
                     hb1.left = hb2.right
-                    p1["vel_x"] = 0
-                    p1["empujando"] = True
-                    p1["direccion_empuje"] = -1
-                else:
-                    max_desp = penetracion
-                    if plataformas:
-                        for plat in plataformas:
-                            if hb2.bottom > plat.top + 2 and hb2.top < plat.bottom - 2 and plat.right <= hb2.right:
-                                max_desp = min(max_desp, max(0, hb2.left - plat.right))
-                    if pantalla_rect:
-                        max_desp = min(max_desp, max(0, hb2.left - pantalla_rect.left))
-                    if caja is not None:
-                        caja_rect = caja["rect"]
-                        if hb2.bottom > caja_rect.top + 10 and hb2.top < caja_rect.bottom - 10 and caja_rect.right <= hb2.right:
-                            max_desp = min(max_desp, max(0, hb2.left - caja_rect.right))
-
-                    if max_desp > 0:
-                        hb2.x -= max_desp
-                        hb1.left = hb2.right
-                        p1["empujando"] = True
-                        p1["direccion_empuje"] = -1
-                        p2["moviendo"] = True
-                        p2["mirando_derecha"] = False
-                    else:
-                        if caja is not None and hb2.bottom > caja_rect.top + 10 and hb2.top < caja_rect.bottom - 10 and caja_rect.right <= hb2.right:
-                            hb2.left = max(hb2.left, caja_rect.right)
-                        hb1.left = hb2.right
-                        p1["vel_x"] = 0
-                        p1["empujando"] = True
-                        p1["direccion_empuje"] = -1
 
     # Si p2 estaba encima de p1, trasladar a p2 el desplazamiento horizontal real de p1
     if p2_encima and hb2 is not None:
@@ -800,6 +810,9 @@ def actualizar_fisica_soga(p1, p2, estado_soga=None, d_reposo=DISTANCIA_SOGA_REP
             )
         )
 
+        p1_bloqueado = p1.get("empujando", False)
+        p2_bloqueado = p2.get("empujando", False)
+
         if v1_away > 0.1 and v2_away > 0.1:
             # Tirón en direcciones opuestas (Tug of war)
             if distancia >= d_max:
@@ -808,29 +821,62 @@ def actualizar_fisica_soga(p1, p2, estado_soga=None, d_reposo=DISTANCIA_SOGA_REP
             else:
                 p1["vel_x"] *= max(0.0, 1.0 - t * 0.70)
                 p2["vel_x"] *= max(0.0, 1.0 - t * 0.70)
+
         elif v1_away > 0.1 and v2_away <= 0.1:
-            # P1 tira de P2 mientras P2 está en el suelo
-            if distancia >= d_max:
-                # P1 alcanza el límite y detiene su avance en la dirección que estira la soga
-                if ux > 0:
-                    p1["vel_x"] = max(0.0, p1.get("vel_x", 0.0))
-                else:
-                    p1["vel_x"] = min(0.0, p1.get("vel_x", 0.0))
-                if not p2.get("moviendo", False):
+            # P1 camina alejándose, tirando progresivamente de P2 (arrastre cooperativo)
+            drag_dir = -ux  # Dirección hacia P1
+            p2_bloqueado_hacia_p1 = p2_bloqueado and ((drag_dir > 0 and p2.get("direccion_empuje", 0) == 1) or (drag_dir < 0 and p2.get("direccion_empuje", 0) == -1))
+            if p2_bloqueado_hacia_p1:
+                if distancia >= d_max:
+                    if ux > 0:
+                        p1["vel_x"] = max(0.0, p1.get("vel_x", 0.0))
+                    else:
+                        p1["vel_x"] = min(0.0, p1.get("vel_x", 0.0))
                     p2["vel_x"] = 0.0
-            else:
-                p1["vel_x"] *= max(0.0, 1.0 - t * 0.70)
-        elif v2_away > 0.1 and v1_away <= 0.1:
-            # P2 tira de P1 mientras P1 está en el suelo
-            if distancia >= d_max:
-                if ux > 0:
-                    p2["vel_x"] = min(0.0, p2.get("vel_x", 0.0))
                 else:
-                    p2["vel_x"] = max(0.0, p2.get("vel_x", 0.0))
-                if not p1.get("moviendo", False):
-                    p1["vel_x"] = 0.0
+                    p1["vel_x"] *= max(0.0, 1.0 - t * 0.70)
             else:
-                p2["vel_x"] *= max(0.0, 1.0 - t * 0.70)
+                if distancia >= d_max:
+                    v_shared = v1_x * 0.75
+                    p1["vel_x"] = v_shared
+                    p2["vel_x"] = v_shared
+                    p2["moviendo"] = True
+                    p2["mirando_derecha"] = (v_shared > 0)
+                else:
+                    target_v2 = v1_x * 0.75
+                    p2["vel_x"] += (target_v2 - p2["vel_x"]) * (t * 0.40)
+                    p1["vel_x"] -= v1_x * (t * 0.20)
+                    if abs(p2["vel_x"]) > 0.2:
+                        p2["moviendo"] = True
+                        p2["mirando_derecha"] = (p2["vel_x"] > 0)
+
+        elif v2_away > 0.1 and v1_away <= 0.1:
+            # P2 camina alejándose, tirando progresivamente de P1 (arrastre cooperativo)
+            drag_dir = ux  # Dirección hacia P2
+            p1_bloqueado_hacia_p2 = p1_bloqueado and ((drag_dir > 0 and p1.get("direccion_empuje", 0) == 1) or (drag_dir < 0 and p1.get("direccion_empuje", 0) == -1))
+            if p1_bloqueado_hacia_p2:
+                if distancia >= d_max:
+                    if ux > 0:
+                        p2["vel_x"] = min(0.0, p2.get("vel_x", 0.0))
+                    else:
+                        p2["vel_x"] = max(0.0, p2.get("vel_x", 0.0))
+                    p1["vel_x"] = 0.0
+                else:
+                    p2["vel_x"] *= max(0.0, 1.0 - t * 0.70)
+            else:
+                if distancia >= d_max:
+                    v_shared = v2_x * 0.75
+                    p2["vel_x"] = v_shared
+                    p1["vel_x"] = v_shared
+                    p1["moviendo"] = True
+                    p1["mirando_derecha"] = (v_shared > 0)
+                else:
+                    target_v1 = v2_x * 0.75
+                    p1["vel_x"] += (target_v1 - p1["vel_x"]) * (t * 0.40)
+                    p2["vel_x"] -= v2_x * (t * 0.20)
+                    if abs(p1["vel_x"]) > 0.2:
+                        p1["moviendo"] = True
+                        p1["mirando_derecha"] = (p1["vel_x"] > 0)
 
         # Garantizar que ninguna velocidad residual aumente la distancia por encima de d_max
         v1_post = p1.get("vel_x", 0.0)
@@ -874,6 +920,7 @@ def actualizar_fisica_soga(p1, p2, estado_soga=None, d_reposo=DISTANCIA_SOGA_REP
             else:
                 if distancia >= d_max and v1.dot(direccion) < 0:
                     p1["vel_x"] *= 0.88
+                    p2["vel_x"] += (p1["vel_x"] - p2["vel_x"]) * (0.35 * t)
         else:
             # P2 está por encima o a nivel (salto / gap)
             fuerza_tiron = t * 1.3
@@ -923,6 +970,7 @@ def actualizar_fisica_soga(p1, p2, estado_soga=None, d_reposo=DISTANCIA_SOGA_REP
             else:
                 if distancia >= d_max and v2.dot(dir_p1) < 0:
                     p2["vel_x"] *= 0.88
+                    p1["vel_x"] += (p2["vel_x"] - p1["vel_x"]) * (0.35 * t)
         else:
             fuerza_tiron = t * 1.3
             if dir_p1.y < -0.15:
