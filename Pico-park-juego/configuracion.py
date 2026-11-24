@@ -1353,6 +1353,8 @@ def reproducir_sonido_ahogamiento():
 
         if _CANAL_AHOGAMIENTO is not None:
             _CANAL_AHOGAMIENTO.set_volume(vol_e)
+        if _CANAL_UI_BOTONES is not None:
+            _CANAL_UI_BOTONES.set_volume(vol_e)
             if not _CANAL_AHOGAMIENTO.get_busy():
                 _CANAL_AHOGAMIENTO.play(snd, loops=-1)
     except Exception:
@@ -1427,6 +1429,8 @@ def _aplicar_volumen_audio():
             pygame.mixer.Channel(i).set_volume(vol_e)
         if _CANAL_AHOGAMIENTO is not None:
             _CANAL_AHOGAMIENTO.set_volume(vol_e)
+        if _CANAL_UI_BOTONES is not None:
+            _CANAL_UI_BOTONES.set_volume(vol_e)
     except Exception:
         pass
 
@@ -1493,56 +1497,143 @@ def reproducir_beep_volumen():
 
 
 _CACHE_SONIDOS_UI = {}
+_CANAL_UI_BOTONES = None
+_ULTIMO_TICK_UI = 0
+_ULTIMO_TIPO_UI = None
 
 
-def reproducir_sonido_ui(tipo="select"):
+def reproducir_sonido_ui(tipo="menu"):
     """
-    Reproduce un efecto de sonido retro/pixel art suave para acciones de la interfaz:
-    - 'tab': cambio de pestaña (COLORES <-> ACCESORIOS)
-    - 'select': selección de color o accesorio
-    - 'pagina': navegación entre páginas
-    Respeta el volumen general de efectos y no interfiere con la música de fondo.
+    Reproduce un efecto de sonido retro/pixel art suave, sutil y agradable para la interfaz y el juego.
+    Diferenciado por sección con identidades sonoras propias:
+    1. Menú y opciones: 'menu' (blip suave), 'tab' (pestañas), 'select' (selección), 'pagina' (paginación).
+    2. Dentro de los niveles: 'nivel_boton' o 'mecanismo' (pulsación táctil de placa/interruptor).
+    3. Ventanas y confirmaciones: 'ventana_aceptar', 'ventana_cancelar', 'ventana_volver',
+       'ventana_reintentar', 'ventana_reiniciar'.
+    4. Partidas guardadas: 'partida_cargar', 'partida_gestionar', 'partida_borrar', 'partida_nueva'.
+
+    Garantiza:
+    - Sonido único por pulsación, sin repetición mientras se mantenga apretado.
+    - Canal de audio dedicado con control anti-saturación para que no se superpongan de forma molesta.
+    - Volumen bajo/moderado calibrado con VOLUMEN_EFECTOS, estéticamente armonioso con el pixel art.
     """
+    global _CANAL_UI_BOTONES, _ULTIMO_TICK_UI, _ULTIMO_TIPO_UI
     try:
         if not pygame.mixer.get_init():
             pygame.mixer.init()
+
         vol_float = max(0.0, min(1.0, VOLUMEN_EFECTOS / 100.0))
         if vol_float <= 0.001:
             return
 
+        now = pygame.time.get_ticks()
+        # Cooldown breve anti-rebote (mínimo 30 ms para el mismo tipo)
+        if tipo == _ULTIMO_TIPO_UI and (now - _ULTIMO_TICK_UI) < 30:
+            return
+        _ULTIMO_TICK_UI = now
+        _ULTIMO_TIPO_UI = tipo
+
         if tipo not in _CACHE_SONIDOS_UI:
-            sample_rate = 22050
+            mix_info = pygame.mixer.get_init()
+            freq = mix_info[0] if mix_info else 44100
+            channels = mix_info[2] if mix_info else 2
+            dur = 0.05
+            n = int(freq * dur)
             buf = bytearray()
-            if tipo == "tab":
-                dur = 0.06
-                n = int(sample_rate * dur)
-                half = n // 2
-                for i in range(n):
-                    freq = 480 if i < half else 640
-                    envelope = 1.0 - (i / n) * 0.7
-                    val = int(32767 * 0.22 * envelope * math.sin(2 * math.pi * freq * i / sample_rate))
-                    buf += struct.pack('<h', val)
-            elif tipo == "pagina":
-                dur = 0.04
-                n = int(sample_rate * dur)
-                for i in range(n):
-                    envelope = max(0.0, 1.0 - (i / n) ** 0.8)
-                    val = int(32767 * 0.20 * envelope * math.sin(2 * math.pi * 380 * i / sample_rate))
-                    buf += struct.pack('<h', val)
-            else:  # "select"
-                dur = 0.05
-                n = int(sample_rate * dur)
-                for i in range(n):
-                    freq = 580 + int(240 * (i / n))
-                    envelope = max(0.0, 1.0 - (i / n) ** 0.5)
-                    val = int(32767 * 0.24 * envelope * math.sin(2 * math.pi * freq * i / sample_rate))
-                    buf += struct.pack('<h', val)
+
+            for i in range(n):
+                p = i / float(n)
+                # Envolvente suave con ataque de 3 ms y caída libre de clics
+                env = max(0.0, 1.0 - (p ** 0.8))
+                if i < int(freq * 0.003):
+                    env *= (i / (freq * 0.003))
+
+                # --- 1. MENÚ Y OPCIONES ---
+                if tipo in ("menu", "ui", "click"):
+                    f = 540 + 140 * p
+                    amp = 0.19
+                    v = math.sin(2 * math.pi * f * i / freq)
+                elif tipo == "tab":
+                    f = 480 if p < 0.5 else 640
+                    amp = 0.18
+                    v = math.sin(2 * math.pi * f * i / freq)
+                elif tipo == "select":
+                    f = 600 + 240 * p
+                    amp = 0.18
+                    v = math.sin(2 * math.pi * f * i / freq)
+                elif tipo == "pagina":
+                    f = 360
+                    amp = 0.16
+                    v = math.sin(2 * math.pi * f * i / freq)
+
+                # --- 2. DENTRO DE LOS NIVELES (BOTONES DE PRESIÓN Y MECANISMOS) ---
+                elif tipo in ("nivel_boton", "mecanismo", "presion"):
+                    f = 220 * (1.0 - 0.3 * p)
+                    amp = 0.22
+                    v = 0.7 * math.sin(2 * math.pi * f * i / freq) + 0.3 * math.sin(2 * math.pi * (f * 0.5) * i / freq)
+
+                # --- 3. VENTANAS Y CONFIRMACIONES ---
+                elif tipo in ("ventana_aceptar", "confirmar"):
+                    f = 587 if p < 0.45 else 880
+                    amp = 0.20
+                    v = math.sin(2 * math.pi * f * i / freq)
+                elif tipo in ("ventana_cancelar", "cerrar"):
+                    f = 440 if p < 0.45 else 330
+                    amp = 0.18
+                    v = math.sin(2 * math.pi * f * i / freq)
+                elif tipo == "ventana_volver":
+                    f = 420 - 60 * p
+                    amp = 0.18
+                    v = math.sin(2 * math.pi * f * i / freq)
+                elif tipo in ("ventana_reintentar", "ventana_reiniciar"):
+                    f = 480 + 140 * math.sin(math.pi * p)
+                    amp = 0.20
+                    v = math.sin(2 * math.pi * f * i / freq)
+
+                # --- 4. PARTIDAS GUARDADAS ---
+                elif tipo == "partida_cargar":
+                    f = 620 + 164 * p
+                    amp = 0.20
+                    v = math.sin(2 * math.pi * f * i / freq)
+                elif tipo == "partida_gestionar":
+                    f = 500
+                    amp = 0.19
+                    v = 0.8 * math.sin(2 * math.pi * f * i / freq) + 0.2 * math.sin(2 * math.pi * f * 2 * i / freq)
+                elif tipo == "partida_borrar":
+                    f = 260 - 85 * p
+                    amp = 0.20
+                    v = math.sin(2 * math.pi * f * i / freq)
+                elif tipo == "partida_nueva":
+                    f = 523 if p < 0.33 else (659 if p < 0.66 else 784)
+                    amp = 0.20
+                    v = math.sin(2 * math.pi * f * i / freq)
+
+                # Fallback neutro
+                else:
+                    f = 520
+                    amp = 0.18
+                    v = math.sin(2 * math.pi * f * i / freq)
+
+                val = int(32767 * amp * env * v)
+                val = max(-32767, min(32767, val))
+                buf += struct.pack('<h', val) * channels
 
             _CACHE_SONIDOS_UI[tipo] = pygame.mixer.Sound(buffer=bytes(buf))
 
         snd = _CACHE_SONIDOS_UI[tipo]
         snd.set_volume(vol_float)
-        snd.play()
+
+        # Usar un canal reservado para la UI para evitar superposiciones discordantes
+        if _CANAL_UI_BOTONES is None:
+            try:
+                _CANAL_UI_BOTONES = pygame.mixer.Channel(6)
+            except Exception:
+                _CANAL_UI_BOTONES = pygame.mixer.find_channel(force=True)
+
+        if _CANAL_UI_BOTONES is not None:
+            _CANAL_UI_BOTONES.play(snd)
+        else:
+            snd.play()
     except Exception:
         pass
 
@@ -1660,7 +1751,7 @@ def mostrar_pestana_configuracion(pantalla, reloj):
                 if rect_x_header.collidepoint(evento.pos):
                     pulsado = True
                     if spr_x_semi and spr_x_apr:
-                        pulsado = animar_pulsacion_boton(pantalla, rect_x_header, spr_x_semi, spr_x_apr, (46, 52, 68), spr_x_norm)
+                        pulsado = animar_pulsacion_boton(pantalla, rect_x_header, spr_x_semi, spr_x_apr, (46, 52, 68), spr_x_norm, tipo_sonido="ventana_cancelar")
                     if pulsado:
                         modal_activo = False
                         break
@@ -1668,7 +1759,7 @@ def mostrar_pestana_configuracion(pantalla, reloj):
                 # 2. Clic en botón Bajar Volumen
                 elif rect_btn_menos.collidepoint(evento.pos):
                     if spr_menos_semi and spr_menos_apr:
-                        if animar_pulsacion_boton(pantalla, rect_btn_menos, spr_menos_semi, spr_menos_apr, (36, 40, 52), spr_menos_norm):
+                        if animar_pulsacion_boton(pantalla, rect_btn_menos, spr_menos_semi, spr_menos_apr, (36, 40, 52), spr_menos_norm, tipo_sonido="menu"):
                             cambiar_volumen(-10)
                     else:
                         cambiar_volumen(-10)
@@ -1676,7 +1767,7 @@ def mostrar_pestana_configuracion(pantalla, reloj):
                 # 3. Clic en botón Subir Volumen
                 elif rect_btn_mas.collidepoint(evento.pos):
                     if spr_mas_semi and spr_mas_apr:
-                        if animar_pulsacion_boton(pantalla, rect_btn_mas, spr_mas_semi, spr_mas_apr, (36, 40, 52), spr_mas_norm):
+                        if animar_pulsacion_boton(pantalla, rect_btn_mas, spr_mas_semi, spr_mas_apr, (36, 40, 52), spr_mas_norm, tipo_sonido="menu"):
                             cambiar_volumen(+10)
                     else:
                         cambiar_volumen(+10)
@@ -1691,10 +1782,13 @@ def mostrar_pestana_configuracion(pantalla, reloj):
                 # 5. Clic en botones de idioma
                 elif rect_lang_es.collidepoint(evento.pos):
                     cambiar_idioma("es")
+                    reproducir_sonido_ui("select")
                 elif rect_lang_en.collidepoint(evento.pos):
                     cambiar_idioma("en")
+                    reproducir_sonido_ui("select")
                 elif rect_lang_zh.collidepoint(evento.pos):
                     cambiar_idioma("zh")
+                    reproducir_sonido_ui("select")
 
                 # 6. Si hace clic fuera del modal, cerramos mediante la X/fondo
                 elif not rect_modal.collidepoint(evento.pos):

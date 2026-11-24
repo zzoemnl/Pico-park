@@ -19,7 +19,7 @@ from sprites import (
     aclarar_boton,
     generar_boton_con_texto,
 )
-from configuracion import t, obtener_idioma
+from configuracion import t, obtener_idioma, reproducir_sonido_ui
 
 import re
 
@@ -645,8 +645,9 @@ def solicitar_texto_modal(pantalla, reloj, titulo, subtitulo, valor_inicial="", 
                     else:
                         pulsado = True
                         if spr_ace_semi and spr_ace_apret:
-                            pulsado = animar_pulsacion_boton(pantalla, btn_confirmar, spr_ace_semi, spr_ace_apret, fondo_tarjeta, spr_ace_norm)
+                            pulsado = animar_pulsacion_boton(pantalla, btn_confirmar, spr_ace_semi, spr_ace_apret, fondo_tarjeta, spr_ace_norm, tipo_sonido="ventana_aceptar")
                         else:
+                            reproducir_sonido_ui("ventana_aceptar")
                             pygame.draw.rect(pantalla, (45, 130, 70), btn_confirmar, border_radius=10)
                             pygame.draw.rect(pantalla, (30, 95, 50), btn_confirmar, width=2, border_radius=10)
                             dibujar_texto_en_rect(pantalla, t("aceptar", "ACEPTAR"), btn_confirmar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(230, 230, 230))
@@ -666,10 +667,13 @@ def solicitar_texto_modal(pantalla, reloj, titulo, subtitulo, valor_inicial="", 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 if rect_ojo and rect_ojo.collidepoint(evento.pos):
                     mostrar_caracteres = not mostrar_caracteres
+                    reproducir_sonido_ui("select")
                 elif btn_cancelar.collidepoint(evento.pos):
                     pulsado = True
                     if spr_can_semi and spr_can_apret:
-                        pulsado = animar_pulsacion_boton(pantalla, btn_cancelar, spr_can_semi, spr_can_apret, fondo_tarjeta, spr_can_norm)
+                        pulsado = animar_pulsacion_boton(pantalla, btn_cancelar, spr_can_semi, spr_can_apret, fondo_tarjeta, spr_can_norm, tipo_sonido="ventana_cancelar")
+                    else:
+                        reproducir_sonido_ui("ventana_cancelar")
                     if pulsado:
                         pygame.event.clear()
                         return None
@@ -680,8 +684,9 @@ def solicitar_texto_modal(pantalla, reloj, titulo, subtitulo, valor_inicial="", 
                     else:
                         pulsado = True
                         if spr_ace_semi and spr_ace_apret:
-                            pulsado = animar_pulsacion_boton(pantalla, btn_confirmar, spr_ace_semi, spr_ace_apret, fondo_tarjeta, spr_ace_norm)
+                            pulsado = animar_pulsacion_boton(pantalla, btn_confirmar, spr_ace_semi, spr_ace_apret, fondo_tarjeta, spr_ace_norm, tipo_sonido="ventana_aceptar")
                         else:
+                            reproducir_sonido_ui("ventana_aceptar")
                             pygame.draw.rect(pantalla, (45, 130, 70), btn_confirmar, border_radius=10)
                             pygame.draw.rect(pantalla, (30, 95, 50), btn_confirmar, width=2, border_radius=10)
                             dibujar_texto_en_rect(pantalla, t("aceptar", "ACEPTAR"), btn_confirmar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(230, 230, 230))
@@ -833,7 +838,9 @@ def pedir_password_modal(pantalla, reloj, partida):
                     if b_rein.collidepoint(ev.pos):
                         pulsado = True
                         if spr_rein_semi and spr_rein_apret:
-                            pulsado = animar_pulsacion_boton(pantalla, b_rein, spr_rein_semi, spr_rein_apret, (253, 246, 233), spr_rein_norm)
+                            pulsado = animar_pulsacion_boton(pantalla, b_rein, spr_rein_semi, spr_rein_apret, (253, 246, 233), spr_rein_norm, tipo_sonido="ventana_reintentar")
+                        else:
+                            reproducir_sonido_ui("ventana_reintentar")
                         if pulsado:
                             esperando = False
                             reintentar = True
@@ -841,7 +848,9 @@ def pedir_password_modal(pantalla, reloj, partida):
                     elif b_canc.collidepoint(ev.pos):
                         pulsado = True
                         if spr_canc_semi and spr_canc_apret:
-                            pulsado = animar_pulsacion_boton(pantalla, b_canc, spr_canc_semi, spr_canc_apret, (253, 246, 233), spr_canc_norm)
+                            pulsado = animar_pulsacion_boton(pantalla, b_canc, spr_canc_semi, spr_canc_apret, (253, 246, 233), spr_canc_norm, tipo_sonido="ventana_cancelar")
+                        else:
+                            reproducir_sonido_ui("ventana_cancelar")
                         if pulsado:
                             pygame.event.clear()
                             return False
@@ -952,12 +961,15 @@ def modal_administrar_perfil(pantalla, reloj, partida):
                 if rect_btn_x.collidepoint(evento.pos):
                     pulsado = True
                     if spr_x_semi and spr_x_apr:
-                        pulsado = animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apr, fondo_tarjeta, spr_x_norm)
+                        pulsado = animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apr, fondo_tarjeta, spr_x_norm, tipo_sonido="ventana_cancelar")
+                    else:
+                        reproducir_sonido_ui("ventana_cancelar")
                     if pulsado:
                         return hubo_cambios
 
                 # 2. Clic en Cambiar Nombre
                 elif btn_renombrar.collidepoint(evento.pos):
+                    reproducir_sonido_ui("partida_gestionar")
                     nuevo_nom = solicitar_texto_modal(
                         pantalla, reloj,
                         titulo=t("cambiar_nombre"),
@@ -972,6 +984,7 @@ def modal_administrar_perfil(pantalla, reloj, partida):
 
                 # 3. Clic en Contraseña
                 elif btn_password.collidepoint(evento.pos):
+                    reproducir_sonido_ui("partida_gestionar")
                     # Si ya tiene contraseña, autenticar primero
                     if partida.get("tiene_password", False):
                         if not pedir_password_modal(pantalla, reloj, partida):
@@ -1004,6 +1017,7 @@ def modal_administrar_perfil(pantalla, reloj, partida):
 
                 # 4. Clic en Eliminar
                 elif btn_eliminar.collidepoint(evento.pos):
+                    reproducir_sonido_ui("partida_borrar")
                     if mostrar_dialogo_confirmar_borrado(pantalla, reloj, partida):
                         eliminar_partida(partida["id"])
                         return True
@@ -1111,13 +1125,17 @@ def mostrar_dialogo_partida_existente(pantalla, reloj, nombre):
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 if btn_cambiar.collidepoint(evento.pos):
+                    reproducir_sonido_ui("ventana_aceptar")
                     return "cambiar"
                 elif btn_sobrescribir.collidepoint(evento.pos):
+                    reproducir_sonido_ui("ventana_aceptar")
                     return "sobrescribir"
                 elif btn_cancelar.collidepoint(evento.pos):
                     pulsado = True
                     if spr_canc_semi and spr_canc_apret:
-                        pulsado = animar_pulsacion_boton(pantalla, btn_cancelar, spr_canc_semi, spr_canc_apret, fondo_tarjeta, spr_canc_norm)
+                        pulsado = animar_pulsacion_boton(pantalla, btn_cancelar, spr_canc_semi, spr_canc_apret, fondo_tarjeta, spr_canc_norm, tipo_sonido="ventana_cancelar")
+                    else:
+                        reproducir_sonido_ui("ventana_cancelar")
                     if pulsado:
                         return "cancelar"
 
@@ -1346,18 +1364,23 @@ def modal_flujo_guardar_perfil(
                 if btn_cancelar.collidepoint(evento.pos):
                     pulsado = True
                     if spr_can_semi and spr_can_apret:
-                        pulsado = animar_pulsacion_boton(pantalla, btn_cancelar, spr_can_semi, spr_can_apret, fondo_tarjeta, spr_can_norm)
+                        pulsado = animar_pulsacion_boton(pantalla, btn_cancelar, spr_can_semi, spr_can_apret, fondo_tarjeta, spr_can_norm, tipo_sonido="ventana_cancelar")
+                    else:
+                        reproducir_sonido_ui("ventana_cancelar")
                     if pulsado:
                         return False
 
                 if btn_pag_ant and btn_pag_ant.collidepoint(evento.pos) and pagina_guardar > 0:
                     pagina_guardar -= 1
+                    reproducir_sonido_ui("pagina")
                     continue
                 elif btn_pag_sig and btn_pag_sig.collidepoint(evento.pos) and pagina_guardar < total_paginas - 1:
                     pagina_guardar += 1
+                    reproducir_sonido_ui("pagina")
                     continue
 
                 if btn_crear_nuevo.collidepoint(evento.pos):
+                    reproducir_sonido_ui("partida_nueva")
                     if nombre_partida_actual:
                         res = guardar_partida(
                             niveles_desbloqueados,
@@ -1442,6 +1465,7 @@ def modal_flujo_guardar_perfil(
 
                 for r_s, p in slots:
                     if r_s.collidepoint(evento.pos):
+                        reproducir_sonido_ui("partida_cargar")
                         # Si tiene contraseña, pedirla antes de actualizar
                         if p.get("tiene_password", False):
                             if not pedir_password_modal(pantalla, reloj, p):
@@ -1644,7 +1668,9 @@ def mostrar_dialogo_guardar_salir(
                 if btn_guardar.collidepoint(evento.pos):
                     pulsado = True
                     if spr_g_semi and spr_g_apret:
-                        pulsado = animar_pulsacion_boton(pantalla, btn_guardar, spr_g_semi, spr_g_apret, fondo_tarjeta, spr_g_norm)
+                        pulsado = animar_pulsacion_boton(pantalla, btn_guardar, spr_g_semi, spr_g_apret, fondo_tarjeta, spr_g_norm, tipo_sonido="ventana_aceptar")
+                    else:
+                        reproducir_sonido_ui("ventana_aceptar")
                     if pulsado:
                         guardado_ok = modal_flujo_guardar_perfil(
                             pantalla, reloj,
@@ -1663,14 +1689,18 @@ def mostrar_dialogo_guardar_salir(
                 elif btn_no_guardar.collidepoint(evento.pos):
                     pulsado = True
                     if spr_s_semi and spr_s_apret:
-                        pulsado = animar_pulsacion_boton(pantalla, btn_no_guardar, spr_s_semi, spr_s_apret, fondo_tarjeta, spr_s_norm)
+                        pulsado = animar_pulsacion_boton(pantalla, btn_no_guardar, spr_s_semi, spr_s_apret, fondo_tarjeta, spr_s_norm, tipo_sonido="ventana_cancelar")
+                    else:
+                        reproducir_sonido_ui("ventana_cancelar")
                     if pulsado:
                         return "salir_sin_guardar"
 
                 elif btn_cancelar.collidepoint(evento.pos):
                     pulsado = True
                     if spr_c_semi and spr_c_apret:
-                        pulsado = animar_pulsacion_boton(pantalla, btn_cancelar, spr_c_semi, spr_c_apret, fondo_tarjeta, spr_c_norm)
+                        pulsado = animar_pulsacion_boton(pantalla, btn_cancelar, spr_c_semi, spr_c_apret, fondo_tarjeta, spr_c_norm, tipo_sonido="ventana_cancelar")
+                    else:
+                        reproducir_sonido_ui("ventana_cancelar")
                     if pulsado:
                         return "cancelar"
 
@@ -1776,13 +1806,17 @@ def mostrar_dialogo_confirmar_borrado(pantalla, reloj, partida):
                 if btn_cancelar.collidepoint(evento.pos):
                     pulsado = True
                     if spr_can_semi and spr_can_apret:
-                        pulsado = animar_pulsacion_boton(pantalla, btn_cancelar, spr_can_semi, spr_can_apret, fondo_tarjeta, spr_can_norm)
+                        pulsado = animar_pulsacion_boton(pantalla, btn_cancelar, spr_can_semi, spr_can_apret, fondo_tarjeta, spr_can_norm, tipo_sonido="ventana_cancelar")
+                    else:
+                        reproducir_sonido_ui("ventana_cancelar")
                     if pulsado:
                         return False
                 elif btn_borrar.collidepoint(evento.pos):
                     pulsado = True
                     if spr_bor_semi and spr_bor_apret:
-                        pulsado = animar_pulsacion_boton(pantalla, btn_borrar, spr_bor_semi, spr_bor_apret, fondo_tarjeta, spr_bor_norm)
+                        pulsado = animar_pulsacion_boton(pantalla, btn_borrar, spr_bor_semi, spr_bor_apret, fondo_tarjeta, spr_bor_norm, tipo_sonido="partida_borrar")
+                    else:
+                        reproducir_sonido_ui("partida_borrar")
                     if pulsado:
                         return True
 
@@ -1951,10 +1985,12 @@ def mostrar_dialogo_confirmar_atuendos(
 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 if btn_cerrar.collidepoint(evento.pos):
+                    reproducir_sonido_ui("ventana_cancelar")
                     pygame.event.clear()
                     return "cancelar"
 
                 elif btn_mantener.collidepoint(evento.pos):
+                    reproducir_sonido_ui("ventana_aceptar")
                     pygame.draw.rect(pantalla, (230, 220, 205), btn_mantener, border_radius=12)
                     pygame.draw.rect(pantalla, (160, 130, 100), btn_mantener, width=2, border_radius=12)
                     dibujar_texto_en_rect(pantalla, t("mantener_guardados"), btn_mantener, categoria="boton", tamano=16, color=(60, 45, 35))
@@ -1964,6 +2000,7 @@ def mostrar_dialogo_confirmar_atuendos(
                     return "mantener"
 
                 elif btn_cambiar.collidepoint(evento.pos):
+                    reproducir_sonido_ui("ventana_aceptar")
                     pygame.draw.rect(pantalla, (45, 130, 70), btn_cambiar, border_radius=12)
                     pygame.draw.rect(pantalla, (30, 95, 50), btn_cambiar, width=2, border_radius=12)
                     dibujar_texto_en_rect(pantalla, t("cambiar_atuendos"), btn_cambiar, categoria="boton", tamano=16, color=(255, 255, 255))

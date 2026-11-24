@@ -578,7 +578,7 @@ def precargar_botones_comunes():
         cargar_boton_escalado(b, 32, 32)
 
 
-def animar_pulsacion_boton(pantalla, rect, spr_semi, spr_apretado, fondo_limpio=None, spr_normal=None):
+def animar_pulsacion_boton(pantalla, rect, spr_semi, spr_apretado, fondo_limpio=None, spr_normal=None, tipo_sonido=None):
     """
     Reproduce una pulsación física real en 4 etapas usando los tres sprites de cada botón:
     1. Normal -> Semiapretado: al hacer clic, pasa rápidamente al sprite semiapretado (~55 ms).
@@ -587,8 +587,17 @@ def animar_pulsacion_boton(pantalla, rect, spr_semi, spr_apretado, fondo_limpio=
     3. Mientras mantenga presionado el clic: permanece visualmente apretado de forma continua.
     4. Al soltar: realiza una transición rápida de regreso (semiapretado ~45 ms -> normal)
        y ejecuta la acción una sola vez por clic.
+    Sincroniza un efecto sonoro suave y diferenciado según la sección (tipo_sonido), sonando una
+    sola vez al presionar y sin repetirse al mantenerlo sostenido.
     Garantiza dimensiones 1:1 estrictas para impedir cualquier deformación o agrandamiento.
     """
+    # Reproducción de sonido sutil sincronizada con la pulsación física inicial
+    if tipo_sonido is not False:
+        try:
+            from configuracion import reproducir_sonido_ui
+            reproducir_sonido_ui(tipo_sonido if tipo_sonido is not None else "menu")
+        except Exception:
+            pass
     target_size = (rect.width, rect.height)
     if spr_semi is not None and spr_semi.get_size() != target_size:
         spr_semi = pygame.transform.smoothscale(spr_semi, target_size)
@@ -1248,6 +1257,7 @@ def recargar_accesorios():
     """Limpia la caché de accesorios para recargar imágenes del disco inmediatamente."""
     global _SURF_ACCESORIO_BUCEO, _SURF_BUCEO_GOGGLES, _SURF_BUCEO_AMARILLO
     _CACHE_ACCESORIOS.clear()
+    _CACHE_ACCESORIOS_ESCALADOS.clear()
     _SURF_ACCESORIO_BUCEO = None
     _SURF_BUCEO_GOGGLES = None
     _SURF_BUCEO_AMARILLO = None
@@ -1346,12 +1356,31 @@ def cargar_accesorio(id_accesorio):
     return None
 
 
+_CACHE_ACCESORIOS_ESCALADOS = {}
+
+
+def cargar_accesorio_escalado(id_accesorio, w, h):
+    """
+    Carga y escala un accesorio cacheando el resultado para evitar transformaciones repetitivas.
+    """
+    clave = (id_accesorio, w, h)
+    if clave in _CACHE_ACCESORIOS_ESCALADOS:
+        return _CACHE_ACCESORIOS_ESCALADOS[clave]
+    surf = cargar_accesorio(id_accesorio)
+    if surf is None:
+        return None
+    scaled = pygame.transform.scale(surf, (w, h))
+    _CACHE_ACCESORIOS_ESCALADOS[clave] = scaled
+    return scaled
+
+
 def dibujar_accesorio_en_personaje(
     pantalla,
     p,
     sprite_personaje=None,
     rect_personaje=None,
     mirando_derecha=None,
+    escala=None,
 ):
     if isinstance(p, dict):
         acc_id = p.get("accesorio")
@@ -1386,11 +1415,30 @@ def dibujar_accesorio_en_personaje(
     else:
         return
 
+    # Determinar escala proporcional respecto al tamaño canónico de personaje (70x85)
+    if escala is not None:
+        if isinstance(escala, (int, float)):
+            sx = float(escala)
+            sy = float(escala)
+        elif isinstance(escala, (tuple, list)) and len(escala) == 2:
+            sx = float(escala[0])
+            sy = float(escala[1])
+        else:
+            sx, sy = 1.0, 1.0
+    elif rect_base.width > 0 and rect_base.height > 0:
+        if abs(rect_base.width - 70) > 1 or abs(rect_base.height - 85) > 1:
+            sx = rect_base.width / 70.0
+            sy = rect_base.height / 85.0
+        else:
+            sx, sy = 1.0, 1.0
+    else:
+        sx, sy = 1.0, 1.0
+
     meta = METADATA_ACCESORIOS.get(sprite_acc_id) or METADATA_ACCESORIOS.get(acc_id)
     if meta:
         off_x, off_y = meta["offset"]
     else:
-        off_x = (rect_base.width - surf_acc.get_width()) // 2
+        off_x = (70 - surf_acc.get_width()) // 2
         off_y = -surf_acc.get_height() + 12
 
     # Anclaje dinámico a la cabeza para todas las animaciones (caminar, saltar, caer, agacharse, etc.)
@@ -1402,6 +1450,17 @@ def dibujar_accesorio_en_personaje(
         sp_act = p["sprites"].get(est)
         if sp_act:
             top_cabeza, _ = calcular_anclaje_sprite(sp_act)
+
+    # Si el personaje está escalado (por ejemplo en la pantalla de Opciones), adaptar escala y offsets
+    if abs(sx - 1.0) > 0.005 or abs(sy - 1.0) > 0.005:
+        w_acc = max(1, round(surf_acc.get_width() * sx))
+        h_acc = max(1, round(surf_acc.get_height() * sy))
+        surf_acc = cargar_accesorio_escalado(sprite_acc_id, w_acc, h_acc)
+        if surf_acc is None:
+            surf_acc = pygame.transform.scale(cargar_accesorio(sprite_acc_id), (w_acc, h_acc))
+        off_x = round(off_x * sx)
+        off_y = round(off_y * sy)
+        top_cabeza = round(top_cabeza * sy)
 
     if mirando_der:
         x_acc = rect_base.left + off_x

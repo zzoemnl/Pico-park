@@ -2753,13 +2753,13 @@ def main():
                     if estado_actual == ESTADO_CONFIGURACION:
                         _asegurar_semi_apretados_menu()
                         f_limpio = fondo_btn_x_main if fondo_btn_x_main else (30, 30, 30)
-                        if animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, f_limpio, spr_x_normal):
+                        if animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, f_limpio, spr_x_normal, tipo_sonido="ventana_cancelar"):
                             estado_actual = ESTADO_MENU_PRINCIPAL
                         break
                     elif estado_actual != ESTADO_SELECCION_NIVEL:
                         _asegurar_semi_apretados_menu()
                         f_limpio = fondo_btn_x_main if fondo_btn_x_main else (30, 30, 30)
-                        if animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, f_limpio, spr_x_normal):
+                        if animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, f_limpio, spr_x_normal, tipo_sonido="ventana_cancelar"):
                             intentar_salir()
                         break
 
@@ -2771,14 +2771,14 @@ def main():
                         sp_s = _obtener_boton_menu_principal_estado("jugar", "semi", idm_act)
                         sp_a = _obtener_boton_menu_principal_estado("jugar", "apretado", idm_act)
                         sp_n = _obtener_boton_menu_principal_estado("jugar", "normal", idm_act)
-                        if animar_pulsacion_boton(pantalla, btn_jugar, sp_s, sp_a, f_limp, sp_n):
+                        if animar_pulsacion_boton(pantalla, btn_jugar, sp_s, sp_a, f_limp, sp_n, tipo_sonido="menu"):
                             estado_actual = ESTADO_MODO_JUEGO
                     elif btn_personajes.collidepoint(evento.pos):
                         f_limp = gestor_personajes_menu.fondo_estatico.subsurface(btn_personajes)
                         sp_s = _obtener_boton_menu_principal_estado("personajes", "semi", idm_act)
                         sp_a = _obtener_boton_menu_principal_estado("personajes", "apretado", idm_act)
                         sp_n = _obtener_boton_menu_principal_estado("personajes", "normal", idm_act)
-                        if animar_pulsacion_boton(pantalla, btn_personajes, sp_s, sp_a, f_limp, sp_n):
+                        if animar_pulsacion_boton(pantalla, btn_personajes, sp_s, sp_a, f_limp, sp_n, tipo_sonido="menu"):
                             estado_actual = ESTADO_PERSONAJES
                             acc_list_init = obtener_accesorios_disponibles()
                             for _ia, _acc in enumerate(acc_list_init):
@@ -2791,7 +2791,7 @@ def main():
                         sp_s = _obtener_boton_menu_principal_estado("opciones", "semi", idm_act)
                         sp_a = _obtener_boton_menu_principal_estado("opciones", "apretado", idm_act)
                         sp_n = _obtener_boton_menu_principal_estado("opciones", "normal", idm_act)
-                        if animar_pulsacion_boton(pantalla, btn_config, sp_s, sp_a, f_limp, sp_n):
+                        if animar_pulsacion_boton(pantalla, btn_config, sp_s, sp_a, f_limp, sp_n, tipo_sonido="menu"):
                             estado_actual = ESTADO_CONFIGURACION
                             seccion_opciones_actual = "configuracion"
                             break
@@ -2800,7 +2800,7 @@ def main():
                         sp_s = _obtener_boton_menu_principal_estado("salir", "semi", idm_act)
                         sp_a = _obtener_boton_menu_principal_estado("salir", "apretado", idm_act)
                         sp_n = _obtener_boton_menu_principal_estado("salir", "normal", idm_act)
-                        if animar_pulsacion_boton(pantalla, btn_salir, sp_s, sp_a, f_limp, sp_n):
+                        if animar_pulsacion_boton(pantalla, btn_salir, sp_s, sp_a, f_limp, sp_n, tipo_sonido="menu"):
                             intentar_salir()
 
                 elif estado_actual == ESTADO_MODO_JUEGO:
@@ -2810,14 +2810,14 @@ def main():
                         sp_c_s = _obtener_boton_modo("continuar", "semi", idm_act)
                         sp_c_a = _obtener_boton_modo("continuar", "apretado", idm_act)
                         sp_c_n = _obtener_boton_modo("continuar", "normal", idm_act)
-                        if animar_pulsacion_boton(pantalla, btn_continuar, sp_c_s, sp_c_a, f_limp_modo, sp_c_n):
+                        if animar_pulsacion_boton(pantalla, btn_continuar, sp_c_s, sp_c_a, f_limp_modo, sp_c_n, tipo_sonido="menu"):
                             pagina_partidas = 0
                             estado_actual = ESTADO_LISTA_PARTIDAS
                     elif btn_nueva_partida.collidepoint(evento.pos):
                         sp_n_s = _obtener_boton_modo("nueva_partida", "semi", idm_act)
                         sp_n_a = _obtener_boton_modo("nueva_partida", "apretado", idm_act)
                         sp_n_n = _obtener_boton_modo("nueva_partida", "normal", idm_act)
-                        if animar_pulsacion_boton(pantalla, btn_nueva_partida, sp_n_s, sp_n_a, f_limp_modo, sp_n_n):
+                        if animar_pulsacion_boton(pantalla, btn_nueva_partida, sp_n_s, sp_n_a, f_limp_modo, sp_n_n, tipo_sonido="partida_nueva"):
                             nueva_p = flujo_crear_nueva_partida(
                                 pantalla, reloj,
                                 color_p1=color_p1, color_p2=color_p2,
@@ -2843,7 +2843,7 @@ def main():
                                     accesorio_p1=accesorio_p1,
                                     accesorio_p2=accesorio_p2,
                                     partida_actual_password=partida_actual_password,
-                                )
+                                    )
                                 if fin_acc == "menu":
                                     estado_actual = ESTADO_SELECCION_NIVEL
                                 else:
@@ -2852,7 +2852,7 @@ def main():
                         sp_v_s = _obtener_boton_volver("semi", idm_act)
                         sp_v_a = _obtener_boton_volver("apretado", idm_act)
                         sp_v_n = _obtener_boton_volver("normal", idm_act)
-                        if animar_pulsacion_boton(pantalla, btn_volver_modo, sp_v_s, sp_v_a, f_limp_modo, sp_v_n):
+                        if animar_pulsacion_boton(pantalla, btn_volver_modo, sp_v_s, sp_v_a, f_limp_modo, sp_v_n, tipo_sonido="ventana_volver"):
                             estado_actual = ESTADO_MENU_PRINCIPAL
 
                 elif estado_actual == ESTADO_LISTA_PARTIDAS:
@@ -2875,7 +2875,7 @@ def main():
                             sp_pr_apret = _obtener_boton_primera_partida("apretado", idm_act)
                             sp_pr_norm = _obtener_boton_primera_partida("normal", idm_act)
                             if sp_pr_semi and sp_pr_apret:
-                                pulsado = animar_pulsacion_boton(pantalla, btn_iniciar_primera, sp_pr_semi, sp_pr_apret, (252, 248, 238), sp_pr_norm)
+                                pulsado = animar_pulsacion_boton(pantalla, btn_iniciar_primera, sp_pr_semi, sp_pr_apret, (252, 248, 238), sp_pr_norm, tipo_sonido="partida_nueva")
                             if pulsado:
                                 nueva_p = flujo_crear_nueva_partida(
                                     pantalla, reloj,
@@ -2924,7 +2924,7 @@ def main():
                                 spr_b_a = dict_sp_act.get("borrar_apretado")
                                 spr_b_n = dict_sp_act.get("borrar_normal")
                                 if spr_b_s and spr_b_a:
-                                    pulsado = animar_pulsacion_boton(pantalla, r_btn_borrar, spr_b_s, spr_b_a, (253, 246, 233), spr_b_n)
+                                    pulsado = animar_pulsacion_boton(pantalla, r_btn_borrar, spr_b_s, spr_b_a, (253, 246, 233), spr_b_n, tipo_sonido="partida_borrar")
                                 if pulsado:
                                     if mostrar_dialogo_confirmar_borrado(pantalla, reloj, p):
                                         eliminar_partida(p["id"])
@@ -2951,7 +2951,7 @@ def main():
                                 spr_g_a = dict_sp_act.get("gestionar_apretado")
                                 spr_g_n = dict_sp_act.get("gestionar_normal")
                                 if spr_g_s and spr_g_a:
-                                    pulsado = animar_pulsacion_boton(pantalla, r_btn_gestionar, spr_g_s, spr_g_a, (253, 246, 233), spr_g_n)
+                                    pulsado = animar_pulsacion_boton(pantalla, r_btn_gestionar, spr_g_s, spr_g_a, (253, 246, 233), spr_g_n, tipo_sonido="partida_gestionar")
                                 if pulsado:
                                     if modal_administrar_perfil(pantalla, reloj, p):
                                         nuevas_p = cargar_partidas()
@@ -2968,7 +2968,7 @@ def main():
                                 spr_c_a = dict_sp_act.get("cargar_apretado")
                                 spr_c_n = dict_sp_act.get("cargar_normal")
                                 if spr_c_s and spr_c_a:
-                                    pulsado = animar_pulsacion_boton(pantalla, r_btn_cargar, spr_c_s, spr_c_a, (253, 246, 233), spr_c_n)
+                                    pulsado = animar_pulsacion_boton(pantalla, r_btn_cargar, spr_c_s, spr_c_a, (253, 246, 233), spr_c_n, tipo_sonido="partida_cargar")
                                 if pulsado:
                                     if p.get("tiene_password", False):
                                         if not pedir_password_modal(pantalla, reloj, p):
@@ -3041,8 +3041,10 @@ def main():
                                 btn_pag_sig = pygame.Rect(rect_panel_partidas.centerx + 84, 508, 36, 32)
                                 if btn_pag_ant.collidepoint(evento.pos) and pagina_partidas > 0:
                                     pagina_partidas -= 1
+                                    reproducir_sonido_ui("pagina")
                                 elif btn_pag_sig.collidepoint(evento.pos) and pagina_partidas < total_paginas - 1:
                                     pagina_partidas += 1
+                                    reproducir_sonido_ui("pagina")
 
                             if btn_nueva_desde_lista.collidepoint(evento.pos):
                                 pulsado = True
@@ -3051,7 +3053,7 @@ def main():
                                 sp_nl_n = _obtener_boton_nueva_lista("normal", idm_act)
                                 if sp_nl_s and sp_nl_a:
                                     f_limp = _obtener_fondo_partidas(ANCHO_MENU, ALTO_MENU)
-                                    pulsado = animar_pulsacion_boton(pantalla, btn_nueva_desde_lista, sp_nl_s, sp_nl_a, f_limp, sp_nl_n)
+                                    pulsado = animar_pulsacion_boton(pantalla, btn_nueva_desde_lista, sp_nl_s, sp_nl_a, f_limp, sp_nl_n, tipo_sonido="partida_nueva")
                                 if pulsado:
                                     nueva_p = flujo_crear_nueva_partida(
                                         pantalla, reloj,
@@ -3091,7 +3093,7 @@ def main():
                         sp_vp_n = _obtener_boton_volver("normal", idm_act)
                         if sp_vp_s and sp_vp_a:
                             f_limp = _obtener_fondo_partidas(ANCHO_MENU, ALTO_MENU)
-                            pulsado = animar_pulsacion_boton(pantalla, btn_volver_partidas, sp_vp_s, sp_vp_a, f_limp, sp_vp_n)
+                            pulsado = animar_pulsacion_boton(pantalla, btn_volver_partidas, sp_vp_s, sp_vp_a, f_limp, sp_vp_n, tipo_sonido="ventana_volver")
                         if pulsado:
                             estado_actual = ESTADO_MODO_JUEGO
 
@@ -3103,7 +3105,7 @@ def main():
                         sp_vp_a = _obtener_boton_volver("apretado", idm_act)
                         sp_vp_n = _obtener_boton_volver("normal", idm_act)
                         if sp_vp_s and sp_vp_a and btn_volver_personajes.collidepoint(evento.pos):
-                            pulsado = animar_pulsacion_boton(pantalla, btn_volver_personajes, sp_vp_s, sp_vp_a, _obtener_fondo_personajes(ANCHO_MENU, ALTO_MENU), sp_vp_n)
+                            pulsado = animar_pulsacion_boton(pantalla, btn_volver_personajes, sp_vp_s, sp_vp_a, _obtener_fondo_personajes(ANCHO_MENU, ALTO_MENU), sp_vp_n, tipo_sonido="ventana_volver")
                         if pulsado:
                             estado_actual = ESTADO_MENU_PRINCIPAL
                             break
@@ -3231,14 +3233,20 @@ def main():
                         sp_v_s = _obtener_boton_volver("semi", idm_act)
                         sp_v_a = _obtener_boton_volver("apretado", idm_act)
                         sp_v_n = _obtener_boton_volver("normal", idm_act)
-                        pulsado = animar_pulsacion_boton(pantalla, btn_volver_config, sp_v_s, sp_v_a, _obtener_fondo_opciones(ANCHO_MENU, ALTO_MENU), sp_v_n)
+                        pulsado = animar_pulsacion_boton(pantalla, btn_volver_config, sp_v_s, sp_v_a, _obtener_fondo_opciones(ANCHO_MENU, ALTO_MENU), sp_v_n, tipo_sonido="ventana_volver")
                         if pulsado:
                             estado_actual = ESTADO_MENU_PRINCIPAL
                     elif rect_btn_sec_cfg.collidepoint(evento.pos):
+                        if seccion_opciones_actual != "configuracion":
+                            reproducir_sonido_ui("tab")
                         seccion_opciones_actual = "configuracion"
                     elif rect_btn_sec_ctrl.collidepoint(evento.pos):
+                        if seccion_opciones_actual != "controles":
+                            reproducir_sonido_ui("tab")
                         seccion_opciones_actual = "controles"
                     elif rect_btn_sec_inst.collidepoint(evento.pos):
+                        if seccion_opciones_actual != "instrucciones":
+                            reproducir_sonido_ui("tab")
                         seccion_opciones_actual = "instrucciones"
                     elif seccion_opciones_actual == "configuracion":
                         rect_panel_ev = pygame.Rect(340, 115, 875, 495)
@@ -3268,10 +3276,13 @@ def main():
                             reproducir_beep_volumen()
                         elif r_bl_es.collidepoint(evento.pos):
                             cambiar_idioma("es")
+                            reproducir_sonido_ui("select")
                         elif r_bl_en.collidepoint(evento.pos):
                             cambiar_idioma("en")
+                            reproducir_sonido_ui("select")
                         elif r_bl_zh.collidepoint(evento.pos):
                             cambiar_idioma("zh")
+                            reproducir_sonido_ui("select")
 
                 elif estado_actual == ESTADO_CREDITOS:
                     idm_act = obtener_idioma()
@@ -3279,7 +3290,7 @@ def main():
                         sp_v_s = _obtener_boton_volver("semi", idm_act)
                         sp_v_a = _obtener_boton_volver("apretado", idm_act)
                         sp_v_n = _obtener_boton_volver("normal", idm_act)
-                        pulsado = animar_pulsacion_boton(pantalla, btn_volver_creditos, sp_v_s, sp_v_a, (30, 30, 30), sp_v_n)
+                        pulsado = animar_pulsacion_boton(pantalla, btn_volver_creditos, sp_v_s, sp_v_a, (30, 30, 30), sp_v_n, tipo_sonido="ventana_volver")
                         if pulsado:
                             estado_actual = ESTADO_MENU_PRINCIPAL
 
@@ -3289,7 +3300,7 @@ def main():
                         pulsado = True
                         if spr_confign_semi and spr_confign_apretado:
                             f_limpio = fondo_btn_config_niveles if fondo_btn_config_niveles else (255, 240, 195)
-                            pulsado = animar_pulsacion_boton(pantalla, rect_btn_config_niveles, spr_confign_semi, spr_confign_apretado, f_limpio, spr_confign_normal)
+                            pulsado = animar_pulsacion_boton(pantalla, rect_btn_config_niveles, spr_confign_semi, spr_confign_apretado, f_limpio, spr_confign_normal, tipo_sonido="menu")
                         if pulsado:
                             mostrar_pestana_configuracion(pantalla, reloj)
                             break
@@ -3297,7 +3308,7 @@ def main():
                         pulsado = True
                         if spr_casa_semi and spr_casa_apretado:
                             f_limpio = fondo_btn_casa_niveles if fondo_btn_casa_niveles else (255, 240, 195)
-                            pulsado = animar_pulsacion_boton(pantalla, rect_btn_casa_niveles, spr_casa_semi, spr_casa_apretado, f_limpio, spr_casa_normal)
+                            pulsado = animar_pulsacion_boton(pantalla, rect_btn_casa_niveles, spr_casa_semi, spr_casa_apretado, f_limpio, spr_casa_normal, tipo_sonido="menu")
                         if pulsado:
                             estado_actual = ESTADO_MENU_PRINCIPAL
                             break
@@ -3305,7 +3316,7 @@ def main():
                         pulsado = True
                         if spr_xn_semi and spr_xn_apretado:
                             f_limpio = fondo_btn_x_niveles if fondo_btn_x_niveles else (255, 240, 195)
-                            pulsado = animar_pulsacion_boton(pantalla, rect_btn_x_niveles, spr_xn_semi, spr_xn_apretado, f_limpio, spr_xn_normal)
+                            pulsado = animar_pulsacion_boton(pantalla, rect_btn_x_niveles, spr_xn_semi, spr_xn_apretado, f_limpio, spr_xn_normal, tipo_sonido="ventana_cancelar")
                         if pulsado:
                             intentar_salir()
                             break
@@ -3314,6 +3325,8 @@ def main():
                     tab_presionada = False
                     for m, t_data in tabs_info.items():
                         if t_data["rect_click"].collidepoint(evento.pos):
+                            if mundo_seleccionado != m:
+                                reproducir_sonido_ui("tab")
                             mundo_seleccionado = m
                             tab_presionada = True
                             break
@@ -3325,9 +3338,9 @@ def main():
                             if rect_c.collidepoint(evento.pos):
                                 if es_nivel_jefe(mundo_seleccionado, idx_nivel + 1) and not es_admin_partida:
                                     # Nivel de jefe en proceso: no jugable en partidas normales
-                                    reproducir_sonido_ui("click")
                                     break
                                 if desbloqueado or es_admin_partida:
+                                    reproducir_sonido_ui("menu")
                                     fin_acc, mundo_seleccionado = jugar_niveles_desde(
                                         mundo_seleccionado,
                                         idx_nivel,
@@ -3353,8 +3366,10 @@ def main():
                     if total_pag > 1:
                         if evento.y > 0 and pagina_partidas > 0:
                             pagina_partidas -= 1
+                            reproducir_sonido_ui("pagina")
                         elif evento.y < 0 and pagina_partidas < total_pag - 1:
                             pagina_partidas += 1
+                            reproducir_sonido_ui("pagina")
 
             elif evento.type == pygame.KEYDOWN:
                 if evento.key == pygame.K_ESCAPE:
@@ -3957,11 +3972,11 @@ def main():
             if sp_p1_d:
                 pantalla.blit(pygame.transform.scale(sp_p1_d, (50, 62)), r_mini_p1)
                 if accesorio_p1:
-                    dibujar_accesorio_en_personaje(pantalla, accesorio_p1, rect_personaje=r_mini_p1)
+                    dibujar_accesorio_en_personaje(pantalla, accesorio_p1, sprite_personaje=sp_p1_d, rect_personaje=r_mini_p1, mirando_derecha=True)
             if sp_p2_d:
                 pantalla.blit(pygame.transform.scale(sp_p2_d, (50, 62)), r_mini_p2)
                 if accesorio_p2:
-                    dibujar_accesorio_en_personaje(pantalla, accesorio_p2, rect_personaje=r_mini_p2)
+                    dibujar_accesorio_en_personaje(pantalla, accesorio_p2, sprite_personaje=sp_p2_d, rect_personaje=r_mini_p2, mirando_derecha=True)
 
             # 4. Panel central grande de color crema
             rect_panel = pygame.Rect(340, 115, 875, 495)

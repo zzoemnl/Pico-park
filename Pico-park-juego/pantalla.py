@@ -30,6 +30,7 @@ from configuracion import (
     obtener_idioma,
     reproducir_sonido_ahogamiento,
     detener_sonido_ahogamiento,
+    reproducir_sonido_ui,
 )
 
 from sprites import (
@@ -164,7 +165,7 @@ def pantalla_muerte(pantalla, reloj):
                         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
                     except Exception:
                         pass
-                    if animar_pulsacion_boton(pantalla, rect_btn_x, boton_x_semi, boton_x_apretado, (25, 25, 25), boton_x_normal):
+                    if animar_pulsacion_boton(pantalla, rect_btn_x, boton_x_semi, boton_x_apretado, (25, 25, 25), boton_x_normal, tipo_sonido="ventana_cancelar"):
                         return "salir"
 
                 elif boton_reiniciar.collidepoint(evento.pos):
@@ -172,7 +173,7 @@ def pantalla_muerte(pantalla, reloj):
                         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
                     except Exception:
                         pass
-                    if animar_pulsacion_boton(pantalla, boton_reiniciar, boton_reiniciar_semi, boton_reiniciar_apretado, (25, 25, 25), boton_reiniciar_normal):
+                    if animar_pulsacion_boton(pantalla, boton_reiniciar, boton_reiniciar_semi, boton_reiniciar_apretado, (25, 25, 25), boton_reiniciar_normal, tipo_sonido="ventana_reiniciar"):
                         return "reiniciar"
 
                 elif boton_menu.collidepoint(evento.pos):
@@ -180,7 +181,7 @@ def pantalla_muerte(pantalla, reloj):
                         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
                     except Exception:
                         pass
-                    if animar_pulsacion_boton(pantalla, boton_menu, boton_menu_semi, boton_menu_apretado, (25, 25, 25), boton_menu_normal):
+                    if animar_pulsacion_boton(pantalla, boton_menu, boton_menu_semi, boton_menu_apretado, (25, 25, 25), boton_menu_normal, tipo_sonido="ventana_volver"):
                         return "menu"
 
         pantalla.fill((25, 25, 25))
@@ -787,16 +788,16 @@ def mostrar_pantalla_victoria(
                         pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
                     except Exception:
                         pass
-                    if animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, fondo_limpio_btn_x or (0, 0, 0), spr_x_normal):
+                    if animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, fondo_limpio_btn_x or (0, 0, 0), spr_x_normal, tipo_sonido="ventana_cancelar"):
                         accion_seleccionada = "salir"
                 elif rect_btn1.collidepoint(evento.pos):
                     spr1_norm = spr_sig_normal if hay_siguiente else spr_menu_normal
                     spr1_semi = spr_sig_semi if hay_siguiente else spr_menu_semi
                     spr1_apr = spr_sig_apretado if hay_siguiente else spr_menu_apretado
-                    if animar_pulsacion_boton(pantalla, rect_btn1, spr1_semi, spr1_apr, fondo_limpio_btn1, spr1_norm):
+                    if animar_pulsacion_boton(pantalla, rect_btn1, spr1_semi, spr1_apr, fondo_limpio_btn1, spr1_norm, tipo_sonido="ventana_aceptar"):
                         accion_seleccionada = "siguiente" if hay_siguiente else "menu"
                 elif rect_btn2.collidepoint(evento.pos):
-                    if animar_pulsacion_boton(pantalla, rect_btn2, spr_menu_semi, spr_menu_apretado, fondo_limpio_btn2, spr_menu_normal):
+                    if animar_pulsacion_boton(pantalla, rect_btn2, spr_menu_semi, spr_menu_apretado, fondo_limpio_btn2, spr_menu_normal, tipo_sonido="ventana_volver"):
                         accion_seleccionada = "menu"
 
         if accion_seleccionada is not None:
@@ -5859,7 +5860,7 @@ def iniciar_mundo(
                 if evento.key == pygame.K_r:
                     if spr_reiniciar_semi and spr_reiniciar_apretado:
                         f_limpio = fondo_btn_reiniciar if fondo_btn_reiniciar else (255, 240, 195)
-                        animar_pulsacion_boton(pantalla, rect_btn_reiniciar, spr_reiniciar_semi, spr_reiniciar_apretado, f_limpio)
+                        animar_pulsacion_boton(pantalla, rect_btn_reiniciar, spr_reiniciar_semi, spr_reiniciar_apretado, f_limpio, tipo_sonido="ventana_reiniciar")
                     _reiniciar_nivel_completo()
                 elif numero_mundo == 3 and numero_nivel in (4, 5):
                     if evento.key in (pygame.K_e, pygame.K_f, pygame.K_SPACE):
@@ -5872,7 +5873,7 @@ def iniciar_mundo(
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 if rect_btn_x.collidepoint(evento.pos):
                     f_limpio = fondo_btn_x if fondo_btn_x else (255, 240, 195)
-                    if animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, f_limpio, spr_x_normal):
+                    if animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, f_limpio, spr_x_normal, tipo_sonido="ventana_cancelar"):
                         if hay_progreso_sin_guardar(niveles_desbloqueados, snapshot_guardado, id_partida=partida_id):
                             resp = mostrar_dialogo_guardar_salir(
                                 pantalla, reloj,
@@ -5894,17 +5895,17 @@ def iniciar_mundo(
 
                 if rect_btn_reiniciar.collidepoint(evento.pos):
                     f_limpio = fondo_btn_reiniciar if fondo_btn_reiniciar else (255, 240, 195)
-                    if animar_pulsacion_boton(pantalla, rect_btn_reiniciar, spr_reiniciar_semi, spr_reiniciar_apretado, f_limpio, spr_reiniciar_normal):
+                    if animar_pulsacion_boton(pantalla, rect_btn_reiniciar, spr_reiniciar_semi, spr_reiniciar_apretado, f_limpio, spr_reiniciar_normal, tipo_sonido="ventana_reiniciar"):
                         _reiniciar_nivel_completo()
 
                 if rect_btn_casa.collidepoint(evento.pos):
                     f_limpio = fondo_btn_casa if fondo_btn_casa else (255, 240, 195)
-                    if animar_pulsacion_boton(pantalla, rect_btn_casa, spr_casa_semi, spr_casa_apretado, f_limpio, spr_casa_normal):
+                    if animar_pulsacion_boton(pantalla, rect_btn_casa, spr_casa_semi, spr_casa_apretado, f_limpio, spr_casa_normal, tipo_sonido="ventana_volver"):
                         return "menu"
 
                 if rect_btn_config.collidepoint(evento.pos):
                     f_limpio = fondo_btn_config if fondo_btn_config else (255, 240, 195)
-                    if animar_pulsacion_boton(pantalla, rect_btn_config, spr_config_semi, spr_config_apretado, f_limpio, spr_config_normal):
+                    if animar_pulsacion_boton(pantalla, rect_btn_config, spr_config_semi, spr_config_apretado, f_limpio, spr_config_normal, tipo_sonido="menu"):
                         mostrar_pestana_configuracion(pantalla, reloj)
 
         teclas = pygame.key.get_pressed()
@@ -6068,7 +6069,10 @@ def iniciar_mundo(
                 and abs(p["hitbox"].bottom - suelo.top) <= 8
                 for p, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]
             )
-            boton_nivel["presionado"] = caja_sobre_btn or pj_sobre_btn
+            nuevo_pres_btn = (caja_sobre_btn or pj_sobre_btn)
+            if nuevo_pres_btn and not boton_nivel.get("presionado", False):
+                reproducir_sonido_ui("nivel_boton")
+            boton_nivel["presionado"] = nuevo_pres_btn
 
             vel_pared = 0.04
             if boton_nivel["presionado"]:
@@ -6098,6 +6102,8 @@ def iniciar_mundo(
                         ):
                             pj_sobre = True
                             break
+                if pj_sobre and not btn.get("presionado", False):
+                    reproducir_sonido_ui("nivel_boton")
                 btn["presionado"] = pj_sobre
 
             rojo_presionado = any(btn["presionado"] for btn in botones_colores if btn["color"] == "rojo")
@@ -6165,6 +6171,8 @@ def iniciar_mundo(
                     ):
                         pj_sobre = True
                         break
+            if pj_sobre and not boton_compuerta.get("presionado", False):
+                reproducir_sonido_ui("nivel_boton")
             boton_compuerta["presionado"] = pj_sobre
 
         if compuerta is not None:
