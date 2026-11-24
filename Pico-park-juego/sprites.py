@@ -83,9 +83,15 @@ def renderizar_texto_pixamuse(texto, tamano, color_texto, max_w=None):
                     letra = f.render("N" if ch == "Ñ" else "n", True, color_texto)
                     t_s.blit(letra, (curr_x, 5))
                     lw = letra.get_width()
-                    w_bar = max(3, lw // 3)
-                    pygame.draw.rect(t_s, color_texto, (curr_x + max(2, lw // 5), 0, w_bar, 2))
-                    pygame.draw.rect(t_s, color_texto, (curr_x + max(2, lw // 5) + w_bar - 1, 1, w_bar, 2))
+                    b_n = letra.get_bounding_rect()
+                    nx = curr_x + (b_n.left if b_n.width > 0 else 2)
+                    nw = b_n.width if b_n.width > 0 else max(6, lw - 4)
+                    ny_top = (5 + b_n.top) if b_n.height > 0 else 5
+                    y_til = max(0, ny_top - 4)
+                    w_bar = max(3, nw // 3)
+                    x_til = nx + max(1, (nw - (w_bar * 2 - 1)) // 2)
+                    pygame.draw.rect(t_s, color_texto, (x_til, y_til, w_bar, 2))
+                    pygame.draw.rect(t_s, color_texto, (x_til + w_bar - 1, y_til + 1, w_bar, 2))
                     curr_x += lw
                 else:
                     letra = f.render(ch, True, color_texto)

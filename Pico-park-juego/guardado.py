@@ -1039,19 +1039,19 @@ def modal_administrar_perfil(pantalla, reloj, partida):
             pantalla.blit(spr_x_dib, rect_btn_x)
 
         # Título centrado con margen seguro
-        rect_tit = pygame.Rect(rect_card.left + 50, rect_card.top + 16, rect_card.width - 100, 32)
-        dibujar_texto_en_rect(pantalla, t("administrar_perfil"), rect_tit, categoria="dialogos", tamano=TAMANO_TITULO_MODAL, color=(60, 45, 35))
+        rect_tit = pygame.Rect(rect_card.left + 44, rect_card.top + 14, rect_card.width - 88, 34)
+        dibujar_texto_en_rect(pantalla, t("administrar_perfil"), rect_tit, categoria="titulo", tamano=22, color=(60, 45, 35))
 
         # Información distribuida en dos líneas con autoajuste para nombres extensos
         nom_perfil = obtener_nombre_partida_visible(partida)
-        rect_nom = pygame.Rect(rect_card.left + 24, rect_card.top + 52, rect_card.width - 48, 24)
-        dibujar_texto_en_rect(pantalla, f"{t('perfil')}: «{nom_perfil}»", rect_nom, categoria="subtitulo", tamano=15, color=(70, 55, 45), negrita=True, padding=4)
+        rect_nom = pygame.Rect(rect_card.left + 24, rect_card.top + 52, rect_card.width - 48, 28)
+        dibujar_texto_en_rect(pantalla, f"{t('perfil')}: «{nom_perfil}»", rect_nom, categoria="subtitulo", tamano=22, color=(70, 55, 45), negrita=True, padding=4)
 
         tiene_p = partida.get("tiene_password", False)
         txt_est = t("estado_protegido") if tiene_p else t("estado_sin_clave")
         col_est = (40, 130, 65) if tiene_p else (125, 105, 90)
-        rect_est = pygame.Rect(rect_card.left + 24, rect_card.top + 78, rect_card.width - 48, 20)
-        dibujar_texto_en_rect(pantalla, txt_est, rect_est, categoria="pequena", tamano=14, color=col_est, padding=4)
+        rect_est = pygame.Rect(rect_card.left + 24, rect_card.top + 82, rect_card.width - 48, 24)
+        dibujar_texto_en_rect(pantalla, txt_est, rect_est, categoria="subtitulo", tamano=18, color=col_est, padding=4)
 
         # 1. Renombrar (Sprite oficial)
         spr_ren = generar_boton_con_texto("mundos/boton-volver.png", w_b, h_b, t("cambiar_nombre"), (60, 45, 30), 16)
