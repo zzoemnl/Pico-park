@@ -1138,7 +1138,7 @@ METADATA_ACCESORIOS = {
     "EXE": {"offset": (18, 34), "size": (48, 20)},
     "Gorra urbana dorada": {"offset": (-7, -7), "size": (76, 69)},
     "Gorra urbana plateada": {"offset": (-7, -7), "size": (76, 69)},
-    "Kenny": {"offset": (-2, 0.5), "size": (73, 57)},
+    "Kenny": {"offset": (-1, 0.5), "size": (72, 58)},
     "Kyle": {"offset": (-4, -5), "size": (80, 58)},
     "Moño Bi": {"offset": (38, -6), "size": (26, 21)},
     "Moño G": {"offset": (38, -6), "size": (26, 21)},

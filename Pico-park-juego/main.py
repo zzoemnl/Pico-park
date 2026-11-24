@@ -1845,7 +1845,7 @@ def dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel, pos_mouse, fuente
         borde_bg = (150, 115, 80) if hov_gestionar else (185, 155, 120)
         pygame.draw.rect(pantalla, col_bg, r_btn_gestionar, border_radius=8)
         pygame.draw.rect(pantalla, borde_bg, r_btn_gestionar, width=2, border_radius=8)
-        dibujar_texto_en_rect(pantalla, t("gestionar"), r_btn_gestionar, categoria="boton", tamano=13, color=(65, 45, 30), padding=4)
+        dibujar_texto_en_rect(pantalla, t("gestionar"), r_btn_gestionar, categoria="boton", tamano=13, color=(82, 83, 83), padding=4)
 
     # 6. Botón «BORRAR» (Terracota cálido suave - Sprite oficial) - Oculto y protegido para la partida especial de Administrador
     if not es_adm:
@@ -1858,7 +1858,7 @@ def dibujar_tarjeta_partida(pantalla, p, idx_slot, rect_panel, pos_mouse, fuente
             borde_bb = (255, 255, 255) if hov_borrar else (150, 50, 45)
             pygame.draw.rect(pantalla, col_bb, r_btn_borrar, border_radius=8)
             pygame.draw.rect(pantalla, borde_bb, r_btn_borrar, width=2, border_radius=8)
-            dibujar_texto_en_rect(pantalla, t("borrar"), r_btn_borrar, categoria="boton", tamano=14, color=(255, 250, 245), padding=4)
+            dibujar_texto_en_rect(pantalla, t("borrar"), r_btn_borrar, categoria="boton", tamano=14, color=(125, 48, 17), padding=4)
     else:
         r_btn_borrar = pygame.Rect(0, 0, 0, 0)
 
@@ -2254,15 +2254,15 @@ def main():
             spr_cargar_apretado = cargar_boton_escalado("mundos/boton-cargar-apretado.png", 126, 38) or cargar_boton_escalado("boton-cargar-apretado.png", 126, 38)
 
             # Botones temáticos GESTIONAR y BORRAR basados en los marcos oficiales de Sprites/Botones
-            spr_gest_normal = generar_boton_con_texto("mundos/boton-volver.png", 118, 38, "GESTIONAR", (60, 45, 30), 13, 0)
+            spr_gest_normal = generar_boton_con_texto("mundos/boton-volver.png", 118, 38, "GESTIONAR", (82, 83, 83), 13, 0)
             spr_gest_hover = aclarar_boton(spr_gest_normal)
-            spr_gest_semi = generar_boton_con_texto("mundos/boton-volver-semiapretado.png", 118, 38, "GESTIONAR", (60, 45, 30), 13, 1)
-            spr_gest_apretado = generar_boton_con_texto("mundos/boton-volver-apretado.png", 118, 38, "GESTIONAR", (60, 45, 30), 13, 2)
+            spr_gest_semi = generar_boton_con_texto("mundos/boton-volver-semiapretado.png", 118, 38, "GESTIONAR", (82, 83, 83), 13, 1)
+            spr_gest_apretado = generar_boton_con_texto("mundos/boton-volver-apretado.png", 118, 38, "GESTIONAR", (82, 83, 83), 13, 2)
 
-            spr_borrar_normal = generar_boton_con_texto("Menu/salir.png", 96, 38, "BORRAR", (255, 255, 255), 14, 0)
+            spr_borrar_normal = generar_boton_con_texto("Menu/salir.png", 96, 38, "BORRAR", (125, 48, 17), 14, 0)
             spr_borrar_hover = aclarar_boton(spr_borrar_normal)
-            spr_borrar_semi = generar_boton_con_texto("Menu/salir-preapretado.png", 96, 38, "BORRAR", (255, 255, 255), 14, 1)
-            spr_borrar_apretado = generar_boton_con_texto("Menu/salir-apretado.png", 96, 38, "BORRAR", (255, 255, 255), 14, 2)
+            spr_borrar_semi = generar_boton_con_texto("Menu/salir-preapretado.png", 96, 38, "BORRAR", (125, 48, 17), 14, 1)
+            spr_borrar_apretado = generar_boton_con_texto("Menu/salir-apretado.png", 96, 38, "BORRAR", (125, 48, 17), 14, 2)
 
             dict_sprites_tarjeta["cargar_normal"] = spr_cargar_normal
             dict_sprites_tarjeta["cargar_hover"] = spr_cargar_hover
@@ -2557,15 +2557,15 @@ def main():
         sp_c_s = generar_boton_con_texto("mundos/boton-cargar-semiapretado.png", 126, 38, t("cargar"), (26, 83, 29), 14, 1, idioma)
         sp_c_a = generar_boton_con_texto("mundos/boton-cargar-apretado.png", 126, 38, t("cargar"), (26, 83, 29), 14, 2, idioma)
 
-        sp_g_n = generar_boton_con_texto("mundos/boton-volver.png", 118, 38, t("gestionar"), (60, 45, 30), 13, 0, idioma)
+        sp_g_n = generar_boton_con_texto("mundos/boton-volver.png", 118, 38, t("gestionar"), (82, 83, 83), 13, 0, idioma)
         sp_g_h = aclarar_boton(sp_g_n)
-        sp_g_s = generar_boton_con_texto("mundos/boton-volver-semiapretado.png", 118, 38, t("gestionar"), (60, 45, 30), 13, 1, idioma)
-        sp_g_a = generar_boton_con_texto("mundos/boton-volver-apretado.png", 118, 38, t("gestionar"), (60, 45, 30), 13, 2, idioma)
+        sp_g_s = generar_boton_con_texto("mundos/boton-volver-semiapretado.png", 118, 38, t("gestionar"), (82, 83, 83), 13, 1, idioma)
+        sp_g_a = generar_boton_con_texto("mundos/boton-volver-apretado.png", 118, 38, t("gestionar"), (82, 83, 83), 13, 2, idioma)
 
-        sp_b_n = generar_boton_con_texto("Menu/salir.png", 96, 38, t("borrar"), (255, 255, 255), 14, 0, idioma)
+        sp_b_n = generar_boton_con_texto("Menu/salir.png", 96, 38, t("borrar"), (125, 48, 17), 14, 0, idioma)
         sp_b_h = aclarar_boton(sp_b_n)
-        sp_b_s = generar_boton_con_texto("Menu/salir-preapretado.png", 96, 38, t("borrar"), (255, 255, 255), 14, 1, idioma)
-        sp_b_a = generar_boton_con_texto("Menu/salir-apretado.png", 96, 38, t("borrar"), (255, 255, 255), 14, 2, idioma)
+        sp_b_s = generar_boton_con_texto("Menu/salir-preapretado.png", 96, 38, t("borrar"), (125, 48, 17), 14, 1, idioma)
+        sp_b_a = generar_boton_con_texto("Menu/salir-apretado.png", 96, 38, t("borrar"), (125, 48, 17), 14, 2, idioma)
 
         res = {
             "cargar_normal": sp_c_n,

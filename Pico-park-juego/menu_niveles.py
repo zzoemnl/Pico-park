@@ -169,6 +169,48 @@ def obtener_geometria_menu(ancho_pantalla, alto_pantalla, cantidad_niveles=5):
     return rect_panel, rects_tabs, rects_cards
 
 
+_CACHE_TABS_MUNDOS = {}
+
+
+def _obtener_sprite_tab_mundo(mundo, seleccionada, w, h):
+    """
+    Carga y escala el sprite oficial de pestaña de mundo (seleccionada o inactiva).
+    Mantiene caché para evitar recalcular transformaciones en cada frame.
+    """
+    clave = (mundo, bool(seleccionada), w, h)
+    if clave in _CACHE_TABS_MUNDOS:
+        return _CACHE_TABS_MUNDOS[clave]
+
+    suffix = "-seleccionado.png" if seleccionada else ".png"
+    nombre = f"mundo-{mundo}{suffix}"
+    rutas = [
+        os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Botones", "mundos", nombre),
+        os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Botones", "Ventanas", nombre),
+        os.path.join("Sprites", "Botones", "mundos", nombre),
+        os.path.join("Sprites", "Botones", "Ventanas", nombre),
+    ]
+    img = None
+    for r in rutas:
+        if os.path.isfile(r):
+            try:
+                img = pygame.image.load(r)
+                try:
+                    img = img.convert_alpha()
+                except Exception:
+                    pass
+                break
+            except Exception:
+                pass
+
+    if img is not None:
+        scaled = pygame.transform.smoothscale(img, (w, h))
+        _CACHE_TABS_MUNDOS[clave] = scaled
+        return scaled
+
+    _CACHE_TABS_MUNDOS[clave] = None
+    return None
+
+
 def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mouse, fuentes=None, es_admin=False):
     """
     Dibuja la pantalla completa de selección de niveles con estética pixel art Pico Park:
@@ -202,34 +244,46 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
     for m in mundos_orden:
         t_data = tabs_info[m]
         es_activa = (m == mundo_actual)
-        info_col = COLORES_TABS[m]
-
-        h_t = t_data["h_activa"] if es_activa else t_data["h_inactiva"]
-        y_t = t_data["y_base"] - h_t + (3 if es_activa else 0)
+        info_col = COLORES_TABS.get(m, COLORES_TABS[1])
         w_t = t_data["w"]
+        h_sprite = t_data.get("h_sprite", round(w_t * 264 / 759))
+        y_spr = t_data["y_base"] - h_sprite + 6
         x_t = t_data["x"]
 
-        # Rectángulo de pestaña con borde superior redondeado
-        r_dibujo = pygame.Rect(x_t, y_t, w_t, h_t + 10)
-        pygame.draw.rect(pantalla, info_col["fondo"], r_dibujo, border_top_left_radius=16, border_top_right_radius=16)
-        pygame.draw.rect(pantalla, info_col["borde"], r_dibujo, 3, border_top_left_radius=16, border_top_right_radius=16)
+        spr_tab = _obtener_sprite_tab_mundo(m, es_activa, w_t, h_sprite)
+        if spr_tab:
+            pantalla.blit(spr_tab, (x_t, y_spr))
+            # Si el mouse está sobre la pestaña inactiva, iluminar levemente
+            if not es_activa and t_data["rect_click"].collidepoint(pos_mouse):
+                glow = spr_tab.copy()
+                bright = pygame.Surface(spr_tab.get_size(), pygame.SRCALPHA)
+                bright.fill((35, 35, 35, 0))
+                glow.blit(bright, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
+                pantalla.blit(glow, (x_t, y_spr))
+        else:
+            h_t = t_data.get("h_activa", 58) if es_activa else t_data.get("h_inactiva", 48)
+            y_t = t_data["y_base"] - h_t + (3 if es_activa else 0)
+            # Rectángulo de pestaña con borde superior redondeado
+            r_dibujo = pygame.Rect(x_t, y_t, w_t, h_t + 10)
+            pygame.draw.rect(pantalla, info_col["fondo"], r_dibujo, border_top_left_radius=16, border_top_right_radius=16)
+            pygame.draw.rect(pantalla, info_col["borde"], r_dibujo, 3, border_top_left_radius=16, border_top_right_radius=16)
 
-        # Si el mouse está sobre la pestaña inactiva, iluminar levemente
-        if not es_activa and t_data["rect_click"].collidepoint(pos_mouse):
-            glow = pygame.Surface((w_t, h_t), pygame.SRCALPHA)
-            glow.fill((255, 255, 255, 50))
-            pantalla.blit(glow, (x_t, y_t))
+            # Si el mouse está sobre la pestaña inactiva, iluminar levemente
+            if not es_activa and t_data["rect_click"].collidepoint(pos_mouse):
+                glow = pygame.Surface((w_t, h_t), pygame.SRCALPHA)
+                glow.fill((255, 255, 255, 50))
+                pantalla.blit(glow, (x_t, y_t))
 
-        # Texto de la pestaña
-        if fuente_tab:
-            color_txt = info_col["texto"] if es_activa else (110, 100, 95)
-            txt_tab = fuente_tab.render(f"{t('mundo')} {m}", True, color_txt)
-            rect_txt_tab = txt_tab.get_rect(center=(x_t + w_t // 2, y_t + h_t // 2 - 2))
-            pantalla.blit(txt_tab, rect_txt_tab)
+            # Texto de la pestaña
+            if fuente_tab:
+                color_txt = info_col["texto"] if es_activa else (110, 100, 95)
+                txt_tab = fuente_tab.render(f"{t('mundo')} {m}", True, color_txt)
+                rect_txt_tab = txt_tab.get_rect(center=(x_t + w_t // 2, y_t + h_t // 2 - 2))
+                pantalla.blit(txt_tab, rect_txt_tab)
 
-        # Mascota de gatito Pico Park en la pestaña activa
-        if es_activa:
-            dibujar_mascota_gato(pantalla, x_t + 16, y_t - 28, size=34, color=info_col["fondo"])
+            # Mascota de gatito Pico Park en la pestaña activa
+            if es_activa:
+                dibujar_mascota_gato(pantalla, x_t + 16, y_t - 28, size=34, color=info_col["fondo"])
 
     # 3. PANEL CONTENEDOR PRINCIPAL
     pygame.draw.rect(pantalla, COL_PANEL, rect_panel, border_radius=18)
