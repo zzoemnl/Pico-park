@@ -96,6 +96,7 @@ CARPETAS_AUDIO = [
 _pista_activa_tipo = None
 _archivo_musica_actual = None
 _musica_menu_sesion = None
+_modo_musica_menu = "aleatorio"  # "aleatorio", "caillou", "christmas"
 _CANAL_AHOGAMIENTO = None
 _SONIDO_AHOGAMIENTO = None
 
@@ -729,6 +730,41 @@ DICCIONARIO = {
         "en": "LANGUAGE SELECTION",
         "zh": "语言选择",
     },
+    "musica_menu_titulo": {
+        "es": "MÚSICA DEL MENÚ",
+        "en": "MENU MUSIC",
+        "zh": "菜单音乐",
+    },
+    "modo_aleatorio": {
+        "es": "ALEATORIO",
+        "en": "RANDOM",
+        "zh": "随机",
+    },
+    "desc_aleatorio": {
+        "es": "Aleatorio (50% Caillou / 50% Christmas)",
+        "en": "Random (50% Caillou / 50% Christmas)",
+        "zh": "随机 (50% 卡由 / 50% 圣诞)",
+    },
+    "modo_caillou": {
+        "es": "CAILLOU",
+        "en": "CAILLOU",
+        "zh": "卡由",
+    },
+    "desc_caillou": {
+        "es": "Caillou Theme [8-bit]",
+        "en": "Caillou Theme [8-bit]",
+        "zh": "卡由主题曲 [8-bit]",
+    },
+    "modo_christmas": {
+        "es": "CHRISTMAS",
+        "en": "CHRISTMAS",
+        "zh": "圣诞 (CHRISTMAS)",
+    },
+    "desc_christmas": {
+        "es": "Christmas / Navidad [menú.mp3]",
+        "en": "Christmas [menú.mp3]",
+        "zh": "圣诞主题 [menú.mp3]",
+    },
     "cambios_guardados_auto": {
         "es": "Los cambios se guardan y sincronizan automáticamente.",
         "en": "Changes are saved and synced automatically.",
@@ -956,6 +992,7 @@ def _guardar_configuracion_disco():
             "volumen_musica": VOLUMEN_MUSICA,
             "volumen_efectos": VOLUMEN_EFECTOS,
             "idioma": "es",
+            "musica_menu": _modo_musica_menu,
         }
         with open(RUTA_CONFIG_JSON, "w", encoding="utf-8") as f:
             json.dump(datos, f, indent=4)
@@ -964,8 +1001,8 @@ def _guardar_configuracion_disco():
 
 
 def _cargar_configuracion_disco():
-    """Carga los ajustes guardados de volumen si existen en disco. Al iniciar el juego siempre debe estar en español."""
-    global _volumen, VOLUMEN_MUSICA, VOLUMEN_EFECTOS, _idioma
+    """Carga los ajustes guardados de volumen y música del menú si existen en disco. Al iniciar el juego siempre debe estar en español."""
+    global _volumen, VOLUMEN_MUSICA, VOLUMEN_EFECTOS, _idioma, _modo_musica_menu
     _idioma = "es"
     if os.path.isfile(RUTA_CONFIG_JSON):
         try:
@@ -981,6 +1018,10 @@ def _cargar_configuracion_disco():
                 VOLUMEN_EFECTOS = max(0, min(100, int(datos["volumen_efectos"])))
             else:
                 VOLUMEN_EFECTOS = _volumen
+            if "musica_menu" in datos:
+                modo_c = str(datos["musica_menu"]).lower().strip()
+                if modo_c in ("aleatorio", "caillou", "christmas"):
+                    _modo_musica_menu = modo_c
         except Exception:
             pass
     _idioma = "es"
@@ -1116,35 +1157,141 @@ def obtener_pistas_musica_menu():
     return pistas_encontradas
 
 
+def obtener_pista_caillou():
+    """Retorna la ruta absoluta del archivo de audio de Caillou si existe en disco."""
+    pistas = obtener_pistas_musica_menu()
+    for p in pistas:
+        nom = unicodedata.normalize('NFD', os.path.basename(p)).encode('ascii', 'ignore').decode('utf-8').lower()
+        if "caillou" in nom:
+            return p
+    # Rutas directas alternativas
+    candidatos = [
+        os.path.join(DIRECTORIO_RAIZ, "sonidos", "menú", "Caillou Theme [8 Bit Tribute to Caillou & Jeffrey Zann] - 8 Bit Universe.mp3"),
+        os.path.join(DIRECTORIO_RAIZ, "sonidos", "menu", "Caillou Theme [8 Bit Tribute to Caillou & Jeffrey Zann] - 8 Bit Universe.mp3"),
+        os.path.join(DIRECTORIO_ACTUAL, "sonidos", "menú", "Caillou Theme [8 Bit Tribute to Caillou & Jeffrey Zann] - 8 Bit Universe.mp3"),
+        os.path.join(DIRECTORIO_ACTUAL, "sonidos", "menu", "Caillou Theme [8 Bit Tribute to Caillou & Jeffrey Zann] - 8 Bit Universe.mp3"),
+    ]
+    for c in candidatos:
+        if os.path.isfile(c):
+            return os.path.normpath(os.path.abspath(c))
+    return None
+
+
+def obtener_pista_christmas():
+    """Retorna la ruta absoluta del archivo de audio navideño (menú.mp3) si existe en disco."""
+    pistas = obtener_pistas_musica_menu()
+    for p in pistas:
+        nom = unicodedata.normalize('NFD', os.path.basename(p)).encode('ascii', 'ignore').decode('utf-8').lower()
+        if "menu" in nom and "caillou" not in nom:
+            return p
+    candidatos = [
+        os.path.join(DIRECTORIO_RAIZ, "sonidos", "menú", "menú.mp3"),
+        os.path.join(DIRECTORIO_RAIZ, "sonidos", "menu", "menú.mp3"),
+        os.path.join(DIRECTORIO_RAIZ, "sonidos", "menu", "menu.mp3"),
+        os.path.join(DIRECTORIO_ACTUAL, "sonidos", "menú", "menú.mp3"),
+        os.path.join(DIRECTORIO_ACTUAL, "sonidos", "menu", "menu.mp3"),
+        _resolver_ruta_audio(AUDIO_MENU),
+    ]
+    for c in candidatos:
+        if c and os.path.isfile(c):
+            return os.path.normpath(os.path.abspath(c))
+    return None
+
+
+def obtener_modo_musica_menu():
+    """Retorna el modo configurado para la música del menú ('aleatorio', 'caillou', o 'christmas')."""
+    global _modo_musica_menu
+    if _modo_musica_menu not in ("aleatorio", "caillou", "christmas"):
+        _modo_musica_menu = "aleatorio"
+    return _modo_musica_menu
+
+
+def fijar_modo_musica_menu(nuevo_modo, reproducir_inmediato=True):
+    """
+    Fija el modo de reproducción para la música del menú principal:
+    - 'aleatorio': 50% de probabilidad entre Caillou y Christmas al iniciar y al volver al menú.
+    - 'caillou': Siempre Caillou en el menú principal.
+    - 'christmas': Siempre música navideña (menú.mp3) en el menú principal.
+    Persiste la elección en configuracion.json y actualiza la reproducción de inmediato si estamos en el menú.
+    """
+    global _modo_musica_menu, _musica_menu_sesion
+    modo_norm = str(nuevo_modo).lower().strip()
+    if modo_norm not in ("aleatorio", "caillou", "christmas"):
+        modo_norm = "aleatorio"
+    _modo_musica_menu = modo_norm
+    _guardar_configuracion_disco()
+
+    if modo_norm == "caillou":
+        _musica_menu_sesion = obtener_pista_caillou()
+    elif modo_norm == "christmas":
+        _musica_menu_sesion = obtener_pista_christmas()
+    else:  # aleatorio
+        seleccionar_musica_menu_aleatoria(forzar_nueva_eleccion=True)
+
+    if reproducir_inmediato and (_pista_activa_tipo == "menu" or _pista_activa_tipo is None):
+        reproducir_musica("menu", forzar=True)
+    return _modo_musica_menu
+
+
 def seleccionar_musica_menu_aleatoria(forzar_nueva_eleccion=False):
     """
-    Selecciona aleatoriamente una de las pistas de música disponibles para el menú principal
-    (por ejemplo 'Caillou' o 'menú.mp3') para la sesión de juego.
-    - La elección se realiza una única vez al iniciar el juego/sesión.
-    - Permanece fija durante la navegación por los menús para evitar cambios constantes.
-    - Si forzar_nueva_eleccion es True, vuelve a elegir aleatoriamente.
+    Selecciona la pista de música para el menú principal según el modo configurado:
+    - Si el modo es 'caillou', siempre devuelve la pista de Caillou.
+    - Si el modo es 'christmas', siempre devuelve la pista navideña (menú.mp3).
+    - Si el modo es 'aleatorio':
+        * Elige con probabilidad exacta del 50 % entre Caillou y Christmas mediante entropía del sistema (random.SystemRandom).
+        * Si forzar_nueva_eleccion es True (por ejemplo al volver de un nivel o al iniciar el juego), realiza un nuevo sorteo.
     """
-    global _musica_menu_sesion
-    if _musica_menu_sesion is not None and not forzar_nueva_eleccion and os.path.isfile(_musica_menu_sesion):
-        return _musica_menu_sesion
+    global _musica_menu_sesion, _modo_musica_menu
+    modo = obtener_modo_musica_menu()
+    pista_caillou = obtener_pista_caillou()
+    pista_christmas = obtener_pista_christmas()
 
-    pistas = obtener_pistas_musica_menu()
-    if pistas:
-        _musica_menu_sesion = random.choice(pistas)
+    if modo == "caillou":
+        _musica_menu_sesion = pista_caillou or pista_christmas or _resolver_ruta_audio(AUDIO_MENU)
+        return _musica_menu_sesion
+    elif modo == "christmas":
+        _musica_menu_sesion = pista_christmas or pista_caillou or _resolver_ruta_audio(AUDIO_MENU)
+        return _musica_menu_sesion
     else:
-        _musica_menu_sesion = _resolver_ruta_audio(AUDIO_MENU)
-    return _musica_menu_sesion
+        # Modo 'aleatorio': selección con probabilidad equitativa exacta (50% / 50%)
+        if _musica_menu_sesion is not None and not forzar_nueva_eleccion and os.path.isfile(_musica_menu_sesion):
+            return _musica_menu_sesion
+        candidatos = []
+        if pista_caillou and os.path.isfile(pista_caillou):
+            candidatos.append(pista_caillou)
+        if pista_christmas and os.path.isfile(pista_christmas):
+            candidatos.append(pista_christmas)
+        if len(candidatos) >= 2:
+            _musica_menu_sesion = random.SystemRandom().choice(candidatos)
+        elif len(candidatos) == 1:
+            _musica_menu_sesion = candidatos[0]
+        else:
+            pistas = obtener_pistas_musica_menu()
+            if pistas:
+                _musica_menu_sesion = random.SystemRandom().choice(pistas)
+            else:
+                _musica_menu_sesion = _resolver_ruta_audio(AUDIO_MENU)
+        return _musica_menu_sesion
 
 
 def _resolver_audio_menu():
     """
-    Retorna la ruta del archivo de audio del menú principal seleccionado para la sesión actual.
-    Si aún no ha sido seleccionado, realiza la selección aleatoria inicial.
+    Retorna la ruta del archivo de audio del menú principal según la configuración activa.
+    Si aún no ha sido resuelta o seleccionada, ejecuta seleccionar_musica_menu_aleatoria.
     """
     global _musica_menu_sesion
-    if _musica_menu_sesion is None or not os.path.isfile(_musica_menu_sesion):
-        return seleccionar_musica_menu_aleatoria()
-    return _musica_menu_sesion
+    modo = obtener_modo_musica_menu()
+    if modo == "caillou":
+        _musica_menu_sesion = obtener_pista_caillou()
+        return _musica_menu_sesion
+    elif modo == "christmas":
+        _musica_menu_sesion = obtener_pista_christmas()
+        return _musica_menu_sesion
+    else:
+        if _musica_menu_sesion is None or not os.path.isfile(_musica_menu_sesion):
+            return seleccionar_musica_menu_aleatoria()
+        return _musica_menu_sesion
 
 
 def _resolver_ruta_audio(pista_o_nombre):
@@ -1248,6 +1395,10 @@ def reproducir_musica(tipo="menu", forzar=False):
 
     if tipo_str in ("menu", "principal", "navegacion", "menu_1", "menu1", "menu 1", "menú 1", "menú_1"):
         tipo_normalizado = "menu"
+        # Si venimos de un nivel/jefe hacia el menú principal y el modo es aleatorio, forzar nueva elección 50/50
+        if _pista_activa_tipo is not None and _pista_activa_tipo != "menu":
+            if obtener_modo_musica_menu() == "aleatorio":
+                seleccionar_musica_menu_aleatoria(forzar_nueva_eleccion=True)
         ruta_audio = _resolver_audio_menu()
     elif tipo_str in ("mundo_1", "mundo1", "1") or tipo == 1:
         tipo_normalizado = "mundo_1"

@@ -31,6 +31,7 @@ from configuracion import (
     obtener_idioma, cambiar_idioma, obtener_volumen, fijar_volumen,
     cambiar_volumen, reproducir_beep_volumen, reproducir_sonido_ui,
     seleccionar_musica_menu_aleatoria,
+    obtener_modo_musica_menu, fijar_modo_musica_menu,
 )
 from menu_niveles import (
     dibujar_menu_niveles,
@@ -1911,6 +1912,8 @@ def jugar_niveles_desde(
                     niveles_desbloqueados[m_idx][n_idx] = True
                     mundo_sel = m_idx
                 else:
+                    seleccionar_musica_menu_aleatoria(forzar_nueva_eleccion=True)
+                    reproducir_musica("menu", forzar=True)
                     return "menu", mundo_sel
             else:
                 # Partidas normales: los jefes (nivel 6) están en proceso.
@@ -1925,13 +1928,19 @@ def jugar_niveles_desde(
                     niveles_desbloqueados[m_idx][n_idx] = True
                     mundo_sel = m_idx
                 else:
+                    seleccionar_musica_menu_aleatoria(forzar_nueva_eleccion=True)
+                    reproducir_musica("menu", forzar=True)
                     return "menu", mundo_sel
         elif res == "reiniciar":
             continue
         elif res == "menu":
+            seleccionar_musica_menu_aleatoria(forzar_nueva_eleccion=True)
+            reproducir_musica("menu", forzar=True)
             return "menu", mundo_sel
         else:
             return "salir", mundo_sel
+    seleccionar_musica_menu_aleatoria(forzar_nueva_eleccion=True)
+    reproducir_musica("menu", forzar=True)
     return "menu", mundo_sel
 
 
@@ -2846,6 +2855,8 @@ def main():
                                     )
                                 if fin_acc == "menu":
                                     estado_actual = ESTADO_SELECCION_NIVEL
+                                    seleccionar_musica_menu_aleatoria(forzar_nueva_eleccion=True)
+                                    reproducir_musica("menu", forzar=True)
                                 else:
                                     ejecutando = False
                     elif btn_volver_modo.collidepoint(evento.pos):
@@ -2905,6 +2916,8 @@ def main():
                                     )
                                     if fin_acc == "menu":
                                         estado_actual = ESTADO_SELECCION_NIVEL
+                                        seleccionar_musica_menu_aleatoria(forzar_nueva_eleccion=True)
+                                        reproducir_musica("menu", forzar=True)
                                     else:
                                         ejecutando = False
                     else:
@@ -3083,6 +3096,8 @@ def main():
                                         )
                                         if fin_acc == "menu":
                                             estado_actual = ESTADO_SELECCION_NIVEL
+                                            seleccionar_musica_menu_aleatoria(forzar_nueva_eleccion=True)
+                                            reproducir_musica("menu", forzar=True)
                                         else:
                                             ejecutando = False
 
@@ -3250,18 +3265,26 @@ def main():
                         seccion_opciones_actual = "instrucciones"
                     elif seccion_opciones_actual == "configuracion":
                         rect_panel_ev = pygame.Rect(340, 115, 875, 495)
-                        y_vol_ev = rect_panel_ev.top + 70
-                        r_card_vol_ev = pygame.Rect(rect_panel_ev.left + 45, y_vol_ev + 26, rect_panel_ev.width - 90, 105)
-                        r_menos_ev = pygame.Rect(r_card_vol_ev.left + 30, r_card_vol_ev.top + 28, 54, 48)
-                        r_barra_bg_ev = pygame.Rect(r_menos_ev.right + 25, r_card_vol_ev.top + 32, 450, 40)
-                        r_mas_ev = pygame.Rect(r_barra_bg_ev.right + 25, r_card_vol_ev.top + 28, 54, 48)
+                        y_vol_ev = rect_panel_ev.top + 60
+                        r_card_vol_ev = pygame.Rect(rect_panel_ev.left + 45, y_vol_ev + 24, rect_panel_ev.width - 90, 72)
+                        cy_v_ev = r_card_vol_ev.centery
+                        r_menos_ev = pygame.Rect(r_card_vol_ev.left + 25, cy_v_ev - 22, 50, 44)
+                        r_barra_bg_ev = pygame.Rect(r_menos_ev.right + 20, cy_v_ev - 18, 460, 36)
+                        r_mas_ev = pygame.Rect(r_barra_bg_ev.right + 20, cy_v_ev - 22, 50, 44)
 
-                        y_idioma_ev = r_card_vol_ev.bottom + 25
-                        r_card_idm_ev = pygame.Rect(rect_panel_ev.left + 45, y_idioma_ev + 26, rect_panel_ev.width - 90, 140)
+                        y_idioma_ev = r_card_vol_ev.bottom + 12
+                        r_card_idm_ev = pygame.Rect(rect_panel_ev.left + 45, y_idioma_ev + 24, rect_panel_ev.width - 90, 94)
                         w_btn_l_ev = (r_card_idm_ev.width - 60) // 3
-                        r_bl_es = pygame.Rect(r_card_idm_ev.left + 20, r_card_idm_ev.top + 20, w_btn_l_ev, 98)
-                        r_bl_en = pygame.Rect(r_card_idm_ev.left + 20 + (w_btn_l_ev + 10), r_card_idm_ev.top + 20, w_btn_l_ev, 98)
-                        r_bl_zh = pygame.Rect(r_card_idm_ev.left + 20 + 2 * (w_btn_l_ev + 10), r_card_idm_ev.top + 20, w_btn_l_ev, 98)
+                        r_bl_es = pygame.Rect(r_card_idm_ev.left + 20, r_card_idm_ev.top + 11, w_btn_l_ev, 72)
+                        r_bl_en = pygame.Rect(r_card_idm_ev.left + 20 + (w_btn_l_ev + 10), r_card_idm_ev.top + 11, w_btn_l_ev, 72)
+                        r_bl_zh = pygame.Rect(r_card_idm_ev.left + 20 + 2 * (w_btn_l_ev + 10), r_card_idm_ev.top + 11, w_btn_l_ev, 72)
+
+                        y_musica_ev = r_card_idm_ev.bottom + 12
+                        r_card_mus_ev = pygame.Rect(rect_panel_ev.left + 45, y_musica_ev + 24, rect_panel_ev.width - 90, 94)
+                        w_btn_m_ev = (r_card_mus_ev.width - 60) // 3
+                        r_bm_rnd = pygame.Rect(r_card_mus_ev.left + 20, r_card_mus_ev.top + 11, w_btn_m_ev, 72)
+                        r_bm_cai = pygame.Rect(r_card_mus_ev.left + 20 + (w_btn_m_ev + 10), r_card_mus_ev.top + 11, w_btn_m_ev, 72)
+                        r_bm_chr = pygame.Rect(r_card_mus_ev.left + 20 + 2 * (w_btn_m_ev + 10), r_card_mus_ev.top + 11, w_btn_m_ev, 72)
 
                         if r_menos_ev.collidepoint(evento.pos):
                             cambiar_volumen(-10)
@@ -3282,6 +3305,15 @@ def main():
                             reproducir_sonido_ui("select")
                         elif r_bl_zh.collidepoint(evento.pos):
                             cambiar_idioma("zh")
+                            reproducir_sonido_ui("select")
+                        elif r_bm_rnd.collidepoint(evento.pos):
+                            fijar_modo_musica_menu("aleatorio")
+                            reproducir_sonido_ui("select")
+                        elif r_bm_cai.collidepoint(evento.pos):
+                            fijar_modo_musica_menu("caillou")
+                            reproducir_sonido_ui("select")
+                        elif r_bm_chr.collidepoint(evento.pos):
+                            fijar_modo_musica_menu("christmas")
                             reproducir_sonido_ui("select")
 
                 elif estado_actual == ESTADO_CREDITOS:
@@ -3356,6 +3388,8 @@ def main():
                                     )
                                     if fin_acc == "menu":
                                         estado_actual = ESTADO_SELECCION_NIVEL
+                                        seleccionar_musica_menu_aleatoria(forzar_nueva_eleccion=True)
+                                        reproducir_musica("menu", forzar=True)
                                     else:
                                         ejecutando = False
                                     break
@@ -4009,29 +4043,30 @@ def main():
             # =========================================================================
             if seccion_opciones_actual == "configuracion":
                 # Bloque A: Volumen
-                y_vol = rect_panel.top + 70
+                y_vol = rect_panel.top + 60
                 txt_vol_b = t("volumen_musica_y_sonido")
-                f_bloq = obtener_fuente_para_texto(txt_vol_b, categoria="texto", tamano=16, negrita=True)
+                f_bloq = obtener_fuente_para_texto(txt_vol_b, categoria="texto", tamano=15, negrita=True)
                 pantalla.blit(f_bloq.render(txt_vol_b, True, (65, 45, 32)), (rect_panel.left + 45, y_vol))
 
                 # Tarjeta contenedora de volumen
-                r_card_vol = pygame.Rect(rect_panel.left + 45, y_vol + 26, rect_panel.width - 90, 105)
+                r_card_vol = pygame.Rect(rect_panel.left + 45, y_vol + 24, rect_panel.width - 90, 72)
                 pygame.draw.rect(pantalla, (244, 236, 222), r_card_vol, border_radius=12)
                 pygame.draw.rect(pantalla, (200, 175, 145), r_card_vol, 2, border_radius=12)
 
                 vol_actual = obtener_volumen()
+                cy_v = r_card_vol.centery
 
                 # Botón [-]
-                r_menos = pygame.Rect(r_card_vol.left + 30, r_card_vol.top + 28, 54, 48)
+                r_menos = pygame.Rect(r_card_vol.left + 25, cy_v - 22, 50, 44)
                 hov_m = r_menos.collidepoint(pos_mouse)
                 col_bm = (235, 115, 85) if hov_m else (215, 105, 75)
                 pygame.draw.rect(pantalla, col_bm, r_menos, border_radius=8)
                 pygame.draw.rect(pantalla, (140, 60, 40), r_menos, 2, border_radius=8)
-                f_btn_v = obtener_fuente_para_texto("-", categoria="boton", tamano=24, negrita=True)
+                f_btn_v = obtener_fuente_para_texto("-", categoria="boton", tamano=22, negrita=True)
                 pantalla.blit(f_btn_v.render("-", True, (255, 255, 255)), f_btn_v.render("-", True, (255, 255, 255)).get_rect(center=r_menos.center))
 
                 # Barra de volumen
-                r_barra_bg = pygame.Rect(r_menos.right + 25, r_card_vol.top + 32, 450, 40)
+                r_barra_bg = pygame.Rect(r_menos.right + 20, cy_v - 18, 460, 36)
                 pygame.draw.rect(pantalla, (40, 46, 62), r_barra_bg, border_radius=8)
                 pygame.draw.rect(pantalla, (150, 160, 185), r_barra_bg, 2, border_radius=8)
 
@@ -4045,28 +4080,28 @@ def main():
                     pygame.draw.rect(pantalla, col_b, (bx, r_barra_bg.top + 4, bw, r_barra_bg.height - 8), border_radius=4)
 
                 # Botón [+]
-                r_mas = pygame.Rect(r_barra_bg.right + 25, r_card_vol.top + 28, 54, 48)
+                r_mas = pygame.Rect(r_barra_bg.right + 20, cy_v - 22, 50, 44)
                 hov_p = r_mas.collidepoint(pos_mouse)
                 col_bp = (95, 200, 120) if hov_p else (85, 180, 110)
                 pygame.draw.rect(pantalla, col_bp, r_mas, border_radius=8)
                 pygame.draw.rect(pantalla, (45, 120, 65), r_mas, 2, border_radius=8)
-                f_btn_mas = obtener_fuente_para_texto("+", categoria="boton", tamano=22, negrita=True)
+                f_btn_mas = obtener_fuente_para_texto("+", categoria="boton", tamano=20, negrita=True)
                 pantalla.blit(f_btn_mas.render("+", True, (255, 255, 255)), f_btn_mas.render("+", True, (255, 255, 255)).get_rect(center=r_mas.center))
 
                 # Porcentaje numérico badge
-                r_pct = pygame.Rect(r_mas.right + 25, r_card_vol.top + 28, 100, 48)
+                r_pct = pygame.Rect(r_mas.right + 20, cy_v - 22, 85, 44)
                 pygame.draw.rect(pantalla, (255, 255, 255), r_pct, border_radius=8)
                 pygame.draw.rect(pantalla, (180, 155, 125), r_pct, 2, border_radius=8)
                 str_pct = f"{vol_actual}%"
-                f_pct = obtener_fuente_para_texto(str_pct, categoria="boton", tamano=17, negrita=True)
+                f_pct = obtener_fuente_para_texto(str_pct, categoria="boton", tamano=16, negrita=True)
                 pantalla.blit(f_pct.render(str_pct, True, (45, 35, 25)), f_pct.render(str_pct, True, (45, 35, 25)).get_rect(center=r_pct.center))
 
                 # Bloque B: Idioma
-                y_idioma = r_card_vol.bottom + 25
+                y_idioma = r_card_vol.bottom + 12
                 txt_idm_b = t("seleccion_idioma")
                 pantalla.blit(f_bloq.render(txt_idm_b, True, (65, 45, 32)), (rect_panel.left + 45, y_idioma))
 
-                r_card_idm = pygame.Rect(rect_panel.left + 45, y_idioma + 26, rect_panel.width - 90, 140)
+                r_card_idm = pygame.Rect(rect_panel.left + 45, y_idioma + 24, rect_panel.width - 90, 94)
                 pygame.draw.rect(pantalla, (244, 236, 222), r_card_idm, border_radius=12)
                 pygame.draw.rect(pantalla, (200, 175, 145), r_card_idm, 2, border_radius=12)
 
@@ -4078,7 +4113,7 @@ def main():
                 w_btn_l = (r_card_idm.width - 60) // 3
                 for l_idx, (l_code, l_tit, l_sub) in enumerate(langs):
                     rx_l = r_card_idm.left + 20 + l_idx * (w_btn_l + 10)
-                    r_bl = pygame.Rect(rx_l, r_card_idm.top + 20, w_btn_l, 98)
+                    r_bl = pygame.Rect(rx_l, r_card_idm.top + 11, w_btn_l, 72)
                     es_sel = (idm_act == l_code)
                     hov_l = r_bl.collidepoint(pos_mouse)
 
@@ -4088,23 +4123,61 @@ def main():
                     pygame.draw.rect(pantalla, col_l_brd, r_bl, 3 if es_sel else 2, border_radius=10)
 
                     if es_sel:
-                        cx_ck, cy_ck = r_bl.right - 14, r_bl.top + 14
-                        pygame.draw.circle(pantalla, (80, 185, 105), (cx_ck, cy_ck), 9)
+                        cx_ck, cy_ck = r_bl.right - 13, r_bl.top + 13
+                        pygame.draw.circle(pantalla, (80, 185, 105), (cx_ck, cy_ck), 8)
                         pts_ck = [(cx_ck - 4, cy_ck), (cx_ck - 1, cy_ck + 3), (cx_ck + 4, cy_ck - 3)]
                         pygame.draw.lines(pantalla, (255, 255, 255), False, pts_ck, 2)
 
-                    f_lt = obtener_fuente_para_texto(l_tit, categoria="boton", tamano=18, negrita=True)
+                    f_lt = obtener_fuente_para_texto(l_tit, categoria="boton", tamano=16, negrita=True)
                     t_lt = f_lt.render(l_tit, True, (45, 30, 20) if es_sel else (95, 75, 60))
-                    pantalla.blit(t_lt, t_lt.get_rect(center=(r_bl.centerx, r_bl.top + 34)))
+                    pantalla.blit(t_lt, t_lt.get_rect(center=(r_bl.centerx, r_bl.top + 23)))
 
-                    f_ls = obtener_fuente_para_texto(l_sub, categoria="texto", tamano=14)
-                    dibujar_texto_en_rect(pantalla, l_sub, pygame.Rect(r_bl.left + 6, r_bl.top + 48, r_bl.width - 12, 44), categoria="texto", tamano=14, color=(80, 60, 45), alineacion="centro", multiline=True, interlineado=2)
+                    dibujar_texto_en_rect(pantalla, l_sub, pygame.Rect(r_bl.left + 6, r_bl.top + 36, r_bl.width - 12, 32), categoria="texto", tamano=12, color=(80, 60, 45), alineacion="centro", multiline=True, interlineado=1)
+
+                # Bloque C: Música del Menú
+                y_musica = r_card_idm.bottom + 12
+                txt_mus_b = t("musica_menu_titulo")
+                pantalla.blit(f_bloq.render(txt_mus_b, True, (65, 45, 32)), (rect_panel.left + 45, y_musica))
+
+                r_card_musica = pygame.Rect(rect_panel.left + 45, y_musica + 24, rect_panel.width - 90, 94)
+                pygame.draw.rect(pantalla, (244, 236, 222), r_card_musica, border_radius=12)
+                pygame.draw.rect(pantalla, (200, 175, 145), r_card_musica, 2, border_radius=12)
+
+                modo_musica_act = obtener_modo_musica_menu()
+                opciones_musica = [
+                    ("aleatorio", t("modo_aleatorio"), t("desc_aleatorio")),
+                    ("caillou", t("modo_caillou"), t("desc_caillou")),
+                    ("christmas", t("modo_christmas"), t("desc_christmas")),
+                ]
+                w_btn_m = (r_card_musica.width - 60) // 3
+                for m_idx, (m_code, m_tit, m_sub) in enumerate(opciones_musica):
+                    rx_m = r_card_musica.left + 20 + m_idx * (w_btn_m + 10)
+                    r_bm = pygame.Rect(rx_m, r_card_musica.top + 11, w_btn_m, 72)
+                    es_sel_m = (modo_musica_act == m_code)
+                    hov_m = r_bm.collidepoint(pos_mouse)
+
+                    col_m_bg = (255, 250, 235) if es_sel_m else ((248, 240, 228) if hov_m else (238, 228, 212))
+                    col_m_brd = (225, 110, 80) if es_sel_m else ((205, 180, 150) if hov_m else (185, 160, 130))
+                    pygame.draw.rect(pantalla, col_m_bg, r_bm, border_radius=10)
+                    pygame.draw.rect(pantalla, col_m_brd, r_bm, 3 if es_sel_m else 2, border_radius=10)
+
+                    if es_sel_m:
+                        cx_ck, cy_ck = r_bm.right - 13, r_bm.top + 13
+                        pygame.draw.circle(pantalla, (80, 185, 105), (cx_ck, cy_ck), 8)
+                        pts_ck = [(cx_ck - 4, cy_ck), (cx_ck - 1, cy_ck + 3), (cx_ck + 4, cy_ck - 3)]
+                        pygame.draw.lines(pantalla, (255, 255, 255), False, pts_ck, 2)
+
+                    f_mt = obtener_fuente_para_texto(m_tit, categoria="boton", tamano=16, negrita=True)
+                    t_mt = f_mt.render(m_tit, True, (45, 30, 20) if es_sel_m else (95, 75, 60))
+                    pantalla.blit(t_mt, t_mt.get_rect(center=(r_bm.centerx, r_bm.top + 23)))
+
+                    dibujar_texto_en_rect(pantalla, m_sub, pygame.Rect(r_bm.left + 6, r_bm.top + 36, r_bm.width - 12, 32), categoria="texto", tamano=12, color=(80, 60, 45), alineacion="centro", multiline=True, interlineado=1)
 
                 # Nota al pie de ajustes (agrandada y más legible con sombra suave)
                 txt_not = t("cambios_guardados_auto")
-                f_not = obtener_fuente_para_texto(txt_not, categoria="texto", tamano=15, negrita=True)
-                pantalla.blit(f_not.render(txt_not, True, (245, 235, 220)), (rect_panel.left + 51, rect_panel.bottom - 41))
-                pantalla.blit(f_not.render(txt_not, True, (55, 38, 25)), (rect_panel.left + 50, rect_panel.bottom - 42))
+                f_not = obtener_fuente_para_texto(txt_not, categoria="texto", tamano=14, negrita=True)
+                pantalla.blit(f_not.render(txt_not, True, (245, 235, 220)), (rect_panel.left + 51, rect_panel.bottom - 35))
+                pantalla.blit(f_not.render(txt_not, True, (55, 38, 25)), (rect_panel.left + 50, rect_panel.bottom - 36))
 
             # =========================================================================
             # SECCIÓN: CONTROLES
