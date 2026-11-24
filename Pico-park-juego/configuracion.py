@@ -979,6 +979,11 @@ def cambiar_idioma(nuevo_idioma):
             limpiar_cache_botones()
         except Exception:
             pass
+        try:
+            import menu_niveles
+            menu_niveles._CACHE_TABS_MUNDOS.clear()
+        except Exception:
+            pass
 
 
 # ==============================================================================

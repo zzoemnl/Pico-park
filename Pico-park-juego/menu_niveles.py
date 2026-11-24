@@ -16,7 +16,7 @@ from fuentes import (
     TAMANO_TITULO_MODAL,
     TAMANO_CARD,
 )
-from configuracion import t
+from configuracion import t, obtener_idioma
 from guardado import NIVELES_POR_MUNDO, es_nivel_jefe
 from sprites import generar_boton_con_texto, aclarar_boton
 
@@ -172,40 +172,64 @@ def obtener_geometria_menu(ancho_pantalla, alto_pantalla, cantidad_niveles=5):
 _CACHE_TABS_MUNDOS = {}
 
 
-def _obtener_sprite_tab_mundo(mundo, seleccionada, w, h):
+def _obtener_sprite_tab_mundo(mundo, seleccionada, w, h, idioma=None):
     """
     Carga y escala el sprite oficial de pestaña de mundo (seleccionada o inactiva).
     Mantiene caché para evitar recalcular transformaciones en cada frame.
     """
-    clave = (mundo, bool(seleccionada), w, h)
+    if idioma is None:
+        idioma = obtener_idioma()
+
+    clave = (mundo, bool(seleccionada), w, h, idioma)
     if clave in _CACHE_TABS_MUNDOS:
         return _CACHE_TABS_MUNDOS[clave]
 
-    suffix = "-seleccionado.png" if seleccionada else ".png"
-    nombre = f"mundo-{mundo}{suffix}"
-    rutas = [
-        os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Botones", "mundos", nombre),
-        os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Botones", "Ventanas", nombre),
-        os.path.join("Sprites", "Botones", "mundos", nombre),
-        os.path.join("Sprites", "Botones", "Ventanas", nombre),
-    ]
-    img = None
-    for r in rutas:
-        if os.path.isfile(r):
-            try:
-                img = pygame.image.load(r)
+    if idioma == "es":
+        suffix = "-seleccionado.png" if seleccionada else ".png"
+        nombre = f"mundo-{mundo}{suffix}"
+        rutas = [
+            os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Botones", "mundos", nombre),
+            os.path.join(DIRECTORIO_ACTUAL, "..", "Sprites", "Botones", "Ventanas", nombre),
+            os.path.join("Sprites", "Botones", "mundos", nombre),
+            os.path.join("Sprites", "Botones", "Ventanas", nombre),
+        ]
+        img = None
+        for r in rutas:
+            if os.path.isfile(r):
                 try:
-                    img = img.convert_alpha()
+                    img = pygame.image.load(r)
+                    try:
+                        img = img.convert_alpha()
+                    except Exception:
+                        pass
+                    break
                 except Exception:
                     pass
-                break
-            except Exception:
-                pass
 
-    if img is not None:
-        scaled = pygame.transform.smoothscale(img, (w, h))
-        _CACHE_TABS_MUNDOS[clave] = scaled
-        return scaled
+        if img is not None:
+            scaled = pygame.transform.smoothscale(img, (w, h))
+            _CACHE_TABS_MUNDOS[clave] = scaled
+            return scaled
+    else:
+        colores_txt_tab = {
+            1: (116, 78, 45) if seleccionada else (137, 102, 67),
+            2: (105, 67, 133) if seleccionada else (127, 93, 142),
+            3: (0, 112, 181) if seleccionada else (38, 131, 183),
+        }
+        col_txt = colores_txt_tab.get(mundo, (60, 45, 30))
+        sprite_base = f"mundos/mundo-{mundo}-seleccionado.png" if seleccionada else f"mundos/mundo-{mundo}.png"
+        texto_tab = f"{t('mundo')} {mundo}"
+        btn_trad = generar_boton_con_texto(
+            sprite_base, w, h,
+            texto=texto_tab,
+            color_texto=col_txt,
+            tamano_fuente=18,
+            offset_y=0,
+            idioma=idioma,
+        )
+        if btn_trad:
+            _CACHE_TABS_MUNDOS[clave] = btn_trad
+            return btn_trad
 
     _CACHE_TABS_MUNDOS[clave] = None
     return None
@@ -250,7 +274,7 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
         y_spr = t_data["y_base"] - h_sprite + 6
         x_t = t_data["x"]
 
-        spr_tab = _obtener_sprite_tab_mundo(m, es_activa, w_t, h_sprite)
+        spr_tab = _obtener_sprite_tab_mundo(m, es_activa, w_t, h_sprite, idioma=obtener_idioma())
         if spr_tab:
             pantalla.blit(spr_tab, (x_t, y_spr))
             # Si el mouse está sobre la pestaña inactiva, iluminar levemente

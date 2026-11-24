@@ -593,9 +593,9 @@ def solicitar_texto_modal(pantalla, reloj, titulo, subtitulo, valor_inicial="", 
     btn_confirmar = pygame.Rect(rect_card.centerx + 12, y_btns, w_btn, h_btn)
 
     idm_modal = obtener_idioma()
-    spr_can_norm = generar_boton_con_texto("Menu/boton-cancelar.png", w_btn, h_btn, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 0)
-    spr_can_semi = generar_boton_con_texto("Menu/boton-cancelar-semiapretado.png", w_btn, h_btn, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 1)
-    spr_can_apret = generar_boton_con_texto("Menu/boton-cancelar-apretado.png", w_btn, h_btn, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 2)
+    spr_can_norm = generar_boton_con_texto("Menu/boton-cancelar.png", w_btn, h_btn, t("cancelar").upper(), (60, 45, 35), TAMANO_BOTON_MODAL, 0)
+    spr_can_semi = generar_boton_con_texto("Menu/boton-cancelar-semiapretado.png", w_btn, h_btn, t("cancelar").upper(), (60, 45, 35), TAMANO_BOTON_MODAL, 1)
+    spr_can_apret = generar_boton_con_texto("Menu/boton-cancelar-apretado.png", w_btn, h_btn, t("cancelar").upper(), (60, 45, 35), TAMANO_BOTON_MODAL, 2)
     spr_can_hover = aclarar_boton(spr_can_norm) if spr_can_norm else None
 
     spr_ace_norm = generar_boton_con_texto("Ventanas/aceptar.png", w_btn, h_btn, t("aceptar", "ACEPTAR"), (28, 82, 37), TAMANO_BOTON_MODAL, 0, idm_modal)
@@ -747,7 +747,7 @@ def solicitar_texto_modal(pantalla, reloj, titulo, subtitulo, valor_inicial="", 
             col_can = (255, 255, 255) if hov_can else (242, 234, 222)
             pygame.draw.rect(pantalla, col_can, btn_cancelar, border_radius=10)
             pygame.draw.rect(pantalla, (185, 155, 125), btn_cancelar, width=2, border_radius=10)
-            dibujar_texto_en_rect(pantalla, t("cancelar"), btn_cancelar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(60, 45, 35), padding=6)
+            dibujar_texto_en_rect(pantalla, t("cancelar").upper(), btn_cancelar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(60, 45, 35), padding=6)
 
         # Botón Aceptar
         if spr_ace_norm:
@@ -809,9 +809,9 @@ def pedir_password_modal(pantalla, reloj, partida):
         spr_rein_apret = generar_boton_con_texto("Ventanas/boton-reintentar-apretado.png", w_btn, h_btn, t("reintentar", "REINTENTAR"), (60, 45, 35), TAMANO_BOTON_MODAL, 2, idm_g)
         spr_rein_hover = aclarar_boton(spr_rein_norm) if spr_rein_norm else None
 
-        spr_canc_norm = generar_boton_con_texto("Menu/boton-cancelar.png", w_btn, h_btn, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 0, idm_g)
-        spr_canc_semi = generar_boton_con_texto("Menu/boton-cancelar-semiapretado.png", w_btn, h_btn, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 1, idm_g)
-        spr_canc_apret = generar_boton_con_texto("Menu/boton-cancelar-apretado.png", w_btn, h_btn, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 2, idm_g)
+        spr_canc_norm = generar_boton_con_texto("Menu/boton-cancelar.png", w_btn, h_btn, t("cancelar").upper(), (60, 45, 35), TAMANO_BOTON_MODAL, 0, idm_g)
+        spr_canc_semi = generar_boton_con_texto("Menu/boton-cancelar-semiapretado.png", w_btn, h_btn, t("cancelar").upper(), (60, 45, 35), TAMANO_BOTON_MODAL, 1, idm_g)
+        spr_canc_apret = generar_boton_con_texto("Menu/boton-cancelar-apretado.png", w_btn, h_btn, t("cancelar").upper(), (60, 45, 35), TAMANO_BOTON_MODAL, 2, idm_g)
         spr_canc_hover = aclarar_boton(spr_canc_norm) if spr_canc_norm else None
 
         captura_aviso = pantalla.copy()
@@ -1101,9 +1101,9 @@ def mostrar_dialogo_partida_existente(pantalla, reloj, nombre):
     btn_sobrescribir = pygame.Rect(x_base + w_btn + gap_btn, y_btns, w_btn, h_btn)
     btn_cancelar = pygame.Rect(x_base + (w_btn + gap_btn) * 2, y_btns, w_btn, h_btn)
 
-    spr_canc_norm = generar_boton_con_texto("Menu/boton-cancelar.png", w_btn, h_btn, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 0)
-    spr_canc_semi = generar_boton_con_texto("Menu/boton-cancelar-semiapretado.png", w_btn, h_btn, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 1)
-    spr_canc_apret = generar_boton_con_texto("Menu/boton-cancelar-apretado.png", w_btn, h_btn, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 2)
+    spr_canc_norm = generar_boton_con_texto("Menu/boton-cancelar.png", w_btn, h_btn, t("cancelar").upper(), (60, 45, 35), TAMANO_BOTON_MODAL, 0)
+    spr_canc_semi = generar_boton_con_texto("Menu/boton-cancelar-semiapretado.png", w_btn, h_btn, t("cancelar").upper(), (60, 45, 35), TAMANO_BOTON_MODAL, 1)
+    spr_canc_apret = generar_boton_con_texto("Menu/boton-cancelar-apretado.png", w_btn, h_btn, t("cancelar").upper(), (60, 45, 35), TAMANO_BOTON_MODAL, 2)
     spr_canc_hover = aclarar_boton(spr_canc_norm) if spr_canc_norm else None
     fondo_tarjeta = (253, 246, 233)
 
@@ -1173,7 +1173,7 @@ def mostrar_dialogo_partida_existente(pantalla, reloj, nombre):
             col_can = (255, 255, 255) if hov_can else (242, 234, 222)
             pygame.draw.rect(pantalla, col_can, btn_cancelar, border_radius=10)
             pygame.draw.rect(pantalla, (185, 155, 125), btn_cancelar, width=2, border_radius=10)
-            dibujar_texto_en_rect(pantalla, t("cancelar"), btn_cancelar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(60, 45, 35), padding=6)
+            dibujar_texto_en_rect(pantalla, t("cancelar").upper(), btn_cancelar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(60, 45, 35), padding=6)
 
         pygame.display.flip()
 
@@ -1315,9 +1315,9 @@ def modal_flujo_guardar_perfil(
     w_can, h_can = 204, 60
     btn_cancelar = pygame.Rect(rect_card.centerx - (w_can // 2), rect_card.top + 488, w_can, h_can)
     spr_can_norm = _cargar_sprite_boton("Menu/boton-cancelar.png", w_can, h_can) or _cargar_sprite_boton("boton-cancelar.png", w_can, h_can)
-    spr_can_norm = generar_boton_con_texto("Menu/boton-cancelar.png", w_can, h_can, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 0)
-    spr_can_semi = generar_boton_con_texto("Menu/boton-cancelar-semiapretado.png", w_can, h_can, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 1)
-    spr_can_apret = generar_boton_con_texto("Menu/boton-cancelar-apretado.png", w_can, h_can, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 2)
+    spr_can_norm = generar_boton_con_texto("Menu/boton-cancelar.png", w_can, h_can, t("cancelar").upper(), (60, 45, 35), TAMANO_BOTON_MODAL, 0)
+    spr_can_semi = generar_boton_con_texto("Menu/boton-cancelar-semiapretado.png", w_can, h_can, t("cancelar").upper(), (60, 45, 35), TAMANO_BOTON_MODAL, 1)
+    spr_can_apret = generar_boton_con_texto("Menu/boton-cancelar-apretado.png", w_can, h_can, t("cancelar").upper(), (60, 45, 35), TAMANO_BOTON_MODAL, 2)
     spr_can_hover = aclarar_boton(spr_can_norm) if spr_can_norm else None
     fondo_tarjeta = (253, 246, 233)
 
@@ -1568,7 +1568,7 @@ def modal_flujo_guardar_perfil(
             col_c = (255, 255, 255) if hov_can else (242, 234, 222)
             pygame.draw.rect(pantalla, col_c, btn_cancelar, border_radius=10)
             pygame.draw.rect(pantalla, (185, 155, 125), btn_cancelar, width=2, border_radius=10)
-            dibujar_texto_en_rect(pantalla, t("cancelar"), btn_cancelar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(60, 45, 35), padding=4)
+            dibujar_texto_en_rect(pantalla, t("cancelar").upper(), btn_cancelar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(60, 45, 35), padding=4)
 
         pygame.display.flip()
 
@@ -1629,17 +1629,17 @@ def mostrar_dialogo_guardar_salir(
         spr_c_semi = _scale_btn("Menu/boton-cancelar-semiapretado.png", w_btn, h_btn) or _scale_btn("boton-cancelar-semiapretado.png", w_btn, h_btn)
         spr_c_apret = _scale_btn("Menu/boton-cancelar-apretado.png", w_btn, h_btn) or _scale_btn("boton-cancelar-apretado.png", w_btn, h_btn)
     else:
-        spr_g_norm = generar_boton_con_texto("Ventanas/boton-guardar-y-salir.png", w_btn, h_btn, t("guardar_salir"), (255, 255, 255), TAMANO_BOTON_MODAL)
-        spr_g_semi = generar_boton_con_texto("Ventanas/boton-guardar-y-salir-semiapretado.png", w_btn, h_btn, t("guardar_salir"), (255, 255, 255), TAMANO_BOTON_MODAL, 1) or spr_g_norm
-        spr_g_apret = generar_boton_con_texto("Ventanas/boton-guardar-y-salir-apretado.png", w_btn, h_btn, t("guardar_salir"), (255, 255, 255), TAMANO_BOTON_MODAL, 2) or spr_g_norm
+        spr_g_norm = generar_boton_con_texto("Ventanas/boton-guardar-y-salir.png", w_btn, h_btn, t("guardar_salir").upper(), (255, 255, 255), TAMANO_BOTON_MODAL)
+        spr_g_semi = generar_boton_con_texto("Ventanas/boton-guardar-y-salir-semiapretado.png", w_btn, h_btn, t("guardar_salir").upper(), (255, 255, 255), TAMANO_BOTON_MODAL, 1) or spr_g_norm
+        spr_g_apret = generar_boton_con_texto("Ventanas/boton-guardar-y-salir-apretado.png", w_btn, h_btn, t("guardar_salir").upper(), (255, 255, 255), TAMANO_BOTON_MODAL, 2) or spr_g_norm
 
-        spr_s_norm = generar_boton_con_texto("Ventanas/boton-salir-sin-guardar.png", w_btn, h_btn, t("salir_sin_guardar"), (255, 255, 255), TAMANO_BOTON_MODAL)
-        spr_s_semi = generar_boton_con_texto("Menu/boton-salir-sin-guardar-semiapretado.png", w_btn, h_btn, t("salir_sin_guardar"), (255, 255, 255), TAMANO_BOTON_MODAL, 1) or spr_s_norm
-        spr_s_apret = generar_boton_con_texto("Ventanas/boton-salir-sin-guardar-apretado.png", w_btn, h_btn, t("salir_sin_guardar"), (255, 255, 255), TAMANO_BOTON_MODAL, 2) or spr_s_norm
+        spr_s_norm = generar_boton_con_texto("Ventanas/boton-salir-sin-guardar.png", w_btn, h_btn, t("salir_sin_guardar").upper(), (255, 255, 255), TAMANO_BOTON_MODAL)
+        spr_s_semi = generar_boton_con_texto("Menu/boton-salir-sin-guardar-semiapretado.png", w_btn, h_btn, t("salir_sin_guardar").upper(), (255, 255, 255), TAMANO_BOTON_MODAL, 1) or spr_s_norm
+        spr_s_apret = generar_boton_con_texto("Ventanas/boton-salir-sin-guardar-apretado.png", w_btn, h_btn, t("salir_sin_guardar").upper(), (255, 255, 255), TAMANO_BOTON_MODAL, 2) or spr_s_norm
 
-        spr_c_norm = generar_boton_con_texto("Menu/boton-cancelar.png", w_btn, h_btn, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL)
-        spr_c_semi = generar_boton_con_texto("Menu/boton-cancelar-semiapretado.png", w_btn, h_btn, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 1) or spr_c_norm
-        spr_c_apret = generar_boton_con_texto("Menu/boton-cancelar-apretado.png", w_btn, h_btn, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 2) or spr_c_norm
+        spr_c_norm = generar_boton_con_texto("Menu/boton-cancelar.png", w_btn, h_btn, t("cancelar").upper(), (60, 45, 35), TAMANO_BOTON_MODAL)
+        spr_c_semi = generar_boton_con_texto("Menu/boton-cancelar-semiapretado.png", w_btn, h_btn, t("cancelar").upper(), (60, 45, 35), TAMANO_BOTON_MODAL, 1) or spr_c_norm
+        spr_c_apret = generar_boton_con_texto("Menu/boton-cancelar-apretado.png", w_btn, h_btn, t("cancelar").upper(), (60, 45, 35), TAMANO_BOTON_MODAL, 2) or spr_c_norm
 
     spr_g_hover = aclarar_boton(spr_g_norm) if spr_g_norm else None
     spr_s_hover = aclarar_boton(spr_s_norm) if spr_s_norm else None
@@ -1738,7 +1738,7 @@ def mostrar_dialogo_guardar_salir(
             pantalla.blit(spr_c_hover if (hov_c and spr_c_hover) else spr_c_norm, btn_cancelar)
         else:
             pygame.draw.rect(pantalla, (255, 255, 255) if hov_c else (242, 234, 222), btn_cancelar, border_radius=12)
-            dibujar_texto_en_rect(pantalla, t("cancelar"), btn_cancelar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(60, 45, 35), padding=8)
+            dibujar_texto_en_rect(pantalla, t("cancelar").upper(), btn_cancelar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(60, 45, 35), padding=8)
 
         pygame.display.flip()
 
@@ -1773,9 +1773,9 @@ def mostrar_dialogo_confirmar_borrado(pantalla, reloj, partida):
     def _scale_btn(nombre, w, h):
         return cargar_boton_escalado(nombre, w, h)
 
-    spr_can_norm = generar_boton_con_texto("Menu/boton-cancelar.png", w_btn, h_btn, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 0)
-    spr_can_semi = generar_boton_con_texto("Menu/boton-cancelar-semiapretado.png", w_btn, h_btn, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 1)
-    spr_can_apret = generar_boton_con_texto("Menu/boton-cancelar-apretado.png", w_btn, h_btn, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 2)
+    spr_can_norm = generar_boton_con_texto("Menu/boton-cancelar.png", w_btn, h_btn, t("cancelar").upper(), (60, 45, 35), TAMANO_BOTON_MODAL, 0)
+    spr_can_semi = generar_boton_con_texto("Menu/boton-cancelar-semiapretado.png", w_btn, h_btn, t("cancelar").upper(), (60, 45, 35), TAMANO_BOTON_MODAL, 1)
+    spr_can_apret = generar_boton_con_texto("Menu/boton-cancelar-apretado.png", w_btn, h_btn, t("cancelar").upper(), (60, 45, 35), TAMANO_BOTON_MODAL, 2)
     spr_can_hover = aclarar_boton(spr_can_norm) if spr_can_norm else None
 
     spr_bor_norm = generar_boton_con_texto("Menu/salir.png", w_btn, h_btn, t("borrar_perfil"), (255, 255, 255), TAMANO_BOTON_MODAL, 0)
@@ -1846,7 +1846,7 @@ def mostrar_dialogo_confirmar_borrado(pantalla, reloj, partida):
             col_can = (255, 255, 255) if hov_can else (242, 234, 222)
             pygame.draw.rect(pantalla, col_can, btn_cancelar, border_radius=12)
             pygame.draw.rect(pantalla, (195, 168, 138), btn_cancelar, width=2, border_radius=12)
-            dibujar_texto_en_rect(pantalla, t("cancelar"), btn_cancelar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(60, 45, 35), padding=6)
+            dibujar_texto_en_rect(pantalla, t("cancelar").upper(), btn_cancelar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(60, 45, 35), padding=6)
 
         if spr_bor_norm:
             pantalla.blit(spr_bor_hover if (hov_bor and spr_bor_hover) else spr_bor_norm, btn_borrar)

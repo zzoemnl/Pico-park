@@ -21,6 +21,7 @@ from sprites import (
     animar_pulsacion_boton,
     aclarar_boton, 
     generar_boton_con_texto,
+    renderizar_texto_pixamuse,
     obtener_accesorios_disponibles,
     cargar_accesorio,
     dibujar_accesorio_en_personaje,
@@ -2389,18 +2390,21 @@ def main():
         pygame.draw.rect(surf, col_bg, rect_interior)
 
         if idioma == "zh":
-            f_tit = obtener_fuente_cjk(28, negrita=True)
+            f_tit = obtener_fuente_cjk(24, negrita=True)
             f_sub = obtener_fuente_cjk(14, negrita=False)
+            t_tit = f_tit.render(tit, True, col_tit)
         else:
-            f_tit = obtener_fuente_para_texto(tit, categoria="boton", tamano=24, negrita=True)
+            _, t_tit = renderizar_texto_pixamuse(tit, 20, col_tit, max_w=w - 24)
             f_sub = obtener_fuente_para_texto(sub, categoria="texto", tamano=12, negrita=False)
 
-        t_tit = f_tit.render(tit, True, col_tit)
         t_sub = f_sub.render(sub, True, col_sub)
 
         offset_y = shift_y
-        r_tit = t_tit.get_rect(center=(w // 2, 33 + offset_y))
-        surf.blit(t_tit, r_tit)
+        bbox_tit = t_tit.get_bounding_rect()
+        if bbox_tit.width > 0 and bbox_tit.height > 0:
+            surf.blit(t_tit, (round(w / 2.0 - (bbox_tit.left + bbox_tit.width / 2.0)), round(30 + offset_y - (bbox_tit.top + bbox_tit.height / 2.0))))
+        else:
+            surf.blit(t_tit, t_tit.get_rect(center=(w // 2, 30 + offset_y)))
 
         r_sub = t_sub.get_rect(center=(w // 2, 59 + offset_y))
         surf.blit(t_sub, r_sub)
@@ -2451,13 +2455,17 @@ def main():
 
         txt_v = t("volver")
         if idioma == "zh":
-            f_v = obtener_fuente_cjk(18, negrita=True)
+            f_v = obtener_fuente_cjk(min(24, max(12, int(round(h * 0.40)))), negrita=True)
+            t_v = f_v.render(txt_v, True, (60, 60, 60))
         else:
-            f_v = obtener_fuente_para_texto(txt_v, categoria="boton", tamano=18, negrita=True)
+            _, t_v = renderizar_texto_pixamuse(txt_v, max(10, int(round(h * 0.29))), (60, 60, 60), max_w=w - 20)
 
-        t_v = f_v.render(txt_v, True, (60, 60, 60))
-        r_v = t_v.get_rect(center=(w // 2, 27 + shift_y))
-        surf.blit(t_v, r_v)
+        cy_v = round(h * 0.42) + shift_y
+        bbox_v = t_v.get_bounding_rect()
+        if bbox_v.width > 0 and bbox_v.height > 0:
+            surf.blit(t_v, (round(w / 2.0 - (bbox_v.left + bbox_v.width / 2.0)), round(cy_v - (bbox_v.top + bbox_v.height / 2.0))))
+        else:
+            surf.blit(t_v, t_v.get_rect(center=(w // 2, cy_v)))
 
         if estado == "hover":
             surf = aclarar_boton(surf)
@@ -2497,13 +2505,17 @@ def main():
 
         txt_nl = t("nueva_partida")
         if idioma == "zh":
-            f_nl = obtener_fuente_cjk(18, negrita=True)
+            f_nl = obtener_fuente_cjk(20, negrita=True)
+            t_nl = f_nl.render(txt_nl, True, (115, 35, 20))
         else:
-            f_nl = obtener_fuente_para_texto(txt_nl, categoria="boton", tamano=16, negrita=True)
+            _, t_nl = renderizar_texto_pixamuse(txt_nl, max(10, int(round(H_VOLVER * 0.28))), (115, 35, 20), max_w=W_VOLVER - 20)
 
-        t_nl = f_nl.render(txt_nl, True, (115, 35, 20))
-        r_nl = t_nl.get_rect(center=(W_VOLVER // 2, 27 + shift_y))
-        surf.blit(t_nl, r_nl)
+        cy_nl = round(H_VOLVER * 0.42) + shift_y
+        bbox_nl = t_nl.get_bounding_rect()
+        if bbox_nl.width > 0 and bbox_nl.height > 0:
+            surf.blit(t_nl, (round(W_VOLVER / 2.0 - (bbox_nl.left + bbox_nl.width / 2.0)), round(cy_nl - (bbox_nl.top + bbox_nl.height / 2.0))))
+        else:
+            surf.blit(t_nl, t_nl.get_rect(center=(W_VOLVER // 2, cy_nl)))
 
         if estado == "hover":
             surf = aclarar_boton(surf)
@@ -2542,12 +2554,17 @@ def main():
 
         txt_p = t("comenzar_aventura")
         if idioma == "zh":
-            f_p = obtener_fuente_cjk(20, negrita=True)
+            f_p = obtener_fuente_cjk(22, negrita=True)
+            t_p = f_p.render(txt_p, True, (115, 35, 20))
         else:
-            f_p = obtener_fuente_para_texto(txt_p, categoria="boton", tamano=18, negrita=True)
+            _, t_p = renderizar_texto_pixamuse(txt_p, 22, (115, 35, 20), max_w=272 - 24)
 
-        t_p = f_p.render(txt_p, True, (115, 35, 20))
-        surf.blit(t_p, t_p.get_rect(center=(136, 31 + shift_y)))
+        cy_p = 33 + shift_y
+        bbox_p = t_p.get_bounding_rect()
+        if bbox_p.width > 0 and bbox_p.height > 0:
+            surf.blit(t_p, (round(136 - (bbox_p.left + bbox_p.width / 2.0)), round(cy_p - (bbox_p.top + bbox_p.height / 2.0))))
+        else:
+            surf.blit(t_p, t_p.get_rect(center=(136, cy_p)))
 
         if estado == "hover":
             surf = aclarar_boton(surf)
@@ -3702,7 +3719,14 @@ def main():
             for tab_id, r_tab, hov in tabs_orden:
                 es_activa = (tab_personajes_actual == tab_id)
                 nom_spr = f"{tab_id}-seleccionado.png" if es_activa else f"{tab_id}.png"
-                spr_tab = cargar_boton_escalado(nom_spr, w_tab_pj, h_tab_pj)
+                col_txt_tab = (116, 78, 45) if es_activa else (157, 131, 100)
+                spr_tab = generar_boton_con_texto(
+                    nom_spr, w_tab_pj, h_tab_pj,
+                    texto=t(tab_id).upper(),
+                    color_texto=col_txt_tab,
+                    tamano_fuente=16,
+                    offset_y=0,
+                )
                 if spr_tab:
                     pantalla.blit(spr_tab, (r_tab.left, r_tab.top))
                     if not es_activa and hov:
@@ -4128,8 +4152,12 @@ def main():
                         pts_ck = [(cx_ck - 4, cy_ck), (cx_ck - 1, cy_ck + 3), (cx_ck + 4, cy_ck - 3)]
                         pygame.draw.lines(pantalla, (255, 255, 255), False, pts_ck, 2)
 
-                    f_lt = obtener_fuente_para_texto(l_tit, categoria="boton", tamano=16, negrita=True)
-                    t_lt = f_lt.render(l_tit, True, (45, 30, 20) if es_sel else (95, 75, 60))
+                    col_lt = (45, 30, 20) if es_sel else (95, 75, 60)
+                    if contiene_caracteres_cjk(l_tit):
+                        f_lt = obtener_fuente_para_texto(l_tit, categoria="boton", tamano=16, negrita=True)
+                        t_lt = f_lt.render(l_tit, True, col_lt)
+                    else:
+                        _, t_lt = renderizar_texto_pixamuse(l_tit, 15, col_lt, max_w=r_bl.width - 28)
                     pantalla.blit(t_lt, t_lt.get_rect(center=(r_bl.centerx, r_bl.top + 23)))
 
                     dibujar_texto_en_rect(pantalla, l_sub, pygame.Rect(r_bl.left + 6, r_bl.top + 36, r_bl.width - 12, 32), categoria="texto", tamano=12, color=(80, 60, 45), alineacion="centro", multiline=True, interlineado=1)
@@ -4167,8 +4195,12 @@ def main():
                         pts_ck = [(cx_ck - 4, cy_ck), (cx_ck - 1, cy_ck + 3), (cx_ck + 4, cy_ck - 3)]
                         pygame.draw.lines(pantalla, (255, 255, 255), False, pts_ck, 2)
 
-                    f_mt = obtener_fuente_para_texto(m_tit, categoria="boton", tamano=16, negrita=True)
-                    t_mt = f_mt.render(m_tit, True, (45, 30, 20) if es_sel_m else (95, 75, 60))
+                    col_mt = (45, 30, 20) if es_sel_m else (95, 75, 60)
+                    if contiene_caracteres_cjk(m_tit):
+                        f_mt = obtener_fuente_para_texto(m_tit, categoria="boton", tamano=16, negrita=True)
+                        t_mt = f_mt.render(m_tit, True, col_mt)
+                    else:
+                        _, t_mt = renderizar_texto_pixamuse(m_tit, 15, col_mt, max_w=r_bm.width - 28)
                     pantalla.blit(t_mt, t_mt.get_rect(center=(r_bm.centerx, r_bm.top + 20)))
 
                     r_sub_m = pygame.Rect(r_bm.left + 4, r_bm.top + 34, r_bm.width - 8, 44)

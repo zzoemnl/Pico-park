@@ -37,7 +37,69 @@ _CACHE_BOTONES_ESCALADOS = {}
 _CACHE_BOTONES_ACLARADOS = weakref.WeakKeyDictionary()
 _CACHE_MARCOS_BOTONES = {}
 _CACHE_BOTONES_PERSONALIZADOS = {}
+_CACHE_FUENTES_PIXAMUSE = {}
 _MAPA_BOTONES = None
+RUTA_FUENTE_PIXAMUSE = ruta_recurso("Sprites", "Fuentes", "PixAmuse.ttf")
+
+
+def obtener_fuente_pixamuse(tamano=16):
+    """Retorna la fuente oficial PixAmuse.ttf escalada para igualar la altura visual original de los botones."""
+    sz_pix = max(14, int(round(tamano * 2.35)))
+    if sz_pix in _CACHE_FUENTES_PIXAMUSE:
+        return _CACHE_FUENTES_PIXAMUSE[sz_pix]
+    f = None
+    try:
+        if RUTA_FUENTE_PIXAMUSE and os.path.isfile(RUTA_FUENTE_PIXAMUSE):
+            f = pygame.font.Font(RUTA_FUENTE_PIXAMUSE, sz_pix)
+    except Exception:
+        f = None
+    if f is None:
+        from fuentes import obtener_fuente_boton
+        f = obtener_fuente_boton(tamano, tamano_fallback=tamano, idioma="es")
+    _CACHE_FUENTES_PIXAMUSE[sz_pix] = f
+    return f
+
+
+def renderizar_texto_pixamuse(texto, tamano, color_texto, max_w=None):
+    """
+    Renderiza texto de botón con PixAmuse.ttf, respetando mayúsculas/minúsculas,
+    soportando Ñ/ñ con virgulilla pixel art y ajustando el tamaño si excede max_w.
+    """
+    curr_sz = tamano
+
+    def _render_sz(sz):
+        f = obtener_fuente_pixamuse(sz)
+        s_txt = str(texto)
+        if any(ch in "ÑñÁÉÍÓÚáéíóú" for ch in s_txt):
+            txt_limpio = (
+                s_txt.replace("Á", "A").replace("É", "E").replace("Í", "I").replace("Ó", "O").replace("Ú", "U")
+                     .replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
+            )
+            ancho_t, alto_t = f.size(txt_limpio.replace("Ñ", "N").replace("ñ", "n"))
+            t_s = pygame.Surface((max(1, ancho_t), max(1, alto_t + 6)), pygame.SRCALPHA)
+            curr_x = 0
+            for ch in txt_limpio:
+                if ch in ("Ñ", "ñ"):
+                    letra = f.render("N" if ch == "Ñ" else "n", True, color_texto)
+                    t_s.blit(letra, (curr_x, 5))
+                    lw = letra.get_width()
+                    w_bar = max(3, lw // 3)
+                    pygame.draw.rect(t_s, color_texto, (curr_x + max(2, lw // 5), 0, w_bar, 2))
+                    pygame.draw.rect(t_s, color_texto, (curr_x + max(2, lw // 5) + w_bar - 1, 1, w_bar, 2))
+                    curr_x += lw
+                else:
+                    letra = f.render(ch, True, color_texto)
+                    t_s.blit(letra, (curr_x, 5))
+                    curr_x += letra.get_width()
+            return f, t_s
+        return f, f.render(s_txt, True, color_texto)
+
+    f_res, surf_res = _render_sz(curr_sz)
+    if max_w is not None:
+        while surf_res.get_width() > max_w and curr_sz > 8:
+            curr_sz -= 1
+            f_res, surf_res = _render_sz(curr_sz)
+    return f_res, surf_res
 # Ancho máximo al que se retiene un botón en caché (4x el tamaño de dibujo de 272 px).
 ANCHO_MAX_BOTON = 1088
 
@@ -330,6 +392,37 @@ COLORES_INTERIORES_BOTONES = {
     "Ventanas/aceptar-apretado.png": (125, 212, 103),
     "Menu/aceptar-apretado.png": (125, 212, 103),
     "aceptar-apretado.png": (125, 212, 103),
+
+    # Pestañas Colores y Accesorios (Personalización)
+    "Menu/colores.png": (252, 218, 145),
+    "colores.png": (252, 218, 145),
+    "Ventanas/colores.png": (252, 218, 145),
+    "Menu/colores-seleccionado.png": (251, 214, 138),
+    "colores-seleccionado.png": (251, 214, 138),
+    "Ventanas/colores-seleccionado.png": (251, 214, 138),
+
+    "Menu/accesorios.png": (252, 218, 145),
+    "accesorios.png": (252, 218, 145),
+    "Ventanas/accesorios.png": (252, 218, 145),
+    "Menu/accesorios-seleccionado.png": (251, 214, 138),
+    "accesorios-seleccionado.png": (251, 214, 138),
+    "Ventanas/accesorios-seleccionado.png": (251, 214, 138),
+
+    # Pestañas de Selección de Mundos
+    "mundos/mundo-1.png": (255, 219, 134),
+    "mundo-1.png": (255, 219, 134),
+    "mundos/mundo-1-seleccionado.png": (255, 215, 123),
+    "mundo-1-seleccionado.png": (255, 215, 123),
+
+    "mundos/mundo-2.png": (226, 213, 246),
+    "mundo-2.png": (226, 213, 246),
+    "mundos/mundo-2-seleccionado.png": (221, 208, 255),
+    "mundo-2-seleccionado.png": (221, 208, 255),
+
+    "mundos/mundo-3.png": (176, 238, 246),
+    "mundo-3.png": (176, 238, 246),
+    "mundos/mundo-3-seleccionado.png": (162, 238, 255),
+    "mundo-3-seleccionado.png": (162, 238, 255),
 }
 
 
@@ -385,6 +478,9 @@ def generar_boton_con_texto(sprite_base, w, h, texto=None, color_texto=(60, 45, 
         elif "reintentar" in base_lower and t_clean == "REINTENTAR": es_nativo = True
         elif "siguiente" in base_lower and t_clean == "SIGUIENTE": es_nativo = True
         elif "menu" in base_lower and t_clean in ("MENÚ", "MENU"): es_nativo = True
+        elif "colores" in base_lower and t_clean == "COLORES": es_nativo = True
+        elif "accesorios" in base_lower and t_clean == "ACCESORIOS": es_nativo = True
+        elif any(f"mundo-{m}" in base_lower for m in (1, 2, 3)) and any(t_clean == f"MUNDO {m}" for m in (1, 2, 3)): es_nativo = True
         if es_nativo:
             res_btn = cargar_boton_escalado(sprite_base, w, h)
             if res_btn:
@@ -400,19 +496,36 @@ def generar_boton_con_texto(sprite_base, w, h, texto=None, color_texto=(60, 45, 
         # Limpieza interior segura si el marco contiene texto original horneado
         base_key = os.path.basename(base_norm)
         col_interior = COLORES_INTERIORES_BOTONES.get(base_norm) or COLORES_INTERIORES_BOTONES.get(base_key)
+        is_tab = any(x in base_lower for x in ("mundo-1", "mundo-2", "mundo-3", "colores", "accesorios"))
         if col_interior:
             is_apr = "apretado" in base_lower and "pre" not in base_lower and "semi" not in base_lower
             is_semi = "semi" in base_lower or "pre" in base_lower
-            shift_clear = int(h * 0.10) if is_apr else (int(h * 0.05) if is_semi else 0)
-            h_bisel = max(6, int(h * 0.28))
-            pad_lat = max(4, int(w * 0.03))
-            pad_top = max(4, int(h * 0.08)) + shift_clear
-            h_clear = max(10, h - max(4, int(h * 0.08)) - h_bisel)
+            if is_tab:
+                pad_lat = max(3, int(w * 0.04))
+                pad_top = max(4, int(h * 0.44))
+                h_clear = max(10, int(h * 0.42))
+            else:
+                shift_clear = int(h * 0.10) if is_apr else (int(h * 0.05) if is_semi else 0)
+                h_bisel = max(6, int(h * 0.28))
+                pad_lat = max(4, int(w * 0.03))
+                pad_top = max(4, int(h * 0.08)) + shift_clear
+                h_clear = max(10, h - max(4, int(h * 0.08)) - h_bisel)
             rect_int = pygame.Rect(pad_lat, pad_top, w - 2 * pad_lat, h_clear)
             pygame.draw.rect(surf, col_interior, rect_int)
 
+        if is_tab and offset_y == 0:
+            offset_y = int(h * 0.16)
+
         curr_sz = tamano_fuente
+        if is_tab:
+            max_sz_lat = max(12, int(round(h * 0.25)))
+            max_sz_cjk = max(12, int(round(h * 0.27)))
+        else:
+            max_sz_lat = max(10, int(round(h * 0.29)))
+            max_sz_cjk = max(11, int(round(h * 0.42)))
+
         if es_cjk:
+            curr_sz = min(curr_sz, max_sz_cjk)
             f_sys = obtener_fuente_cjk(curr_sz, negrita=True)
             txt_surf = f_sys.render(str(texto), True, color_texto)
             while txt_surf.get_width() > w - 16 and curr_sz > 8:
@@ -420,38 +533,29 @@ def generar_boton_con_texto(sprite_base, w, h, texto=None, color_texto=(60, 45, 
                 f_sys = obtener_fuente_cjk(curr_sz, negrita=True)
                 txt_surf = f_sys.render(str(texto), True, color_texto)
         else:
-            def _render_latin(sz):
-                f = obtener_fuente_boton(sz, tamano_fallback=sz, idioma="es")
-                if any(ch in "ÑñÁÉÍÓÚáéíóú" for ch in str(texto)):
-                    txt_limpio = (
-                        str(texto).replace("Á", "A").replace("É", "E").replace("Í", "I").replace("Ó", "O").replace("Ú", "U")
-                                  .replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
-                    )
-                    ancho_t, alto_t = f.size(txt_limpio.replace("Ñ", "N").replace("ñ", "n"))
-                    t_s = pygame.Surface((ancho_t, alto_t + 4), pygame.SRCALPHA)
-                    curr_x = 0
-                    for ch in txt_limpio:
-                        if ch in ("Ñ", "ñ"):
-                            letra = f.render("N" if ch == "Ñ" else "n", True, color_texto)
-                            t_s.blit(letra, (curr_x, 3))
-                            lw = letra.get_width()
-                            pygame.draw.rect(t_s, color_texto, (curr_x + 2, 0, 3, 2))
-                            pygame.draw.rect(t_s, color_texto, (curr_x + 5, 1, 3, 2))
-                            curr_x += lw
-                        else:
-                            letra = f.render(ch, True, color_texto)
-                            t_s.blit(letra, (curr_x, 3))
-                            curr_x += letra.get_width()
-                    return f, t_s
-                else:
-                    return f, f.render(str(texto), True, color_texto)
+            # Igualar visualmente al ~30% de la altura del botón (como los sprites originales)
+            # evitando que palabras cortas (PLAY, QUIT, LOAD, BACK) queden desproporcionadas
+            curr_sz = min(max(curr_sz, int(round(max_sz_lat * 0.85))), max_sz_lat)
+            f_lat, txt_surf = renderizar_texto_pixamuse(str(texto), curr_sz, color_texto, max_w=w - 18)
 
-            f_lat, txt_surf = _render_latin(curr_sz)
-            while txt_surf.get_width() > w - 16 and curr_sz > 8:
-                curr_sz -= 1
-                f_lat, txt_surf = _render_latin(curr_sz)
+        if is_tab:
+            target_cy = round(h * 0.66) + (offset_y if offset_y != int(h * 0.16) else 0)
+        else:
+            press_shift = 0
+            if "apretado" in base_lower and "pre" not in base_lower and "semi" not in base_lower:
+                press_shift = max(2, int(round(h * 0.06)))
+            elif "semi" in base_lower or "pre" in base_lower:
+                press_shift = max(1, int(round(h * 0.03)))
+            target_cy = round(h * 0.42) + press_shift
 
-        rect_txt = txt_surf.get_rect(center=(w // 2, (h - 4) // 2 + offset_y))
+        bbox = txt_surf.get_bounding_rect()
+        if bbox.width > 0 and bbox.height > 0:
+            draw_x = round(w / 2.0 - (bbox.left + bbox.width / 2.0))
+            draw_y = round(target_cy - (bbox.top + bbox.height / 2.0))
+            rect_txt = pygame.Rect(draw_x, draw_y, txt_surf.get_width(), txt_surf.get_height())
+        else:
+            rect_txt = txt_surf.get_rect(center=(w // 2, target_cy))
+
         if color_texto == (255, 255, 255) and ("salir" in base_norm.lower() or "borrar" in str(texto).lower()):
             f_somb = f_sys if es_cjk else f_lat
             somb_surf = f_somb.render(str(texto), True, (127, 49, 19))
