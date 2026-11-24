@@ -72,10 +72,6 @@ from movimientos import (
     aplicar_fisica_agua,
     ALTO_HITBOX,
 )
-from jefes import (
-    crear_jefe, crear_botones_jefe, reiniciar_jefe, actualizar_jefe, dibujar_jefe, dibujar_proyectiles, dibujar_pista_jefe,
-    MUSICA as MUSICA_JEFES,
-)
 from guardado import (
     crear_desbloqueados_inicial,
     mostrar_dialogo_guardar_salir,
@@ -3541,9 +3537,7 @@ def iniciar_mundo(
         niveles_desbloqueados = crear_desbloqueados_inicial()
 
     # Reproducción centralizada de música del mundo correspondiente (sin reiniciar dentro del mismo mundo)
-    tipo_jefe = {1: "nieve", 2: "ruinas", 3: "kraken"}.get(numero_mundo)
-    es_nivel_jefe = (numero_nivel == 6 and tipo_jefe is not None)
-    reproducir_musica(MUSICA_JEFES[tipo_jefe] if es_nivel_jefe else f"mundo_{numero_mundo}")
+    reproducir_musica(f"mundo_{numero_mundo}")
 
     es_admin = es_partida_admin(partida_nombre, partida_id)
     if es_admin:
@@ -3945,7 +3939,6 @@ def iniciar_mundo(
     bloque_peligroso = None
     bloques_peligrosos = []
     plat_elevada = None
-    jefe = None
     plataformas_derrumbables = None
     plataformas_alternadas = None
     rocas_submarinas = None
@@ -4319,36 +4312,6 @@ def iniciar_mundo(
 
         # La compuerta inicia completamente cerrada y sólida
         plataformas = list(plataformas_base) + [p["rect"] for p in paredes_colores] + [compuerta["rect"]]
-    elif numero_mundo == 1 and numero_nivel == 6:
-        # Nivel 1-6: «El Muñeco de Nieve» (jefe del mundo 1), lógica y dibujo en jefe_nieve.py
-        # - Arena de una sola pantalla (sin scroll). El muñeco ocupa la derecha y lanza bolas que ruedan.
-        # - Dos botones de colores: hay que pisarlos los dos A LA VEZ para golpearlo; tres golpes lo derriten.
-        # - Mientras está en pie, su cuerpo es una pared sólida que esconde la llave y la puerta.
-        # - Una plataforma "refugio" en el centro permite dejar pasar las bolas por debajo.
-        ancho_mundo_nivel = ANCHO
-        usar_caja = False
-        usar_soga = False
-        usar_agua = False
-        usar_pinchos = False
-        usar_llave = True
-
-        suelo = pygame.Rect(0, ALTO - 80, ancho_mundo_nivel, 80)
-        mundo_rect = pygame.Rect(0, 0, ancho_mundo_nivel, ALTO)
-        jugador1 = crear_personaje(120, 0, p1_color)
-        jugador2 = crear_personaje(220, 0, p2_color)
-        caja = None
-        pinchos = []
-
-        jefe = crear_jefe("nieve", suelo, ancho_mundo_nivel)
-        refugio = pygame.Rect(560, 530, 150, 22)
-        jefe["plataformas_iniciales"] = [refugio, jefe["cuerpo"]]
-        plataformas_base = list(jefe["plataformas_iniciales"])
-        plataformas = list(plataformas_base)
-        paredes_colores = []
-        botones_colores = crear_botones_jefe(suelo, 0)
-
-        llave = crear_llave(jefe["cuerpo"].left + 40, suelo.top - 46)
-        puerta = crear_puerta(jefe["cuerpo"].right - 110, suelo.top - 90)
     elif numero_mundo == 2 and numero_nivel == 1:
         # Mundo 2 - Nivel 1: Introducción a la Soga (El arrastre cooperativo)
         # Nivel introductorio centrado en aprender a moverse y coordinar saltos unidos por la soga
@@ -4723,34 +4686,6 @@ def iniciar_mundo(
 
         # Puerta de salida en la plataforma final de llegada en la cima (x=810, y=130)
         puerta = crear_puerta(810, 130 - 90)
-    elif numero_mundo == 2 and numero_nivel == 6:
-        # Nivel 2-6: «El Guardián de piedra» (jefe del mundo 2), lógica y dibujo en jefe_ruinas.py
-        # - Arena de una pantalla, con soga. El guardián golpea el suelo (onda expansiva + rocas
-        #   que caen sobre cada jugador) y después queda aturdido unos segundos.
-        # - Aturdido, la runa de su pecho brilla: está a 320 px, solo se alcanza con torre humana.
-        # - Tres toques a la runa lo desmoronan; su cuerpo es una pared que esconde llave y puerta.
-        # - Una plataforma flotante en el centro sirve para esquivar la onda.
-        ancho_mundo_nivel = ANCHO
-        suelo = pygame.Rect(0, ALTO - 80, ancho_mundo_nivel, 80)
-        mundo_rect = pygame.Rect(0, 0, ancho_mundo_nivel, ALTO)
-        usar_caja = False
-        usar_soga = True
-        usar_agua = False
-        usar_pinchos = False
-        usar_llave = True
-        jugador1 = crear_personaje(120, 0, p1_color)
-        jugador2 = crear_personaje(210, 0, p2_color)
-        caja = None
-        pinchos = []
-
-        jefe = crear_jefe("ruinas", suelo, ancho_mundo_nivel)
-        refugio = pygame.Rect(540, 520, 130, 24)
-        jefe["plataformas_iniciales"] = [refugio, jefe["cuerpo"]]
-        plataformas_base = list(jefe["plataformas_iniciales"])
-        plataformas = list(plataformas_base)
-
-        llave = crear_llave(jefe["cuerpo"].left + 16, suelo.top - 46)
-        puerta = crear_puerta(jefe["cuerpo"].right - 110, suelo.top - 90)
     elif numero_mundo == 3 and numero_nivel == 1:
         # Mundo 3 — Nivel 1: «El jardín de algas» (Niveles.pdf, páginas 10 y 13)
         # Objetivo: explorar el escenario submarino, encontrar la llave y llegar a la puerta de salida.
@@ -5313,61 +5248,6 @@ def iniciar_mundo(
 
         surf_oscuridad_m3 = pygame.Surface((ancho_mundo_nivel, ALTO), pygame.SRCALPHA)
         surf_luz_linterna, surf_luz_tenue = obtener_superficies_luz_linterna(radio_linterna=165, radio_tenue=45)
-    elif numero_mundo == 3 and numero_nivel == 6:
-        # Nivel 3-6: «El Kraken» (jefe final), lógica y dibujo en jefe_kraken.py
-        # - Arena submarina de una pantalla, con oxígeno y dos cámaras de aire como en 3-5 (sin oscuridad).
-        # - Tentáculos que suben del lecho avisados con burbujas; tinta a partir del segundo golpe.
-        # - El orbe de luz se carga con los dos jugadores adentro y vuela al ojo del Kraken.
-        # - Tres golpes y se hunde; su cuerpo es una pared que esconde llave y puerta.
-        ancho_mundo_nivel = ANCHO
-        suelo = pygame.Rect(0, ALTO - 75, ancho_mundo_nivel, 75)
-        mundo_rect = pygame.Rect(0, 0, ancho_mundo_nivel, ALTO)
-        usar_caja = False
-        usar_soga = False
-        usar_agua = True
-        usar_pinchos = False
-        usar_llave = True
-
-        ZONA_AGUA.x = 0
-        ZONA_AGUA.y = 0
-        ZONA_AGUA.width = ancho_mundo_nivel
-        ZONA_AGUA.height = ALTO
-        techo_agua = pygame.Rect(0, 0, ancho_mundo_nivel, 25)
-        oxigeno_p1 = 100.0
-        oxigeno_p2 = 100.0
-        linterna_p1 = False
-        linterna_p2 = False
-
-        jugador1 = crear_personaje(80, 280, p1_color)
-        jugador2 = crear_personaje(150, 280, p2_color)
-        jugador1["en_agua"] = True
-        jugador2["en_agua"] = True
-        caja = None
-        pinchos = []
-
-        jefe = crear_jefe("kraken", suelo, ancho_mundo_nivel)
-        camaras_aire = [
-            {"rect": pygame.Rect(40, 84, 170, 70), "nombre": "Cámara 1"},
-            {"rect": pygame.Rect(560, 84, 170, 70), "nombre": "Cámara 2"},
-        ]
-        corrientes_marinas = []
-        rocas_submarinas = [
-            {"rect": pygame.Rect(300, 420, 100, 36)},
-            {"rect": pygame.Rect(590, 300, 100, 36), "coral": True, "color_coral": (240, 110, 130)},
-        ]
-        barreras_algas = []
-        corales_decorativos = []
-        algas_decorativas = []
-        flechas_indicadoras = []
-        jefe["plataformas_iniciales"] = [techo_agua] + [r["rect"] for r in rocas_submarinas] + [jefe["cuerpo"]]
-        plataformas_base = list(jefe["plataformas_iniciales"])
-        plataformas = list(plataformas_base)
-
-        llave = crear_llave(jefe["cuerpo"].left + 50, suelo.top - 46)
-        puerta = crear_puerta(jefe["cuerpo"].right - 120, suelo.top - 90)
-
-        burbujas_m3 = crear_sistema_burbujas_m3(ancho_mundo_nivel, cantidad=35)
-        tick_m3 = 0
     else:
         ancho_mundo_nivel = ANCHO_MUNDO
         suelo = pygame.Rect(0, ALTO - 80, ANCHO_MUNDO, 80)
@@ -5441,7 +5321,6 @@ def iniciar_mundo(
         dibujar_decoraciones_mundo1(mundo_inicio, suelo, ancho_mundo_nivel, 0)
         plats_dibujar_ini = plataformas_base if (paredes_colores is not None and plataformas_base is not None) else plataformas
         plats_estaticas_ini = [p for p in plats_dibujar_ini if not (
-            (jefe is not None and p is jefe["cuerpo"]) or
             (barrera_l_horiz is not None and (p is barrera_l_horiz or p is barrera_l_vert)) or
             (bloque_central is not None and p is bloque_central["rect"]) or
             (plataforma_movil is not None and p is plataforma_movil["rect"]) or
@@ -5459,7 +5338,6 @@ def iniciar_mundo(
         dibujar_decoraciones_mundo2(mundo_inicio, suelo, ancho_mundo_nivel, 0, pozo_nivel)
         plats_dibujar_ini = plataformas_base if (paredes_colores is not None and plataformas_base is not None) else plataformas
         plats_estaticas_ini = [p for p in plats_dibujar_ini if not (
-            (jefe is not None and p is jefe["cuerpo"]) or
             (barrera_l_horiz is not None and (p is barrera_l_horiz or p is barrera_l_vert)) or
             (bloque_central is not None and p is bloque_central["rect"]) or
             (plataforma_movil is not None and p is plataforma_movil["rect"]) or
@@ -5615,8 +5493,6 @@ def iniciar_mundo(
         dibujar_personaje(mundo_inicio, jugador2, ZONA_AGUA if usar_agua else None)
         dibujar_linterna_minero(mundo_inicio, jugador2, linterna_p2)
     else:
-        if jefe is not None:
-            dibujar_jefe(mundo_inicio, jefe, suelo)
         dibujar_personaje(mundo_inicio, jugador1, ZONA_AGUA if usar_agua else None)
         dibujar_personaje(mundo_inicio, jugador2, ZONA_AGUA if usar_agua else None)
 
@@ -5681,10 +5557,6 @@ def iniciar_mundo(
             for pared in paredes_colores:
                 pared["progreso"] = 0.0
                 pared["rect"].y = int(pared["y_cerrada"])
-        if jefe is not None:
-            reiniciar_jefe(jefe, botones_colores, suelo)
-            plataformas_base = list(jefe["plataformas_iniciales"])
-            plataformas = list(plataformas_base)
         if boton_compuerta is not None and compuerta is not None:
             boton_compuerta["presionado"] = False
             compuerta["progreso"] = 0.0
@@ -6141,22 +6013,6 @@ def iniciar_mundo(
                         paredes_solidas.append(p_col["rect"])
             plataformas = plataformas_base + paredes_solidas
 
-        if jefe is not None:
-            golpeados, recien_derrotado = actualizar_jefe(
-                jefe, botones_colores, [(jugador1, p1_completado), (jugador2, p2_completado)], suelo, plataformas
-            )
-            if recien_derrotado:
-                # El muñeco se derrite: su cuerpo deja de bloquear la llave y la puerta
-                plataformas_base = [p for p in plataformas_base if p is not jefe["cuerpo"]]
-                plataformas = list(plataformas_base)
-            for p in golpeados:
-                if not p["muerto"]:
-                    matar_personaje(p)
-                    otro = jugador2 if p is jugador1 else jugador1
-                    comp_otro = p2_completado if p is jugador1 else p1_completado
-                    if numero_mundo != 3 and not comp_otro and not otro.get("muerto", False):
-                        matar_personaje(otro)
-
         if boton_compuerta is not None:
             pj_sobre = False
             rb = boton_compuerta["rect"]
@@ -6574,7 +6430,6 @@ def iniciar_mundo(
             dibujar_decoraciones_mundo1(mundo, suelo, ancho_mundo_nivel, tick_m1)
             plats_dibujar = plataformas_base if (paredes_colores is not None and plataformas_base is not None) else plataformas
             plats_estaticas = [p for p in plats_dibujar if not (
-                (jefe is not None and p is jefe["cuerpo"]) or
                 (barrera_l_horiz is not None and (p is barrera_l_horiz or p is barrera_l_vert)) or
                 (compuerta is not None and p is compuerta["rect"]) or
                 (bloque_central is not None and p is bloque_central["rect"]) or
@@ -6594,7 +6449,6 @@ def iniciar_mundo(
             dibujar_decoraciones_mundo2(mundo, suelo, ancho_mundo_nivel, tick_m2, pozo_nivel)
             plats_dibujar = plataformas_base if (paredes_colores is not None and plataformas_base is not None) else plataformas
             plats_estaticas = [p for p in plats_dibujar if not (
-                (jefe is not None and p is jefe["cuerpo"]) or
                 (barrera_l_horiz is not None and (p is barrera_l_horiz or p is barrera_l_vert)) or
                 (compuerta is not None and p is compuerta["rect"]) or
                 (bloque_central is not None and p is bloque_central["rect"]) or
@@ -6757,11 +6611,6 @@ def iniciar_mundo(
                     pygame.draw.ellipse(halo_surf, (255, 230, 90, alpha_h), (0, 0, 44, 60))
                     mundo.blit(halo_surf, (llave["rect"].centerx - 22, llave["rect"].centery - 30))
                 mundo.blit(llave["sprite"], llave["rect"])
-
-        if jefe is not None:
-            dibujar_jefe(mundo, jefe, suelo)
-            dibujar_proyectiles(mundo, jefe)
-            dibujar_pista_jefe(mundo, jefe, ancho_mundo_nivel)
 
         if numero_mundo == 3 and numero_nivel in (4, 5) and surf_oscuridad_m3 is not None:
             aplicar_oscuridad_submarina(

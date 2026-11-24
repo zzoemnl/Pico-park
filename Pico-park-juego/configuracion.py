@@ -73,7 +73,6 @@ CARPETAS_AUDIO = [
     os.path.join(DIRECTORIO_RAIZ, "sonidos", "mundo1"),
     os.path.join(DIRECTORIO_RAIZ, "sonidos", "mundo2"),
     os.path.join(DIRECTORIO_RAIZ, "sonidos", "mundo3"),
-    os.path.join(DIRECTORIO_RAIZ, "sonidos", "jefe1"),
     os.path.join(DIRECTORIO_RAIZ, "sonidos", "ahogamiento"),
     os.path.join(DIRECTORIO_RAIZ, "sonidos"),
     os.path.join(DIRECTORIO_ACTUAL, "sonidos", "menú"),
@@ -81,7 +80,6 @@ CARPETAS_AUDIO = [
     os.path.join(DIRECTORIO_ACTUAL, "sonidos", "mundo1"),
     os.path.join(DIRECTORIO_ACTUAL, "sonidos", "mundo2"),
     os.path.join(DIRECTORIO_ACTUAL, "sonidos", "mundo3"),
-    os.path.join(DIRECTORIO_ACTUAL, "sonidos", "jefe1"),
     os.path.join(DIRECTORIO_ACTUAL, "sonidos", "ahogamiento"),
     os.path.join(DIRECTORIO_ACTUAL, "sonidos"),
     os.path.join(DIRECTORIO_RAIZ, "assets", "audio"),
@@ -164,21 +162,6 @@ DICCIONARIO = {
         "es": "¡NIVEL COMPLETADO!",
         "en": "LEVEL COMPLETED!",
         "zh": "关卡完成！",
-    },
-    "jefe_pista": {
-        "es": "¡Pisen los dos botones al mismo tiempo!",
-        "en": "Step on both buttons at the same time!",
-        "zh": "同时踩下两个按钮！",
-    },
-    "jefe_pista_ruinas": {
-        "es": "Cuando quede aturdido, hagan una torre y toquen la runa de su pecho",
-        "en": "When it is stunned, stack up and touch the rune on its chest",
-        "zh": "它眩晕时，叠罗汉触碰它胸口的符文",
-    },
-    "jefe_pista_kraken": {
-        "es": "¡Métanse los dos dentro del orbe de luz y aguanten!",
-        "en": "Both of you get inside the light orb and hold on!",
-        "zh": "两人一起进入光球并坚持住！",
     },
     "buen_trabajo": {
         "es": "¡Buen trabajo!",
@@ -268,11 +251,6 @@ DICCIONARIO = {
         "es": "BLOQUEADO",
         "en": "LOCKED",
         "zh": "未解锁",
-    },
-    "en_proceso": {
-        "es": "EN PROCESO",
-        "en": "IN PROGRESS",
-        "zh": "开发中",
     },
     "deseas_guardar_sub": {
         "es": "Puedes guardar tu partida en un perfil antes de salir.",

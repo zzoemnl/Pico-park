@@ -17,7 +17,7 @@ from fuentes import (
     TAMANO_CARD,
 )
 from configuracion import t, obtener_idioma
-from guardado import NIVELES_POR_MUNDO, es_nivel_jefe
+from guardado import NIVELES_POR_MUNDO
 from sprites import generar_boton_con_texto, aclarar_boton
 
 # Paletas de colores del menú
@@ -53,15 +53,9 @@ def obtener_mecanicas_nivel(mundo, nivel):
             return ["caja"]
         elif nivel == 5:
             return []
-        elif nivel == 6:
-            return ["jefe"]
     elif mundo == 2:
-        if nivel == 6:
-            return ["soga", "jefe"]
         return ["soga", "pinchos"]
     elif mundo == 3:
-        if nivel == 6:
-            return ["agua", "jefe"]
         return ["agua"]
     return []
 
@@ -241,8 +235,6 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
     - Fondo de paisaje pastel con nubes y cactus.
     - Pestañas superiores estilizadas para cada mundo con mascota de gato.
     - Panel contenedor con tarjetas/botones, miniaturas ampliadas, nombres, estrellas y botón de acción.
-    - Identificación especial «EN PROCESO» para niveles de jefes.
-    - Acceso exclusivo para el administrador en los niveles de jefes.
     """
     ancho, alto = pantalla.get_size()
     rect_panel, tabs_info, rects_cards = obtener_geometria_menu(ancho, alto, NIVELES_POR_MUNDO[mundo_actual])
@@ -316,16 +308,8 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
     # 4. TARJETAS DE NIVEL (EN FILA)
     for idx, r_card in enumerate(rects_cards):
         nivel_num = idx + 1
-        es_jefe = es_nivel_jefe(mundo_actual, nivel_num)
-
-        # En partidas normales, los jefes no se pueden jugar (en proceso)
-        # En la partida especial del administrador, todos los niveles son accesibles
-        if es_jefe:
-            jugable = es_admin
-            desbloqueado = es_admin
-        else:
-            desbloqueado = bool(niveles_desbloqueados.get(mundo_actual, [])[idx]) if idx < len(niveles_desbloqueados.get(mundo_actual, [])) else False
-            jugable = desbloqueado
+        desbloqueado = bool(niveles_desbloqueados.get(mundo_actual, [])[idx]) if idx < len(niveles_desbloqueados.get(mundo_actual, [])) else False
+        jugable = desbloqueado
 
         mouse_encima = r_card.collidepoint(pos_mouse) and jugable
 
@@ -334,10 +318,6 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
             col_fondo_card = (255, 255, 255) if mouse_encima else (255, 252, 246)
             col_borde_card = (235, 165, 60) if mouse_encima else (210, 185, 155)
             ancho_borde = 3 if mouse_encima else 2
-        elif es_jefe:
-            col_fondo_card = (248, 243, 235)
-            col_borde_card = (215, 185, 150)
-            ancho_borde = 2
         else:
             col_fondo_card = (248, 244, 236) if mouse_encima else (244, 237, 226)
             col_borde_card = (195, 180, 165)
@@ -372,28 +352,8 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
         # Borde decorativo de la miniatura
         pygame.draw.rect(pantalla, (165, 140, 115), (x_th, y_draw_th, w_th, h_th), 2, border_radius=6)
 
-        # Distintivo EN PROCESO o candado de bloqueo
-        if es_jefe:
-            if not es_admin:
-                # Capa translúcida sutil para indicar que está en desarrollo
-                lock_mask = pygame.Surface((w_th, h_th), pygame.SRCALPHA)
-                lock_mask.fill((35, 25, 20, 95))
-                pantalla.blit(lock_mask, (x_th, y_draw_th))
-
-            # Distintivo / Etiqueta "EN PROCESO" en la miniatura
-            str_en_proc = t("en_proceso")
-            if contiene_caracteres_cjk(str_en_proc):
-                f_proc = obtener_fuente_cjk(11, negrita=True)
-            else:
-                f_proc = pygame.font.SysFont("Arial", 11, bold=True)
-            txt_proc = f_proc.render(str_en_proc, True, (255, 255, 255))
-            w_badge = max(txt_proc.get_width() + 14, 96)
-            h_badge = 20
-            r_badge_proc = pygame.Rect(x_th + (w_th - w_badge) // 2, y_draw_th + h_th - h_badge - 5, w_badge, h_badge)
-            pygame.draw.rect(pantalla, (220, 120, 20), r_badge_proc, border_radius=4)
-            pygame.draw.rect(pantalla, (255, 220, 160), r_badge_proc, 1, border_radius=4)
-            pantalla.blit(txt_proc, txt_proc.get_rect(center=r_badge_proc.center))
-        elif not desbloqueado:
+        # Candado de bloqueo
+        if not desbloqueado:
             lock_mask = pygame.Surface((w_th, h_th), pygame.SRCALPHA)
             lock_mask.fill((30, 20, 20, 160))
             pantalla.blit(lock_mask, (x_th, y_draw_th))
@@ -422,15 +382,12 @@ def dibujar_menu_niveles(pantalla, mundo_actual, niveles_desbloqueados, pos_mous
                 col_borde=(180, 170, 160),
             )
 
-        # Botón / Badge de estado inferior ("JUGAR >", "EN PROCESO" o "BLOQUEADO")
+        # Botón / Badge de estado inferior ("JUGAR >" o "BLOQUEADO")
         r_btn_status = pygame.Rect(r_card.centerx - 70, r_card.bottom - 44, 140, 32)
         if jugable:
             spr_btn = generar_boton_con_texto("mundos/boton-cargar.png", 140, 32, f"{t('jugar')} >", (26, 83, 29), 13, 0)
             if mouse_encima:
                 spr_btn = aclarar_boton(spr_btn)
-            pantalla.blit(spr_btn, r_btn_status)
-        elif es_jefe:
-            spr_btn = generar_boton_con_texto("Menu/boton-cancelar.png", 140, 32, t("en_proceso"), (200, 115, 25), 11, 0)
             pantalla.blit(spr_btn, r_btn_status)
         else:
             spr_btn = generar_boton_con_texto("Menu/boton-cancelar.png", 140, 32, t("bloqueado"), (70, 65, 60), 13, 0)
@@ -572,41 +529,6 @@ def _dibujar_soga(surf, p1, p2):
 # ==============================================================================
 # MUNDO 1: BÁSICO (Fondo cálido original, sin soga)
 # ==============================================================================
-
-def _crear_m1_n6():
-    """1-6: Jefe. Muñeco de nieve gigante a la derecha, bola rodando, botones de colores."""
-    s = pygame.Surface((ANCHO_MINI, ALTO_MINI))
-    s.fill(COL_FONDO_M1)
-    y_suelo = 88
-    pygame.draw.rect(s, COL_SUELO_M1, (0, y_suelo, ANCHO_MINI, ALTO_MINI - y_suelo))
-
-    # Muñeco de nieve: tres bolas apiladas, sombrero, cara y botones
-    cx = 143
-    for cy, r in ((y_suelo - 14, 15), (y_suelo - 38, 12), (y_suelo - 57, 9)):
-        pygame.draw.circle(s, (248, 250, 255), (cx, cy), r)
-        pygame.draw.circle(s, (170, 190, 215), (cx, cy), r, 1)
-    pygame.draw.rect(s, (40, 40, 50), (cx - 10, y_suelo - 67, 20, 3))
-    pygame.draw.rect(s, (40, 40, 50), (cx - 6, y_suelo - 78, 12, 12))
-    pygame.draw.circle(s, (30, 30, 30), (cx - 3, y_suelo - 59), 1)
-    pygame.draw.circle(s, (30, 30, 30), (cx + 3, y_suelo - 59), 1)
-    pygame.draw.polygon(s, (245, 140, 40), [(cx, y_suelo - 57), (cx + 8, y_suelo - 55), (cx, y_suelo - 53)])
-    for i, col in enumerate(((220, 60, 60), (60, 110, 220), (220, 60, 60))):
-        pygame.draw.circle(s, col, (cx, y_suelo - 44 + i * 9), 2)
-    pygame.draw.line(s, (120, 80, 40), (cx - 12, y_suelo - 40), (cx - 26, y_suelo - 52), 2)
-
-    # Bola de nieve rodando hacia los jugadores
-    pygame.draw.circle(s, (248, 250, 255), (100, y_suelo - 8), 8)
-    pygame.draw.circle(s, (170, 190, 215), (100, y_suelo - 8), 8, 1)
-
-    # Botones de colores en el suelo
-    pygame.draw.rect(s, (220, 60, 60), (58, y_suelo - 3, 12, 3))
-    pygame.draw.rect(s, (60, 110, 220), (80, y_suelo - 3, 12, 3))
-
-    pj1 = _cargar_personaje("Celeste")
-    pj2 = _cargar_personaje("Violeta")
-    s.blit(pj1, (14, y_suelo - 20))
-    s.blit(pj2, (34, y_suelo - 20))
-    return s
 
 
 def _crear_m1_n1():
@@ -1321,88 +1243,6 @@ def _crear_m3_n5():
 
 
 
-def _crear_m2_n6():
-    """2-6: Jefe. Guardián de piedra de las ruinas, rocas cayendo, personajes unidos por la soga."""
-    s = pygame.Surface((ANCHO_MINI, ALTO_MINI))
-    s.fill(COL_FONDO_M1)
-    y_suelo = 94
-    pygame.draw.rect(s, COL_SUELO_M1, (0, y_suelo, ANCHO_MINI, ALTO_MINI - y_suelo))
-    pygame.draw.rect(s, COL_BORDE_PLAT, (0, y_suelo, ANCHO_MINI, ALTO_MINI - y_suelo), 1)
-
-    # Columnas de ruinas al fondo
-    for x in (8, 150):
-        pygame.draw.rect(s, (205, 190, 165), (x, 30, 14, y_suelo - 30))
-        pygame.draw.rect(s, (160, 145, 120), (x, 30, 14, y_suelo - 30), 1)
-        pygame.draw.rect(s, (205, 190, 165), (x - 3, 26, 20, 6))
-
-    # Guardián: bloques de piedra apilados, runa brillante en el pecho
-    col_piedra, col_borde = (120, 125, 135), (70, 72, 82)
-    cx = 122
-    cuerpo = pygame.Rect(cx - 18, y_suelo - 52, 36, 36)
-    cabeza = pygame.Rect(cx - 12, y_suelo - 70, 24, 20)
-    pierna_i = pygame.Rect(cx - 16, y_suelo - 18, 12, 18)
-    pierna_d = pygame.Rect(cx + 4, y_suelo - 18, 12, 18)
-    brazo_i = pygame.Rect(cx - 30, y_suelo - 50, 11, 30)
-    brazo_d = pygame.Rect(cx + 19, y_suelo - 50, 11, 30)
-    for r in (pierna_i, pierna_d, brazo_i, brazo_d, cuerpo, cabeza):
-        pygame.draw.rect(s, col_piedra, r, border_radius=3)
-        pygame.draw.rect(s, col_borde, r, 1, border_radius=3)
-    pygame.draw.circle(s, (120, 220, 255), (cx, y_suelo - 36), 5)
-    pygame.draw.circle(s, (230, 250, 255), (cx, y_suelo - 36), 2)
-    pygame.draw.rect(s, (255, 200, 60), (cx - 8, y_suelo - 64, 5, 4))
-    pygame.draw.rect(s, (255, 200, 60), (cx + 3, y_suelo - 64, 5, 4))
-
-    # Rocas cayendo
-    for (rx, ry) in ((60, 20), (88, 42)):
-        pygame.draw.rect(s, col_piedra, (rx, ry, 12, 12), border_radius=3)
-        pygame.draw.rect(s, col_borde, (rx, ry, 12, 12), 1, border_radius=3)
-
-    pj1 = _cargar_personaje("Celeste")
-    pj2 = _cargar_personaje("Violeta")
-    pos_c = (18, y_suelo - 20)
-    pos_v = (44, y_suelo - 20)
-    _dibujar_soga(s, (pos_c[0] + 12, pos_c[1] + 14), (pos_v[0] + 6, pos_v[1] + 14))
-    s.blit(pj1, pos_c)
-    s.blit(pj2, pos_v)
-    return s
-
-
-def _crear_m3_n6():
-    """3-6: Jefe final. Kraken con tentáculos, orbe de luz que hay que cargar entre los dos."""
-    s = _crear_fondo_submarino()
-    y_lecho = 96
-    pygame.draw.rect(s, (45, 75, 105), (0, y_lecho, ANCHO_MINI, ALTO_MINI - y_lecho))
-
-    # Kraken: cabeza violeta, ojos amarillos, tentáculos que suben del lecho
-    col_k, col_kb = (110, 60, 150), (70, 35, 100)
-    cx = 128
-    pygame.draw.ellipse(s, col_kb, (cx - 30, 22, 60, 50))
-    pygame.draw.ellipse(s, col_k, (cx - 28, 24, 56, 46))
-    for ex in (cx - 12, cx + 12):
-        pygame.draw.circle(s, (255, 220, 60), (ex, 44), 6)
-        pygame.draw.circle(s, (30, 20, 40), (ex, 45), 3)
-    for i, tx in enumerate((52, 78, 104, 130, 156)):
-        alto = 26 + (i % 3) * 12
-        pygame.draw.rect(s, col_k, (tx, y_lecho - alto, 10, alto), border_top_left_radius=5, border_top_right_radius=5)
-        pygame.draw.rect(s, col_kb, (tx, y_lecho - alto, 10, alto), 1, border_top_left_radius=5, border_top_right_radius=5)
-        for vy in range(y_lecho - alto + 6, y_lecho - 4, 7):
-            pygame.draw.circle(s, (200, 140, 220), (tx + 5, vy), 2)
-
-    # Orbe de luz entre los personajes
-    orbe = pygame.Surface((40, 40), pygame.SRCALPHA)
-    pygame.draw.circle(orbe, (255, 240, 150, 90), (20, 20), 20)
-    pygame.draw.circle(orbe, (255, 250, 200, 200), (20, 20), 9)
-    s.blit(orbe, (26, 36))
-
-    pj1 = _cargar_personaje("Celeste", tinte_agua=True)
-    pj2 = _cargar_personaje("Violeta", tinte_agua=True)
-    s.blit(pj1, (14, 52))
-    s.blit(pj2, (48, 44))
-    _dibujar_alga(s, 8, y_lecho, alto=24)
-    _dibujar_coral(s, 170, y_lecho, (240, 110, 130))
-    return s
-
-
 # ==============================================================================
 # DICCIONARIO Y GENERADOR PRINCIPAL
 # ==============================================================================
@@ -1414,7 +1254,6 @@ CREADORES_MINIATURAS = {
         3: _crear_m1_n3,
         4: _crear_m1_n4,
         5: _crear_m1_n5,
-        6: _crear_m1_n6,
     },
     2: {
         1: _crear_m2_n1,
@@ -1422,7 +1261,6 @@ CREADORES_MINIATURAS = {
         3: _crear_m2_n3,
         4: _crear_m2_n4,
         5: _crear_m2_n5,
-        6: _crear_m2_n6,
     },
     3: {
         1: _crear_m3_n1,
@@ -1430,7 +1268,6 @@ CREADORES_MINIATURAS = {
         3: _crear_m3_n3,
         4: _crear_m3_n4,
         5: _crear_m3_n5,
-        6: _crear_m3_n6,
     },
 }
 

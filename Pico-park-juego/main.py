@@ -61,7 +61,6 @@ from guardado import (
     flujo_crear_nueva_partida,
     obtener_nombre_partida_visible,
     es_partida_admin,
-    es_nivel_jefe,
 )
 from fuentes import (
     contiene_caracteres_cjk,
@@ -1903,35 +1902,18 @@ def jugar_niveles_desde(
             partida_password=partida_actual_password,
         )
         if res == "siguiente":
-            if es_admin:
-                if n_idx + 1 < NIVELES_POR_MUNDO[m_idx]:
-                    n_idx += 1
-                    niveles_desbloqueados[m_idx][n_idx] = True
-                elif m_idx + 1 <= 3:
-                    m_idx += 1
-                    n_idx = 0
-                    niveles_desbloqueados[m_idx][n_idx] = True
-                    mundo_sel = m_idx
-                else:
-                    seleccionar_musica_menu_aleatoria(forzar_nueva_eleccion=True)
-                    reproducir_musica("menu", forzar=True)
-                    return "menu", mundo_sel
+            if n_idx + 1 < NIVELES_POR_MUNDO[m_idx]:
+                n_idx += 1
+                niveles_desbloqueados[m_idx][n_idx] = True
+            elif m_idx + 1 <= 3:
+                m_idx += 1
+                n_idx = 0
+                niveles_desbloqueados[m_idx][n_idx] = True
+                mundo_sel = m_idx
             else:
-                # Partidas normales: los jefes (nivel 6) están en proceso.
-                # Al completar el último nivel normal (nivel 5), se salta automáticamente el jefe
-                # y se avanza directamente al siguiente mundo disponible sin bloquear al jugador.
-                if n_idx < 4:
-                    n_idx += 1
-                    niveles_desbloqueados[m_idx][n_idx] = True
-                elif m_idx + 1 <= 3:
-                    m_idx += 1
-                    n_idx = 0
-                    niveles_desbloqueados[m_idx][n_idx] = True
-                    mundo_sel = m_idx
-                else:
-                    seleccionar_musica_menu_aleatoria(forzar_nueva_eleccion=True)
-                    reproducir_musica("menu", forzar=True)
-                    return "menu", mundo_sel
+                seleccionar_musica_menu_aleatoria(forzar_nueva_eleccion=True)
+                reproducir_musica("menu", forzar=True)
+                return "menu", mundo_sel
         elif res == "reiniciar":
             continue
         elif res == "menu":
@@ -3385,9 +3367,6 @@ def main():
                         for idx_nivel, rect_c in enumerate(rects_cards):
                             desbloqueado = niveles_desbloqueados[mundo_seleccionado][idx_nivel]
                             if rect_c.collidepoint(evento.pos):
-                                if es_nivel_jefe(mundo_seleccionado, idx_nivel + 1) and not es_admin_partida:
-                                    # Nivel de jefe en proceso: no jugable en partidas normales
-                                    break
                                 if desbloqueado or es_admin_partida:
                                     reproducir_sonido_ui("menu")
                                     fin_acc, mundo_seleccionado = jugar_niveles_desde(
