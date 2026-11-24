@@ -3109,8 +3109,8 @@ def main():
                             break
 
                     # Pestañas [ COLORES ] y [ ACCESORIOS ]
-                    rect_tab_col = pygame.Rect(388, 100, 240, 50)
-                    rect_tab_acc = pygame.Rect(652, 100, 240, 50)
+                    rect_tab_col = pygame.Rect(388, 83, 240, 67)
+                    rect_tab_acc = pygame.Rect(652, 83, 240, 67)
 
                     if rect_tab_col.collidepoint(evento.pos):
                         if tab_personajes_actual != "colores":
@@ -3631,30 +3631,51 @@ def main():
             subt = f_sub_pj.render(txt_sub_pj, True, (120, 100, 85))
             pantalla.blit(subt, subt.get_rect(center=(ANCHO_MENU // 2, 78)))
 
-            # 3. Pestañas visuales [ COLORES ] y [ ACCESORIOS ]
-            rect_tab_col = pygame.Rect(388, 100, 240, 50)
-            rect_tab_acc = pygame.Rect(652, 100, 240, 50)
+            # 3. Pestañas visuales [ COLORES ] y [ ACCESORIOS ] con sprites oficiales
+            w_tab_pj = 240
+            h_tab_pj = round(w_tab_pj * 264 / 950)  # 67 px
+            y_tab_pj = 150 - h_tab_pj               # 83 px
+            rect_tab_col = pygame.Rect(388, y_tab_pj, w_tab_pj, h_tab_pj)
+            rect_tab_acc = pygame.Rect(652, y_tab_pj, w_tab_pj, h_tab_pj)
 
             hov_tab_col = rect_tab_col.collidepoint(pos_mouse)
             hov_tab_acc = rect_tab_acc.collidepoint(pos_mouse)
 
-            for tab_id, r_tab, hov in [
+            # Dibujar primero la pestaña inactiva y luego la seleccionada para mantener profundidad correcta
+            tabs_orden = [
+                ("accesorios", rect_tab_acc, hov_tab_acc),
+                ("colores", rect_tab_col, hov_tab_col),
+            ] if tab_personajes_actual == "colores" else [
                 ("colores", rect_tab_col, hov_tab_col),
                 ("accesorios", rect_tab_acc, hov_tab_acc),
-            ]:
+            ]
+
+            for tab_id, r_tab, hov in tabs_orden:
                 es_activa = (tab_personajes_actual == tab_id)
-                col_tab_bg = (246, 215, 153) if es_activa else ((248, 242, 232) if hov else (238, 226, 210))
-                col_tab_borde = (175, 130, 80) if es_activa else (195, 175, 155)
-                ancho_b = 3 if es_activa else 2
-                pygame.draw.rect(pantalla, col_tab_bg, r_tab, border_radius=12)
-                pygame.draw.rect(pantalla, col_tab_borde, r_tab, ancho_b, border_radius=12)
+                nom_spr = f"{tab_id}-seleccionado.png" if es_activa else f"{tab_id}.png"
+                spr_tab = cargar_boton_escalado(nom_spr, w_tab_pj, h_tab_pj)
+                if spr_tab:
+                    pantalla.blit(spr_tab, (r_tab.left, r_tab.top))
+                    if not es_activa and hov:
+                        glow = spr_tab.copy()
+                        bright = pygame.Surface(spr_tab.get_size(), pygame.SRCALPHA)
+                        bright.fill((35, 35, 35, 0))
+                        glow.blit(bright, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
+                        pantalla.blit(glow, (r_tab.left, r_tab.top))
+                else:
+                    r_fb = pygame.Rect(r_tab.left, 100, w_tab_pj, 50)
+                    col_tab_bg = (246, 215, 153) if es_activa else ((248, 242, 232) if hov else (238, 226, 210))
+                    col_tab_borde = (175, 130, 80) if es_activa else (195, 175, 155)
+                    ancho_b = 3 if es_activa else 2
+                    pygame.draw.rect(pantalla, col_tab_bg, r_fb, border_radius=12)
+                    pygame.draw.rect(pantalla, col_tab_borde, r_fb, ancho_b, border_radius=12)
 
-                col_txt = (50, 40, 30) if es_activa else (130, 115, 100)
-                txt_tab_str = t(tab_id).upper()
-                dibujar_texto_en_rect(pantalla, txt_tab_str, r_tab, categoria="boton", tamano=18, color=col_txt, negrita=True, padding=8)
+                    col_txt = (50, 40, 30) if es_activa else (130, 115, 100)
+                    txt_tab_str = t(tab_id).upper()
+                    dibujar_texto_en_rect(pantalla, txt_tab_str, r_fb, categoria="boton", tamano=18, color=col_txt, negrita=True, padding=8)
 
-                if es_activa:
-                    dibujar_mascota_gato(pantalla, r_tab.left + 16, r_tab.top - 18, size=28, color=(246, 215, 153))
+                    if es_activa:
+                        dibujar_mascota_gato(pantalla, r_fb.left + 16, r_fb.top - 18, size=28, color=(246, 215, 153))
 
             # 4. Columnas simétricas de Jugador 1 y Jugador 2
             cx_p1 = 360
