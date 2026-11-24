@@ -319,6 +319,17 @@ COLORES_INTERIORES_BOTONES = {
     "boton-salir-sin-guardar-semiapretado.png": (242, 126, 123),
     "Ventanas/boton-salir-sin-guardar-apretado.png": (225, 114, 112),
     "boton-salir-sin-guardar-apretado.png": (225, 114, 112),
+
+    # Botones Aceptar
+    "Ventanas/aceptar.png": (157, 255, 124),
+    "Menu/aceptar.png": (157, 255, 124),
+    "aceptar.png": (157, 255, 124),
+    "Ventanas/aceptar-semiapretado.png": (144, 238, 115),
+    "Menu/aceptar-semiapretado.png": (144, 238, 115),
+    "aceptar-semiapretado.png": (144, 238, 115),
+    "Ventanas/aceptar-apretado.png": (125, 212, 103),
+    "Menu/aceptar-apretado.png": (125, 212, 103),
+    "aceptar-apretado.png": (125, 212, 103),
 }
 
 
@@ -368,6 +379,7 @@ def generar_boton_con_texto(sprite_base, w, h, texto=None, color_texto=(60, 45, 
         elif "salir" in base_lower and t_clean == "SALIR": es_nativo = True
         elif "cargar" in base_lower and t_clean == "CARGAR": es_nativo = True
         elif "cancelar" in base_lower and t_clean == "CANCELAR": es_nativo = True
+        elif "aceptar" in base_lower and t_clean in ("ACEPTAR", "CONFIRMAR"): es_nativo = True
         elif "nueva-partida" in base_lower and t_clean == "NUEVA PARTIDA": es_nativo = True
         elif "reiniciar" in base_lower and t_clean == "REINICIAR": es_nativo = True
         elif "reintentar" in base_lower and t_clean == "REINTENTAR": es_nativo = True
@@ -1126,7 +1138,7 @@ METADATA_ACCESORIOS = {
     "EXE": {"offset": (18, 34), "size": (48, 20)},
     "Gorra urbana dorada": {"offset": (-7, -7), "size": (76, 69)},
     "Gorra urbana plateada": {"offset": (-7, -7), "size": (76, 69)},
-    "Kenny": {"offset": (0, 0.5), "size": (70, 56)},
+    "Kenny": {"offset": (-2, 0.5), "size": (73, 57)},
     "Kyle": {"offset": (-4, -5), "size": (80, 58)},
     "Moño Bi": {"offset": (38, -6), "size": (26, 21)},
     "Moño G": {"offset": (38, -6), "size": (26, 21)},

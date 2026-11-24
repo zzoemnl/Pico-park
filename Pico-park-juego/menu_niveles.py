@@ -135,8 +135,7 @@ def obtener_geometria_menu(ancho_pantalla, alto_pantalla, cantidad_niveles=5):
 
     # Pestañas
     w_tab = min(240, int((w_panel - 80) / 3))
-    h_tab_activa = 58
-    h_tab_inactiva = 48
+    h_sprite = round(w_tab * 264 / 759)
     gap_tab = 12
     x_tabs_start = x_panel + 40
 
@@ -144,12 +143,13 @@ def obtener_geometria_menu(ancho_pantalla, alto_pantalla, cantidad_niveles=5):
     for m in (1, 2, 3):
         x_t = x_tabs_start + (m - 1) * (w_tab + gap_tab)
         rects_tabs[m] = {
-            "rect_click": pygame.Rect(x_t, y_panel - h_tab_activa, w_tab, h_tab_activa + 5),
+            "rect_click": pygame.Rect(x_t, y_panel - h_sprite + 6, w_tab, h_sprite),
             "x": x_t,
             "y_base": y_panel,
             "w": w_tab,
-            "h_activa": h_tab_activa,
-            "h_inactiva": h_tab_inactiva,
+            "h_sprite": h_sprite,
+            "h_activa": 58,
+            "h_inactiva": 48,
         }
 
     # Tarjetas de nivel (una sola fila; 220 px con 5 tarjetas, 180 px con 6)

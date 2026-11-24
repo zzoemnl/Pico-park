@@ -597,6 +597,11 @@ def solicitar_texto_modal(pantalla, reloj, titulo, subtitulo, valor_inicial="", 
     spr_can_semi = generar_boton_con_texto("Menu/boton-cancelar-semiapretado.png", w_btn, h_btn, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 1)
     spr_can_apret = generar_boton_con_texto("Menu/boton-cancelar-apretado.png", w_btn, h_btn, t("cancelar"), (60, 45, 35), TAMANO_BOTON_MODAL, 2)
     spr_can_hover = aclarar_boton(spr_can_norm) if spr_can_norm else None
+
+    spr_ace_norm = generar_boton_con_texto("Ventanas/aceptar.png", w_btn, h_btn, t("aceptar", "ACEPTAR"), (28, 82, 37), TAMANO_BOTON_MODAL, 0, idm_modal)
+    spr_ace_semi = generar_boton_con_texto("Ventanas/aceptar-semiapretado.png", w_btn, h_btn, t("aceptar", "ACEPTAR"), (28, 82, 37), TAMANO_BOTON_MODAL, 1, idm_modal)
+    spr_ace_apret = generar_boton_con_texto("Ventanas/aceptar-apretado.png", w_btn, h_btn, t("aceptar", "ACEPTAR"), (28, 82, 37), TAMANO_BOTON_MODAL, 2, idm_modal)
+    spr_ace_hover = aclarar_boton(spr_ace_norm) if spr_ace_norm else None
     fondo_tarjeta = (253, 246, 233)
 
     rect_ojo = pygame.Rect(rect_input.right - 42, rect_input.top + 5, 36, 36) if es_password else None
@@ -638,15 +643,18 @@ def solicitar_texto_modal(pantalla, reloj, titulo, subtitulo, valor_inicial="", 
                     if not val and not permitir_vacio:
                         mensaje_error = t("campo_no_vacio")
                     else:
-                        # Animar visualmente el botón CONFIRMAR dentro de la ventana modal
-                        pygame.draw.rect(pantalla, (45, 130, 70), btn_confirmar, border_radius=10)
-                        pygame.draw.rect(pantalla, (30, 95, 50), btn_confirmar, width=2, border_radius=10)
-                        dibujar_texto_en_rect(pantalla, t("confirmar"), btn_confirmar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(230, 230, 230))
-                        pygame.display.flip()
-                        pygame.time.delay(60)
-                        # Limpiar eventos para evitar propagación al menú subyacente
-                        pygame.event.clear()
-                        return val
+                        pulsado = True
+                        if spr_ace_semi and spr_ace_apret:
+                            pulsado = animar_pulsacion_boton(pantalla, btn_confirmar, spr_ace_semi, spr_ace_apret, fondo_tarjeta, spr_ace_norm)
+                        else:
+                            pygame.draw.rect(pantalla, (45, 130, 70), btn_confirmar, border_radius=10)
+                            pygame.draw.rect(pantalla, (30, 95, 50), btn_confirmar, width=2, border_radius=10)
+                            dibujar_texto_en_rect(pantalla, t("aceptar", "ACEPTAR"), btn_confirmar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(230, 230, 230))
+                            pygame.display.flip()
+                            pygame.time.delay(60)
+                        if pulsado:
+                            pygame.event.clear()
+                            return val
                 elif evento.key == pygame.K_BACKSPACE:
                     texto = texto[:-1]
                     mensaje_error = None
@@ -670,13 +678,18 @@ def solicitar_texto_modal(pantalla, reloj, titulo, subtitulo, valor_inicial="", 
                     if not val and not permitir_vacio:
                         mensaje_error = t("campo_no_vacio")
                     else:
-                        pygame.draw.rect(pantalla, (45, 130, 70), btn_confirmar, border_radius=10)
-                        pygame.draw.rect(pantalla, (30, 95, 50), btn_confirmar, width=2, border_radius=10)
-                        dibujar_texto_en_rect(pantalla, t("confirmar"), btn_confirmar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(230, 230, 230))
-                        pygame.display.flip()
-                        pygame.time.delay(60)
-                        pygame.event.clear()
-                        return val
+                        pulsado = True
+                        if spr_ace_semi and spr_ace_apret:
+                            pulsado = animar_pulsacion_boton(pantalla, btn_confirmar, spr_ace_semi, spr_ace_apret, fondo_tarjeta, spr_ace_norm)
+                        else:
+                            pygame.draw.rect(pantalla, (45, 130, 70), btn_confirmar, border_radius=10)
+                            pygame.draw.rect(pantalla, (30, 95, 50), btn_confirmar, width=2, border_radius=10)
+                            dibujar_texto_en_rect(pantalla, t("aceptar", "ACEPTAR"), btn_confirmar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(230, 230, 230))
+                            pygame.display.flip()
+                            pygame.time.delay(60)
+                        if pulsado:
+                            pygame.event.clear()
+                            return val
 
         # Dibujar fondo capturado + overlay
         pantalla.blit(captura_previa, (0, 0))
@@ -731,11 +744,14 @@ def solicitar_texto_modal(pantalla, reloj, titulo, subtitulo, valor_inicial="", 
             pygame.draw.rect(pantalla, (185, 155, 125), btn_cancelar, width=2, border_radius=10)
             dibujar_texto_en_rect(pantalla, t("cancelar"), btn_cancelar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(60, 45, 35), padding=6)
 
-        # Botón Confirmar
-        col_con = (82, 194, 114) if hov_con else (68, 172, 98)
-        pygame.draw.rect(pantalla, col_con, btn_confirmar, border_radius=10)
-        pygame.draw.rect(pantalla, (45, 130, 70), btn_confirmar, width=2, border_radius=10)
-        dibujar_texto_en_rect(pantalla, t("confirmar"), btn_confirmar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(255, 255, 255), padding=6)
+        # Botón Aceptar
+        if spr_ace_norm:
+            pantalla.blit(spr_ace_hover if (hov_con and spr_ace_hover) else spr_ace_norm, btn_confirmar)
+        else:
+            col_con = (82, 194, 114) if hov_con else (68, 172, 98)
+            pygame.draw.rect(pantalla, col_con, btn_confirmar, border_radius=10)
+            pygame.draw.rect(pantalla, (45, 130, 70), btn_confirmar, width=2, border_radius=10)
+            dibujar_texto_en_rect(pantalla, t("aceptar", "ACEPTAR"), btn_confirmar, categoria="boton", tamano=TAMANO_BOTON_MODAL, color=(255, 255, 255), padding=6)
 
         pygame.display.flip()
 
