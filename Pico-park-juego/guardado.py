@@ -1065,7 +1065,7 @@ def modal_administrar_perfil(pantalla, reloj, partida):
         if spr_pwd: pantalla.blit(spr_pwd, btn_password)
 
         # 3. Eliminar (Sprite oficial)
-        spr_eli = generar_boton_con_texto("Menu/salir.png", w_b, h_b, t("eliminar_perfil"), (255, 255, 255), 16)
+        spr_eli = generar_boton_con_texto("Menu/salir.png", w_b, h_b, t("eliminar_perfil"), (125, 48, 17), 16)
         if hov_eli and spr_eli: spr_eli = aclarar_boton(spr_eli)
         if spr_eli: pantalla.blit(spr_eli, btn_eliminar)
 
