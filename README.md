@@ -47,9 +47,18 @@ Inicia el juego ejecutando el archivo principal main.py
 ● Dependencias:
 pygame
 
-● Organización general del proyecto:
-main.py
-niveles.py
+● Organización general del proyecto (carpeta Pico-park-juego):
+main.py            menús (principal, modo de juego, partidas, personajes, opciones) y arranque
+pantalla.py        iniciar_mundo: loop de juego, física por frame, dibujo de cada mundo, cámara
+niveles.py         definición de los 15 niveles, una función por nivel (nivel_1_1 … nivel_3_5)
+movimientos.py     física de personajes, caja, soga, llave y puerta
+sprites.py         carga y caché de sprites, botones y accesorios
+menu_niveles.py    menú de selección de niveles y miniaturas
+guardado.py        partidas guardadas (partidas.txt) y sus diálogos
+configuracion.py   idiomas, audio, volumen, configuracion.json
+fuentes.py         fuentes y caché de textos
+rutas.py, ventana.py, errores.py   rutas de recursos, pantalla completa, registro de errores
+herramientas/      scripts de mantenimiento: jugar_nivel.py, regresion_visual.py, reducir_botones.py
 
 
 ● Distribución de tareas entre integrantes:
