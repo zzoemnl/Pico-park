@@ -3607,1995 +3607,2043 @@ def dibujar_alerta_oxigeno_personaje(superficie, jugador, oxigeno, tick):
         superficie.blit(_SURF_ALERTA_O2, (hx - 19, hy))
 
 
-def iniciar_mundo(
-    mecanicas=None,
-    numero_nivel=1,
-    color_p1=None,
-    color_p2=None,
-    mundo=1,
-    niveles_desbloqueados=None,
-    partida_id=None,
-    partida_nombre=None,
-    snapshot_guardado=None,
-    accesorio_p1=None,
-    accesorio_p2=None,
-    partida_password=None,
-):
-    numero_mundo = mundo
-    p1_acc = accesorio_p1 if accesorio_p1 else "Ninguno"
-    p2_acc = accesorio_p2 if accesorio_p2 else "Ninguno"
-    if mecanicas is None:
-        mecanicas = []
+class EstadoNivel:
+    """
+    Estado de un nivel en curso: jugadores, objetos, mecánicas, cámara y HUD (antes eran las
+    variables locales de iniciar_mundo). __init__ hace toda la preparación: carga el nivel desde
+    niveles.py, crea los sprites y el HUD, dibuja el primer cuadro y corre la animación de apertura.
+    Cada fase del frame es una función _fase(n) que trabaja sobre este objeto.
+    """
 
-    if niveles_desbloqueados is None:
-        niveles_desbloqueados = crear_desbloqueados_inicial()
+    def __init__(self, mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, mundo=1, niveles_desbloqueados=None, partida_id=None, partida_nombre=None, snapshot_guardado=None, accesorio_p1=None, accesorio_p2=None, partida_password=None):
+        self.mecanicas = mecanicas
+        self.numero_nivel = numero_nivel
+        self.color_p1 = color_p1
+        self.color_p2 = color_p2
+        self.mundo = mundo
+        self.niveles_desbloqueados = niveles_desbloqueados
+        self.partida_id = partida_id
+        self.partida_nombre = partida_nombre
+        self.snapshot_guardado = snapshot_guardado
+        self.accesorio_p1 = accesorio_p1
+        self.accesorio_p2 = accesorio_p2
+        self.partida_password = partida_password
+        self.numero_mundo = self.mundo
+        self.p1_acc = self.accesorio_p1 if self.accesorio_p1 else "Ninguno"
+        self.p2_acc = self.accesorio_p2 if self.accesorio_p2 else "Ninguno"
+        if self.mecanicas is None:
+            self.mecanicas = []
 
-    # Reproducción centralizada de música del mundo correspondiente (sin reiniciar dentro del mismo mundo)
-    reproducir_musica(f"mundo_{numero_mundo}")
+        if self.niveles_desbloqueados is None:
+            self.niveles_desbloqueados = crear_desbloqueados_inicial()
 
-    es_admin = es_partida_admin(partida_nombre, partida_id)
-    if es_admin:
-        hay_siguiente_nivel = not (numero_mundo >= 3 and numero_nivel >= 6)
-    else:
-        hay_siguiente_nivel = not (numero_mundo >= 3 and numero_nivel >= 5)
+        # Reproducción centralizada de música del mundo correspondiente (sin reiniciar dentro del mismo mundo)
+        reproducir_musica(f"mundo_{self.numero_mundo}")
 
-    usar_caja = "caja" in mecanicas
-    usar_soga = "soga" in mecanicas
-    usar_agua = "agua" in mecanicas
-    usar_pinchos = "pinchos" in mecanicas
-    usar_llave = True
-
-    linterna_p1 = True
-    linterna_p2 = True
-    surf_oscuridad_m3 = None
-    surf_oscuridad_m3_n4 = None
-    surf_luz_linterna = None
-    surf_luz_tenue = None
-    flechas_indicadoras = []
-
-    oxigeno_p1 = 100.0
-    oxigeno_p2 = 100.0
-    OXIGENO_MAX = 100.0
-    camaras_aire = []
-    corrientes_marinas = []
-
-    pantalla = pygame.display.get_surface()
-    if pantalla is None:
-        from ventana import crear_ventana
-        pantalla = crear_ventana()
-
-    mundo_rect = pygame.Rect(0, 0, ANCHO_MUNDO, ALTO)
-    reloj = pygame.time.Clock()
-    fuente_tut = obtener_fuente_texto(TAMANO_TEXTO_GRANDE, tamano_fallback=32)
-
-    W_BOTON_HUD, H_BOTON_HUD = 44, 52
-    MARGEN_DER, MARGEN_SUP, ESPACIO_BOTONES = 18, 16, 12
-
-    rect_btn_x = pygame.Rect(pantalla.get_width() - MARGEN_DER - W_BOTON_HUD, MARGEN_SUP, W_BOTON_HUD, H_BOTON_HUD)
-    rect_btn_reiniciar = pygame.Rect(rect_btn_x.left - ESPACIO_BOTONES - W_BOTON_HUD, MARGEN_SUP, W_BOTON_HUD, H_BOTON_HUD)
-    rect_btn_casa = pygame.Rect(rect_btn_reiniciar.left - ESPACIO_BOTONES - W_BOTON_HUD, MARGEN_SUP, W_BOTON_HUD, H_BOTON_HUD)
-    rect_btn_config = pygame.Rect(rect_btn_casa.left - ESPACIO_BOTONES - W_BOTON_HUD, MARGEN_SUP, W_BOTON_HUD, H_BOTON_HUD)
-
-    def _cargar_hud(nombre):
-        return cargar_boton_escalado(nombre, W_BOTON_HUD, H_BOTON_HUD)
-
-    spr_x_normal = _cargar_hud("boton-x.png")
-    spr_x_semi = _cargar_hud("boton-x-semiapretado.png")
-    spr_x_apretado = _cargar_hud("boton-x-apretado.png")
-    spr_x_hover = aclarar_boton(spr_x_normal)
-
-    spr_reiniciar_normal = _cargar_hud("boton-reiniciar-icono.png")
-    spr_reiniciar_semi = _cargar_hud("boton-reiniciar-icono-semiapretado.png")
-    spr_reiniciar_apretado = _cargar_hud("boton-reiniciar-icono-apretado.png")
-    spr_reiniciar_hover = aclarar_boton(spr_reiniciar_normal)
-
-    spr_casa_normal = _cargar_hud("boton-casa.png")
-    spr_casa_semi = _cargar_hud("boton-casa-semiapretado.png")
-    spr_casa_apretado = _cargar_hud("boton-casa-apretado.png")
-    spr_casa_hover = aclarar_boton(spr_casa_normal)
-
-    spr_config_normal = _cargar_hud("boton-configuracion.png")
-    spr_config_semi = _cargar_hud("boton-configuracion-semiapretado.png")
-    spr_config_apretado = _cargar_hud("boton-configuracion-apretado.png")
-    spr_config_hover = aclarar_boton(spr_config_normal)
-
-    fondo_btn_config = None
-    fondo_btn_casa = None
-    fondo_btn_reiniciar = None
-    fondo_btn_x = None
-
-    p1_color = color_p1 if color_p1 else COLOR_JUGADOR1
-    p2_color = color_p2 if color_p2 else COLOR_JUGADOR2
-
-    # Configuración de botones e indicadores para Tutorial (Nivel 1)
-    TAM_BTN_TUT = 32
-    GAP_BTN_TUT = 3
-
-    COLORES_PERSONAJES = {
-        "Blanco": (232, 232, 232),
-        "Gris": (154, 154, 154),
-        "Negro": (95, 95, 95),
-        "Marron": (206, 136, 111),
-        "Rojo": (255, 137, 134),
-        "Rosa": (255, 150, 240),
-        "Naranja": (255, 160, 100),
-        "Amarillo": (255, 244, 123),
-        "Verde": (157, 255, 124),
-        "Verde oscuro": (105, 205, 75),
-        "Celeste": (124, 231, 255),
-        "Azul": (36, 166, 247),
-        "Violeta": (161, 123, 255),
-    }
-
-    def _cargar_o_crear_boton(nombres_posibles, letra_fallback):
-        img = None
-        for nombre in nombres_posibles:
-            img = cargar_boton(nombre)
-            if img is not None:
-                break
-
-        if img is not None:
-            try:
-                mask = pygame.mask.from_surface(img)
-                rects = mask.get_bounding_rects()
-                if rects:
-                    img = img.subsurface(rects[0])
-            except Exception:
-                pass
-            return pygame.transform.smoothscale(img, (TAM_BTN_TUT, TAM_BTN_TUT))
-
-        # Botón procedimental si no encuentra la imagen (mismo diseño de tecla roja)
-        surf = pygame.Surface((TAM_BTN_TUT, TAM_BTN_TUT), pygame.SRCALPHA)
-        color_fondo = (237, 112, 109)
-        color_borde = (94, 4, 4)
-        color_sombra = (237, 86, 83)
-        color_letra = (94, 4, 4)
-
-        pygame.draw.rect(surf, color_fondo, (0, 0, TAM_BTN_TUT, TAM_BTN_TUT), border_radius=6)
-        pygame.draw.rect(surf, color_sombra, (2, TAM_BTN_TUT - 5, TAM_BTN_TUT - 4, 3), border_bottom_left_radius=4, border_bottom_right_radius=4)
-        pygame.draw.rect(surf, color_borde, (0, 0, TAM_BTN_TUT, TAM_BTN_TUT), width=2, border_radius=6)
-
-        fuente_tecla = obtener_fuente_boton(int(TAM_BTN_TUT * 0.58), negrita=True)
-        txt_surf = fuente_tecla.render(str(letra_fallback).upper(), True, color_letra)
-        rect_txt = txt_surf.get_rect(center=(TAM_BTN_TUT // 2, TAM_BTN_TUT // 2 - 1))
-        surf.blit(txt_surf, rect_txt)
-        return surf
-
-    def _crear_etiqueta_jugador(texto, color_nombre):
-        color_base = COLORES_PERSONAJES.get(color_nombre, (124, 231, 255))
-        color_borde = (max(0, color_base[0] - 65), max(0, color_base[1] - 65), max(0, color_base[2] - 65))
-        fuente = obtener_fuente_pequena(16, negrita=True)
-        t_base = fuente.render(texto, True, (25, 35, 45))
-        w, h = t_base.get_size()
-        ancho_cartel = max(w + 14, 40)
-        alto_cartel = h + 4
-        surf = pygame.Surface((ancho_cartel, alto_cartel), pygame.SRCALPHA)
-        pygame.draw.rect(surf, color_base, (0, 0, ancho_cartel, alto_cartel), border_radius=6)
-        pygame.draw.rect(surf, color_borde, (0, 0, ancho_cartel, alto_cartel), width=2, border_radius=6)
-        rect_txt = t_base.get_rect(center=(ancho_cartel // 2, alto_cartel // 2))
-        surf.blit(t_base, rect_txt)
-        return surf
-
-    # Cargar botones WASD para Jugador 1 (P1: W arriba, A izquierda, S abajo, D derecha)
-    btn_w = _cargar_o_crear_boton(["boton-w.png", "boton-W.png", "w.png", "W.png"], "W")
-    btn_s = _cargar_o_crear_boton(["boton-s.png", "boton-S.png", "s.png", "S.png"], "S")
-    btn_a = _cargar_o_crear_boton(["boton-a.png", "boton-A.png", "a.png", "A.png"], "A")
-    btn_d = _cargar_o_crear_boton(["boton-d.png", "boton-D.png", "d.png", "D.png"], "D")
-    badge_p1 = _crear_etiqueta_jugador("P1", p1_color)
-
-    # Cargar botones Flechas para Jugador 2 (P2: Flecha arriba, flecha izquierda, flecha abajo, flecha derecha)
-    btn_arr = _cargar_o_crear_boton(["boton-arriba.png", "arriba.png"], "↑")
-    btn_aba = _cargar_o_crear_boton(["boton-abajo.png", "abajo.png"], "↓")
-    btn_izq = _cargar_o_crear_boton(["boton-izquierda.png", "izquierda.png"], "←")
-    btn_der = _cargar_o_crear_boton(["boton-derecha.png", "derecha.png"], "→")
-    badge_p2 = _crear_etiqueta_jugador("P2", p2_color)
-
-    def _dibujar_cluster_jugador(superficie, jugador, badge, btn_arriba, btn_izq, btn_abajo, btn_der, k_arriba, k_izq, k_abajo, k_der, teclas_presionadas, alpha=255, bottom_override=None):
-        if jugador.get("muerto", False):
-            return 0
-
-        ancho_grid = 3 * TAM_BTN_TUT + 2 * GAP_BTN_TUT
-        alto_grid = 2 * TAM_BTN_TUT + GAP_BTN_TUT
-        alto_total = badge.get_height() + 4 + alto_grid
-
-        surf_total = pygame.Surface((ancho_grid, alto_total), pygame.SRCALPHA)
-
-        # 1. Badge centrado arriba
-        badge_x = (ancho_grid - badge.get_width()) // 2
-        surf_total.blit(badge, (badge_x, 0))
-
-        # 2. Teclas abajo del badge
-        y_grid_offset = badge.get_height() + 4
-        col0_x = 0
-        col1_x = TAM_BTN_TUT + GAP_BTN_TUT
-        col2_x = 2 * (TAM_BTN_TUT + GAP_BTN_TUT)
-        row1_y = TAM_BTN_TUT + GAP_BTN_TUT
-
-        press_arriba = teclas_presionadas[k_arriba] if teclas_presionadas else False
-        press_izq = teclas_presionadas[k_izq] if teclas_presionadas else False
-        press_abajo = teclas_presionadas[k_abajo] if teclas_presionadas else False
-        press_der = teclas_presionadas[k_der] if teclas_presionadas else False
-
-        surf_total.blit(btn_arriba, (col1_x, y_grid_offset + (2 if press_arriba else 0)))
-        surf_total.blit(btn_izq, (col0_x, y_grid_offset + row1_y + (2 if press_izq else 0)))
-        surf_total.blit(btn_abajo, (col1_x, y_grid_offset + row1_y + (2 if press_abajo else 0)))
-        surf_total.blit(btn_der, (col2_x, y_grid_offset + row1_y + (2 if press_der else 0)))
-
-        if alpha < 255:
-            surf_total.set_alpha(alpha)
-
-        bottom_y = bottom_override if bottom_override is not None else (jugador["hitbox"].top - 8)
-        dest_rect = surf_total.get_rect(centerx=jugador["hitbox"].centerx, bottom=bottom_y)
-        superficie.blit(surf_total, dest_rect)
-        return alto_total
-
-    def _dibujar_controles_tutorial(superficie, alpha_p1=255, alpha_p2=255, teclas_actuales=None):
-        if teclas_actuales is None:
-            teclas_actuales = pygame.key.get_pressed()
-
-        # Determinar posición vertical si uno está parado sobre el otro
-        bottom_p1 = jugador1["hitbox"].top - 8
-        bottom_p2 = jugador2["hitbox"].top - 8
-
-        if p1_sobre_p2:
-            h_p1 = badge_p1.get_height() + 4 + (2 * TAM_BTN_TUT + GAP_BTN_TUT)
-            bottom_p2 = bottom_p1 - h_p1 - 6
-        elif p2_sobre_p1:
-            h_p2 = badge_p2.get_height() + 4 + (2 * TAM_BTN_TUT + GAP_BTN_TUT)
-            bottom_p1 = bottom_p2 - h_p2 - 6
-
-        # Dibujar WASD directamente sobre Jugador 1
-        if not p1_completado and not jugador1["muerto"] and not p1_soplado and alpha_p1 > 0:
-            _dibujar_cluster_jugador(
-                superficie, jugador1, badge_p1,
-                btn_w, btn_a, btn_s, btn_d,
-                pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d,
-                teclas_actuales, alpha=int(alpha_p1), bottom_override=bottom_p1
-            )
-
-        # Dibujar Flechas directamente sobre Jugador 2
-        if not p2_completado and not jugador2["muerto"] and not p2_soplado and alpha_p2 > 0:
-            _dibujar_cluster_jugador(
-                superficie, jugador2, badge_p2,
-                btn_arr, btn_izq, btn_aba, btn_der,
-                pygame.K_UP, pygame.K_LEFT, pygame.K_DOWN, pygame.K_RIGHT,
-                teclas_actuales, alpha=int(alpha_p2), bottom_override=bottom_p2
-            )
-
-    def _crear_efecto_soplar(jugador_quieto, es_p1, dir_viento):
-        alto_grid = 2 * TAM_BTN_TUT + GAP_BTN_TUT
-        badge_ref = badge_p1 if es_p1 else badge_p2
-        alto_total = badge_ref.get_height() + 4 + alto_grid
-        ancho_grid = 3 * TAM_BTN_TUT + 2 * GAP_BTN_TUT
-
-        left_cluster = jugador_quieto["hitbox"].centerx - ancho_grid // 2
-        top_cluster = (jugador_quieto["hitbox"].top - 8) - alto_total
-
-        y_grid_offset = badge_ref.get_height() + 4
-        col0_x = 0
-        col1_x = TAM_BTN_TUT + GAP_BTN_TUT
-        col2_x = 2 * (TAM_BTN_TUT + GAP_BTN_TUT)
-        row1_y = TAM_BTN_TUT + GAP_BTN_TUT
-
-        if es_p1:
-            badge_surf = badge_p1
-            btn_arr_surf = btn_w
-            btn_izq_surf = btn_a
-            btn_aba_surf = btn_s
-            btn_der_surf = btn_d
+        self.es_admin = es_partida_admin(self.partida_nombre, self.partida_id)
+        if self.es_admin:
+            self.hay_siguiente_nivel = not (self.numero_mundo >= 3 and self.numero_nivel >= 6)
         else:
-            badge_surf = badge_p2
-            btn_arr_surf = btn_arr
-            btn_izq_surf = btn_izq
-            btn_aba_surf = btn_aba
-            btn_der_surf = btn_der
+            self.hay_siguiente_nivel = not (self.numero_mundo >= 3 and self.numero_nivel >= 5)
 
-        piezas = [
-            # Badge centrado arriba
-            {
-                "surf": badge_surf,
-                "x": float(left_cluster + ancho_grid // 2),
-                "y": float(top_cluster + badge_surf.get_height() // 2),
-                "vx": dir_viento * random.uniform(6.5, 8.5),
-                "vy": random.uniform(-4.5, -3.0),
-                "rot": 0.0,
-                "rot_vel": dir_viento * random.uniform(2.5, 4.5),
-                "alpha": 255.0,
-            },
-            # Tecla arriba
-            {
-                "surf": btn_arr_surf,
-                "x": float(left_cluster + col1_x + TAM_BTN_TUT // 2),
-                "y": float(top_cluster + y_grid_offset + TAM_BTN_TUT // 2),
-                "vx": dir_viento * random.uniform(6.0, 8.0),
-                "vy": random.uniform(-3.5, -2.0),
-                "rot": 0.0,
-                "rot_vel": dir_viento * random.uniform(3.0, 5.5),
-                "alpha": 255.0,
-            },
-            # Tecla izquierda
-            {
-                "surf": btn_izq_surf,
-                "x": float(left_cluster + col0_x + TAM_BTN_TUT // 2),
-                "y": float(top_cluster + y_grid_offset + row1_y + TAM_BTN_TUT // 2),
-                "vx": dir_viento * (random.uniform(8.5, 11.0) if dir_viento < 0 else random.uniform(4.5, 6.5)),
-                "vy": random.uniform(-2.5, -1.0),
-                "rot": 0.0,
-                "rot_vel": dir_viento * random.uniform(3.5, 6.0),
-                "alpha": 255.0,
-            },
-            # Tecla abajo
-            {
-                "surf": btn_aba_surf,
-                "x": float(left_cluster + col1_x + TAM_BTN_TUT // 2),
-                "y": float(top_cluster + y_grid_offset + row1_y + TAM_BTN_TUT // 2),
-                "vx": dir_viento * random.uniform(5.5, 7.5),
-                "vy": random.uniform(-1.0, 0.5),
-                "rot": 0.0,
-                "rot_vel": dir_viento * random.uniform(2.0, 4.5),
-                "alpha": 255.0,
-            },
-            # Tecla derecha
-            {
-                "surf": btn_der_surf,
-                "x": float(left_cluster + col2_x + TAM_BTN_TUT // 2),
-                "y": float(top_cluster + y_grid_offset + row1_y + TAM_BTN_TUT // 2),
-                "vx": dir_viento * (random.uniform(8.5, 11.0) if dir_viento > 0 else random.uniform(4.5, 6.5)),
-                "vy": random.uniform(-2.5, -1.0),
-                "rot": 0.0,
-                "rot_vel": dir_viento * random.uniform(3.5, 6.0),
-                "alpha": 255.0,
-            },
-        ]
+        self.usar_caja = "caja" in self.mecanicas
+        self.usar_soga = "soga" in self.mecanicas
+        self.usar_agua = "agua" in self.mecanicas
+        self.usar_pinchos = "pinchos" in self.mecanicas
+        self.usar_llave = True
 
-        for p in piezas:
-            teclas_sopladas.append(p)
+        self.linterna_p1 = True
+        self.linterna_p2 = True
+        self.surf_oscuridad_m3 = None
+        self.surf_oscuridad_m3_n4 = None
+        self.surf_luz_linterna = None
+        self.surf_luz_tenue = None
+        self.flechas_indicadoras = []
 
-        # Líneas de viento estilo pixel art
-        for _ in range(10):
-            lineas_viento.append({
-                "tipo": "linea",
-                "x": float(left_cluster + random.randint(-15, ancho_grid + 15)),
-                "y": float(top_cluster + random.randint(0, alto_total)),
-                "longitud": random.randint(14, 28),
-                "grosor": random.choice([1, 2]),
-                "vx": dir_viento * random.uniform(11.0, 16.0),
-                "vy": random.uniform(-0.8, 0.5),
-                "alpha": 220.0,
-                "fade": random.uniform(10.0, 14.0),
-            })
+        self.oxigeno_p1 = 100.0
+        self.oxigeno_p2 = 100.0
+        self.OXIGENO_MAX = 100.0
+        self.camaras_aire = []
+        self.corrientes_marinas = []
 
-        # Partículas discretas de aire pixel art
-        for _ in range(8):
-            lineas_viento.append({
-                "tipo": "particula",
-                "x": float(left_cluster + random.randint(-10, ancho_grid + 10)),
-                "y": float(top_cluster + random.randint(0, alto_total)),
-                "tam": random.choice([2, 3]),
-                "vx": dir_viento * random.uniform(7.0, 12.0),
-                "vy": random.uniform(-1.5, 0.5),
-                "alpha": 240.0,
-                "fade": random.uniform(7.0, 10.0),
-            })
+        self.pantalla = pygame.display.get_surface()
+        if self.pantalla is None:
+            from ventana import crear_ventana
+            self.pantalla = crear_ventana()
 
-    def _actualizar_y_dibujar_soplado(superficie):
-        # 1. Actualizar y dibujar líneas y partículas de viento
-        activas_viento = []
-        for elem in lineas_viento:
-            elem["x"] += elem["vx"]
-            elem["y"] += elem["vy"]
-            elem["alpha"] -= elem["fade"]
-            if elem["alpha"] > 0:
-                activas_viento.append(elem)
-                alpha_int = max(0, min(255, int(elem["alpha"])))
-                if elem["tipo"] == "linea":
-                    surf_lin = pygame.Surface((elem["longitud"], elem["grosor"] + 2), pygame.SRCALPHA)
-                    pygame.draw.line(surf_lin, (255, 255, 255, alpha_int), (0, 1), (elem["longitud"], 1), elem["grosor"])
-                    superficie.blit(surf_lin, (int(elem["x"]), int(elem["y"])))
-                elif elem["tipo"] == "particula":
-                    tam = elem["tam"]
-                    surf_pt = pygame.Surface((tam, tam), pygame.SRCALPHA)
-                    surf_pt.fill((255, 255, 255, alpha_int))
-                    superficie.blit(surf_pt, (int(elem["x"]), int(elem["y"])))
-        lineas_viento[:] = activas_viento
+        self.mundo_rect = pygame.Rect(0, 0, ANCHO_MUNDO, ALTO)
+        self.reloj = pygame.time.Clock()
+        self.fuente_tut = obtener_fuente_texto(TAMANO_TEXTO_GRANDE, tamano_fallback=32)
 
-        # 2. Actualizar y dibujar teclas sopladas con rotación y desvanecimiento
-        activas_teclas = []
-        for pieza in teclas_sopladas:
-            pieza["x"] += pieza["vx"]
-            pieza["y"] += pieza["vy"]
-            pieza["vy"] += 0.12  # Suave aceleración gravitacional
-            pieza["rot"] += pieza["rot_vel"]
-            pieza["alpha"] = max(0.0, pieza["alpha"] - 5.5)
+        self.W_BOTON_HUD, self.H_BOTON_HUD = 44, 52
+        self.MARGEN_DER, self.MARGEN_SUP, self.ESPACIO_BOTONES = 18, 16, 12
 
-            if pieza["alpha"] > 0:
-                activas_teclas.append(pieza)
-                surf_rot = pygame.transform.rotate(pieza["surf"], pieza["rot"])
-                surf_rot.set_alpha(int(pieza["alpha"]))
-                rect_rot = surf_rot.get_rect(center=(int(pieza["x"]), int(pieza["y"])))
-                superficie.blit(surf_rot, rect_rot)
-        teclas_sopladas[:] = activas_teclas
+        self.rect_btn_x = pygame.Rect(self.pantalla.get_width() - self.MARGEN_DER - self.W_BOTON_HUD, self.MARGEN_SUP, self.W_BOTON_HUD, self.H_BOTON_HUD)
+        self.rect_btn_reiniciar = pygame.Rect(self.rect_btn_x.left - self.ESPACIO_BOTONES - self.W_BOTON_HUD, self.MARGEN_SUP, self.W_BOTON_HUD, self.H_BOTON_HUD)
+        self.rect_btn_casa = pygame.Rect(self.rect_btn_reiniciar.left - self.ESPACIO_BOTONES - self.W_BOTON_HUD, self.MARGEN_SUP, self.W_BOTON_HUD, self.H_BOTON_HUD)
+        self.rect_btn_config = pygame.Rect(self.rect_btn_casa.left - self.ESPACIO_BOTONES - self.W_BOTON_HUD, self.MARGEN_SUP, self.W_BOTON_HUD, self.H_BOTON_HUD)
 
-    boton_nivel = None
-    pared_nivel = None
-    dintel_superior = None
-    laser_nivel = None
-    pozo_nivel = None
-    paredes_colores = None
-    botones_colores = None
-    plataformas_base = None
-    barrera_l_horiz = None
-    barrera_l_vert = None
-    boton_compuerta = None
-    compuerta = None
-    plataforma_movil = None
-    bloque_central = None
-    bloque_peligroso = None
-    bloques_peligrosos = []
-    plat_elevada = None
-    plataformas_derrumbables = None
-    plataformas_alternadas = None
-    rocas_submarinas = None
-    barreras_algas = None
-    corales_decorativos = None
-    algas_decorativas = None
-    burbujas_m3 = None
-    tick_m3 = 0
-    tick_m1 = 0
-    tick_m2 = 0
-    estado_soga = crear_estado_soga()
+        def _cargar_hud(nombre):
+            return cargar_boton_escalado(nombre, self.W_BOTON_HUD, self.H_BOTON_HUD)
+        self._cargar_hud = _cargar_hud
 
-    # Los niveles viven en niveles.py (una función por nivel). Se importa acá y no al inicio
-    # del módulo porque niveles.py usa funciones de pantalla.py (evita el import circular).
-    from niveles import definir_nivel
-    definicion_nivel = definir_nivel(numero_mundo, numero_nivel, p1_color, p2_color, bloques_peligrosos)
-    if definicion_nivel is not None:
-        if "algas_decorativas" in definicion_nivel: algas_decorativas = definicion_nivel["algas_decorativas"]
-        if "ancho_mundo_nivel" in definicion_nivel: ancho_mundo_nivel = definicion_nivel["ancho_mundo_nivel"]
-        if "b" in definicion_nivel: b = definicion_nivel["b"]
-        if "barrera_l_horiz" in definicion_nivel: barrera_l_horiz = definicion_nivel["barrera_l_horiz"]
-        if "barrera_l_vert" in definicion_nivel: barrera_l_vert = definicion_nivel["barrera_l_vert"]
-        if "barreras_algas" in definicion_nivel: barreras_algas = definicion_nivel["barreras_algas"]
-        if "bloque_central" in definicion_nivel: bloque_central = definicion_nivel["bloque_central"]
-        if "bloque_peligroso" in definicion_nivel: bloque_peligroso = definicion_nivel["bloque_peligroso"]
-        if "boton_compuerta" in definicion_nivel: boton_compuerta = definicion_nivel["boton_compuerta"]
-        if "boton_nivel" in definicion_nivel: boton_nivel = definicion_nivel["boton_nivel"]
-        if "botones_colores" in definicion_nivel: botones_colores = definicion_nivel["botones_colores"]
-        if "burbujas_m3" in definicion_nivel: burbujas_m3 = definicion_nivel["burbujas_m3"]
-        if "by" in definicion_nivel: by = definicion_nivel["by"]
-        if "caja" in definicion_nivel: caja = definicion_nivel["caja"]
-        if "camaras_aire" in definicion_nivel: camaras_aire = definicion_nivel["camaras_aire"]
-        if "compuerta" in definicion_nivel: compuerta = definicion_nivel["compuerta"]
-        if "corales_decorativos" in definicion_nivel: corales_decorativos = definicion_nivel["corales_decorativos"]
-        if "corrientes_marinas" in definicion_nivel: corrientes_marinas = definicion_nivel["corrientes_marinas"]
-        if "datos_lab" in definicion_nivel: datos_lab = definicion_nivel["datos_lab"]
-        if "flechas_indicadoras" in definicion_nivel: flechas_indicadoras = definicion_nivel["flechas_indicadoras"]
-        if "jugador1" in definicion_nivel: jugador1 = definicion_nivel["jugador1"]
-        if "jugador2" in definicion_nivel: jugador2 = definicion_nivel["jugador2"]
-        if "laser_nivel" in definicion_nivel: laser_nivel = definicion_nivel["laser_nivel"]
-        if "linterna_p1" in definicion_nivel: linterna_p1 = definicion_nivel["linterna_p1"]
-        if "linterna_p2" in definicion_nivel: linterna_p2 = definicion_nivel["linterna_p2"]
-        if "llave" in definicion_nivel: llave = definicion_nivel["llave"]
-        if "mundo_rect" in definicion_nivel: mundo_rect = definicion_nivel["mundo_rect"]
-        if "oxigeno_p1" in definicion_nivel: oxigeno_p1 = definicion_nivel["oxigeno_p1"]
-        if "oxigeno_p2" in definicion_nivel: oxigeno_p2 = definicion_nivel["oxigeno_p2"]
-        if "p" in definicion_nivel: p = definicion_nivel["p"]
-        if "pared_nivel" in definicion_nivel: pared_nivel = definicion_nivel["pared_nivel"]
-        if "paredes_colores" in definicion_nivel: paredes_colores = definicion_nivel["paredes_colores"]
-        if "pinchos" in definicion_nivel: pinchos = definicion_nivel["pinchos"]
-        if "plat_elevada" in definicion_nivel: plat_elevada = definicion_nivel["plat_elevada"]
-        if "plataforma_movil" in definicion_nivel: plataforma_movil = definicion_nivel["plataforma_movil"]
-        if "plataformas" in definicion_nivel: plataformas = definicion_nivel["plataformas"]
-        if "plataformas_alternadas" in definicion_nivel: plataformas_alternadas = definicion_nivel["plataformas_alternadas"]
-        if "plataformas_base" in definicion_nivel: plataformas_base = definicion_nivel["plataformas_base"]
-        if "plataformas_derrumbables" in definicion_nivel: plataformas_derrumbables = definicion_nivel["plataformas_derrumbables"]
-        if "pozo_nivel" in definicion_nivel: pozo_nivel = definicion_nivel["pozo_nivel"]
-        if "puerta" in definicion_nivel: puerta = definicion_nivel["puerta"]
-        if "r" in definicion_nivel: r = definicion_nivel["r"]
-        if "rocas_submarinas" in definicion_nivel: rocas_submarinas = definicion_nivel["rocas_submarinas"]
-        if "suelo" in definicion_nivel: suelo = definicion_nivel["suelo"]
-        if "surf_luz_linterna" in definicion_nivel: surf_luz_linterna = definicion_nivel["surf_luz_linterna"]
-        if "surf_luz_tenue" in definicion_nivel: surf_luz_tenue = definicion_nivel["surf_luz_tenue"]
-        if "surf_oscuridad_m3" in definicion_nivel: surf_oscuridad_m3 = definicion_nivel["surf_oscuridad_m3"]
-        if "techo_agua" in definicion_nivel: techo_agua = definicion_nivel["techo_agua"]
-        if "tick_m3" in definicion_nivel: tick_m3 = definicion_nivel["tick_m3"]
-        if "usar_agua" in definicion_nivel: usar_agua = definicion_nivel["usar_agua"]
-        if "usar_caja" in definicion_nivel: usar_caja = definicion_nivel["usar_caja"]
-        if "usar_llave" in definicion_nivel: usar_llave = definicion_nivel["usar_llave"]
-        if "usar_pinchos" in definicion_nivel: usar_pinchos = definicion_nivel["usar_pinchos"]
-        if "usar_soga" in definicion_nivel: usar_soga = definicion_nivel["usar_soga"]
-    else:
-        ancho_mundo_nivel = ANCHO_MUNDO
-        suelo = pygame.Rect(0, ALTO - 80, ANCHO_MUNDO, 80)
-        mundo_rect = pygame.Rect(0, 0, ANCHO_MUNDO, ALTO)
+        self.spr_x_normal = self._cargar_hud("boton-x.png")
+        self.spr_x_semi = self._cargar_hud("boton-x-semiapretado.png")
+        self.spr_x_apretado = self._cargar_hud("boton-x-apretado.png")
+        self.spr_x_hover = aclarar_boton(self.spr_x_normal)
 
-        jugador1 = crear_personaje(100, 0, p1_color)
-        jugador2 = crear_personaje(300, 0, p2_color)
+        self.spr_reiniciar_normal = self._cargar_hud("boton-reiniciar-icono.png")
+        self.spr_reiniciar_semi = self._cargar_hud("boton-reiniciar-icono-semiapretado.png")
+        self.spr_reiniciar_apretado = self._cargar_hud("boton-reiniciar-icono-apretado.png")
+        self.spr_reiniciar_hover = aclarar_boton(self.spr_reiniciar_normal)
 
-        caja = crear_caja(450, 0) if usar_caja else None
-        pinchos = crear_pinchos(suelo.top) if usar_pinchos else []
-        llave = crear_llave(1400, suelo.top - 46) if usar_llave else None
-        puerta = crear_puerta(1900, suelo.top - 90) if usar_llave else None
+        self.spr_casa_normal = self._cargar_hud("boton-casa.png")
+        self.spr_casa_semi = self._cargar_hud("boton-casa-semiapretado.png")
+        self.spr_casa_apretado = self._cargar_hud("boton-casa-apretado.png")
+        self.spr_casa_hover = aclarar_boton(self.spr_casa_normal)
 
-        plataformas = []
-        if usar_soga:
-            plataformas.extend([
-                pygame.Rect(420, 530, 90, 30),
-                pygame.Rect(530, 440, 90, 30),
-                pygame.Rect(640, 350, 340, 35),
-            ])
+        self.spr_config_normal = self._cargar_hud("boton-configuracion.png")
+        self.spr_config_semi = self._cargar_hud("boton-configuracion-semiapretado.png")
+        self.spr_config_apretado = self._cargar_hud("boton-configuracion-apretado.png")
+        self.spr_config_hover = aclarar_boton(self.spr_config_normal)
 
-        if usar_agua:
-            ZONA_AGUA.x, ZONA_AGUA.y = 0, 220
-            ZONA_AGUA.width, ZONA_AGUA.height = ANCHO_MUNDO, suelo.top - 220
+        self.fondo_btn_config = None
+        self.fondo_btn_casa = None
+        self.fondo_btn_reiniciar = None
+        self.fondo_btn_x = None
 
-    p1_completado = False
-    p2_completado = False
-    mostrar_tutorial = (numero_mundo == 1 and numero_nivel == 1)
-    contador_tutorial = 0
-    frames_tutorial = 300  # Los controles duran 5 segundos antes de despejar la pantalla
-    p1_movio = False
-    p2_movio = False
-    alpha_tut_p1 = 255.0
-    alpha_tut_p2 = 255.0
-    p1_soplado = False
-    p2_soplado = False
-    teclas_sopladas = []
-    lineas_viento = []
+        self.p1_color = self.color_p1 if self.color_p1 else COLOR_JUGADOR1
+        self.p2_color = self.color_p2 if self.color_p2 else COLOR_JUGADOR2
 
-    p1_sobre_p2 = False
-    p2_sobre_p1 = False
+        # Configuración de botones e indicadores para Tutorial (Nivel 1)
+        self.TAM_BTN_TUT = 32
+        self.GAP_BTN_TUT = 3
 
-    # Renderizar el fotograma inicial del escenario con los personajes en sus posiciones iniciales
-    mundo_inicio = pygame.Surface((ancho_mundo_nivel, ALTO))
+        self.COLORES_PERSONAJES = {
+            "Blanco": (232, 232, 232),
+            "Gris": (154, 154, 154),
+            "Negro": (95, 95, 95),
+            "Marron": (206, 136, 111),
+            "Rojo": (255, 137, 134),
+            "Rosa": (255, 150, 240),
+            "Naranja": (255, 160, 100),
+            "Amarillo": (255, 244, 123),
+            "Verde": (157, 255, 124),
+            "Verde oscuro": (105, 205, 75),
+            "Celeste": (124, 231, 255),
+            "Azul": (36, 166, 247),
+            "Violeta": (161, 123, 255),
+        }
 
-    if numero_mundo == 3:
-        dibujar_submarino_fondo_escenario(mundo_inicio, ancho_mundo_nivel, 0)
-        dibujar_lecho_marino(mundo_inicio, suelo, ancho_mundo_nivel)
-        if algas_decorativas:
-            dibujar_algas_decorativas_escenario(mundo_inicio, algas_decorativas, 0, capa="fondo")
-        if corrientes_marinas:
-            dibujar_corrientes_marinas_escenario(mundo_inicio, corrientes_marinas, 0)
-        if camaras_aire:
-            dibujar_camaras_aire_escenario(mundo_inicio, camaras_aire, 0)
-        if rocas_submarinas:
-            dibujar_rocas_submarinas_escenario(mundo_inicio, rocas_submarinas)
-        if barreras_algas:
-            dibujar_barreras_algas_escenario(mundo_inicio, barreras_algas, 0)
-        if flechas_indicadoras:
-            dibujar_flechas_indicadoras_escenario(mundo_inicio, flechas_indicadoras, 0)
-        if corales_decorativos:
-            dibujar_corales_escenario(mundo_inicio, corales_decorativos, 0)
-        if algas_decorativas:
-            dibujar_algas_decorativas_escenario(mundo_inicio, algas_decorativas, 0, capa="frente")
-        if pinchos:
-            dibujar_peligros_marinos_escenario(mundo_inicio, pinchos)
-        if burbujas_m3:
-            actualizar_y_dibujar_burbujas_m3(mundo_inicio, burbujas_m3, [jugador1, jugador2], 0)
-    elif numero_mundo == 1:
-        dibujar_fondo_mundo1_invierno(mundo_inicio, ancho_mundo_nivel)
-        dibujar_decoraciones_mundo1(mundo_inicio, suelo, ancho_mundo_nivel, 0)
-        plats_dibujar_ini = plataformas_base if (paredes_colores is not None and plataformas_base is not None) else plataformas
-        plats_estaticas_ini = [p for p in plats_dibujar_ini if not (
-            (barrera_l_horiz is not None and (p is barrera_l_horiz or p is barrera_l_vert)) or
-            (bloque_central is not None and p is bloque_central["rect"]) or
-            (plataforma_movil is not None and p is plataforma_movil["rect"]) or
-            (compuerta is not None and p is compuerta["rect"]) or
-            (plataformas_derrumbables is not None and any(p is p_d["rect"] for p_d in plataformas_derrumbables))
-        )]
-        dibujar_escenario_mundo1(mundo_inicio, suelo, plats_estaticas_ini, pozo_nivel)
-        if barrera_l_horiz is not None and barrera_l_vert is not None:
-            dibujar_barrera_l_escenario(mundo_inicio, barrera_l_horiz, barrera_l_vert)
-        if pinchos:
-            dibujar_pinchos_escenario(mundo_inicio, pinchos)
-        actualizar_y_dibujar_nieve_mundo1(mundo_inicio, ancho_mundo_nivel, 0)
-    elif numero_mundo == 2:
-        dibujar_fondo_mundo2_ruinas(mundo_inicio, ancho_mundo_nivel)
-        dibujar_decoraciones_mundo2(mundo_inicio, suelo, ancho_mundo_nivel, 0, pozo_nivel)
-        plats_dibujar_ini = plataformas_base if (paredes_colores is not None and plataformas_base is not None) else plataformas
-        plats_estaticas_ini = [p for p in plats_dibujar_ini if not (
-            (barrera_l_horiz is not None and (p is barrera_l_horiz or p is barrera_l_vert)) or
-            (bloque_central is not None and p is bloque_central["rect"]) or
-            (plataforma_movil is not None and p is plataforma_movil["rect"]) or
-            (compuerta is not None and p is compuerta["rect"]) or
-            (plataformas_derrumbables is not None and any(p is p_d["rect"] for p_d in plataformas_derrumbables))
-        )]
-        dibujar_escenario_mundo2(mundo_inicio, suelo, plats_estaticas_ini, pozo_nivel)
-        if barrera_l_horiz is not None and barrera_l_vert is not None:
-            dibujar_barrera_l_escenario(mundo_inicio, barrera_l_horiz, barrera_l_vert)
-        if pinchos:
-            dibujar_pinchos_escenario(mundo_inicio, pinchos)
-        if numero_nivel == 3:
-            dibujar_pendulo_escenario(mundo_inicio, plataformas, plat_elevada, pozo_nivel)
-        if numero_nivel == 4 and plataformas_derrumbables is not None:
-            dibujar_plataformas_derrumbables_escenario(mundo_inicio, plataformas_derrumbables, pozo_nivel)
-        if numero_nivel == 5 and plataformas_alternadas is not None:
-            dibujar_plataformas_alternadas_escenario(mundo_inicio, plataformas_alternadas, pozo_nivel)
-        actualizar_y_dibujar_polvo_mundo2(mundo_inicio, ancho_mundo_nivel, 0)
-    else:
-        mundo_inicio.fill((255, 240, 195))
+        def _cargar_o_crear_boton(nombres_posibles, letra_fallback):
+            img = None
+            for nombre in nombres_posibles:
+                img = cargar_boton(nombre)
+                if img is not None:
+                    break
 
-        if pozo_nivel is not None:
-            pz = pozo_nivel
-            pygame.draw.rect(mundo_inicio, (235, 222, 192), (pz["x"], pz["y"], pz["ancho"], pz["alto"]))
-            pygame.draw.line(mundo_inicio, COLOR_BORDE_PLATAFORMA, (pz["x"], pz["y"]), (pz["x"], pz["y"] + pz["alto"]), 2)
-            pygame.draw.line(mundo_inicio, COLOR_BORDE_PLATAFORMA, (pz["x"] + pz["ancho"], pz["y"]), (pz["x"] + pz["ancho"], pz["y"] + pz["alto"]), 2)
+            if img is not None:
+                try:
+                    mask = pygame.mask.from_surface(img)
+                    rects = mask.get_bounding_rects()
+                    if rects:
+                        img = img.subsurface(rects[0])
+                except Exception:
+                    pass
+                return pygame.transform.smoothscale(img, (self.TAM_BTN_TUT, self.TAM_BTN_TUT))
 
-        for plat in plataformas:
-            if barrera_l_horiz is not None and (plat is barrera_l_horiz or plat is barrera_l_vert):
-                continue
-            if bloque_central is not None and plat is bloque_central["rect"]:
-                continue
-            if plataforma_movil is not None and plat is plataforma_movil["rect"]:
-                continue
-            if compuerta is not None and plat is compuerta["rect"]:
-                continue
-            if plataformas_derrumbables is not None and any(plat is p_d["rect"] for p_d in plataformas_derrumbables):
-                continue
-            if plat.bottom >= suelo.top:
-                rect_torre = pygame.Rect(plat.x, plat.y, plat.width, plat.height + 4)
-                pygame.draw.rect(mundo_inicio, COLOR_PLATAFORMA, rect_torre, border_top_left_radius=4, border_top_right_radius=4)
-                pygame.draw.rect(mundo_inicio, COLOR_BORDE_PLATAFORMA, rect_torre, width=2, border_top_left_radius=4, border_top_right_radius=4)
+            # Botón procedimental si no encuentra la imagen (mismo diseño de tecla roja)
+            surf = pygame.Surface((self.TAM_BTN_TUT, self.TAM_BTN_TUT), pygame.SRCALPHA)
+            color_fondo = (237, 112, 109)
+            color_borde = (94, 4, 4)
+            color_sombra = (237, 86, 83)
+            color_letra = (94, 4, 4)
+
+            pygame.draw.rect(surf, color_fondo, (0, 0, self.TAM_BTN_TUT, self.TAM_BTN_TUT), border_radius=6)
+            pygame.draw.rect(surf, color_sombra, (2, self.TAM_BTN_TUT - 5, self.TAM_BTN_TUT - 4, 3), border_bottom_left_radius=4, border_bottom_right_radius=4)
+            pygame.draw.rect(surf, color_borde, (0, 0, self.TAM_BTN_TUT, self.TAM_BTN_TUT), width=2, border_radius=6)
+
+            fuente_tecla = obtener_fuente_boton(int(self.TAM_BTN_TUT * 0.58), negrita=True)
+            txt_surf = fuente_tecla.render(str(letra_fallback).upper(), True, color_letra)
+            rect_txt = txt_surf.get_rect(center=(self.TAM_BTN_TUT // 2, self.TAM_BTN_TUT // 2 - 1))
+            surf.blit(txt_surf, rect_txt)
+            return surf
+        self._cargar_o_crear_boton = _cargar_o_crear_boton
+
+        def _crear_etiqueta_jugador(texto, color_nombre):
+            color_base = self.COLORES_PERSONAJES.get(color_nombre, (124, 231, 255))
+            color_borde = (max(0, color_base[0] - 65), max(0, color_base[1] - 65), max(0, color_base[2] - 65))
+            fuente = obtener_fuente_pequena(16, negrita=True)
+            t_base = fuente.render(texto, True, (25, 35, 45))
+            w, h = t_base.get_size()
+            ancho_cartel = max(w + 14, 40)
+            alto_cartel = h + 4
+            surf = pygame.Surface((ancho_cartel, alto_cartel), pygame.SRCALPHA)
+            pygame.draw.rect(surf, color_base, (0, 0, ancho_cartel, alto_cartel), border_radius=6)
+            pygame.draw.rect(surf, color_borde, (0, 0, ancho_cartel, alto_cartel), width=2, border_radius=6)
+            rect_txt = t_base.get_rect(center=(ancho_cartel // 2, alto_cartel // 2))
+            surf.blit(t_base, rect_txt)
+            return surf
+        self._crear_etiqueta_jugador = _crear_etiqueta_jugador
+
+        # Cargar botones WASD para Jugador 1 (P1: W arriba, A izquierda, S abajo, D derecha)
+        self.btn_w = self._cargar_o_crear_boton(["boton-w.png", "boton-W.png", "w.png", "W.png"], "W")
+        self.btn_s = self._cargar_o_crear_boton(["boton-s.png", "boton-S.png", "s.png", "S.png"], "S")
+        self.btn_a = self._cargar_o_crear_boton(["boton-a.png", "boton-A.png", "a.png", "A.png"], "A")
+        self.btn_d = self._cargar_o_crear_boton(["boton-d.png", "boton-D.png", "d.png", "D.png"], "D")
+        self.badge_p1 = self._crear_etiqueta_jugador("P1", self.p1_color)
+
+        # Cargar botones Flechas para Jugador 2 (P2: Flecha arriba, flecha izquierda, flecha abajo, flecha derecha)
+        self.btn_arr = self._cargar_o_crear_boton(["boton-arriba.png", "arriba.png"], "↑")
+        self.btn_aba = self._cargar_o_crear_boton(["boton-abajo.png", "abajo.png"], "↓")
+        self.btn_izq = self._cargar_o_crear_boton(["boton-izquierda.png", "izquierda.png"], "←")
+        self.btn_der = self._cargar_o_crear_boton(["boton-derecha.png", "derecha.png"], "→")
+        self.badge_p2 = self._crear_etiqueta_jugador("P2", self.p2_color)
+
+        def _dibujar_cluster_jugador(superficie, jugador, badge, btn_arriba, btn_izq, btn_abajo, btn_der, k_arriba, k_izq, k_abajo, k_der, teclas_presionadas, alpha=255, bottom_override=None):
+            if jugador.get("muerto", False):
+                return 0
+
+            ancho_grid = 3 * self.TAM_BTN_TUT + 2 * self.GAP_BTN_TUT
+            alto_grid = 2 * self.TAM_BTN_TUT + self.GAP_BTN_TUT
+            alto_total = badge.get_height() + 4 + alto_grid
+
+            surf_total = pygame.Surface((ancho_grid, alto_total), pygame.SRCALPHA)
+
+            # 1. Badge centrado arriba
+            badge_x = (ancho_grid - badge.get_width()) // 2
+            surf_total.blit(badge, (badge_x, 0))
+
+            # 2. Teclas abajo del badge
+            y_grid_offset = badge.get_height() + 4
+            col0_x = 0
+            col1_x = self.TAM_BTN_TUT + self.GAP_BTN_TUT
+            col2_x = 2 * (self.TAM_BTN_TUT + self.GAP_BTN_TUT)
+            row1_y = self.TAM_BTN_TUT + self.GAP_BTN_TUT
+
+            press_arriba = teclas_presionadas[k_arriba] if teclas_presionadas else False
+            press_izq = teclas_presionadas[k_izq] if teclas_presionadas else False
+            press_abajo = teclas_presionadas[k_abajo] if teclas_presionadas else False
+            press_der = teclas_presionadas[k_der] if teclas_presionadas else False
+
+            surf_total.blit(btn_arriba, (col1_x, y_grid_offset + (2 if press_arriba else 0)))
+            surf_total.blit(btn_izq, (col0_x, y_grid_offset + row1_y + (2 if press_izq else 0)))
+            surf_total.blit(btn_abajo, (col1_x, y_grid_offset + row1_y + (2 if press_abajo else 0)))
+            surf_total.blit(btn_der, (col2_x, y_grid_offset + row1_y + (2 if press_der else 0)))
+
+            if alpha < 255:
+                surf_total.set_alpha(alpha)
+
+            bottom_y = bottom_override if bottom_override is not None else (jugador["hitbox"].top - 8)
+            dest_rect = surf_total.get_rect(centerx=jugador["hitbox"].centerx, bottom=bottom_y)
+            superficie.blit(surf_total, dest_rect)
+            return alto_total
+        self._dibujar_cluster_jugador = _dibujar_cluster_jugador
+
+        def _dibujar_controles_tutorial(superficie, alpha_p1=255, alpha_p2=255, teclas_actuales=None):
+            if teclas_actuales is None:
+                teclas_actuales = pygame.key.get_pressed()
+
+            # Determinar posición vertical si uno está parado sobre el otro
+            bottom_p1 = self.jugador1["hitbox"].top - 8
+            bottom_p2 = self.jugador2["hitbox"].top - 8
+
+            if self.p1_sobre_p2:
+                h_p1 = self.badge_p1.get_height() + 4 + (2 * self.TAM_BTN_TUT + self.GAP_BTN_TUT)
+                bottom_p2 = bottom_p1 - h_p1 - 6
+            elif self.p2_sobre_p1:
+                h_p2 = self.badge_p2.get_height() + 4 + (2 * self.TAM_BTN_TUT + self.GAP_BTN_TUT)
+                bottom_p1 = bottom_p2 - h_p2 - 6
+
+            # Dibujar WASD directamente sobre Jugador 1
+            if not self.p1_completado and not self.jugador1["muerto"] and not self.p1_soplado and alpha_p1 > 0:
+                self._dibujar_cluster_jugador(
+                    superficie, self.jugador1, self.badge_p1,
+                    self.btn_w, self.btn_a, self.btn_s, self.btn_d,
+                    pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d,
+                    teclas_actuales, alpha=int(alpha_p1), bottom_override=bottom_p1
+                )
+
+            # Dibujar Flechas directamente sobre Jugador 2
+            if not self.p2_completado and not self.jugador2["muerto"] and not self.p2_soplado and alpha_p2 > 0:
+                self._dibujar_cluster_jugador(
+                    superficie, self.jugador2, self.badge_p2,
+                    self.btn_arr, self.btn_izq, self.btn_aba, self.btn_der,
+                    pygame.K_UP, pygame.K_LEFT, pygame.K_DOWN, pygame.K_RIGHT,
+                    teclas_actuales, alpha=int(alpha_p2), bottom_override=bottom_p2
+                )
+        self._dibujar_controles_tutorial = _dibujar_controles_tutorial
+
+        def _crear_efecto_soplar(jugador_quieto, es_p1, dir_viento):
+            alto_grid = 2 * self.TAM_BTN_TUT + self.GAP_BTN_TUT
+            badge_ref = self.badge_p1 if es_p1 else self.badge_p2
+            alto_total = badge_ref.get_height() + 4 + alto_grid
+            ancho_grid = 3 * self.TAM_BTN_TUT + 2 * self.GAP_BTN_TUT
+
+            left_cluster = jugador_quieto["hitbox"].centerx - ancho_grid // 2
+            top_cluster = (jugador_quieto["hitbox"].top - 8) - alto_total
+
+            y_grid_offset = badge_ref.get_height() + 4
+            col0_x = 0
+            col1_x = self.TAM_BTN_TUT + self.GAP_BTN_TUT
+            col2_x = 2 * (self.TAM_BTN_TUT + self.GAP_BTN_TUT)
+            row1_y = self.TAM_BTN_TUT + self.GAP_BTN_TUT
+
+            if es_p1:
+                badge_surf = self.badge_p1
+                btn_arr_surf = self.btn_w
+                btn_izq_surf = self.btn_a
+                btn_aba_surf = self.btn_s
+                btn_der_surf = self.btn_d
             else:
-                pygame.draw.rect(mundo_inicio, COLOR_PLATAFORMA, plat, border_radius=4)
-                pygame.draw.rect(mundo_inicio, COLOR_BORDE_PLATAFORMA, plat, width=2, border_radius=4)
+                badge_surf = self.badge_p2
+                btn_arr_surf = self.btn_arr
+                btn_izq_surf = self.btn_izq
+                btn_aba_surf = self.btn_aba
+                btn_der_surf = self.btn_der
 
-        if barrera_l_horiz is not None and barrera_l_vert is not None:
-            dibujar_barrera_l_escenario(mundo_inicio, barrera_l_horiz, barrera_l_vert)
+            piezas = [
+                # Badge centrado arriba
+                {
+                    "surf": badge_surf,
+                    "x": float(left_cluster + ancho_grid // 2),
+                    "y": float(top_cluster + badge_surf.get_height() // 2),
+                    "vx": dir_viento * random.uniform(6.5, 8.5),
+                    "vy": random.uniform(-4.5, -3.0),
+                    "rot": 0.0,
+                    "rot_vel": dir_viento * random.uniform(2.5, 4.5),
+                    "alpha": 255.0,
+                },
+                # Tecla arriba
+                {
+                    "surf": btn_arr_surf,
+                    "x": float(left_cluster + col1_x + self.TAM_BTN_TUT // 2),
+                    "y": float(top_cluster + y_grid_offset + self.TAM_BTN_TUT // 2),
+                    "vx": dir_viento * random.uniform(6.0, 8.0),
+                    "vy": random.uniform(-3.5, -2.0),
+                    "rot": 0.0,
+                    "rot_vel": dir_viento * random.uniform(3.0, 5.5),
+                    "alpha": 255.0,
+                },
+                # Tecla izquierda
+                {
+                    "surf": btn_izq_surf,
+                    "x": float(left_cluster + col0_x + self.TAM_BTN_TUT // 2),
+                    "y": float(top_cluster + y_grid_offset + row1_y + self.TAM_BTN_TUT // 2),
+                    "vx": dir_viento * (random.uniform(8.5, 11.0) if dir_viento < 0 else random.uniform(4.5, 6.5)),
+                    "vy": random.uniform(-2.5, -1.0),
+                    "rot": 0.0,
+                    "rot_vel": dir_viento * random.uniform(3.5, 6.0),
+                    "alpha": 255.0,
+                },
+                # Tecla abajo
+                {
+                    "surf": btn_aba_surf,
+                    "x": float(left_cluster + col1_x + self.TAM_BTN_TUT // 2),
+                    "y": float(top_cluster + y_grid_offset + row1_y + self.TAM_BTN_TUT // 2),
+                    "vx": dir_viento * random.uniform(5.5, 7.5),
+                    "vy": random.uniform(-1.0, 0.5),
+                    "rot": 0.0,
+                    "rot_vel": dir_viento * random.uniform(2.0, 4.5),
+                    "alpha": 255.0,
+                },
+                # Tecla derecha
+                {
+                    "surf": btn_der_surf,
+                    "x": float(left_cluster + col2_x + self.TAM_BTN_TUT // 2),
+                    "y": float(top_cluster + y_grid_offset + row1_y + self.TAM_BTN_TUT // 2),
+                    "vx": dir_viento * (random.uniform(8.5, 11.0) if dir_viento > 0 else random.uniform(4.5, 6.5)),
+                    "vy": random.uniform(-2.5, -1.0),
+                    "rot": 0.0,
+                    "rot_vel": dir_viento * random.uniform(3.5, 6.0),
+                    "alpha": 255.0,
+                },
+            ]
 
-        pygame.draw.rect(mundo_inicio, (225, 110, 80), suelo)
-        if pozo_nivel is not None:
-            pygame.draw.line(mundo_inicio, COLOR_BORDE_PLATAFORMA, (pz["x"], pz["y"] + pz["alto"]), (pz["x"] + pz["ancho"], pz["y"] + pz["alto"]), 2)
+            for p in piezas:
+                self.teclas_sopladas.append(p)
 
-        if pinchos:
-            dibujar_pinchos_escenario(mundo_inicio, pinchos)
-        if numero_mundo == 2 and numero_nivel == 3:
-            dibujar_pendulo_escenario(mundo_inicio, plataformas, plat_elevada, pozo_nivel)
-        if numero_mundo == 2 and numero_nivel == 4 and plataformas_derrumbables is not None:
-            dibujar_plataformas_derrumbables_escenario(mundo_inicio, plataformas_derrumbables, pozo_nivel)
-        if numero_mundo == 2 and numero_nivel == 5 and plataformas_alternadas is not None:
-            dibujar_plataformas_alternadas_escenario(mundo_inicio, plataformas_alternadas, pozo_nivel)
+            # Líneas de viento estilo pixel art
+            for _ in range(10):
+                self.lineas_viento.append({
+                    "tipo": "linea",
+                    "x": float(left_cluster + random.randint(-15, ancho_grid + 15)),
+                    "y": float(top_cluster + random.randint(0, alto_total)),
+                    "longitud": random.randint(14, 28),
+                    "grosor": random.choice([1, 2]),
+                    "vx": dir_viento * random.uniform(11.0, 16.0),
+                    "vy": random.uniform(-0.8, 0.5),
+                    "alpha": 220.0,
+                    "fade": random.uniform(10.0, 14.0),
+                })
 
-    if boton_nivel is not None:
-        rect_b = boton_nivel["rect"]
-        h_actual = 4 if boton_nivel["presionado"] else 12
-        y_actual = suelo.top - h_actual
-        pygame.draw.rect(mundo_inicio, (90, 70, 60), (rect_b.left - 6, suelo.top - 4, rect_b.width + 12, 10), border_radius=2)
-        col_btn = (80, 200, 100) if boton_nivel["presionado"] else (225, 65, 65)
-        col_borde_btn = (50, 150, 70) if boton_nivel["presionado"] else (175, 45, 45)
-        pygame.draw.rect(mundo_inicio, col_btn, (rect_b.x, y_actual, rect_b.width, h_actual), border_top_left_radius=3, border_top_right_radius=3)
-        pygame.draw.rect(mundo_inicio, col_borde_btn, (rect_b.x, y_actual, rect_b.width, h_actual), width=2, border_top_left_radius=3, border_top_right_radius=3)
+            # Partículas discretas de aire pixel art
+            for _ in range(8):
+                self.lineas_viento.append({
+                    "tipo": "particula",
+                    "x": float(left_cluster + random.randint(-10, ancho_grid + 10)),
+                    "y": float(top_cluster + random.randint(0, alto_total)),
+                    "tam": random.choice([2, 3]),
+                    "vx": dir_viento * random.uniform(7.0, 12.0),
+                    "vy": random.uniform(-1.5, 0.5),
+                    "alpha": 240.0,
+                    "fade": random.uniform(7.0, 10.0),
+                })
+        self._crear_efecto_soplar = _crear_efecto_soplar
 
-    if pared_nivel is not None:
-        pr = pared_nivel["rect"]
-        for y_linea in range(pr.top + 30, pr.bottom - 10, 35):
-            if 0 <= y_linea <= ALTO:
-                pygame.draw.line(mundo_inicio, COLOR_BORDE_PLATAFORMA, (pr.left + 4, y_linea), (pr.right - 4, y_linea), 2)
+        def _actualizar_y_dibujar_soplado(superficie):
+            # 1. Actualizar y dibujar líneas y partículas de viento
+            activas_viento = []
+            for elem in self.lineas_viento:
+                elem["x"] += elem["vx"]
+                elem["y"] += elem["vy"]
+                elem["alpha"] -= elem["fade"]
+                if elem["alpha"] > 0:
+                    activas_viento.append(elem)
+                    alpha_int = max(0, min(255, int(elem["alpha"])))
+                    if elem["tipo"] == "linea":
+                        surf_lin = pygame.Surface((elem["longitud"], elem["grosor"] + 2), pygame.SRCALPHA)
+                        pygame.draw.line(surf_lin, (255, 255, 255, alpha_int), (0, 1), (elem["longitud"], 1), elem["grosor"])
+                        superficie.blit(surf_lin, (int(elem["x"]), int(elem["y"])))
+                    elif elem["tipo"] == "particula":
+                        tam = elem["tam"]
+                        surf_pt = pygame.Surface((tam, tam), pygame.SRCALPHA)
+                        surf_pt.fill((255, 255, 255, alpha_int))
+                        superficie.blit(surf_pt, (int(elem["x"]), int(elem["y"])))
+            self.lineas_viento[:] = activas_viento
 
-    if laser_nivel is not None:
-        dibujar_laser_escenario(mundo_inicio, laser_nivel)
+            # 2. Actualizar y dibujar teclas sopladas con rotación y desvanecimiento
+            activas_teclas = []
+            for pieza in self.teclas_sopladas:
+                pieza["x"] += pieza["vx"]
+                pieza["y"] += pieza["vy"]
+                pieza["vy"] += 0.12  # Suave aceleración gravitacional
+                pieza["rot"] += pieza["rot_vel"]
+                pieza["alpha"] = max(0.0, pieza["alpha"] - 5.5)
 
-    if paredes_colores is not None:
-        dibujar_paredes_colores_escenario(mundo_inicio, paredes_colores)
+                if pieza["alpha"] > 0:
+                    activas_teclas.append(pieza)
+                    surf_rot = pygame.transform.rotate(pieza["surf"], pieza["rot"])
+                    surf_rot.set_alpha(int(pieza["alpha"]))
+                    rect_rot = surf_rot.get_rect(center=(int(pieza["x"]), int(pieza["y"])))
+                    superficie.blit(surf_rot, rect_rot)
+            self.teclas_sopladas[:] = activas_teclas
+        self._actualizar_y_dibujar_soplado = _actualizar_y_dibujar_soplado
 
-    if botones_colores is not None:
-        dibujar_botones_colores_escenario(mundo_inicio, botones_colores, suelo)
+        self.boton_nivel = None
+        self.pared_nivel = None
+        self.dintel_superior = None
+        self.laser_nivel = None
+        self.pozo_nivel = None
+        self.paredes_colores = None
+        self.botones_colores = None
+        self.plataformas_base = None
+        self.barrera_l_horiz = None
+        self.barrera_l_vert = None
+        self.boton_compuerta = None
+        self.compuerta = None
+        self.plataforma_movil = None
+        self.bloque_central = None
+        self.bloque_peligroso = None
+        self.bloques_peligrosos = []
+        self.plat_elevada = None
+        self.plataformas_derrumbables = None
+        self.plataformas_alternadas = None
+        self.rocas_submarinas = None
+        self.barreras_algas = None
+        self.corales_decorativos = None
+        self.algas_decorativas = None
+        self.burbujas_m3 = None
+        self.tick_m3 = 0
+        self.tick_m1 = 0
+        self.tick_m2 = 0
+        self.estado_soga = crear_estado_soga()
 
-    if boton_compuerta is not None:
-        rect_bc = boton_compuerta["rect"]
-        h_bc = 4 if boton_compuerta["presionado"] else 12
-        y_bc = suelo.top - h_bc
-        pygame.draw.rect(mundo_inicio, (90, 70, 60), (rect_bc.left - 6, suelo.top - 4, rect_bc.width + 12, 10), border_radius=2)
-        col_bc = (220, 200, 60) if boton_compuerta["presionado"] else (245, 175, 40)
-        col_borde_bc = (160, 140, 30) if boton_compuerta["presionado"] else (180, 120, 20)
-        pygame.draw.rect(mundo_inicio, col_bc, (rect_bc.x, y_bc, rect_bc.width, h_bc), border_top_left_radius=3, border_top_right_radius=3)
-        pygame.draw.rect(mundo_inicio, col_borde_bc, (rect_bc.x, y_bc, rect_bc.width, h_bc), width=2, border_top_left_radius=3, border_top_right_radius=3)
+        # Los niveles viven en niveles.py (una función por nivel). Se importa acá y no al inicio
+        # del módulo porque niveles.py usa funciones de pantalla.py (evita el import circular).
+        from niveles import definir_nivel
+        self.definicion_nivel = definir_nivel(self.numero_mundo, self.numero_nivel, self.p1_color, self.p2_color, self.bloques_peligrosos)
+        if self.definicion_nivel is not None:
+            if "algas_decorativas" in self.definicion_nivel: self.algas_decorativas = self.definicion_nivel["algas_decorativas"]
+            if "ancho_mundo_nivel" in self.definicion_nivel: self.ancho_mundo_nivel = self.definicion_nivel["ancho_mundo_nivel"]
+            if "b" in self.definicion_nivel: self.b = self.definicion_nivel["b"]
+            if "barrera_l_horiz" in self.definicion_nivel: self.barrera_l_horiz = self.definicion_nivel["barrera_l_horiz"]
+            if "barrera_l_vert" in self.definicion_nivel: self.barrera_l_vert = self.definicion_nivel["barrera_l_vert"]
+            if "barreras_algas" in self.definicion_nivel: self.barreras_algas = self.definicion_nivel["barreras_algas"]
+            if "bloque_central" in self.definicion_nivel: self.bloque_central = self.definicion_nivel["bloque_central"]
+            if "bloque_peligroso" in self.definicion_nivel: self.bloque_peligroso = self.definicion_nivel["bloque_peligroso"]
+            if "boton_compuerta" in self.definicion_nivel: self.boton_compuerta = self.definicion_nivel["boton_compuerta"]
+            if "boton_nivel" in self.definicion_nivel: self.boton_nivel = self.definicion_nivel["boton_nivel"]
+            if "botones_colores" in self.definicion_nivel: self.botones_colores = self.definicion_nivel["botones_colores"]
+            if "burbujas_m3" in self.definicion_nivel: self.burbujas_m3 = self.definicion_nivel["burbujas_m3"]
+            if "by" in self.definicion_nivel: self.by = self.definicion_nivel["by"]
+            if "caja" in self.definicion_nivel: self.caja = self.definicion_nivel["caja"]
+            if "camaras_aire" in self.definicion_nivel: self.camaras_aire = self.definicion_nivel["camaras_aire"]
+            if "compuerta" in self.definicion_nivel: self.compuerta = self.definicion_nivel["compuerta"]
+            if "corales_decorativos" in self.definicion_nivel: self.corales_decorativos = self.definicion_nivel["corales_decorativos"]
+            if "corrientes_marinas" in self.definicion_nivel: self.corrientes_marinas = self.definicion_nivel["corrientes_marinas"]
+            if "datos_lab" in self.definicion_nivel: self.datos_lab = self.definicion_nivel["datos_lab"]
+            if "flechas_indicadoras" in self.definicion_nivel: self.flechas_indicadoras = self.definicion_nivel["flechas_indicadoras"]
+            if "jugador1" in self.definicion_nivel: self.jugador1 = self.definicion_nivel["jugador1"]
+            if "jugador2" in self.definicion_nivel: self.jugador2 = self.definicion_nivel["jugador2"]
+            if "laser_nivel" in self.definicion_nivel: self.laser_nivel = self.definicion_nivel["laser_nivel"]
+            if "linterna_p1" in self.definicion_nivel: self.linterna_p1 = self.definicion_nivel["linterna_p1"]
+            if "linterna_p2" in self.definicion_nivel: self.linterna_p2 = self.definicion_nivel["linterna_p2"]
+            if "llave" in self.definicion_nivel: self.llave = self.definicion_nivel["llave"]
+            if "mundo_rect" in self.definicion_nivel: self.mundo_rect = self.definicion_nivel["mundo_rect"]
+            if "oxigeno_p1" in self.definicion_nivel: self.oxigeno_p1 = self.definicion_nivel["oxigeno_p1"]
+            if "oxigeno_p2" in self.definicion_nivel: self.oxigeno_p2 = self.definicion_nivel["oxigeno_p2"]
+            if "p" in self.definicion_nivel: self.p = self.definicion_nivel["p"]
+            if "pared_nivel" in self.definicion_nivel: self.pared_nivel = self.definicion_nivel["pared_nivel"]
+            if "paredes_colores" in self.definicion_nivel: self.paredes_colores = self.definicion_nivel["paredes_colores"]
+            if "pinchos" in self.definicion_nivel: self.pinchos = self.definicion_nivel["pinchos"]
+            if "plat_elevada" in self.definicion_nivel: self.plat_elevada = self.definicion_nivel["plat_elevada"]
+            if "plataforma_movil" in self.definicion_nivel: self.plataforma_movil = self.definicion_nivel["plataforma_movil"]
+            if "plataformas" in self.definicion_nivel: self.plataformas = self.definicion_nivel["plataformas"]
+            if "plataformas_alternadas" in self.definicion_nivel: self.plataformas_alternadas = self.definicion_nivel["plataformas_alternadas"]
+            if "plataformas_base" in self.definicion_nivel: self.plataformas_base = self.definicion_nivel["plataformas_base"]
+            if "plataformas_derrumbables" in self.definicion_nivel: self.plataformas_derrumbables = self.definicion_nivel["plataformas_derrumbables"]
+            if "pozo_nivel" in self.definicion_nivel: self.pozo_nivel = self.definicion_nivel["pozo_nivel"]
+            if "puerta" in self.definicion_nivel: self.puerta = self.definicion_nivel["puerta"]
+            if "r" in self.definicion_nivel: self.r = self.definicion_nivel["r"]
+            if "rocas_submarinas" in self.definicion_nivel: self.rocas_submarinas = self.definicion_nivel["rocas_submarinas"]
+            if "suelo" in self.definicion_nivel: self.suelo = self.definicion_nivel["suelo"]
+            if "surf_luz_linterna" in self.definicion_nivel: self.surf_luz_linterna = self.definicion_nivel["surf_luz_linterna"]
+            if "surf_luz_tenue" in self.definicion_nivel: self.surf_luz_tenue = self.definicion_nivel["surf_luz_tenue"]
+            if "surf_oscuridad_m3" in self.definicion_nivel: self.surf_oscuridad_m3 = self.definicion_nivel["surf_oscuridad_m3"]
+            if "techo_agua" in self.definicion_nivel: self.techo_agua = self.definicion_nivel["techo_agua"]
+            if "tick_m3" in self.definicion_nivel: self.tick_m3 = self.definicion_nivel["tick_m3"]
+            if "usar_agua" in self.definicion_nivel: self.usar_agua = self.definicion_nivel["usar_agua"]
+            if "usar_caja" in self.definicion_nivel: self.usar_caja = self.definicion_nivel["usar_caja"]
+            if "usar_llave" in self.definicion_nivel: self.usar_llave = self.definicion_nivel["usar_llave"]
+            if "usar_pinchos" in self.definicion_nivel: self.usar_pinchos = self.definicion_nivel["usar_pinchos"]
+            if "usar_soga" in self.definicion_nivel: self.usar_soga = self.definicion_nivel["usar_soga"]
+        else:
+            self.ancho_mundo_nivel = ANCHO_MUNDO
+            self.suelo = pygame.Rect(0, ALTO - 80, ANCHO_MUNDO, 80)
+            self.mundo_rect = pygame.Rect(0, 0, ANCHO_MUNDO, ALTO)
 
-    if compuerta is not None and compuerta["rect"].width > 0:
-        cr = compuerta["rect"]
-        pygame.draw.rect(mundo_inicio, COLOR_PLATAFORMA, cr, border_radius=3)
-        pygame.draw.rect(mundo_inicio, COLOR_BORDE_PLATAFORMA, cr, width=2, border_radius=3)
-        for lx in range(cr.left + 12, cr.right - 8, 16):
-            pygame.draw.line(mundo_inicio, COLOR_BORDE_PLATAFORMA, (lx, cr.top + 3), (lx, cr.bottom - 4), 2)
+            self.jugador1 = crear_personaje(100, 0, self.p1_color)
+            self.jugador2 = crear_personaje(300, 0, self.p2_color)
 
-    if bloque_central is not None:
-        br = bloque_central["rect"]
-        pygame.draw.line(mundo_inicio, (110, 100, 95), (br.left + 12, 0), (br.left + 12, br.top), 3)
-        pygame.draw.line(mundo_inicio, (110, 100, 95), (br.right - 12, 0), (br.right - 12, br.top), 3)
-        pygame.draw.circle(mundo_inicio, (70, 65, 60), (br.left + 12, br.top), 4)
-        pygame.draw.circle(mundo_inicio, (70, 65, 60), (br.right - 12, br.top), 4)
-        pygame.draw.rect(mundo_inicio, (220, 50, 50), br, border_radius=4)
-        pygame.draw.rect(mundo_inicio, (140, 25, 25), br, width=2, border_radius=4)
-        for by in range(br.top + 16, br.bottom - 8, 16):
-            pygame.draw.line(mundo_inicio, (160, 30, 30), (br.left + 4, by), (br.right - 4, by), 2)
+            self.caja = crear_caja(450, 0) if self.usar_caja else None
+            self.pinchos = crear_pinchos(self.suelo.top) if self.usar_pinchos else []
+            self.llave = crear_llave(1400, self.suelo.top - 46) if self.usar_llave else None
+            self.puerta = crear_puerta(1900, self.suelo.top - 90) if self.usar_llave else None
 
-    if plataforma_movil is not None:
-        pm = plataforma_movil["rect"]
-        pygame.draw.rect(mundo_inicio, COLOR_PLATAFORMA, pm, border_radius=4)
-        pygame.draw.rect(mundo_inicio, COLOR_BORDE_PLATAFORMA, pm, width=2, border_radius=4)
-        for rx in range(pm.left + 15, pm.right - 10, 22):
-            pygame.draw.circle(mundo_inicio, (140, 60, 40), (rx, pm.bottom - 5), 3)
-        col_ind = (80, 220, 100) if plataforma_movil["moviendo"] else ((240, 180, 40) if plataforma_movil["tiempo_con_peso"] > 0 else (180, 80, 55))
-        pygame.draw.circle(mundo_inicio, col_ind, (pm.centerx, pm.centery), 4)
+            self.plataformas = []
+            if self.usar_soga:
+                self.plataformas.extend([
+                    pygame.Rect(420, 530, 90, 30),
+                    pygame.Rect(530, 440, 90, 30),
+                    pygame.Rect(640, 350, 340, 35),
+                ])
 
-    if usar_agua:
-        dibujar_agua(mundo_inicio, ZONA_AGUA)
-    if usar_soga and not p1_completado and not p2_completado:
-        dibujar_soga_escenario(mundo_inicio, jugador1, jugador2, estado_soga, DISTANCIA_SOGA_REPOSO, DISTANCIA_SOGA_MAXIMA)
-    if usar_caja:
-        mundo_inicio.blit(caja["sprite"], caja["rect"])
+            if self.usar_agua:
+                ZONA_AGUA.x, ZONA_AGUA.y = 0, 220
+                ZONA_AGUA.width, ZONA_AGUA.height = ANCHO_MUNDO, self.suelo.top - 220
 
-    if usar_llave and puerta:
-        actualizar_puerta(puerta)
-        estado_p = "cerrada"
-        mundo_inicio.blit(puerta["sprites"][estado_p], puerta["rect"])
-        if llave:
-            if numero_mundo == 3:
-                halo_surf = pygame.Surface((44, 60), pygame.SRCALPHA)
-                pygame.draw.ellipse(halo_surf, (255, 230, 90, 75), (0, 0, 44, 60))
-                mundo_inicio.blit(halo_surf, (llave["rect"].centerx - 22, llave["rect"].centery - 30))
-            mundo_inicio.blit(llave["sprite"], llave["rect"])
+        self.p1_completado = False
+        self.p2_completado = False
+        self.mostrar_tutorial = (self.numero_mundo == 1 and self.numero_nivel == 1)
+        self.contador_tutorial = 0
+        self.frames_tutorial = 300  # Los controles duran 5 segundos antes de despejar la pantalla
+        self.p1_movio = False
+        self.p2_movio = False
+        self.alpha_tut_p1 = 255.0
+        self.alpha_tut_p2 = 255.0
+        self.p1_soplado = False
+        self.p2_soplado = False
+        self.teclas_sopladas = []
+        self.lineas_viento = []
 
-    if numero_mundo == 3 and numero_nivel in (4, 5) and surf_oscuridad_m3 is not None:
-        aplicar_oscuridad_submarina(
-            mundo_inicio,
-            [(jugador1, linterna_p1, False), (jugador2, linterna_p2, False)],
-            surf_oscuridad_m3,
-            surf_luz_linterna,
-            surf_luz_tenue
-        )
-        dibujar_personaje(mundo_inicio, jugador1, ZONA_AGUA if usar_agua else None)
-        dibujar_linterna_minero(mundo_inicio, jugador1, linterna_p1)
-        dibujar_personaje(mundo_inicio, jugador2, ZONA_AGUA if usar_agua else None)
-        dibujar_linterna_minero(mundo_inicio, jugador2, linterna_p2)
-    else:
-        dibujar_personaje(mundo_inicio, jugador1, ZONA_AGUA if usar_agua else None)
-        dibujar_personaje(mundo_inicio, jugador2, ZONA_AGUA if usar_agua else None)
+        self.p1_sobre_p2 = False
+        self.p2_sobre_p1 = False
 
-    distancia_ini = abs(jugador1["hitbox"].centerx - jugador2["hitbox"].centerx)
-    if distancia_ini <= DISTANCIA_SPLIT:
-        centro_ini = (jugador1["hitbox"].centerx + jugador2["hitbox"].centerx) // 2
-        cam_ini_x = max(0, min(centro_ini - ANCHO // 2, ancho_mundo_nivel - ANCHO))
-        pantalla.blit(mundo_inicio, (0, 0), pygame.Rect(cam_ini_x, 0, ANCHO, ALTO))
-    else:
-        ancho_m = ANCHO // 2
-        p_izq = jugador1 if jugador1["hitbox"].centerx <= jugador2["hitbox"].centerx else jugador2
-        p_der = jugador2 if p_izq is jugador1 else jugador1
-        cam_izq_x = max(0, min(p_izq["hitbox"].centerx - ancho_m // 2, ancho_mundo_nivel - ancho_m))
-        cam_der_x = max(0, min(p_der["hitbox"].centerx - ancho_m // 2, ancho_mundo_nivel - ancho_m))
-        pantalla.blit(mundo_inicio, (0, 0), pygame.Rect(cam_izq_x, 0, ancho_m, ALTO))
-        pantalla.blit(mundo_inicio, (ancho_m, 0), pygame.Rect(cam_der_x, 0, ancho_m, ALTO))
-        pygame.draw.line(pantalla, (0, 0, 0), (ancho_m, 0), (ancho_m, ALTO), 4)
+        # Renderizar el fotograma inicial del escenario con los personajes en sus posiciones iniciales
+        self.mundo_inicio = pygame.Surface((self.ancho_mundo_nivel, ALTO))
 
-    fondo_btn_config = pantalla.subsurface(rect_btn_config).copy()
-    fondo_btn_casa = pantalla.subsurface(rect_btn_casa).copy()
-    fondo_btn_reiniciar = pantalla.subsurface(rect_btn_reiniciar).copy()
-    fondo_btn_x = pantalla.subsurface(rect_btn_x).copy()
+        if self.numero_mundo == 3:
+            dibujar_submarino_fondo_escenario(self.mundo_inicio, self.ancho_mundo_nivel, 0)
+            dibujar_lecho_marino(self.mundo_inicio, self.suelo, self.ancho_mundo_nivel)
+            if self.algas_decorativas:
+                dibujar_algas_decorativas_escenario(self.mundo_inicio, self.algas_decorativas, 0, capa="fondo")
+            if self.corrientes_marinas:
+                dibujar_corrientes_marinas_escenario(self.mundo_inicio, self.corrientes_marinas, 0)
+            if self.camaras_aire:
+                dibujar_camaras_aire_escenario(self.mundo_inicio, self.camaras_aire, 0)
+            if self.rocas_submarinas:
+                dibujar_rocas_submarinas_escenario(self.mundo_inicio, self.rocas_submarinas)
+            if self.barreras_algas:
+                dibujar_barreras_algas_escenario(self.mundo_inicio, self.barreras_algas, 0)
+            if self.flechas_indicadoras:
+                dibujar_flechas_indicadoras_escenario(self.mundo_inicio, self.flechas_indicadoras, 0)
+            if self.corales_decorativos:
+                dibujar_corales_escenario(self.mundo_inicio, self.corales_decorativos, 0)
+            if self.algas_decorativas:
+                dibujar_algas_decorativas_escenario(self.mundo_inicio, self.algas_decorativas, 0, capa="frente")
+            if self.pinchos:
+                dibujar_peligros_marinos_escenario(self.mundo_inicio, self.pinchos)
+            if self.burbujas_m3:
+                actualizar_y_dibujar_burbujas_m3(self.mundo_inicio, self.burbujas_m3, [self.jugador1, self.jugador2], 0)
+        elif self.numero_mundo == 1:
+            dibujar_fondo_mundo1_invierno(self.mundo_inicio, self.ancho_mundo_nivel)
+            dibujar_decoraciones_mundo1(self.mundo_inicio, self.suelo, self.ancho_mundo_nivel, 0)
+            self.plats_dibujar_ini = self.plataformas_base if (self.paredes_colores is not None and self.plataformas_base is not None) else self.plataformas
+            self.plats_estaticas_ini = [p for p in self.plats_dibujar_ini if not (
+                (self.barrera_l_horiz is not None and (p is self.barrera_l_horiz or p is self.barrera_l_vert)) or
+                (self.bloque_central is not None and p is self.bloque_central["rect"]) or
+                (self.plataforma_movil is not None and p is self.plataforma_movil["rect"]) or
+                (self.compuerta is not None and p is self.compuerta["rect"]) or
+                (self.plataformas_derrumbables is not None and any(p is p_d["rect"] for p_d in self.plataformas_derrumbables))
+            )]
+            dibujar_escenario_mundo1(self.mundo_inicio, self.suelo, self.plats_estaticas_ini, self.pozo_nivel)
+            if self.barrera_l_horiz is not None and self.barrera_l_vert is not None:
+                dibujar_barrera_l_escenario(self.mundo_inicio, self.barrera_l_horiz, self.barrera_l_vert)
+            if self.pinchos:
+                dibujar_pinchos_escenario(self.mundo_inicio, self.pinchos)
+            actualizar_y_dibujar_nieve_mundo1(self.mundo_inicio, self.ancho_mundo_nivel, 0)
+        elif self.numero_mundo == 2:
+            dibujar_fondo_mundo2_ruinas(self.mundo_inicio, self.ancho_mundo_nivel)
+            dibujar_decoraciones_mundo2(self.mundo_inicio, self.suelo, self.ancho_mundo_nivel, 0, self.pozo_nivel)
+            self.plats_dibujar_ini = self.plataformas_base if (self.paredes_colores is not None and self.plataformas_base is not None) else self.plataformas
+            self.plats_estaticas_ini = [p for p in self.plats_dibujar_ini if not (
+                (self.barrera_l_horiz is not None and (p is self.barrera_l_horiz or p is self.barrera_l_vert)) or
+                (self.bloque_central is not None and p is self.bloque_central["rect"]) or
+                (self.plataforma_movil is not None and p is self.plataforma_movil["rect"]) or
+                (self.compuerta is not None and p is self.compuerta["rect"]) or
+                (self.plataformas_derrumbables is not None and any(p is p_d["rect"] for p_d in self.plataformas_derrumbables))
+            )]
+            dibujar_escenario_mundo2(self.mundo_inicio, self.suelo, self.plats_estaticas_ini, self.pozo_nivel)
+            if self.barrera_l_horiz is not None and self.barrera_l_vert is not None:
+                dibujar_barrera_l_escenario(self.mundo_inicio, self.barrera_l_horiz, self.barrera_l_vert)
+            if self.pinchos:
+                dibujar_pinchos_escenario(self.mundo_inicio, self.pinchos)
+            if self.numero_nivel == 3:
+                dibujar_pendulo_escenario(self.mundo_inicio, self.plataformas, self.plat_elevada, self.pozo_nivel)
+            if self.numero_nivel == 4 and self.plataformas_derrumbables is not None:
+                dibujar_plataformas_derrumbables_escenario(self.mundo_inicio, self.plataformas_derrumbables, self.pozo_nivel)
+            if self.numero_nivel == 5 and self.plataformas_alternadas is not None:
+                dibujar_plataformas_alternadas_escenario(self.mundo_inicio, self.plataformas_alternadas, self.pozo_nivel)
+            actualizar_y_dibujar_polvo_mundo2(self.mundo_inicio, self.ancho_mundo_nivel, 0)
+        else:
+            self.mundo_inicio.fill((255, 240, 195))
 
-    if spr_config_normal: pantalla.blit(spr_config_normal, rect_btn_config)
-    if spr_casa_normal: pantalla.blit(spr_casa_normal, rect_btn_casa)
-    if spr_reiniciar_normal: pantalla.blit(spr_reiniciar_normal, rect_btn_reiniciar)
-    if spr_x_normal: pantalla.blit(spr_x_normal, rect_btn_x)
+            if self.pozo_nivel is not None:
+                self.pz = self.pozo_nivel
+                pygame.draw.rect(self.mundo_inicio, (235, 222, 192), (self.pz["x"], self.pz["y"], self.pz["ancho"], self.pz["alto"]))
+                pygame.draw.line(self.mundo_inicio, COLOR_BORDE_PLATAFORMA, (self.pz["x"], self.pz["y"]), (self.pz["x"], self.pz["y"] + self.pz["alto"]), 2)
+                pygame.draw.line(self.mundo_inicio, COLOR_BORDE_PLATAFORMA, (self.pz["x"] + self.pz["ancho"], self.pz["y"]), (self.pz["x"] + self.pz["ancho"], self.pz["y"] + self.pz["alto"]), 2)
 
-    captura_nuevo_nivel = pantalla.copy()
-    animar_apertura_franjas(pantalla, reloj, captura_nuevo_nivel)
-
-    jugador1["accesorio"] = p1_acc
-    jugador2["accesorio"] = p2_acc
-    jugador1["equipo_buceo"] = (numero_mundo == 3)
-    jugador2["equipo_buceo"] = (numero_mundo == 3)
-
-    def _reiniciar_nivel_completo():
-        nonlocal p1_completado, p2_completado, mostrar_tutorial, contador_tutorial
-        nonlocal p1_movio, p2_movio, alpha_tut_p1, alpha_tut_p2, p1_soplado, p2_soplado, plataformas
-        nonlocal rocas_submarinas, barreras_algas, corales_decorativos, algas_decorativas, plataformas_base, llave, pinchos, linterna_p1, linterna_p2
-        nonlocal oxigeno_p1, oxigeno_p2, camaras_aire, corrientes_marinas, flechas_indicadoras
-
-        reiniciar_juego(jugador1, jugador2, caja, llave, puerta, estado_soga=estado_soga)
-        jugador1["accesorio"] = p1_acc
-        jugador2["accesorio"] = p2_acc
-        jugador1["equipo_buceo"] = (numero_mundo == 3)
-        jugador2["equipo_buceo"] = (numero_mundo == 3)
-        if boton_nivel is not None and pared_nivel is not None:
-            boton_nivel["presionado"] = False
-            pared_nivel["progreso"] = 0.0
-            pared_nivel["y"] = pared_nivel["y_cerrada"]
-            pared_nivel["rect"].y = int(pared_nivel["y_cerrada"])
-        if laser_nivel is not None:
-            laser_nivel["bloqueado"] = False
-            pared_x = laser_nivel.get("pared_der_x", 1100)
-            laser_nivel["x_fin"] = pared_x
-            laser_nivel["rect_dano"].x = laser_nivel["emisor_rect"].right
-            laser_nivel["rect_dano"].width = max(0, pared_x - laser_nivel["emisor_rect"].right)
-        if botones_colores is not None and paredes_colores is not None:
-            for btn in botones_colores:
-                btn["presionado"] = False
-            for pared in paredes_colores:
-                pared["progreso"] = 0.0
-                pared["rect"].y = int(pared["y_cerrada"])
-        if boton_compuerta is not None and compuerta is not None:
-            boton_compuerta["presionado"] = False
-            compuerta["progreso"] = 0.0
-            compuerta["rect"].x = 1700
-            compuerta["rect"].width = 140
-        if plataforma_movil is not None:
-            plataforma_movil["x"] = plataforma_movil["x_inicial"]
-            plataforma_movil["rect"].x = int(plataforma_movil["x_inicial"])
-            plataforma_movil["tiempo_con_peso"] = 0
-            plataforma_movil["tiempo_espera_retorno"] = 0
-            plataforma_movil["estado"] = "esperando_inicio"
-            plataforma_movil["moviendo"] = False
-            plataforma_movil["llegada"] = False
-
-        if plataformas_base is not None:
-            plataformas = list(plataformas_base)
-            if paredes_colores is not None:
-                plataformas.extend([p["rect"] for p in paredes_colores])
-            if compuerta is not None and compuerta["rect"].width > 0:
-                plataformas.append(compuerta["rect"])
-            if plataforma_movil is not None:
-                plataformas.append(plataforma_movil["rect"])
-            if plataformas_derrumbables is not None:
-                plataformas.extend([p_d["rect"] for p_d in plataformas_derrumbables])
-            if plataformas_alternadas is not None:
-                plataformas.extend(plataformas_alternadas)
-
-        if plataformas_derrumbables is not None:
-            for p_d in plataformas_derrumbables:
-                p_d["rect"].x = p_d["x_inicial"]
-                p_d["rect"].y = p_d["y_inicial"]
-                p_d["y"] = float(p_d["y_inicial"])
-                p_d["vel_y"] = 0.0
-                p_d["estado"] = "intacta"
-                p_d["pisada"] = False
-                p_d["tiempo_restante"] = 60
-                p_d["particulas"].clear()
-
-        p1_completado, p2_completado = False, False
-        mostrar_tutorial = (numero_mundo == 1 and numero_nivel == 1)
-        contador_tutorial = 0
-        p1_movio = False
-        p2_movio = False
-        alpha_tut_p1 = 255.0
-        alpha_tut_p2 = 255.0
-        p1_soplado = False
-        p2_soplado = False
-        teclas_sopladas.clear()
-        lineas_viento.clear()
-
-        if numero_mundo == 3 and numero_nivel == 1:
-            jugador1["en_agua"] = True
-            jugador2["en_agua"] = True
-            if burbujas_m3:
-                burbujas_m3[:] = crear_sistema_burbujas_m3(ancho_mundo_nivel, cantidad=45)
-
-        if numero_mundo == 3 and numero_nivel == 2:
-            datos_lab = generar_laberinto_coral_m3_n2(ancho_mundo_nivel, ALTO, suelo.top, techo_agua.bottom)
-            rocas_submarinas = datos_lab["rocas"]
-            barreras_algas = datos_lab["barreras"]
-            corales_decorativos = datos_lab["corales"]
-            algas_decorativas = datos_lab["algas"]
-            plataformas_base = [techo_agua] + [r["rect"] for r in rocas_submarinas] + [b["rect"] for b in barreras_algas]
-            plataformas = list(plataformas_base)
-            llave["x_inicial"] = datos_lab["llave_x"]
-            llave["y_inicial"] = datos_lab["llave_y"]
-            llave["x_float"] = float(datos_lab["llave_x"])
-            llave["y_float"] = float(datos_lab["llave_y"])
-            llave["rect"].x = datos_lab["llave_x"]
-            llave["rect"].y = datos_lab["llave_y"]
-            llave["recolectada"] = False
-            llave["portador"] = None
-            puerta["abierta"] = False
-            jugador1["x_inicial"] = datos_lab["p1_x"]
-            jugador1["y_inicial"] = datos_lab["p1_y"]
-            jugador1["hitbox"].x = datos_lab["p1_x"]
-            jugador1["hitbox"].y = datos_lab["p1_y"]
-            jugador1["vel_x"] = 0
-            jugador1["vel_y"] = 0
-            jugador1["en_agua"] = True
-            jugador2["x_inicial"] = datos_lab["p2_x"]
-            jugador2["y_inicial"] = datos_lab["p2_y"]
-            jugador2["hitbox"].x = datos_lab["p2_x"]
-            jugador2["hitbox"].y = datos_lab["p2_y"]
-            jugador2["vel_x"] = 0
-            jugador2["vel_y"] = 0
-            jugador2["en_agua"] = True
-            if burbujas_m3:
-                burbujas_m3[:] = crear_sistema_burbujas_m3(ancho_mundo_nivel, cantidad=50)
-
-        if numero_mundo == 3 and numero_nivel == 3:
-            jugador1["en_agua"] = True
-            jugador2["en_agua"] = True
-            if burbujas_m3:
-                burbujas_m3[:] = crear_sistema_burbujas_m3(ancho_mundo_nivel, cantidad=45)
-
-        if numero_mundo == 3 and numero_nivel == 4:
-            linterna_p1 = True
-            linterna_p2 = True
-            datos_lab = generar_laberinto_oscuro_m3_n4(ancho_mundo_nivel, ALTO, suelo.top, techo_agua.bottom)
-            rocas_submarinas = datos_lab["rocas"]
-            barreras_algas = datos_lab["barreras"]
-            corales_decorativos = datos_lab["corales"]
-            algas_decorativas = datos_lab["algas"]
-            pinchos = datos_lab["pinchos"]
-            flechas_indicadoras = datos_lab.get("flechas", [])
-            plataformas_base = [techo_agua] + [r["rect"] for r in rocas_submarinas] + [b["rect"] for b in barreras_algas]
-            plataformas = list(plataformas_base)
-            llave["x_inicial"] = datos_lab["llave_x"]
-            llave["y_inicial"] = datos_lab["llave_y"]
-            llave["x_float"] = float(datos_lab["llave_x"])
-            llave["y_float"] = float(datos_lab["llave_y"])
-            llave["rect"].x = datos_lab["llave_x"]
-            llave["rect"].y = datos_lab["llave_y"]
-            llave["recolectada"] = False
-            llave["portador"] = None
-            puerta["abierta"] = False
-            jugador1["x_inicial"] = datos_lab["p1_x"]
-            jugador1["y_inicial"] = datos_lab["p1_y"]
-            jugador1["hitbox"].x = datos_lab["p1_x"]
-            jugador1["hitbox"].y = datos_lab["p1_y"]
-            jugador1["vel_x"] = 0
-            jugador1["vel_y"] = 0
-            jugador1["en_agua"] = True
-            jugador2["x_inicial"] = datos_lab["p2_x"]
-            jugador2["y_inicial"] = datos_lab["p2_y"]
-            jugador2["hitbox"].x = datos_lab["p2_x"]
-            jugador2["hitbox"].y = datos_lab["p2_y"]
-            jugador2["vel_x"] = 0
-            jugador2["vel_y"] = 0
-            jugador2["en_agua"] = True
-            if burbujas_m3:
-                burbujas_m3[:] = crear_sistema_burbujas_m3(ancho_mundo_nivel, cantidad=45)
-
-        if numero_mundo == 3 and numero_nivel in (5, 6):
-            linterna_p1 = True
-            linterna_p2 = True
-            oxigeno_p1 = 100.0
-            oxigeno_p2 = 100.0
-            jugador1["en_agua"] = True
-            jugador2["en_agua"] = True
-            detener_sonido_ahogamiento()
-            if burbujas_m3:
-                burbujas_m3[:] = crear_sistema_burbujas_m3(ancho_mundo_nivel, cantidad=45)
-
-    mundo = pygame.Surface((ancho_mundo_nivel, ALTO)).convert()
-    ejecutando = True
-    while ejecutando:
-        reloj.tick(FPS)
-
-        for evento in pygame.event.get():
-            if evento.type == pygame.QUIT:
-                if hay_progreso_sin_guardar(niveles_desbloqueados, snapshot_guardado, id_partida=partida_id):
-                    resp = mostrar_dialogo_guardar_salir(
-                        pantalla, reloj,
-                        niveles_desbloqueados=niveles_desbloqueados,
-                        id_partida=partida_id,
-                        nombre_partida=partida_nombre,
-                        password_partida=partida_password,
-                        color_p1=color_p1,
-                        color_p2=color_p2,
-                        accesorio_p1=p1_acc,
-                        accesorio_p2=p2_acc,
-                    )
-                    if resp in ("guardar_salir", "salir_sin_guardar"):
-                        pygame.quit()
-                        sys.exit()
+            for self.plat in self.plataformas:
+                if self.barrera_l_horiz is not None and (self.plat is self.barrera_l_horiz or self.plat is self.barrera_l_vert):
+                    continue
+                if self.bloque_central is not None and self.plat is self.bloque_central["rect"]:
+                    continue
+                if self.plataforma_movil is not None and self.plat is self.plataforma_movil["rect"]:
+                    continue
+                if self.compuerta is not None and self.plat is self.compuerta["rect"]:
+                    continue
+                if self.plataformas_derrumbables is not None and any(self.plat is p_d["rect"] for p_d in self.plataformas_derrumbables):
+                    continue
+                if self.plat.bottom >= self.suelo.top:
+                    self.rect_torre = pygame.Rect(self.plat.x, self.plat.y, self.plat.width, self.plat.height + 4)
+                    pygame.draw.rect(self.mundo_inicio, COLOR_PLATAFORMA, self.rect_torre, border_top_left_radius=4, border_top_right_radius=4)
+                    pygame.draw.rect(self.mundo_inicio, COLOR_BORDE_PLATAFORMA, self.rect_torre, width=2, border_top_left_radius=4, border_top_right_radius=4)
                 else:
+                    pygame.draw.rect(self.mundo_inicio, COLOR_PLATAFORMA, self.plat, border_radius=4)
+                    pygame.draw.rect(self.mundo_inicio, COLOR_BORDE_PLATAFORMA, self.plat, width=2, border_radius=4)
+
+            if self.barrera_l_horiz is not None and self.barrera_l_vert is not None:
+                dibujar_barrera_l_escenario(self.mundo_inicio, self.barrera_l_horiz, self.barrera_l_vert)
+
+            pygame.draw.rect(self.mundo_inicio, (225, 110, 80), self.suelo)
+            if self.pozo_nivel is not None:
+                pygame.draw.line(self.mundo_inicio, COLOR_BORDE_PLATAFORMA, (self.pz["x"], self.pz["y"] + self.pz["alto"]), (self.pz["x"] + self.pz["ancho"], self.pz["y"] + self.pz["alto"]), 2)
+
+            if self.pinchos:
+                dibujar_pinchos_escenario(self.mundo_inicio, self.pinchos)
+            if self.numero_mundo == 2 and self.numero_nivel == 3:
+                dibujar_pendulo_escenario(self.mundo_inicio, self.plataformas, self.plat_elevada, self.pozo_nivel)
+            if self.numero_mundo == 2 and self.numero_nivel == 4 and self.plataformas_derrumbables is not None:
+                dibujar_plataformas_derrumbables_escenario(self.mundo_inicio, self.plataformas_derrumbables, self.pozo_nivel)
+            if self.numero_mundo == 2 and self.numero_nivel == 5 and self.plataformas_alternadas is not None:
+                dibujar_plataformas_alternadas_escenario(self.mundo_inicio, self.plataformas_alternadas, self.pozo_nivel)
+
+        if self.boton_nivel is not None:
+            self.rect_b = self.boton_nivel["rect"]
+            self.h_actual = 4 if self.boton_nivel["presionado"] else 12
+            self.y_actual = self.suelo.top - self.h_actual
+            pygame.draw.rect(self.mundo_inicio, (90, 70, 60), (self.rect_b.left - 6, self.suelo.top - 4, self.rect_b.width + 12, 10), border_radius=2)
+            self.col_btn = (80, 200, 100) if self.boton_nivel["presionado"] else (225, 65, 65)
+            self.col_borde_btn = (50, 150, 70) if self.boton_nivel["presionado"] else (175, 45, 45)
+            pygame.draw.rect(self.mundo_inicio, self.col_btn, (self.rect_b.x, self.y_actual, self.rect_b.width, self.h_actual), border_top_left_radius=3, border_top_right_radius=3)
+            pygame.draw.rect(self.mundo_inicio, self.col_borde_btn, (self.rect_b.x, self.y_actual, self.rect_b.width, self.h_actual), width=2, border_top_left_radius=3, border_top_right_radius=3)
+
+        if self.pared_nivel is not None:
+            self.pr = self.pared_nivel["rect"]
+            for self.y_linea in range(self.pr.top + 30, self.pr.bottom - 10, 35):
+                if 0 <= self.y_linea <= ALTO:
+                    pygame.draw.line(self.mundo_inicio, COLOR_BORDE_PLATAFORMA, (self.pr.left + 4, self.y_linea), (self.pr.right - 4, self.y_linea), 2)
+
+        if self.laser_nivel is not None:
+            dibujar_laser_escenario(self.mundo_inicio, self.laser_nivel)
+
+        if self.paredes_colores is not None:
+            dibujar_paredes_colores_escenario(self.mundo_inicio, self.paredes_colores)
+
+        if self.botones_colores is not None:
+            dibujar_botones_colores_escenario(self.mundo_inicio, self.botones_colores, self.suelo)
+
+        if self.boton_compuerta is not None:
+            self.rect_bc = self.boton_compuerta["rect"]
+            self.h_bc = 4 if self.boton_compuerta["presionado"] else 12
+            self.y_bc = self.suelo.top - self.h_bc
+            pygame.draw.rect(self.mundo_inicio, (90, 70, 60), (self.rect_bc.left - 6, self.suelo.top - 4, self.rect_bc.width + 12, 10), border_radius=2)
+            self.col_bc = (220, 200, 60) if self.boton_compuerta["presionado"] else (245, 175, 40)
+            self.col_borde_bc = (160, 140, 30) if self.boton_compuerta["presionado"] else (180, 120, 20)
+            pygame.draw.rect(self.mundo_inicio, self.col_bc, (self.rect_bc.x, self.y_bc, self.rect_bc.width, self.h_bc), border_top_left_radius=3, border_top_right_radius=3)
+            pygame.draw.rect(self.mundo_inicio, self.col_borde_bc, (self.rect_bc.x, self.y_bc, self.rect_bc.width, self.h_bc), width=2, border_top_left_radius=3, border_top_right_radius=3)
+
+        if self.compuerta is not None and self.compuerta["rect"].width > 0:
+            self.cr = self.compuerta["rect"]
+            pygame.draw.rect(self.mundo_inicio, COLOR_PLATAFORMA, self.cr, border_radius=3)
+            pygame.draw.rect(self.mundo_inicio, COLOR_BORDE_PLATAFORMA, self.cr, width=2, border_radius=3)
+            for self.lx in range(self.cr.left + 12, self.cr.right - 8, 16):
+                pygame.draw.line(self.mundo_inicio, COLOR_BORDE_PLATAFORMA, (self.lx, self.cr.top + 3), (self.lx, self.cr.bottom - 4), 2)
+
+        if self.bloque_central is not None:
+            self.br = self.bloque_central["rect"]
+            pygame.draw.line(self.mundo_inicio, (110, 100, 95), (self.br.left + 12, 0), (self.br.left + 12, self.br.top), 3)
+            pygame.draw.line(self.mundo_inicio, (110, 100, 95), (self.br.right - 12, 0), (self.br.right - 12, self.br.top), 3)
+            pygame.draw.circle(self.mundo_inicio, (70, 65, 60), (self.br.left + 12, self.br.top), 4)
+            pygame.draw.circle(self.mundo_inicio, (70, 65, 60), (self.br.right - 12, self.br.top), 4)
+            pygame.draw.rect(self.mundo_inicio, (220, 50, 50), self.br, border_radius=4)
+            pygame.draw.rect(self.mundo_inicio, (140, 25, 25), self.br, width=2, border_radius=4)
+            for self.by in range(self.br.top + 16, self.br.bottom - 8, 16):
+                pygame.draw.line(self.mundo_inicio, (160, 30, 30), (self.br.left + 4, self.by), (self.br.right - 4, self.by), 2)
+
+        if self.plataforma_movil is not None:
+            self.pm = self.plataforma_movil["rect"]
+            pygame.draw.rect(self.mundo_inicio, COLOR_PLATAFORMA, self.pm, border_radius=4)
+            pygame.draw.rect(self.mundo_inicio, COLOR_BORDE_PLATAFORMA, self.pm, width=2, border_radius=4)
+            for self.rx in range(self.pm.left + 15, self.pm.right - 10, 22):
+                pygame.draw.circle(self.mundo_inicio, (140, 60, 40), (self.rx, self.pm.bottom - 5), 3)
+            self.col_ind = (80, 220, 100) if self.plataforma_movil["moviendo"] else ((240, 180, 40) if self.plataforma_movil["tiempo_con_peso"] > 0 else (180, 80, 55))
+            pygame.draw.circle(self.mundo_inicio, self.col_ind, (self.pm.centerx, self.pm.centery), 4)
+
+        if self.usar_agua:
+            dibujar_agua(self.mundo_inicio, ZONA_AGUA)
+        if self.usar_soga and not self.p1_completado and not self.p2_completado:
+            dibujar_soga_escenario(self.mundo_inicio, self.jugador1, self.jugador2, self.estado_soga, DISTANCIA_SOGA_REPOSO, DISTANCIA_SOGA_MAXIMA)
+        if self.usar_caja:
+            self.mundo_inicio.blit(self.caja["sprite"], self.caja["rect"])
+
+        if self.usar_llave and self.puerta:
+            actualizar_puerta(self.puerta)
+            self.estado_p = "cerrada"
+            self.mundo_inicio.blit(self.puerta["sprites"][self.estado_p], self.puerta["rect"])
+            if self.llave:
+                if self.numero_mundo == 3:
+                    self.halo_surf = pygame.Surface((44, 60), pygame.SRCALPHA)
+                    pygame.draw.ellipse(self.halo_surf, (255, 230, 90, 75), (0, 0, 44, 60))
+                    self.mundo_inicio.blit(self.halo_surf, (self.llave["rect"].centerx - 22, self.llave["rect"].centery - 30))
+                self.mundo_inicio.blit(self.llave["sprite"], self.llave["rect"])
+
+        if self.numero_mundo == 3 and self.numero_nivel in (4, 5) and self.surf_oscuridad_m3 is not None:
+            aplicar_oscuridad_submarina(
+                self.mundo_inicio,
+                [(self.jugador1, self.linterna_p1, False), (self.jugador2, self.linterna_p2, False)],
+                self.surf_oscuridad_m3,
+                self.surf_luz_linterna,
+                self.surf_luz_tenue
+            )
+            dibujar_personaje(self.mundo_inicio, self.jugador1, ZONA_AGUA if self.usar_agua else None)
+            dibujar_linterna_minero(self.mundo_inicio, self.jugador1, self.linterna_p1)
+            dibujar_personaje(self.mundo_inicio, self.jugador2, ZONA_AGUA if self.usar_agua else None)
+            dibujar_linterna_minero(self.mundo_inicio, self.jugador2, self.linterna_p2)
+        else:
+            dibujar_personaje(self.mundo_inicio, self.jugador1, ZONA_AGUA if self.usar_agua else None)
+            dibujar_personaje(self.mundo_inicio, self.jugador2, ZONA_AGUA if self.usar_agua else None)
+
+        self.distancia_ini = abs(self.jugador1["hitbox"].centerx - self.jugador2["hitbox"].centerx)
+        if self.distancia_ini <= DISTANCIA_SPLIT:
+            self.centro_ini = (self.jugador1["hitbox"].centerx + self.jugador2["hitbox"].centerx) // 2
+            self.cam_ini_x = max(0, min(self.centro_ini - ANCHO // 2, self.ancho_mundo_nivel - ANCHO))
+            self.pantalla.blit(self.mundo_inicio, (0, 0), pygame.Rect(self.cam_ini_x, 0, ANCHO, ALTO))
+        else:
+            self.ancho_m = ANCHO // 2
+            self.p_izq = self.jugador1 if self.jugador1["hitbox"].centerx <= self.jugador2["hitbox"].centerx else self.jugador2
+            self.p_der = self.jugador2 if self.p_izq is self.jugador1 else self.jugador1
+            self.cam_izq_x = max(0, min(self.p_izq["hitbox"].centerx - self.ancho_m // 2, self.ancho_mundo_nivel - self.ancho_m))
+            self.cam_der_x = max(0, min(self.p_der["hitbox"].centerx - self.ancho_m // 2, self.ancho_mundo_nivel - self.ancho_m))
+            self.pantalla.blit(self.mundo_inicio, (0, 0), pygame.Rect(self.cam_izq_x, 0, self.ancho_m, ALTO))
+            self.pantalla.blit(self.mundo_inicio, (self.ancho_m, 0), pygame.Rect(self.cam_der_x, 0, self.ancho_m, ALTO))
+            pygame.draw.line(self.pantalla, (0, 0, 0), (self.ancho_m, 0), (self.ancho_m, ALTO), 4)
+
+        self.fondo_btn_config = self.pantalla.subsurface(self.rect_btn_config).copy()
+        self.fondo_btn_casa = self.pantalla.subsurface(self.rect_btn_casa).copy()
+        self.fondo_btn_reiniciar = self.pantalla.subsurface(self.rect_btn_reiniciar).copy()
+        self.fondo_btn_x = self.pantalla.subsurface(self.rect_btn_x).copy()
+
+        if self.spr_config_normal: self.pantalla.blit(self.spr_config_normal, self.rect_btn_config)
+        if self.spr_casa_normal: self.pantalla.blit(self.spr_casa_normal, self.rect_btn_casa)
+        if self.spr_reiniciar_normal: self.pantalla.blit(self.spr_reiniciar_normal, self.rect_btn_reiniciar)
+        if self.spr_x_normal: self.pantalla.blit(self.spr_x_normal, self.rect_btn_x)
+
+        self.captura_nuevo_nivel = self.pantalla.copy()
+        animar_apertura_franjas(self.pantalla, self.reloj, self.captura_nuevo_nivel)
+
+        self.jugador1["accesorio"] = self.p1_acc
+        self.jugador2["accesorio"] = self.p2_acc
+        self.jugador1["equipo_buceo"] = (self.numero_mundo == 3)
+        self.jugador2["equipo_buceo"] = (self.numero_mundo == 3)
+
+        def _reiniciar_nivel_completo():
+            pass  # (antes: nonlocal; ahora son atributos del estado del nivel)
+            pass  # (antes: nonlocal; ahora son atributos del estado del nivel)
+            pass  # (antes: nonlocal; ahora son atributos del estado del nivel)
+            pass  # (antes: nonlocal; ahora son atributos del estado del nivel)
+
+            reiniciar_juego(self.jugador1, self.jugador2, self.caja, self.llave, self.puerta, estado_soga=self.estado_soga)
+            self.jugador1["accesorio"] = self.p1_acc
+            self.jugador2["accesorio"] = self.p2_acc
+            self.jugador1["equipo_buceo"] = (self.numero_mundo == 3)
+            self.jugador2["equipo_buceo"] = (self.numero_mundo == 3)
+            if self.boton_nivel is not None and self.pared_nivel is not None:
+                self.boton_nivel["presionado"] = False
+                self.pared_nivel["progreso"] = 0.0
+                self.pared_nivel["y"] = self.pared_nivel["y_cerrada"]
+                self.pared_nivel["rect"].y = int(self.pared_nivel["y_cerrada"])
+            if self.laser_nivel is not None:
+                self.laser_nivel["bloqueado"] = False
+                pared_x = self.laser_nivel.get("pared_der_x", 1100)
+                self.laser_nivel["x_fin"] = pared_x
+                self.laser_nivel["rect_dano"].x = self.laser_nivel["emisor_rect"].right
+                self.laser_nivel["rect_dano"].width = max(0, pared_x - self.laser_nivel["emisor_rect"].right)
+            if self.botones_colores is not None and self.paredes_colores is not None:
+                for btn in self.botones_colores:
+                    btn["presionado"] = False
+                for pared in self.paredes_colores:
+                    pared["progreso"] = 0.0
+                    pared["rect"].y = int(pared["y_cerrada"])
+            if self.boton_compuerta is not None and self.compuerta is not None:
+                self.boton_compuerta["presionado"] = False
+                self.compuerta["progreso"] = 0.0
+                self.compuerta["rect"].x = 1700
+                self.compuerta["rect"].width = 140
+            if self.plataforma_movil is not None:
+                self.plataforma_movil["x"] = self.plataforma_movil["x_inicial"]
+                self.plataforma_movil["rect"].x = int(self.plataforma_movil["x_inicial"])
+                self.plataforma_movil["tiempo_con_peso"] = 0
+                self.plataforma_movil["tiempo_espera_retorno"] = 0
+                self.plataforma_movil["estado"] = "esperando_inicio"
+                self.plataforma_movil["moviendo"] = False
+                self.plataforma_movil["llegada"] = False
+
+            if self.plataformas_base is not None:
+                self.plataformas = list(self.plataformas_base)
+                if self.paredes_colores is not None:
+                    self.plataformas.extend([p["rect"] for p in self.paredes_colores])
+                if self.compuerta is not None and self.compuerta["rect"].width > 0:
+                    self.plataformas.append(self.compuerta["rect"])
+                if self.plataforma_movil is not None:
+                    self.plataformas.append(self.plataforma_movil["rect"])
+                if self.plataformas_derrumbables is not None:
+                    self.plataformas.extend([p_d["rect"] for p_d in self.plataformas_derrumbables])
+                if self.plataformas_alternadas is not None:
+                    self.plataformas.extend(self.plataformas_alternadas)
+
+            if self.plataformas_derrumbables is not None:
+                for p_d in self.plataformas_derrumbables:
+                    p_d["rect"].x = p_d["x_inicial"]
+                    p_d["rect"].y = p_d["y_inicial"]
+                    p_d["y"] = float(p_d["y_inicial"])
+                    p_d["vel_y"] = 0.0
+                    p_d["estado"] = "intacta"
+                    p_d["pisada"] = False
+                    p_d["tiempo_restante"] = 60
+                    p_d["particulas"].clear()
+
+            self.p1_completado, self.p2_completado = False, False
+            self.mostrar_tutorial = (self.numero_mundo == 1 and self.numero_nivel == 1)
+            self.contador_tutorial = 0
+            self.p1_movio = False
+            self.p2_movio = False
+            self.alpha_tut_p1 = 255.0
+            self.alpha_tut_p2 = 255.0
+            self.p1_soplado = False
+            self.p2_soplado = False
+            self.teclas_sopladas.clear()
+            self.lineas_viento.clear()
+
+            if self.numero_mundo == 3 and self.numero_nivel == 1:
+                self.jugador1["en_agua"] = True
+                self.jugador2["en_agua"] = True
+                if self.burbujas_m3:
+                    self.burbujas_m3[:] = crear_sistema_burbujas_m3(self.ancho_mundo_nivel, cantidad=45)
+
+            if self.numero_mundo == 3 and self.numero_nivel == 2:
+                datos_lab = generar_laberinto_coral_m3_n2(self.ancho_mundo_nivel, ALTO, self.suelo.top, self.techo_agua.bottom)
+                self.rocas_submarinas = datos_lab["rocas"]
+                self.barreras_algas = datos_lab["barreras"]
+                self.corales_decorativos = datos_lab["corales"]
+                self.algas_decorativas = datos_lab["algas"]
+                self.plataformas_base = [self.techo_agua] + [r["rect"] for r in self.rocas_submarinas] + [b["rect"] for b in self.barreras_algas]
+                self.plataformas = list(self.plataformas_base)
+                self.llave["x_inicial"] = datos_lab["llave_x"]
+                self.llave["y_inicial"] = datos_lab["llave_y"]
+                self.llave["x_float"] = float(datos_lab["llave_x"])
+                self.llave["y_float"] = float(datos_lab["llave_y"])
+                self.llave["rect"].x = datos_lab["llave_x"]
+                self.llave["rect"].y = datos_lab["llave_y"]
+                self.llave["recolectada"] = False
+                self.llave["portador"] = None
+                self.puerta["abierta"] = False
+                self.jugador1["x_inicial"] = datos_lab["p1_x"]
+                self.jugador1["y_inicial"] = datos_lab["p1_y"]
+                self.jugador1["hitbox"].x = datos_lab["p1_x"]
+                self.jugador1["hitbox"].y = datos_lab["p1_y"]
+                self.jugador1["vel_x"] = 0
+                self.jugador1["vel_y"] = 0
+                self.jugador1["en_agua"] = True
+                self.jugador2["x_inicial"] = datos_lab["p2_x"]
+                self.jugador2["y_inicial"] = datos_lab["p2_y"]
+                self.jugador2["hitbox"].x = datos_lab["p2_x"]
+                self.jugador2["hitbox"].y = datos_lab["p2_y"]
+                self.jugador2["vel_x"] = 0
+                self.jugador2["vel_y"] = 0
+                self.jugador2["en_agua"] = True
+                if self.burbujas_m3:
+                    self.burbujas_m3[:] = crear_sistema_burbujas_m3(self.ancho_mundo_nivel, cantidad=50)
+
+            if self.numero_mundo == 3 and self.numero_nivel == 3:
+                self.jugador1["en_agua"] = True
+                self.jugador2["en_agua"] = True
+                if self.burbujas_m3:
+                    self.burbujas_m3[:] = crear_sistema_burbujas_m3(self.ancho_mundo_nivel, cantidad=45)
+
+            if self.numero_mundo == 3 and self.numero_nivel == 4:
+                self.linterna_p1 = True
+                self.linterna_p2 = True
+                datos_lab = generar_laberinto_oscuro_m3_n4(self.ancho_mundo_nivel, ALTO, self.suelo.top, self.techo_agua.bottom)
+                self.rocas_submarinas = datos_lab["rocas"]
+                self.barreras_algas = datos_lab["barreras"]
+                self.corales_decorativos = datos_lab["corales"]
+                self.algas_decorativas = datos_lab["algas"]
+                self.pinchos = datos_lab["pinchos"]
+                self.flechas_indicadoras = datos_lab.get("flechas", [])
+                self.plataformas_base = [self.techo_agua] + [r["rect"] for r in self.rocas_submarinas] + [b["rect"] for b in self.barreras_algas]
+                self.plataformas = list(self.plataformas_base)
+                self.llave["x_inicial"] = datos_lab["llave_x"]
+                self.llave["y_inicial"] = datos_lab["llave_y"]
+                self.llave["x_float"] = float(datos_lab["llave_x"])
+                self.llave["y_float"] = float(datos_lab["llave_y"])
+                self.llave["rect"].x = datos_lab["llave_x"]
+                self.llave["rect"].y = datos_lab["llave_y"]
+                self.llave["recolectada"] = False
+                self.llave["portador"] = None
+                self.puerta["abierta"] = False
+                self.jugador1["x_inicial"] = datos_lab["p1_x"]
+                self.jugador1["y_inicial"] = datos_lab["p1_y"]
+                self.jugador1["hitbox"].x = datos_lab["p1_x"]
+                self.jugador1["hitbox"].y = datos_lab["p1_y"]
+                self.jugador1["vel_x"] = 0
+                self.jugador1["vel_y"] = 0
+                self.jugador1["en_agua"] = True
+                self.jugador2["x_inicial"] = datos_lab["p2_x"]
+                self.jugador2["y_inicial"] = datos_lab["p2_y"]
+                self.jugador2["hitbox"].x = datos_lab["p2_x"]
+                self.jugador2["hitbox"].y = datos_lab["p2_y"]
+                self.jugador2["vel_x"] = 0
+                self.jugador2["vel_y"] = 0
+                self.jugador2["en_agua"] = True
+                if self.burbujas_m3:
+                    self.burbujas_m3[:] = crear_sistema_burbujas_m3(self.ancho_mundo_nivel, cantidad=45)
+
+            if self.numero_mundo == 3 and self.numero_nivel in (5, 6):
+                self.linterna_p1 = True
+                self.linterna_p2 = True
+                self.oxigeno_p1 = 100.0
+                self.oxigeno_p2 = 100.0
+                self.jugador1["en_agua"] = True
+                self.jugador2["en_agua"] = True
+                detener_sonido_ahogamiento()
+                if self.burbujas_m3:
+                    self.burbujas_m3[:] = crear_sistema_burbujas_m3(self.ancho_mundo_nivel, cantidad=45)
+        self._reiniciar_nivel_completo = _reiniciar_nivel_completo
+
+        self.mundo = pygame.Surface((self.ancho_mundo_nivel, ALTO)).convert()
+        self.ejecutando = True
+
+
+
+def _procesar_eventos(n):
+    """Eventos de teclado y botones del HUD. Devuelve un resultado ('menu', 'salir') para terminar el nivel, o None."""
+    for n.evento in pygame.event.get():
+        if n.evento.type == pygame.QUIT:
+            if hay_progreso_sin_guardar(n.niveles_desbloqueados, n.snapshot_guardado, id_partida=n.partida_id):
+                n.resp = mostrar_dialogo_guardar_salir(
+                    n.pantalla, n.reloj,
+                    niveles_desbloqueados=n.niveles_desbloqueados,
+                    id_partida=n.partida_id,
+                    nombre_partida=n.partida_nombre,
+                    password_partida=n.partida_password,
+                    color_p1=n.color_p1,
+                    color_p2=n.color_p2,
+                    accesorio_p1=n.p1_acc,
+                    accesorio_p2=n.p2_acc,
+                )
+                if n.resp in ("guardar_salir", "salir_sin_guardar"):
                     pygame.quit()
                     sys.exit()
+            else:
+                pygame.quit()
+                sys.exit()
 
-            if evento.type == pygame.KEYDOWN:
-                if evento.key == pygame.K_r:
-                    if spr_reiniciar_semi and spr_reiniciar_apretado:
-                        f_limpio = fondo_btn_reiniciar if fondo_btn_reiniciar else (255, 240, 195)
-                        animar_pulsacion_boton(pantalla, rect_btn_reiniciar, spr_reiniciar_semi, spr_reiniciar_apretado, f_limpio, tipo_sonido="ventana_reiniciar")
-                    _reiniciar_nivel_completo()
-                elif numero_mundo == 3 and numero_nivel in (4, 5):
-                    if evento.key in (pygame.K_e, pygame.K_f, pygame.K_SPACE):
-                        if not jugador1.get("muerto", False):
-                            linterna_p1 = not linterna_p1
-                    elif evento.key in (pygame.K_l, pygame.K_RETURN, pygame.K_RSHIFT, pygame.K_RCTRL):
-                        if not jugador2.get("muerto", False):
-                            linterna_p2 = not linterna_p2
+        if n.evento.type == pygame.KEYDOWN:
+            if n.evento.key == pygame.K_r:
+                if n.spr_reiniciar_semi and n.spr_reiniciar_apretado:
+                    n.f_limpio = n.fondo_btn_reiniciar if n.fondo_btn_reiniciar else (255, 240, 195)
+                    animar_pulsacion_boton(n.pantalla, n.rect_btn_reiniciar, n.spr_reiniciar_semi, n.spr_reiniciar_apretado, n.f_limpio, tipo_sonido="ventana_reiniciar")
+                n._reiniciar_nivel_completo()
+            elif n.numero_mundo == 3 and n.numero_nivel in (4, 5):
+                if n.evento.key in (pygame.K_e, pygame.K_f, pygame.K_SPACE):
+                    if not n.jugador1.get("muerto", False):
+                        n.linterna_p1 = not n.linterna_p1
+                elif n.evento.key in (pygame.K_l, pygame.K_RETURN, pygame.K_RSHIFT, pygame.K_RCTRL):
+                    if not n.jugador2.get("muerto", False):
+                        n.linterna_p2 = not n.linterna_p2
 
-            if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-                if rect_btn_x.collidepoint(evento.pos):
-                    f_limpio = fondo_btn_x if fondo_btn_x else (255, 240, 195)
-                    if animar_pulsacion_boton(pantalla, rect_btn_x, spr_x_semi, spr_x_apretado, f_limpio, spr_x_normal, tipo_sonido="ventana_cancelar"):
-                        if hay_progreso_sin_guardar(niveles_desbloqueados, snapshot_guardado, id_partida=partida_id):
-                            resp = mostrar_dialogo_guardar_salir(
-                                pantalla, reloj,
-                                niveles_desbloqueados=niveles_desbloqueados,
-                                id_partida=partida_id,
-                                nombre_partida=partida_nombre,
-                                password_partida=partida_password,
-                                color_p1=color_p1,
-                                color_p2=color_p2,
-                                accesorio_p1=p1_acc,
-                                accesorio_p2=p2_acc,
-                            )
-                            if resp in ("guardar_salir", "salir_sin_guardar"):
-                                pygame.quit()
-                                sys.exit()
-                        else:
+        if n.evento.type == pygame.MOUSEBUTTONDOWN and n.evento.button == 1:
+            if n.rect_btn_x.collidepoint(n.evento.pos):
+                n.f_limpio = n.fondo_btn_x if n.fondo_btn_x else (255, 240, 195)
+                if animar_pulsacion_boton(n.pantalla, n.rect_btn_x, n.spr_x_semi, n.spr_x_apretado, n.f_limpio, n.spr_x_normal, tipo_sonido="ventana_cancelar"):
+                    if hay_progreso_sin_guardar(n.niveles_desbloqueados, n.snapshot_guardado, id_partida=n.partida_id):
+                        n.resp = mostrar_dialogo_guardar_salir(
+                            n.pantalla, n.reloj,
+                            niveles_desbloqueados=n.niveles_desbloqueados,
+                            id_partida=n.partida_id,
+                            nombre_partida=n.partida_nombre,
+                            password_partida=n.partida_password,
+                            color_p1=n.color_p1,
+                            color_p2=n.color_p2,
+                            accesorio_p1=n.p1_acc,
+                            accesorio_p2=n.p2_acc,
+                        )
+                        if n.resp in ("guardar_salir", "salir_sin_guardar"):
                             pygame.quit()
                             sys.exit()
-
-                if rect_btn_reiniciar.collidepoint(evento.pos):
-                    f_limpio = fondo_btn_reiniciar if fondo_btn_reiniciar else (255, 240, 195)
-                    if animar_pulsacion_boton(pantalla, rect_btn_reiniciar, spr_reiniciar_semi, spr_reiniciar_apretado, f_limpio, spr_reiniciar_normal, tipo_sonido="ventana_reiniciar"):
-                        _reiniciar_nivel_completo()
-
-                if rect_btn_casa.collidepoint(evento.pos):
-                    f_limpio = fondo_btn_casa if fondo_btn_casa else (255, 240, 195)
-                    if animar_pulsacion_boton(pantalla, rect_btn_casa, spr_casa_semi, spr_casa_apretado, f_limpio, spr_casa_normal, tipo_sonido="ventana_volver"):
-                        return "menu"
-
-                if rect_btn_config.collidepoint(evento.pos):
-                    f_limpio = fondo_btn_config if fondo_btn_config else (255, 240, 195)
-                    if animar_pulsacion_boton(pantalla, rect_btn_config, spr_config_semi, spr_config_apretado, f_limpio, spr_config_normal, tipo_sonido="menu"):
-                        mostrar_pestana_configuracion(pantalla, reloj)
-
-        teclas = pygame.key.get_pressed()
-
-        salto_p1_pedido = teclas[pygame.K_w] and (puede_saltar(jugador1) if usar_agua else jugador1["en_suelo"])
-        salto_p2_pedido = teclas[pygame.K_UP] and (puede_saltar(jugador2) if usar_agua else jugador2["en_suelo"])
-
-        if mostrar_tutorial:
-            contador_tutorial += 1
-
-            # Detectar si Jugador 1 se mueve (WASD o salto)
-            if not p1_movio and not p1_completado and not jugador1["muerto"]:
-                if (
-                    teclas[pygame.K_a] or teclas[pygame.K_d] or salto_p1_pedido
-                    or (usar_agua and (teclas[pygame.K_w] or teclas[pygame.K_s]))
-                    or jugador1["moviendo"]
-                ):
-                    p1_movio = True
-
-            # Detectar si Jugador 2 se mueve (Flechas o salto)
-            if not p2_movio and not p2_completado and not jugador2["muerto"]:
-                if (
-                    teclas[pygame.K_LEFT] or teclas[pygame.K_RIGHT] or salto_p2_pedido
-                    or (usar_agua and (teclas[pygame.K_UP] or teclas[pygame.K_DOWN]))
-                    or jugador2["moviendo"]
-                ):
-                    p2_movio = True
-
-            # Desvanecer los controles de P1 al moverse o soplado
-            if p1_soplado:
-                alpha_tut_p1 = 0.0
-            elif p1_movio:
-                alpha_tut_p1 = max(0.0, alpha_tut_p1 - 25.0)
-
-            # Desvanecer los controles de P2 al moverse o soplado
-            if p2_soplado:
-                alpha_tut_p2 = 0.0
-            elif p2_movio:
-                alpha_tut_p2 = max(0.0, alpha_tut_p2 - 25.0)
-
-            if alpha_tut_p1 <= 0 and alpha_tut_p2 <= 0 and not teclas_sopladas and not lineas_viento:
-                mostrar_tutorial = False
-
-        p1_sobre_p2 = (
-            not p1_completado and not p2_completado and not jugador1["muerto"] and not jugador2["muerto"]
-            and abs(jugador1["hitbox"].bottom - jugador2["hitbox"].top) <= 8
-            and jugador1["hitbox"].right > jugador2["hitbox"].left + 2
-            and jugador1["hitbox"].left < jugador2["hitbox"].right - 2
-        )
-        p2_sobre_p1 = (
-            not p1_completado and not p2_completado and not jugador1["muerto"] and not jugador2["muerto"]
-            and abs(jugador2["hitbox"].bottom - jugador1["hitbox"].top) <= 8
-            and jugador2["hitbox"].right > jugador1["hitbox"].left + 2
-            and jugador2["hitbox"].left < jugador1["hitbox"].right - 2
-        )
-
-        # Movimiento horizontal Jugador 1 (P1: WASD)
-        if not jugador1["muerto"] and not p1_completado:
-            mover_izq_p1 = teclas[pygame.K_a]
-            mover_der_p1 = teclas[pygame.K_d]
-
-            if mover_izq_p1 and not mover_der_p1:
-                if usar_soga and not jugador1["en_suelo"] and jugador2.get("en_suelo", False):
-                    # Suspendido en el aire: bombear impulso tangencial al péndulo
-                    jugador1["vel_x"] = max(-jugador1["velocidad_mov"], jugador1["vel_x"] - 0.45)
-                else:
-                    jugador1["vel_x"] = -jugador1["velocidad_mov"]
-                jugador1["moviendo"] = True
-            elif mover_der_p1 and not mover_izq_p1:
-                if usar_soga and not jugador1["en_suelo"] and jugador2.get("en_suelo", False):
-                    jugador1["vel_x"] = min(jugador1["velocidad_mov"], jugador1["vel_x"] + 0.45)
-                else:
-                    jugador1["vel_x"] = jugador1["velocidad_mov"]
-                jugador1["moviendo"] = True
-            else:
-                if usar_soga and not jugador1["en_suelo"]:
-                    if jugador2.get("en_suelo", False):
-                        jugador1["vel_x"] *= 0.995  # Conservación natural de la inercia pendular
                     else:
-                        jugador1["vel_x"] *= 0.97
-                elif numero_mundo == 3:
-                    jugador1["vel_x"] *= 0.82
-                    if abs(jugador1["vel_x"]) < 0.15:
-                        jugador1["vel_x"] = 0
-                else:
-                    jugador1["vel_x"] = 0
-                if abs(jugador1["vel_x"]) < 0.15 and abs(jugador1.get("vel_y", 0)) < 0.3:
-                    jugador1["moviendo"] = False
+                        pygame.quit()
+                        sys.exit()
 
-            if salto_p1_pedido:
-                impulso = 0
-                if not usar_agua and p1_sobre_p2 and (salto_p2_pedido or jugador2["vel_y"] < 0):
-                    impulso = -4.5
-                jugador1["vel_y"] = jugador1["fuerza_salto"] + impulso
-                jugador1["en_suelo"] = False
+            if n.rect_btn_reiniciar.collidepoint(n.evento.pos):
+                n.f_limpio = n.fondo_btn_reiniciar if n.fondo_btn_reiniciar else (255, 240, 195)
+                if animar_pulsacion_boton(n.pantalla, n.rect_btn_reiniciar, n.spr_reiniciar_semi, n.spr_reiniciar_apretado, n.f_limpio, n.spr_reiniciar_normal, tipo_sonido="ventana_reiniciar"):
+                    n._reiniciar_nivel_completo()
 
-        # Movimiento horizontal Jugador 2 (P2: Flechas)
-        if not jugador2["muerto"] and not p2_completado:
-            mover_izq_p2 = teclas[pygame.K_LEFT]
-            mover_der_p2 = teclas[pygame.K_RIGHT]
+            if n.rect_btn_casa.collidepoint(n.evento.pos):
+                n.f_limpio = n.fondo_btn_casa if n.fondo_btn_casa else (255, 240, 195)
+                if animar_pulsacion_boton(n.pantalla, n.rect_btn_casa, n.spr_casa_semi, n.spr_casa_apretado, n.f_limpio, n.spr_casa_normal, tipo_sonido="ventana_volver"):
+                    return "menu"
 
-            if mover_izq_p2 and not mover_der_p2:
-                if usar_soga and not jugador2["en_suelo"] and jugador1.get("en_suelo", False):
-                    # Suspendido en el aire: bombear impulso tangencial al péndulo
-                    jugador2["vel_x"] = max(-jugador2["velocidad_mov"], jugador2["vel_x"] - 0.45)
-                else:
-                    jugador2["vel_x"] = -jugador2["velocidad_mov"]
-                jugador2["moviendo"] = True
-            elif mover_der_p2 and not mover_izq_p2:
-                if usar_soga and not jugador2["en_suelo"] and jugador1.get("en_suelo", False):
-                    jugador2["vel_x"] = min(jugador2["velocidad_mov"], jugador2["vel_x"] + 0.45)
-                else:
-                    jugador2["vel_x"] = jugador2["velocidad_mov"]
-                jugador2["moviendo"] = True
+            if n.rect_btn_config.collidepoint(n.evento.pos):
+                n.f_limpio = n.fondo_btn_config if n.fondo_btn_config else (255, 240, 195)
+                if animar_pulsacion_boton(n.pantalla, n.rect_btn_config, n.spr_config_semi, n.spr_config_apretado, n.f_limpio, n.spr_config_normal, tipo_sonido="menu"):
+                    mostrar_pestana_configuracion(n.pantalla, n.reloj)
+
+
+def _actualizar_jugadores(n):
+    """Entrada de los jugadores, tutorial, movimiento, soga y agua."""
+    n.teclas = pygame.key.get_pressed()
+
+    salto_p1_pedido = n.teclas[pygame.K_w] and (puede_saltar(n.jugador1) if n.usar_agua else n.jugador1["en_suelo"])
+    salto_p2_pedido = n.teclas[pygame.K_UP] and (puede_saltar(n.jugador2) if n.usar_agua else n.jugador2["en_suelo"])
+
+    if n.mostrar_tutorial:
+        n.contador_tutorial += 1
+
+        # Detectar si Jugador 1 se mueve (WASD o salto)
+        if not n.p1_movio and not n.p1_completado and not n.jugador1["muerto"]:
+            if (
+                n.teclas[pygame.K_a] or n.teclas[pygame.K_d] or salto_p1_pedido
+                or (n.usar_agua and (n.teclas[pygame.K_w] or n.teclas[pygame.K_s]))
+                or n.jugador1["moviendo"]
+            ):
+                n.p1_movio = True
+
+        # Detectar si Jugador 2 se mueve (Flechas o salto)
+        if not n.p2_movio and not n.p2_completado and not n.jugador2["muerto"]:
+            if (
+                n.teclas[pygame.K_LEFT] or n.teclas[pygame.K_RIGHT] or salto_p2_pedido
+                or (n.usar_agua and (n.teclas[pygame.K_UP] or n.teclas[pygame.K_DOWN]))
+                or n.jugador2["moviendo"]
+            ):
+                n.p2_movio = True
+
+        # Desvanecer los controles de P1 al moverse o soplado
+        if n.p1_soplado:
+            n.alpha_tut_p1 = 0.0
+        elif n.p1_movio:
+            n.alpha_tut_p1 = max(0.0, n.alpha_tut_p1 - 25.0)
+
+        # Desvanecer los controles de P2 al moverse o soplado
+        if n.p2_soplado:
+            n.alpha_tut_p2 = 0.0
+        elif n.p2_movio:
+            n.alpha_tut_p2 = max(0.0, n.alpha_tut_p2 - 25.0)
+
+        if n.alpha_tut_p1 <= 0 and n.alpha_tut_p2 <= 0 and not n.teclas_sopladas and not n.lineas_viento:
+            n.mostrar_tutorial = False
+
+    n.p1_sobre_p2 = (
+        not n.p1_completado and not n.p2_completado and not n.jugador1["muerto"] and not n.jugador2["muerto"]
+        and abs(n.jugador1["hitbox"].bottom - n.jugador2["hitbox"].top) <= 8
+        and n.jugador1["hitbox"].right > n.jugador2["hitbox"].left + 2
+        and n.jugador1["hitbox"].left < n.jugador2["hitbox"].right - 2
+    )
+    n.p2_sobre_p1 = (
+        not n.p1_completado and not n.p2_completado and not n.jugador1["muerto"] and not n.jugador2["muerto"]
+        and abs(n.jugador2["hitbox"].bottom - n.jugador1["hitbox"].top) <= 8
+        and n.jugador2["hitbox"].right > n.jugador1["hitbox"].left + 2
+        and n.jugador2["hitbox"].left < n.jugador1["hitbox"].right - 2
+    )
+
+    # Movimiento horizontal Jugador 1 (P1: WASD)
+    if not n.jugador1["muerto"] and not n.p1_completado:
+        n.mover_izq_p1 = n.teclas[pygame.K_a]
+        n.mover_der_p1 = n.teclas[pygame.K_d]
+
+        if n.mover_izq_p1 and not n.mover_der_p1:
+            if n.usar_soga and not n.jugador1["en_suelo"] and n.jugador2.get("en_suelo", False):
+                # Suspendido en el aire: bombear impulso tangencial al péndulo
+                n.jugador1["vel_x"] = max(-n.jugador1["velocidad_mov"], n.jugador1["vel_x"] - 0.45)
             else:
-                if usar_soga and not jugador2["en_suelo"]:
-                    if jugador1.get("en_suelo", False):
-                        jugador2["vel_x"] *= 0.995  # Conservación natural de la inercia pendular
-                    else:
-                        jugador2["vel_x"] *= 0.97
-                elif numero_mundo == 3:
-                    jugador2["vel_x"] *= 0.82
-                    if abs(jugador2["vel_x"]) < 0.15:
-                        jugador2["vel_x"] = 0
-                else:
-                    jugador2["vel_x"] = 0
-                if abs(jugador2["vel_x"]) < 0.15 and abs(jugador2.get("vel_y", 0)) < 0.3:
-                    jugador2["moviendo"] = False
-
-            if salto_p2_pedido:
-                impulso = 0
-                if not usar_agua and p2_sobre_p1 and (salto_p1_pedido or jugador1["vel_y"] < 0):
-                    impulso = -4.5
-                jugador2["vel_y"] = jugador2["fuerza_salto"] + impulso
-                jugador2["en_suelo"] = False
-
-        if usar_soga and not p1_completado and not p2_completado:
-            actualizar_fisica_soga(jugador1, jugador2, estado_soga, DISTANCIA_SOGA_REPOSO, DISTANCIA_SOGA_MAXIMA)
-
-        if usar_agua:
-            if not jugador1["muerto"]:
-                actualizar_estado_agua(jugador1, ZONA_AGUA)
-                if jugador1["en_agua"]:
-                    aplicar_fisica_agua(jugador1, teclas[pygame.K_w], teclas[pygame.K_s], submarino=(numero_mundo == 3))
-            if not jugador2["muerto"]:
-                actualizar_estado_agua(jugador2, ZONA_AGUA)
-                if jugador2["en_agua"]:
-                    aplicar_fisica_agua(jugador2, teclas[pygame.K_UP], teclas[pygame.K_DOWN], submarino=(numero_mundo == 3))
-
-        if boton_nivel is not None and pared_nivel is not None:
-            caja_sobre_btn = (
-                caja is not None
-                and caja["rect"].right > boton_nivel["rect"].left + 15
-                and caja["rect"].left < boton_nivel["rect"].right - 15
-                and abs(caja["rect"].bottom - suelo.top) <= 8
-            )
-            pj_sobre_btn = any(
-                not p["muerto"] and not comp
-                and p["hitbox"].right > boton_nivel["rect"].left + 10
-                and p["hitbox"].left < boton_nivel["rect"].right - 10
-                and abs(p["hitbox"].bottom - suelo.top) <= 8
-                for p, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]
-            )
-            nuevo_pres_btn = (caja_sobre_btn or pj_sobre_btn)
-            if nuevo_pres_btn and not boton_nivel.get("presionado", False):
-                reproducir_sonido_ui("nivel_boton")
-            boton_nivel["presionado"] = nuevo_pres_btn
-
-            vel_pared = 0.04
-            if boton_nivel["presionado"]:
-                if pared_nivel["progreso"] < 1.0:
-                    pared_nivel["progreso"] = min(1.0, pared_nivel["progreso"] + vel_pared)
+                n.jugador1["vel_x"] = -n.jugador1["velocidad_mov"]
+            n.jugador1["moviendo"] = True
+        elif n.mover_der_p1 and not n.mover_izq_p1:
+            if n.usar_soga and not n.jugador1["en_suelo"] and n.jugador2.get("en_suelo", False):
+                n.jugador1["vel_x"] = min(n.jugador1["velocidad_mov"], n.jugador1["vel_x"] + 0.45)
             else:
-                if pared_nivel["progreso"] > 0.0:
-                    pared_nivel["progreso"] = max(0.0, pared_nivel["progreso"] - vel_pared)
-
-            pared_nivel["y"] = pared_nivel["y_cerrada"] + (pared_nivel["y_abierta"] - pared_nivel["y_cerrada"]) * pared_nivel["progreso"]
-            pared_nivel["rect"].y = int(pared_nivel["y"])
-
-        if botones_colores is not None and paredes_colores is not None:
-            # Comprobación continua de presión física: el botón solo está presionado
-            # mientras un personaje permanezca físicamente apoyado sobre él.
-            for btn in botones_colores:
-                rb = btn["rect"]
-                pj_sobre = False
-                for p, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]:
-                    if not p["muerto"] and not comp:
-                        hb = p["hitbox"]
-                        if (
-                            hb.right > rb.left + 8
-                            and hb.left < rb.right - 8
-                            and abs(hb.bottom - suelo.top) <= 8
-                            and (p["en_suelo"] or abs(p["vel_y"]) <= 1.5)
-                        ):
-                            pj_sobre = True
-                            break
-                if pj_sobre and not btn.get("presionado", False):
-                    reproducir_sonido_ui("nivel_boton")
-                btn["presionado"] = pj_sobre
-
-            rojo_presionado = any(btn["presionado"] for btn in botones_colores if btn["color"] == "rojo")
-            azul_presionado = any(btn["presionado"] for btn in botones_colores if btn["color"] == "azul")
-
-            vel_pared = 0.05
-            for pared in paredes_colores:
-                abrir = (rojo_presionado if pared["color"] == "rojo" else azul_presionado)
-                if abrir:
-                    if pared["progreso"] < 1.0:
-                        pared["progreso"] = min(1.0, pared["progreso"] + vel_pared)
+                n.jugador1["vel_x"] = n.jugador1["velocidad_mov"]
+            n.jugador1["moviendo"] = True
+        else:
+            if n.usar_soga and not n.jugador1["en_suelo"]:
+                if n.jugador2.get("en_suelo", False):
+                    n.jugador1["vel_x"] *= 0.995  # Conservación natural de la inercia pendular
                 else:
-                    # Protección anti-aplastamiento: si un personaje está en el espacio que ocupa la pared cerrada,
-                    # no reactivar la colisión ni bajar la pared directamente sobre él hasta que el espacio quede libre.
-                    rect_espacio_cerrado = pygame.Rect(pared["x"], int(pared["y_cerrada"]), pared["ancho"], pared["alto"])
-                    jugador_en_espacio = any(
-                        not pj["muerto"] and not comp and pj["hitbox"].colliderect(rect_espacio_cerrado)
-                        for pj, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]
-                    )
-                    if not jugador_en_espacio:
-                        if pared["progreso"] > 0.0:
-                            pared["progreso"] = max(0.0, pared["progreso"] - vel_pared)
+                    n.jugador1["vel_x"] *= 0.97
+            elif n.numero_mundo == 3:
+                n.jugador1["vel_x"] *= 0.82
+                if abs(n.jugador1["vel_x"]) < 0.15:
+                    n.jugador1["vel_x"] = 0
+            else:
+                n.jugador1["vel_x"] = 0
+            if abs(n.jugador1["vel_x"]) < 0.15 and abs(n.jugador1.get("vel_y", 0)) < 0.3:
+                n.jugador1["moviendo"] = False
 
-                y_actual = pared["y_cerrada"] + (pared["y_abierta"] - pared["y_cerrada"]) * pared["progreso"]
-                pared["rect"].y = int(y_actual)
+        if salto_p1_pedido:
+            n.impulso = 0
+            if not n.usar_agua and n.p1_sobre_p2 and (salto_p2_pedido or n.jugador2["vel_y"] < 0):
+                n.impulso = -4.5
+            n.jugador1["vel_y"] = n.jugador1["fuerza_salto"] + n.impulso
+            n.jugador1["en_suelo"] = False
 
-            paredes_solidas = []
-            for p_col in paredes_colores:
-                if p_col["progreso"] < 0.75:
-                    solapado = any(
-                        not pj["muerto"] and not comp and pj["hitbox"].colliderect(p_col["rect"])
-                        for pj, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]
-                    )
-                    if not solapado:
-                        paredes_solidas.append(p_col["rect"])
-            plataformas = plataformas_base + paredes_solidas
+    # Movimiento horizontal Jugador 2 (P2: Flechas)
+    if not n.jugador2["muerto"] and not n.p2_completado:
+        n.mover_izq_p2 = n.teclas[pygame.K_LEFT]
+        n.mover_der_p2 = n.teclas[pygame.K_RIGHT]
 
-        if boton_compuerta is not None:
-            pj_sobre = False
-            rb = boton_compuerta["rect"]
-            for p, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]:
-                if not comp and not p["muerto"]:
-                    hb = p["hitbox"]
+        if n.mover_izq_p2 and not n.mover_der_p2:
+            if n.usar_soga and not n.jugador2["en_suelo"] and n.jugador1.get("en_suelo", False):
+                # Suspendido en el aire: bombear impulso tangencial al péndulo
+                n.jugador2["vel_x"] = max(-n.jugador2["velocidad_mov"], n.jugador2["vel_x"] - 0.45)
+            else:
+                n.jugador2["vel_x"] = -n.jugador2["velocidad_mov"]
+            n.jugador2["moviendo"] = True
+        elif n.mover_der_p2 and not n.mover_izq_p2:
+            if n.usar_soga and not n.jugador2["en_suelo"] and n.jugador1.get("en_suelo", False):
+                n.jugador2["vel_x"] = min(n.jugador2["velocidad_mov"], n.jugador2["vel_x"] + 0.45)
+            else:
+                n.jugador2["vel_x"] = n.jugador2["velocidad_mov"]
+            n.jugador2["moviendo"] = True
+        else:
+            if n.usar_soga and not n.jugador2["en_suelo"]:
+                if n.jugador1.get("en_suelo", False):
+                    n.jugador2["vel_x"] *= 0.995  # Conservación natural de la inercia pendular
+                else:
+                    n.jugador2["vel_x"] *= 0.97
+            elif n.numero_mundo == 3:
+                n.jugador2["vel_x"] *= 0.82
+                if abs(n.jugador2["vel_x"]) < 0.15:
+                    n.jugador2["vel_x"] = 0
+            else:
+                n.jugador2["vel_x"] = 0
+            if abs(n.jugador2["vel_x"]) < 0.15 and abs(n.jugador2.get("vel_y", 0)) < 0.3:
+                n.jugador2["moviendo"] = False
+
+        if salto_p2_pedido:
+            n.impulso = 0
+            if not n.usar_agua and n.p2_sobre_p1 and (salto_p1_pedido or n.jugador1["vel_y"] < 0):
+                n.impulso = -4.5
+            n.jugador2["vel_y"] = n.jugador2["fuerza_salto"] + n.impulso
+            n.jugador2["en_suelo"] = False
+
+    if n.usar_soga and not n.p1_completado and not n.p2_completado:
+        actualizar_fisica_soga(n.jugador1, n.jugador2, n.estado_soga, DISTANCIA_SOGA_REPOSO, DISTANCIA_SOGA_MAXIMA)
+
+    if n.usar_agua:
+        if not n.jugador1["muerto"]:
+            actualizar_estado_agua(n.jugador1, ZONA_AGUA)
+            if n.jugador1["en_agua"]:
+                aplicar_fisica_agua(n.jugador1, n.teclas[pygame.K_w], n.teclas[pygame.K_s], submarino=(n.numero_mundo == 3))
+        if not n.jugador2["muerto"]:
+            actualizar_estado_agua(n.jugador2, ZONA_AGUA)
+            if n.jugador2["en_agua"]:
+                aplicar_fisica_agua(n.jugador2, n.teclas[pygame.K_UP], n.teclas[pygame.K_DOWN], submarino=(n.numero_mundo == 3))
+
+
+def _actualizar_mecanicas(n):
+    """Botones, paredes, compuerta, plataformas móviles y derrumbables, caja."""
+    if n.boton_nivel is not None and n.pared_nivel is not None:
+        n.caja_sobre_btn = (
+            n.caja is not None
+            and n.caja["rect"].right > n.boton_nivel["rect"].left + 15
+            and n.caja["rect"].left < n.boton_nivel["rect"].right - 15
+            and abs(n.caja["rect"].bottom - n.suelo.top) <= 8
+        )
+        n.pj_sobre_btn = any(
+            not p["muerto"] and not comp
+            and p["hitbox"].right > n.boton_nivel["rect"].left + 10
+            and p["hitbox"].left < n.boton_nivel["rect"].right - 10
+            and abs(p["hitbox"].bottom - n.suelo.top) <= 8
+            for p, comp in [(n.jugador1, n.p1_completado), (n.jugador2, n.p2_completado)]
+        )
+        n.nuevo_pres_btn = (n.caja_sobre_btn or n.pj_sobre_btn)
+        if n.nuevo_pres_btn and not n.boton_nivel.get("presionado", False):
+            reproducir_sonido_ui("nivel_boton")
+        n.boton_nivel["presionado"] = n.nuevo_pres_btn
+
+        n.vel_pared = 0.04
+        if n.boton_nivel["presionado"]:
+            if n.pared_nivel["progreso"] < 1.0:
+                n.pared_nivel["progreso"] = min(1.0, n.pared_nivel["progreso"] + n.vel_pared)
+        else:
+            if n.pared_nivel["progreso"] > 0.0:
+                n.pared_nivel["progreso"] = max(0.0, n.pared_nivel["progreso"] - n.vel_pared)
+
+        n.pared_nivel["y"] = n.pared_nivel["y_cerrada"] + (n.pared_nivel["y_abierta"] - n.pared_nivel["y_cerrada"]) * n.pared_nivel["progreso"]
+        n.pared_nivel["rect"].y = int(n.pared_nivel["y"])
+
+    if n.botones_colores is not None and n.paredes_colores is not None:
+        # Comprobación continua de presión física: el botón solo está presionado
+        # mientras un personaje permanezca físicamente apoyado sobre él.
+        for n.btn in n.botones_colores:
+            n.rb = n.btn["rect"]
+            n.pj_sobre = False
+            for n.p, n.comp in [(n.jugador1, n.p1_completado), (n.jugador2, n.p2_completado)]:
+                if not n.p["muerto"] and not n.comp:
+                    n.hb = n.p["hitbox"]
                     if (
-                        hb.right > rb.left + 6
-                        and hb.left < rb.right - 6
-                        and abs(hb.bottom - suelo.top) <= 8
-                        and (p["en_suelo"] or abs(p["vel_y"]) <= 1.5)
+                        n.hb.right > n.rb.left + 8
+                        and n.hb.left < n.rb.right - 8
+                        and abs(n.hb.bottom - n.suelo.top) <= 8
+                        and (n.p["en_suelo"] or abs(n.p["vel_y"]) <= 1.5)
                     ):
-                        pj_sobre = True
+                        n.pj_sobre = True
                         break
-            if pj_sobre and not boton_compuerta.get("presionado", False):
+            if n.pj_sobre and not n.btn.get("presionado", False):
                 reproducir_sonido_ui("nivel_boton")
-            boton_compuerta["presionado"] = pj_sobre
+            n.btn["presionado"] = n.pj_sobre
 
-        if compuerta is not None:
-            vel_comp = 0.06
-            if boton_compuerta is not None and boton_compuerta["presionado"]:
-                if compuerta["progreso"] < 1.0:
-                    compuerta["progreso"] = min(1.0, compuerta["progreso"] + vel_comp)
+        n.rojo_presionado = any(btn["presionado"] for btn in n.botones_colores if btn["color"] == "rojo")
+        n.azul_presionado = any(btn["presionado"] for btn in n.botones_colores if btn["color"] == "azul")
+
+        n.vel_pared = 0.05
+        for n.pared in n.paredes_colores:
+            n.abrir = (n.rojo_presionado if n.pared["color"] == "rojo" else n.azul_presionado)
+            if n.abrir:
+                if n.pared["progreso"] < 1.0:
+                    n.pared["progreso"] = min(1.0, n.pared["progreso"] + n.vel_pared)
             else:
-                rect_espacio_hueco = pygame.Rect(1700, 460, 140, 60)
-                jugador_en_espacio = any(
-                    not pj["muerto"] and not comp and pj["hitbox"].colliderect(rect_espacio_hueco)
-                    for pj, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]
+                # Protección anti-aplastamiento: si un personaje está en el espacio que ocupa la pared cerrada,
+                # no reactivar la colisión ni bajar la pared directamente sobre él hasta que el espacio quede libre.
+                n.rect_espacio_cerrado = pygame.Rect(n.pared["x"], int(n.pared["y_cerrada"]), n.pared["ancho"], n.pared["alto"])
+                n.jugador_en_espacio = any(
+                    not pj["muerto"] and not comp and pj["hitbox"].colliderect(n.rect_espacio_cerrado)
+                    for pj, comp in [(n.jugador1, n.p1_completado), (n.jugador2, n.p2_completado)]
                 )
-                if not jugador_en_espacio:
-                    if compuerta["progreso"] > 0.0:
-                        compuerta["progreso"] = max(0.0, compuerta["progreso"] - vel_comp)
+                if not n.jugador_en_espacio:
+                    if n.pared["progreso"] > 0.0:
+                        n.pared["progreso"] = max(0.0, n.pared["progreso"] - n.vel_pared)
 
-            comp_x = 1700 + int(140 * compuerta["progreso"])
-            compuerta["rect"].x = comp_x
-            compuerta["rect"].width = max(0, 1840 - comp_x)
+            n.y_actual = n.pared["y_cerrada"] + (n.pared["y_abierta"] - n.pared["y_cerrada"]) * n.pared["progreso"]
+            n.pared["rect"].y = int(n.y_actual)
 
-            if compuerta["progreso"] < 0.75:
-                solapado_comp = any(
-                    not pj["muerto"] and not comp and pj["hitbox"].colliderect(compuerta["rect"])
-                    for pj, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]
+        n.paredes_solidas = []
+        for n.p_col in n.paredes_colores:
+            if n.p_col["progreso"] < 0.75:
+                n.solapado = any(
+                    not pj["muerto"] and not comp and pj["hitbox"].colliderect(n.p_col["rect"])
+                    for pj, comp in [(n.jugador1, n.p1_completado), (n.jugador2, n.p2_completado)]
                 )
-                if not solapado_comp and compuerta["rect"].width > 0:
-                    if compuerta["rect"] not in plataformas:
-                        plataformas.append(compuerta["rect"])
+                if not n.solapado:
+                    n.paredes_solidas.append(n.p_col["rect"])
+        n.plataformas = n.plataformas_base + n.paredes_solidas
 
-        if plataforma_movil is not None:
-            pm_rect = plataforma_movil["rect"]
-            pjs_sobre = []
-            for pj, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]:
-                if not comp and not pj["muerto"]:
-                    hb = pj["hitbox"]
-                    if (
-                        hb.right > pm_rect.left + 4
-                        and hb.left < pm_rect.right - 4
-                        and abs(hb.bottom - pm_rect.top) <= 8
-                        and (pj["en_suelo"] or abs(pj["vel_y"]) <= 2.0)
-                    ):
-                        pjs_sobre.append(pj)
+    if n.boton_compuerta is not None:
+        n.pj_sobre = False
+        n.rb = n.boton_compuerta["rect"]
+        for n.p, n.comp in [(n.jugador1, n.p1_completado), (n.jugador2, n.p2_completado)]:
+            if not n.comp and not n.p["muerto"]:
+                n.hb = n.p["hitbox"]
+                if (
+                    n.hb.right > n.rb.left + 6
+                    and n.hb.left < n.rb.right - 6
+                    and abs(n.hb.bottom - n.suelo.top) <= 8
+                    and (n.p["en_suelo"] or abs(n.p["vel_y"]) <= 1.5)
+                ):
+                    n.pj_sobre = True
+                    break
+        if n.pj_sobre and not n.boton_compuerta.get("presionado", False):
+            reproducir_sonido_ui("nivel_boton")
+        n.boton_compuerta["presionado"] = n.pj_sobre
 
-            estado_pm = plataforma_movil.get("estado", "esperando_inicio")
+    if n.compuerta is not None:
+        n.vel_comp = 0.06
+        if n.boton_compuerta is not None and n.boton_compuerta["presionado"]:
+            if n.compuerta["progreso"] < 1.0:
+                n.compuerta["progreso"] = min(1.0, n.compuerta["progreso"] + n.vel_comp)
+        else:
+            n.rect_espacio_hueco = pygame.Rect(1700, 460, 140, 60)
+            n.jugador_en_espacio = any(
+                not pj["muerto"] and not comp and pj["hitbox"].colliderect(n.rect_espacio_hueco)
+                for pj, comp in [(n.jugador1, n.p1_completado), (n.jugador2, n.p2_completado)]
+            )
+            if not n.jugador_en_espacio:
+                if n.compuerta["progreso"] > 0.0:
+                    n.compuerta["progreso"] = max(0.0, n.compuerta["progreso"] - n.vel_comp)
 
-            if estado_pm == "esperando_inicio":
-                if len(pjs_sobre) > 0:
-                    plataforma_movil["tiempo_con_peso"] += 1
-                    if plataforma_movil["tiempo_con_peso"] >= plataforma_movil.get("tiempo_activacion", 120):
-                        plataforma_movil["estado"] = "avanzando"
-                        plataforma_movil["moviendo"] = True
+        n.comp_x = 1700 + int(140 * n.compuerta["progreso"])
+        n.compuerta["rect"].x = n.comp_x
+        n.compuerta["rect"].width = max(0, 1840 - n.comp_x)
+
+        if n.compuerta["progreso"] < 0.75:
+            n.solapado_comp = any(
+                not pj["muerto"] and not comp and pj["hitbox"].colliderect(n.compuerta["rect"])
+                for pj, comp in [(n.jugador1, n.p1_completado), (n.jugador2, n.p2_completado)]
+            )
+            if not n.solapado_comp and n.compuerta["rect"].width > 0:
+                if n.compuerta["rect"] not in n.plataformas:
+                    n.plataformas.append(n.compuerta["rect"])
+
+    if n.plataforma_movil is not None:
+        n.pm_rect = n.plataforma_movil["rect"]
+        n.pjs_sobre = []
+        for n.pj, n.comp in [(n.jugador1, n.p1_completado), (n.jugador2, n.p2_completado)]:
+            if not n.comp and not n.pj["muerto"]:
+                n.hb = n.pj["hitbox"]
+                if (
+                    n.hb.right > n.pm_rect.left + 4
+                    and n.hb.left < n.pm_rect.right - 4
+                    and abs(n.hb.bottom - n.pm_rect.top) <= 8
+                    and (n.pj["en_suelo"] or abs(n.pj["vel_y"]) <= 2.0)
+                ):
+                    n.pjs_sobre.append(n.pj)
+
+        n.estado_pm = n.plataforma_movil.get("estado", "esperando_inicio")
+
+        if n.estado_pm == "esperando_inicio":
+            if len(n.pjs_sobre) > 0:
+                n.plataforma_movil["tiempo_con_peso"] += 1
+                if n.plataforma_movil["tiempo_con_peso"] >= n.plataforma_movil.get("tiempo_activacion", 120):
+                    n.plataforma_movil["estado"] = "avanzando"
+                    n.plataforma_movil["moviendo"] = True
+            else:
+                n.plataforma_movil["tiempo_con_peso"] = 0
+
+        elif n.estado_pm == "avanzando":
+            n.vel = n.plataforma_movil["velocidad"]
+            n.x_fin = n.plataforma_movil.get("x_fin", 1720.0)
+            if n.plataforma_movil["x"] + n.vel >= n.x_fin:
+                n.plataforma_movil["x"] = n.x_fin
+                n.plataforma_movil["estado"] = "esperando_retorno"
+                n.plataforma_movil["moviendo"] = False
+                n.plataforma_movil["llegada"] = True
+                n.plataforma_movil["tiempo_espera_retorno"] = 0
+            else:
+                n.plataforma_movil["x"] += n.vel
+            n.plataforma_movil["rect"].x = int(n.plataforma_movil["x"])
+
+        elif n.estado_pm == "esperando_retorno":
+            n.plataforma_movil["moviendo"] = False
+            n.plataforma_movil["tiempo_espera_retorno"] += 1
+            if n.plataforma_movil["tiempo_espera_retorno"] >= n.plataforma_movil.get("tiempo_max_espera_retorno", 300):
+                n.plataforma_movil["estado"] = "regresando"
+                n.plataforma_movil["moviendo"] = True
+                n.plataforma_movil["llegada"] = False
+
+        elif n.estado_pm == "regresando":
+            n.vel = n.plataforma_movil["velocidad"]
+            n.x_ini = n.plataforma_movil["x_inicial"]
+            if n.plataforma_movil["x"] - n.vel <= n.x_ini:
+                n.plataforma_movil["x"] = n.x_ini
+                n.plataforma_movil["estado"] = "esperando_inicio"
+                n.plataforma_movil["moviendo"] = False
+                n.plataforma_movil["tiempo_con_peso"] = 0
+                n.plataforma_movil["tiempo_espera_retorno"] = 0
+            else:
+                n.plataforma_movil["x"] -= n.vel
+            n.plataforma_movil["rect"].x = int(n.plataforma_movil["x"])
+
+        # Los personajes deben tener que moverse para mantenerse sobre la plataforma
+        # (No se traslada artificialmente pj["hitbox"].x += dx)
+
+        if n.plataformas_base is not None:
+            n.plataformas = list(n.plataformas_base) + [n.plataforma_movil["rect"]]
+
+    if n.plataformas_derrumbables is not None:
+        for n.p_d in n.plataformas_derrumbables:
+            # 1. Detectar si un personaje vivo no completado está pisando físicamente la plataforma
+            # Cada plataforma gestiona su propio temporizador de forma independiente.
+            if not n.p_d["pisada"]:
+                n.pjs_pisando = False
+                for n.pj, n.comp in [(n.jugador1, n.p1_completado), (n.jugador2, n.p2_completado)]:
+                    if not n.comp and not n.pj["muerto"]:
+                        n.hb = n.pj["hitbox"]
+                        # El personaje pisa la plataforma si tiene solapamiento horizontal y sus pies
+                        # contactan la cara superior (estando en suelo o aterrizando con vel_y >= 0)
+                        if (
+                            n.hb.right > n.p_d["rect"].left + 2
+                            and n.hb.left < n.p_d["rect"].right - 2
+                            and abs(n.hb.bottom - n.p_d["rect"].top) <= 8
+                            and (n.pj["en_suelo"] or n.pj.get("vel_y", 0) >= 0)
+                        ):
+                            n.pjs_pisando = True
+                            break
+                if n.pjs_pisando:
+                    n.p_d["pisada"] = True
+                    n.p_d["tiempo_restante"] = 60  # Exactamente 1.0 segundo a 60 FPS (no se reinicia al permanecer encima)
+
+            # 2. Descontar temporizador
+            if n.p_d["pisada"] and n.p_d["tiempo_restante"] > 0:
+                n.p_d["tiempo_restante"] -= 1
+                if n.p_d["tiempo_restante"] <= 20:
+                    n.p_d["estado"] = "temblando"
                 else:
-                    plataforma_movil["tiempo_con_peso"] = 0
+                    n.p_d["estado"] = "agrietandose"
 
-            elif estado_pm == "avanzando":
-                vel = plataforma_movil["velocidad"]
-                x_fin = plataforma_movil.get("x_fin", 1720.0)
-                if plataforma_movil["x"] + vel >= x_fin:
-                    plataforma_movil["x"] = x_fin
-                    plataforma_movil["estado"] = "esperando_retorno"
-                    plataforma_movil["moviendo"] = False
-                    plataforma_movil["llegada"] = True
-                    plataforma_movil["tiempo_espera_retorno"] = 0
-                else:
-                    plataforma_movil["x"] += vel
-                plataforma_movil["rect"].x = int(plataforma_movil["x"])
-
-            elif estado_pm == "esperando_retorno":
-                plataforma_movil["moviendo"] = False
-                plataforma_movil["tiempo_espera_retorno"] += 1
-                if plataforma_movil["tiempo_espera_retorno"] >= plataforma_movil.get("tiempo_max_espera_retorno", 300):
-                    plataforma_movil["estado"] = "regresando"
-                    plataforma_movil["moviendo"] = True
-                    plataforma_movil["llegada"] = False
-
-            elif estado_pm == "regresando":
-                vel = plataforma_movil["velocidad"]
-                x_ini = plataforma_movil["x_inicial"]
-                if plataforma_movil["x"] - vel <= x_ini:
-                    plataforma_movil["x"] = x_ini
-                    plataforma_movil["estado"] = "esperando_inicio"
-                    plataforma_movil["moviendo"] = False
-                    plataforma_movil["tiempo_con_peso"] = 0
-                    plataforma_movil["tiempo_espera_retorno"] = 0
-                else:
-                    plataforma_movil["x"] -= vel
-                plataforma_movil["rect"].x = int(plataforma_movil["x"])
-
-            # Los personajes deben tener que moverse para mantenerse sobre la plataforma
-            # (No se traslada artificialmente pj["hitbox"].x += dx)
-
-            if plataformas_base is not None:
-                plataformas = list(plataformas_base) + [plataforma_movil["rect"]]
-
-        if plataformas_derrumbables is not None:
-            for p_d in plataformas_derrumbables:
-                # 1. Detectar si un personaje vivo no completado está pisando físicamente la plataforma
-                # Cada plataforma gestiona su propio temporizador de forma independiente.
-                if not p_d["pisada"]:
-                    pjs_pisando = False
-                    for pj, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]:
-                        if not comp and not pj["muerto"]:
-                            hb = pj["hitbox"]
-                            # El personaje pisa la plataforma si tiene solapamiento horizontal y sus pies
-                            # contactan la cara superior (estando en suelo o aterrizando con vel_y >= 0)
+                if n.p_d["tiempo_restante"] <= 0:
+                    n.p_d["estado"] = "derrumbada"
+                    # Dejar de sostener inmediatamente a los personajes sobre esta plataforma
+                    for n.pj, n.comp in [(n.jugador1, n.p1_completado), (n.jugador2, n.p2_completado)]:
+                        if not n.comp and not n.pj["muerto"]:
+                            n.hb = n.pj["hitbox"]
                             if (
-                                hb.right > p_d["rect"].left + 2
-                                and hb.left < p_d["rect"].right - 2
-                                and abs(hb.bottom - p_d["rect"].top) <= 8
-                                and (pj["en_suelo"] or pj.get("vel_y", 0) >= 0)
+                                n.hb.right > n.p_d["rect"].left + 2
+                                and n.hb.left < n.p_d["rect"].right - 2
+                                and abs(n.hb.bottom - n.p_d["rect"].top) <= 8
                             ):
-                                pjs_pisando = True
-                                break
-                    if pjs_pisando:
-                        p_d["pisada"] = True
-                        p_d["tiempo_restante"] = 60  # Exactamente 1.0 segundo a 60 FPS (no se reinicia al permanecer encima)
+                                n.pj["en_suelo"] = False
+                    for n._ in range(14):
+                        n.p_d["particulas"].append({
+                            "x": random.uniform(n.p_d["rect"].left, n.p_d["rect"].right),
+                            "y": random.uniform(n.p_d["rect"].top, n.p_d["rect"].bottom),
+                            "vx": random.uniform(-2.5, 2.5),
+                            "vy": random.uniform(-1.0, 3.0),
+                            "tam": random.randint(3, 6),
+                            "vida": random.randint(30, 50),
+                        })
 
-                # 2. Descontar temporizador
-                if p_d["pisada"] and p_d["tiempo_restante"] > 0:
-                    p_d["tiempo_restante"] -= 1
-                    if p_d["tiempo_restante"] <= 20:
-                        p_d["estado"] = "temblando"
-                    else:
-                        p_d["estado"] = "agrietandose"
+            # 3. Caída libre de la plataforma si se derrumbó (caída rápida)
+            if n.p_d["estado"] == "derrumbada":
+                n.p_d["vel_y"] += 1.5
+                n.p_d["y"] += n.p_d["vel_y"]
+                n.p_d["rect"].y = int(n.p_d["y"])
 
-                    if p_d["tiempo_restante"] <= 0:
-                        p_d["estado"] = "derrumbada"
-                        # Dejar de sostener inmediatamente a los personajes sobre esta plataforma
-                        for pj, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]:
-                            if not comp and not pj["muerto"]:
-                                hb = pj["hitbox"]
-                                if (
-                                    hb.right > p_d["rect"].left + 2
-                                    and hb.left < p_d["rect"].right - 2
-                                    and abs(hb.bottom - p_d["rect"].top) <= 8
-                                ):
-                                    pj["en_suelo"] = False
-                        for _ in range(14):
-                            p_d["particulas"].append({
-                                "x": random.uniform(p_d["rect"].left, p_d["rect"].right),
-                                "y": random.uniform(p_d["rect"].top, p_d["rect"].bottom),
-                                "vx": random.uniform(-2.5, 2.5),
-                                "vy": random.uniform(-1.0, 3.0),
-                                "tam": random.randint(3, 6),
-                                "vida": random.randint(30, 50),
-                            })
+            # 4. Actualizar partículas existentes
+            n.activas_part = []
+            for n.part in n.p_d["particulas"]:
+                n.part["x"] += n.part["vx"]
+                n.part["y"] += n.part["vy"]
+                n.part["vy"] += 0.25
+                n.part["vida"] -= 1
+                if n.part["vida"] > 0:
+                    n.activas_part.append(n.part)
+            n.p_d["particulas"] = n.activas_part
 
-                # 3. Caída libre de la plataforma si se derrumbó (caída rápida)
-                if p_d["estado"] == "derrumbada":
-                    p_d["vel_y"] += 1.5
-                    p_d["y"] += p_d["vel_y"]
-                    p_d["rect"].y = int(p_d["y"])
+        # 5. Las plataformas activas que sostienen a los personajes son las que no se han derrumbado
+        if n.plataformas_base is not None:
+            n.plataformas = list(n.plataformas_base) + [p_d["rect"] for p_d in n.plataformas_derrumbables if p_d["estado"] != "derrumbada"]
 
-                # 4. Actualizar partículas existentes
-                activas_part = []
-                for part in p_d["particulas"]:
-                    part["x"] += part["vx"]
-                    part["y"] += part["vy"]
-                    part["vy"] += 0.25
-                    part["vida"] -= 1
-                    if part["vida"] > 0:
-                        activas_part.append(part)
-                p_d["particulas"] = activas_part
+    if n.usar_caja:
+        actualizar_caja(n.caja, n.suelo, n.mundo_rect, n.plataformas)
+        if n.numero_mundo == 1 and n.numero_nivel == 4 and n.caja is not None:
+            if n.caja["rect"].left < 20:
+                n.caja["rect"].left = 20
 
-            # 5. Las plataformas activas que sostienen a los personajes son las que no se han derrumbado
-            if plataformas_base is not None:
-                plataformas = list(plataformas_base) + [p_d["rect"] for p_d in plataformas_derrumbables if p_d["estado"] != "derrumbada"]
 
-        if usar_caja:
-            actualizar_caja(caja, suelo, mundo_rect, plataformas)
-            if numero_mundo == 1 and numero_nivel == 4 and caja is not None:
-                if caja["rect"].left < 20:
-                    caja["rect"].left = 20
+def _resolver_interacciones(n):
+    """Colisiones, oxígeno, llave y puerta, pinchos, láser, caídas, muerte y entrada a la puerta."""
+    if n.usar_soga and not n.p1_completado and not n.p2_completado:
+        coordinar_movimiento_soga(n.jugador1, n.jugador2, DISTANCIA_SOGA_MAXIMA)
 
-        if usar_soga and not p1_completado and not p2_completado:
-            coordinar_movimiento_soga(jugador1, jugador2, DISTANCIA_SOGA_MAXIMA)
+    if not n.jugador1["muerto"] and not n.p1_completado:
+        resolver_colisiones(n.jugador1, n.jugador2 if not n.p2_completado and not n.jugador2["muerto"] else None, n.suelo, n.mundo_rect, n.caja if n.usar_caja else None, n.jugador1["en_agua"], n.plataformas, usar_soga=n.usar_soga, d_max=DISTANCIA_SOGA_MAXIMA)
+    if not n.jugador2["muerto"] and not n.p2_completado:
+        resolver_colisiones(n.jugador2, n.jugador1 if not n.p1_completado and not n.jugador1["muerto"] else None, n.suelo, n.mundo_rect, n.caja if n.usar_caja else None, n.jugador2["en_agua"], n.plataformas, usar_soga=n.usar_soga, d_max=DISTANCIA_SOGA_MAXIMA)
 
-        if not jugador1["muerto"] and not p1_completado:
-            resolver_colisiones(jugador1, jugador2 if not p2_completado and not jugador2["muerto"] else None, suelo, mundo_rect, caja if usar_caja else None, jugador1["en_agua"], plataformas, usar_soga=usar_soga, d_max=DISTANCIA_SOGA_MAXIMA)
-        if not jugador2["muerto"] and not p2_completado:
-            resolver_colisiones(jugador2, jugador1 if not p1_completado and not jugador1["muerto"] else None, suelo, mundo_rect, caja if usar_caja else None, jugador2["en_agua"], plataformas, usar_soga=usar_soga, d_max=DISTANCIA_SOGA_MAXIMA)
+    if n.numero_mundo == 3 and n.numero_nivel in (5, 6):
+        # 1. Empuje de corrientes marinas sobre personajes activos
+        for n.p, n.comp in [(n.jugador1, n.p1_completado), (n.jugador2, n.p2_completado)]:
+            if not n.comp and not n.p["muerto"]:
+                for n.corr in n.corrientes_marinas:
+                    if n.p["hitbox"].colliderect(n.corr["rect"]):
+                        n.p["hitbox"].x += int(n.corr["fuerza_x"])
+                        n.p["hitbox"].y += int(n.corr["fuerza_y"])
 
-        if numero_mundo == 3 and numero_nivel in (5, 6):
-            # 1. Empuje de corrientes marinas sobre personajes activos
-            for p, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]:
-                if not comp and not p["muerto"]:
-                    for corr in corrientes_marinas:
-                        if p["hitbox"].colliderect(corr["rect"]):
-                            p["hitbox"].x += int(corr["fuerza_x"])
-                            p["hitbox"].y += int(corr["fuerza_y"])
-
-            # 2. Gestión del oxígeno de Jugador 1
-            if not p1_completado and not jugador1["muerto"]:
-                en_camara_p1 = any(cam["rect"].colliderect(jugador1["hitbox"]) for cam in camaras_aire)
-                if en_camara_p1:
-                    oxigeno_p1 = min(OXIGENO_MAX, oxigeno_p1 + 0.85)
-                else:
-                    oxigeno_p1 = max(0.0, oxigeno_p1 - 0.082)
-                    if oxigeno_p1 <= 0.0:
-                        matar_personaje(jugador1)
-                        if numero_mundo != 3 and not jugador2["muerto"] and not p2_completado:
-                            matar_personaje(jugador2)
-
-            # 3. Gestión del oxígeno de Jugador 2
-            if not p2_completado and not jugador2["muerto"]:
-                en_camara_p2 = any(cam["rect"].colliderect(jugador2["hitbox"]) for cam in camaras_aire)
-                if en_camara_p2:
-                    oxigeno_p2 = min(OXIGENO_MAX, oxigeno_p2 + 0.85)
-                else:
-                    oxigeno_p2 = max(0.0, oxigeno_p2 - 0.086)
-                    if oxigeno_p2 <= 0.0:
-                        matar_personaje(jugador2)
-                        if numero_mundo != 3 and not jugador1["muerto"] and not p1_completado:
-                            matar_personaje(jugador1)
-
-            # 4. Gestión del sonido de ahogamiento (se activa cuando la barra de oxígeno entra en rojo < 25%)
-            p1_ahogandose = (not p1_completado and not jugador1["muerto"] and oxigeno_p1 < 25.0)
-            p2_ahogandose = (not p2_completado and not jugador2["muerto"] and oxigeno_p2 < 25.0)
-
-            if p1_ahogandose or p2_ahogandose:
-                reproducir_sonido_ahogamiento()
+        # 2. Gestión del oxígeno de Jugador 1
+        if not n.p1_completado and not n.jugador1["muerto"]:
+            n.en_camara_p1 = any(cam["rect"].colliderect(n.jugador1["hitbox"]) for cam in n.camaras_aire)
+            if n.en_camara_p1:
+                n.oxigeno_p1 = min(n.OXIGENO_MAX, n.oxigeno_p1 + 0.85)
             else:
-                detener_sonido_ahogamiento()
+                n.oxigeno_p1 = max(0.0, n.oxigeno_p1 - 0.082)
+                if n.oxigeno_p1 <= 0.0:
+                    matar_personaje(n.jugador1)
+                    if n.numero_mundo != 3 and not n.jugador2["muerto"] and not n.p2_completado:
+                        matar_personaje(n.jugador2)
 
-        if usar_soga and not p1_completado and not p2_completado:
-            aplicar_restriccion_soga(jugador1, jugador2, DISTANCIA_SOGA_MAXIMA, plataformas, suelo, estado_soga)
-        if usar_llave:
-            personajes_activos = [p for p, comp in [(jugador1, p1_completado), (jugador2, p2_completado)] if not comp and not p["muerto"]]
-            actualizar_llave(llave, personajes_activos, puerta)
-        if usar_pinchos:
-            p1_toco = False
-            p2_toco = False
-            if not p1_completado:
-                p1_toco = comprobar_pinchos(jugador1, pinchos)
-            if not p2_completado:
-                p2_toco = comprobar_pinchos(jugador2, pinchos)
-
-            if numero_mundo != 3:
-                if p1_toco and not jugador2["muerto"] and not p2_completado:
-                    matar_personaje(jugador2)
-                elif p2_toco and not jugador1["muerto"] and not p1_completado:
-                    matar_personaje(jugador1)
-
-        if laser_nivel is not None:
-            em = laser_nivel["emisor_rect"]
-            y_r = laser_nivel["y_rayo"]
-            pared_x = laser_nivel.get("pared_der_x", 1100)
-            x_stop = pared_x
-            bloqueado = False
-            if caja is not None:
-                cr = caja["rect"]
-                if cr.right > em.left and cr.left < pared_x and cr.top <= y_r <= cr.bottom:
-                    x_stop = max(em.right, cr.left)
-                    bloqueado = True
-
-            laser_nivel["bloqueado"] = bloqueado
-            laser_nivel["x_fin"] = x_stop
-            laser_nivel["rect_dano"].x = em.right
-            laser_nivel["rect_dano"].width = max(0, x_stop - em.right)
-
-            for p, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]:
-                if not comp and not p["muerto"]:
-                    if laser_nivel["rect_dano"].width > 0 and p["hitbox"].colliderect(laser_nivel["rect_dano"]):
-                        matar_personaje(p)
-                        if numero_mundo != 3:
-                            otro = jugador2 if p is jugador1 else jugador1
-                            comp_otro = p2_completado if p is jugador1 else p1_completado
-                            if not comp_otro and not otro.get("muerto", False):
-                                matar_personaje(otro)
-
-        # Detección continua de muerte cuando un personaje cae o sale completamente de la pantalla o del escenario
-        for p, comp, otro, comp_otro in [
-            (jugador1, p1_completado, jugador2, p2_completado),
-            (jugador2, p2_completado, jugador1, p1_completado),
-        ]:
-            if not comp and not p.get("muerto", False):
-                hb = p["hitbox"]
-                if numero_mundo == 3:
-                    # En Mundo 3 todos los bordes (izquierdo x=0, derecho x=ancho, techo y=0, suelo marino)
-                    # son límites físicos sólidos infranqueables, no zonas mortales ni abismos.
-                    # Tocarlos nunca causa daño ni muerte a los personajes.
-                    caida_abajo = False
-                    salida_izq = False
-                    salida_der = False
-                    salida_arriba = False
-                else:
-                    caida_abajo = (hb.top >= ALTO)
-                    salida_izq = (hb.right <= 0)
-                    salida_der = (hb.left >= ancho_mundo_nivel)
-                    salida_arriba = (hb.bottom <= -50)
-
-                if caida_abajo or salida_izq or salida_der or salida_arriba:
-                    if caida_abajo and numero_mundo != 3:
-                        # Asegurar que inicie el salto de muerte desde el borde para que sea visible en pantalla
-                        hb.top = ALTO
-                    matar_personaje(p)
-
-                    # Si el personaje que cayó portaba la llave, reubicarla en su posición inicial
-                    # para que el sobreviviente pueda continuar sin quedar bloqueado indefinidamente
-                    if usar_llave and llave and llave.get("recolectada", False) and llave.get("portador") is p:
-                        llave["recolectada"] = False
-                        llave["portador"] = None
-                        llave["rect"].x = llave["x_inicial"]
-                        llave["rect"].y = llave["y_inicial"]
-                        llave["x_float"] = float(llave["x_inicial"])
-                        llave["y_float"] = float(llave["y_inicial"])
-
-                    # Reglas por mundo:
-                    # - Mundos 1 y 2: muerte compartida (si uno muere, mueren ambos)
-                    # - Mundo 3: muerte independiente (el otro continúa con vida)
-                    if numero_mundo != 3:
-                        if not comp_otro and not otro.get("muerto", False):
-                            matar_personaje(otro)
-
-        dur_max_muerte = 36 if numero_mundo == 3 else None
-        actualizar_muerte(jugador1, duracion_max=dur_max_muerte, limites_mundo=mundo_rect if numero_mundo == 3 else None)
-        actualizar_muerte(jugador2, duracion_max=dur_max_muerte, limites_mundo=mundo_rect if numero_mundo == 3 else None)
-
-        # Limitar horizontalmente y techo para personajes vivos, permitiendo caída libre por el fondo
-        for p, comp in [(jugador1, p1_completado), (jugador2, p2_completado)]:
-            if not comp and not p.get("muerto", False):
-                hb = p["hitbox"]
-                if hb.left < 0:
-                    hb.left = 0
-                elif hb.right > ancho_mundo_nivel:
-                    hb.right = ancho_mundo_nivel
-                if hb.top < 0:
-                    hb.top = 0
-
-        # Detección de interacción especial en Mundo 1 Nivel 1: soplar indicadores del personaje quieto al saltar sobre él
-        if numero_mundo == 1 and numero_nivel == 1:
-            ancho_c = 3 * TAM_BTN_TUT + 2 * GAP_BTN_TUT
-            h_c1 = badge_p1.get_height() + 4 + (2 * TAM_BTN_TUT + GAP_BTN_TUT)
-            h_c2 = badge_p2.get_height() + 4 + (2 * TAM_BTN_TUT + GAP_BTN_TUT)
-
-            # Caso 1: Jugador 1 está quieto, Jugador 2 salta y atraviesa la zona de sus indicadores
-            if not p1_movio and not p1_soplado and alpha_tut_p1 > 0 and not jugador1["muerto"] and not p1_completado:
-                if not jugador2["muerto"] and not p2_completado and not p2_sobre_p1:
-                    if not jugador2["en_suelo"] or abs(jugador2["vel_y"]) > 1.0:
-                        rect_c1 = pygame.Rect(jugador1["hitbox"].centerx - ancho_c // 2, (jugador1["hitbox"].top - 8) - h_c1, ancho_c, h_c1)
-                        if jugador2["hitbox"].colliderect(rect_c1):
-                            pasa_sobre = abs(jugador2["vel_x"]) > 0.3 or (jugador2["hitbox"].right > jugador1["hitbox"].left + 2 and jugador2["hitbox"].left < jugador1["hitbox"].right - 2)
-                            if pasa_sobre:
-                                p1_soplado = True
-                                alpha_tut_p1 = 0.0
-                                dir_v = 1.0 if jugador2["vel_x"] > 0.3 else (-1.0 if jugador2["vel_x"] < -0.3 else (1.0 if jugador2["hitbox"].centerx >= jugador1["hitbox"].centerx else -1.0))
-                                _crear_efecto_soplar(jugador1, es_p1=True, dir_viento=dir_v)
-
-            # Caso 2: Jugador 2 está quieto, Jugador 1 salta y atraviesa la zona de sus indicadores
-            if not p2_movio and not p2_soplado and alpha_tut_p2 > 0 and not jugador2["muerto"] and not p2_completado:
-                if not jugador1["muerto"] and not p1_completado and not p1_sobre_p2:
-                    if not jugador1["en_suelo"] or abs(jugador1["vel_y"]) > 1.0:
-                        rect_c2 = pygame.Rect(jugador2["hitbox"].centerx - ancho_c // 2, (jugador2["hitbox"].top - 8) - h_c2, ancho_c, h_c2)
-                        if jugador1["hitbox"].colliderect(rect_c2):
-                            pasa_sobre = abs(jugador1["vel_x"]) > 0.3 or (jugador1["hitbox"].right > jugador2["hitbox"].left + 2 and jugador1["hitbox"].left < jugador2["hitbox"].right - 2)
-                            if pasa_sobre:
-                                p2_soplado = True
-                                alpha_tut_p2 = 0.0
-                                dir_v = 1.0 if jugador1["vel_x"] > 0.3 else (-1.0 if jugador1["vel_x"] < -0.3 else (1.0 if jugador1["hitbox"].centerx >= jugador2["hitbox"].centerx else -1.0))
-                                _crear_efecto_soplar(jugador2, es_p1=False, dir_viento=dir_v)
-
-        if puerta and puerta["abierta"]:
-            rect_ent = puerta.get("rect_entrada", puerta["rect"])
-            if not p1_completado and jugador1["hitbox"].colliderect(rect_ent):
-                p1_completado = True
-                jugador1["hitbox"].x = -9999
-            if not p2_completado and jugador2["hitbox"].colliderect(rect_ent):
-                p2_completado = True
-                jugador2["hitbox"].x = -9999
-
-        vistas_camara = calcular_vistas_camara(jugador1, jugador2, p1_completado, p2_completado, numero_mundo, puerta, ancho_mundo_nivel)
-        rangos_visibles = rangos_visibles_de_vistas(vistas_camara)
-
-        if numero_mundo == 3:
-            tick_m3 += 1
-            dibujar_submarino_fondo_escenario(mundo, ancho_mundo_nivel, tick_m3, rangos=rangos_visibles)
-            blit_capa_en_rangos(mundo, obtener_capa_estatica_m3(
-                "lecho", suelo, ancho_mundo_nivel, ALTO,
-                lambda capa: dibujar_lecho_marino(capa, suelo, ancho_mundo_nivel)), rangos_visibles)
-            if algas_decorativas:
-                dibujar_algas_decorativas_escenario(mundo, algas_decorativas, tick_m3, capa="fondo")
-            if corrientes_marinas:
-                dibujar_corrientes_marinas_escenario(mundo, corrientes_marinas, tick_m3)
-            if camaras_aire:
-                dibujar_camaras_aire_escenario(mundo, camaras_aire, tick_m3)
-            if rocas_submarinas:
-                blit_capa_en_rangos(mundo, obtener_capa_estatica_m3(
-                    "rocas", rocas_submarinas, ancho_mundo_nivel, ALTO,
-                    lambda capa: dibujar_rocas_submarinas_escenario(capa, rocas_submarinas)), rangos_visibles)
-            if barreras_algas:
-                dibujar_barreras_algas_escenario(mundo, barreras_algas, tick_m3)
-            if flechas_indicadoras:
-                dibujar_flechas_indicadoras_escenario(mundo, flechas_indicadoras, tick_m3)
-            if corales_decorativos:
-                dibujar_corales_escenario(mundo, corales_decorativos, tick_m3)
-            if algas_decorativas:
-                dibujar_algas_decorativas_escenario(mundo, algas_decorativas, tick_m3, capa="frente")
-            if pinchos:
-                blit_capa_en_rangos(mundo, obtener_capa_estatica_m3(
-                    "erizos", pinchos, ancho_mundo_nivel, ALTO,
-                    lambda capa: dibujar_peligros_marinos_escenario(capa, pinchos)), rangos_visibles)
-            if burbujas_m3:
-                actualizar_y_dibujar_burbujas_m3(mundo, burbujas_m3, [jugador1, jugador2], tick_m3)
-        elif numero_mundo == 1:
-            tick_m1 += 1
-            dibujar_fondo_mundo1_invierno(mundo, ancho_mundo_nivel)
-            dibujar_decoraciones_mundo1(mundo, suelo, ancho_mundo_nivel, tick_m1)
-            plats_dibujar = plataformas_base if (paredes_colores is not None and plataformas_base is not None) else plataformas
-            plats_estaticas = [p for p in plats_dibujar if not (
-                (barrera_l_horiz is not None and (p is barrera_l_horiz or p is barrera_l_vert)) or
-                (compuerta is not None and p is compuerta["rect"]) or
-                (bloque_central is not None and p is bloque_central["rect"]) or
-                (bloque_peligroso is not None and p is bloque_peligroso["rect"]) or
-                (plataforma_movil is not None and p is plataforma_movil["rect"]) or
-                (plataformas_derrumbables is not None and any(p is p_d["rect"] for p_d in plataformas_derrumbables))
-            )]
-            dibujar_escenario_mundo1(mundo, suelo, plats_estaticas, pozo_nivel)
-            if barrera_l_horiz is not None and barrera_l_vert is not None:
-                dibujar_barrera_l_escenario(mundo, barrera_l_horiz, barrera_l_vert)
-            if pinchos:
-                dibujar_pinchos_escenario(mundo, pinchos)
-            actualizar_y_dibujar_nieve_mundo1(mundo, ancho_mundo_nivel, tick_m1)
-        elif numero_mundo == 2:
-            tick_m2 += 1
-            dibujar_fondo_mundo2_ruinas(mundo, ancho_mundo_nivel)
-            dibujar_decoraciones_mundo2(mundo, suelo, ancho_mundo_nivel, tick_m2, pozo_nivel)
-            plats_dibujar = plataformas_base if (paredes_colores is not None and plataformas_base is not None) else plataformas
-            plats_estaticas = [p for p in plats_dibujar if not (
-                (barrera_l_horiz is not None and (p is barrera_l_horiz or p is barrera_l_vert)) or
-                (compuerta is not None and p is compuerta["rect"]) or
-                (bloque_central is not None and p is bloque_central["rect"]) or
-                (bloque_peligroso is not None and p is bloque_peligroso["rect"]) or
-                (bloques_peligrosos and any(p is bp["rect"] for bp in bloques_peligrosos)) or
-                (plataforma_movil is not None and p is plataforma_movil["rect"]) or
-                (plataformas_derrumbables is not None and any(p is p_d["rect"] for p_d in plataformas_derrumbables))
-            )]
-            dibujar_escenario_mundo2(mundo, suelo, plats_estaticas, pozo_nivel)
-            if barrera_l_horiz is not None and barrera_l_vert is not None:
-                dibujar_barrera_l_escenario(mundo, barrera_l_horiz, barrera_l_vert)
-            if numero_nivel == 3:
-                dibujar_pendulo_escenario(mundo, plataformas, plat_elevada, pozo_nivel, bloque_peligroso)
-            if pinchos:
-                dibujar_pinchos_escenario(mundo, pinchos)
-            for bp in bloques_peligrosos:
-                if bp is not bloque_peligroso:
-                    dibujar_bloque_peligroso(mundo, bp)
-            if numero_nivel == 4 and plataformas_derrumbables is not None:
-                dibujar_plataformas_derrumbables_escenario(mundo, plataformas_derrumbables, pozo_nivel)
-            if numero_nivel == 5 and plataformas_alternadas is not None:
-                dibujar_plataformas_alternadas_escenario(mundo, plataformas_alternadas, pozo_nivel)
-            actualizar_y_dibujar_polvo_mundo2(mundo, ancho_mundo_nivel, tick_m2)
-        else:
-            mundo.fill((255, 240, 195))
-
-            if pozo_nivel is not None:
-                pz = pozo_nivel
-                pygame.draw.rect(mundo, (235, 222, 192), (pz["x"], pz["y"], pz["ancho"], pz["alto"]))
-                pygame.draw.line(mundo, COLOR_BORDE_PLATAFORMA, (pz["x"], pz["y"]), (pz["x"], pz["y"] + pz["alto"]), 2)
-                pygame.draw.line(mundo, COLOR_BORDE_PLATAFORMA, (pz["x"] + pz["ancho"], pz["y"]), (pz["x"] + pz["ancho"], pz["y"] + pz["alto"]), 2)
-
-            plats_dibujar = plataformas_base if (paredes_colores is not None and plataformas_base is not None) else plataformas
-            for plat in plats_dibujar:
-                if barrera_l_horiz is not None and (plat is barrera_l_horiz or plat is barrera_l_vert):
-                    continue
-                if compuerta is not None and plat is compuerta["rect"]:
-                    continue
-                if bloque_central is not None and plat is bloque_central["rect"]:
-                    continue
-                if bloque_peligroso is not None and plat is bloque_peligroso["rect"]:
-                    continue
-                if plataforma_movil is not None and plat is plataforma_movil["rect"]:
-                    continue
-                if plataformas_derrumbables is not None and any(plat is p_d["rect"] for p_d in plataformas_derrumbables):
-                    continue
-                if plat.bottom >= suelo.top:
-                    rect_torre = pygame.Rect(plat.x, plat.y, plat.width, plat.height + 4)
-                    pygame.draw.rect(mundo, COLOR_PLATAFORMA, rect_torre, border_top_left_radius=4, border_top_right_radius=4)
-                    pygame.draw.rect(mundo, COLOR_BORDE_PLATAFORMA, rect_torre, width=2, border_top_left_radius=4, border_top_right_radius=4)
-                else:
-                    pygame.draw.rect(mundo, COLOR_PLATAFORMA, plat, border_radius=4)
-                    pygame.draw.rect(mundo, COLOR_BORDE_PLATAFORMA, plat, width=2, border_radius=4)
-
-            if barrera_l_horiz is not None and barrera_l_vert is not None:
-                dibujar_barrera_l_escenario(mundo, barrera_l_horiz, barrera_l_vert)
-
-            pygame.draw.rect(mundo, (225, 110, 80), suelo)
-            if pozo_nivel is not None:
-                pygame.draw.line(mundo, COLOR_BORDE_PLATAFORMA, (pz["x"], pz["y"] + pz["alto"]), (pz["x"] + pz["ancho"], pz["y"] + pz["alto"]), 2)
-
-            if pinchos:
-                dibujar_pinchos_escenario(mundo, pinchos)
-            if numero_mundo == 2 and numero_nivel == 3:
-                dibujar_pendulo_escenario(mundo, plataformas, plat_elevada, pozo_nivel, bloque_peligroso)
-            for bp in bloques_peligrosos:
-                if bp is not bloque_peligroso:
-                    dibujar_bloque_peligroso(mundo, bp)
-            if numero_mundo == 2 and numero_nivel == 4 and plataformas_derrumbables is not None:
-                dibujar_plataformas_derrumbables_escenario(mundo, plataformas_derrumbables, pozo_nivel)
-            if numero_mundo == 2 and numero_nivel == 5 and plataformas_alternadas is not None:
-                dibujar_plataformas_alternadas_escenario(mundo, plataformas_alternadas, pozo_nivel)
-
-        if compuerta is not None and compuerta["rect"].width > 0:
-            c_rect = compuerta["rect"]
-            pygame.draw.rect(mundo, (180, 85, 60), c_rect, border_radius=3)
-            pygame.draw.rect(mundo, (120, 45, 30), c_rect, width=2, border_radius=3)
-            for lx in range(c_rect.left + 14, c_rect.right - 6, 18):
-                pygame.draw.line(mundo, (130, 55, 35), (lx, c_rect.top + 3), (lx, c_rect.bottom - 4), 2)
-
-        if boton_compuerta is not None:
-            rect_bc = boton_compuerta["rect"]
-            h_bc = 4 if boton_compuerta["presionado"] else 12
-            y_bc = suelo.top - h_bc
-            pygame.draw.rect(mundo, (85, 70, 60), (rect_bc.left - 6, suelo.top - 4, rect_bc.width + 12, 10), border_radius=2)
-            col_bc = (70, 205, 120) if boton_compuerta["presionado"] else (210, 85, 45)
-            col_borde_bc = (40, 150, 80) if boton_compuerta["presionado"] else (150, 45, 25)
-            pygame.draw.rect(mundo, col_bc, (rect_bc.x, y_bc, rect_bc.width, h_bc), border_top_left_radius=3, border_top_right_radius=3)
-            pygame.draw.rect(mundo, col_borde_bc, (rect_bc.x, y_bc, rect_bc.width, h_bc), width=2, border_top_left_radius=3, border_top_right_radius=3)
-
-        if bloque_central is not None:
-            bc = bloque_central["rect"]
-            pygame.draw.rect(mundo, (220, 50, 50), bc, border_radius=4)
-            pygame.draw.rect(mundo, (140, 25, 25), bc, width=2, border_radius=4)
-            for by in range(bc.top + 16, bc.bottom - 8, 16):
-                pygame.draw.line(mundo, (160, 30, 30), (bc.left + 4, by), (bc.right - 4, by), 2)
-
-        if plataforma_movil is not None:
-            pm = plataforma_movil["rect"]
-            pygame.draw.rect(mundo, (215, 105, 75), pm, border_radius=5)
-            pygame.draw.rect(mundo, (150, 60, 40), pm, width=2, border_radius=5)
-            for rx in range(pm.left + 16, pm.right - 8, 24):
-                pygame.draw.circle(mundo, (140, 60, 40), (rx, pm.bottom - 5), 3)
-
-            estado_pm = plataforma_movil.get("estado", "esperando_inicio")
-            if estado_pm == "esperando_retorno":
-                t_esp = plataforma_movil.get("tiempo_espera_retorno", 0)
-                parpadeo = (t_esp // 15) % 2 == 0
-                col_luz = (255, 235, 40) if parpadeo else (100, 85, 20)
-                col_halo = (255, 245, 120) if parpadeo else (70, 60, 15)
-                if parpadeo:
-                    pygame.draw.circle(mundo, col_halo, (pm.centerx, pm.centery), 8)
-                pygame.draw.circle(mundo, col_luz, (pm.centerx, pm.centery), 5)
-                pygame.draw.circle(mundo, (255, 255, 200) if parpadeo else (60, 50, 10), (pm.centerx, pm.centery), 5, width=1)
-            elif estado_pm in ("avanzando", "regresando"):
-                pygame.draw.circle(mundo, (80, 220, 100), (pm.centerx, pm.centery), 5)
-                pygame.draw.circle(mundo, (180, 255, 190), (pm.centerx, pm.centery), 5, width=1)
+        # 3. Gestión del oxígeno de Jugador 2
+        if not n.p2_completado and not n.jugador2["muerto"]:
+            n.en_camara_p2 = any(cam["rect"].colliderect(n.jugador2["hitbox"]) for cam in n.camaras_aire)
+            if n.en_camara_p2:
+                n.oxigeno_p2 = min(n.OXIGENO_MAX, n.oxigeno_p2 + 0.85)
             else:
-                col_ind = (240, 180, 40) if plataforma_movil.get("tiempo_con_peso", 0) > 0 else (180, 80, 55)
-                pygame.draw.circle(mundo, col_ind, (pm.centerx, pm.centery), 4)
+                n.oxigeno_p2 = max(0.0, n.oxigeno_p2 - 0.086)
+                if n.oxigeno_p2 <= 0.0:
+                    matar_personaje(n.jugador2)
+                    if n.numero_mundo != 3 and not n.jugador1["muerto"] and not n.p1_completado:
+                        matar_personaje(n.jugador1)
 
-        if boton_nivel is not None:
-            rect_b = boton_nivel["rect"]
-            h_actual = 4 if boton_nivel["presionado"] else 12
-            y_actual = suelo.top - h_actual
-            pygame.draw.rect(mundo, (90, 70, 60), (rect_b.left - 6, suelo.top - 4, rect_b.width + 12, 10), border_radius=2)
-            col_btn = (80, 200, 100) if boton_nivel["presionado"] else (225, 65, 65)
-            col_borde_btn = (50, 150, 70) if boton_nivel["presionado"] else (175, 45, 45)
-            pygame.draw.rect(mundo, col_btn, (rect_b.x, y_actual, rect_b.width, h_actual), border_top_left_radius=3, border_top_right_radius=3)
-            pygame.draw.rect(mundo, col_borde_btn, (rect_b.x, y_actual, rect_b.width, h_actual), width=2, border_top_left_radius=3, border_top_right_radius=3)
+        # 4. Gestión del sonido de ahogamiento (se activa cuando la barra de oxígeno entra en rojo < 25%)
+        n.p1_ahogandose = (not n.p1_completado and not n.jugador1["muerto"] and n.oxigeno_p1 < 25.0)
+        n.p2_ahogandose = (not n.p2_completado and not n.jugador2["muerto"] and n.oxigeno_p2 < 25.0)
 
-        if pared_nivel is not None:
-            pr = pared_nivel["rect"]
-            for y_linea in range(pr.top + 30, pr.bottom - 10, 35):
-                if 0 <= y_linea <= ALTO:
-                    pygame.draw.line(mundo, COLOR_BORDE_PLATAFORMA, (pr.left + 4, y_linea), (pr.right - 4, y_linea), 2)
-
-        if laser_nivel is not None:
-            dibujar_laser_escenario(mundo, laser_nivel)
-
-        if paredes_colores is not None:
-            dibujar_paredes_colores_escenario(mundo, paredes_colores)
-
-        if botones_colores is not None:
-            dibujar_botones_colores_escenario(mundo, botones_colores, suelo)
-
-        if usar_agua: dibujar_agua(mundo, ZONA_AGUA, rangos=rangos_visibles)
-        if usar_soga and not p1_completado and not p2_completado:
-            dibujar_soga_escenario(mundo, jugador1, jugador2, estado_soga, DISTANCIA_SOGA_REPOSO, DISTANCIA_SOGA_MAXIMA)
-        if usar_caja: mundo.blit(caja["sprite"], caja["rect"])
-
-        if usar_llave and puerta:
-            actualizar_puerta(puerta)
-            estado_p = "abierta" if puerta["abierta"] else "cerrada"
-            mundo.blit(puerta["sprites"][estado_p], puerta["rect"])
-            if llave and not puerta["abierta"]:
-                if numero_mundo == 3:
-                    halo_surf = pygame.Surface((44, 60), pygame.SRCALPHA)
-                    alpha_h = int(60 + 25 * math.sin(tick_m3 * 0.08))
-                    pygame.draw.ellipse(halo_surf, (255, 230, 90, alpha_h), (0, 0, 44, 60))
-                    mundo.blit(halo_surf, (llave["rect"].centerx - 22, llave["rect"].centery - 30))
-                mundo.blit(llave["sprite"], llave["rect"])
-
-        if numero_mundo == 3 and numero_nivel in (4, 5) and surf_oscuridad_m3 is not None:
-            aplicar_oscuridad_submarina(
-                mundo,
-                [(jugador1, linterna_p1, p1_completado), (jugador2, linterna_p2, p2_completado)],
-                surf_oscuridad_m3,
-                surf_luz_linterna,
-                surf_luz_tenue,
-                rangos=rangos_visibles,
-            )
-            if not p1_completado:
-                dibujar_personaje(mundo, jugador1, ZONA_AGUA if usar_agua else None)
-                dibujar_linterna_minero(mundo, jugador1, linterna_p1 and not jugador1.get("muerto", False))
-                if numero_nivel in (5, 6):
-                    dibujar_alerta_oxigeno_personaje(mundo, jugador1, oxigeno_p1, tick_m3)
-            if not p2_completado:
-                dibujar_personaje(mundo, jugador2, ZONA_AGUA if usar_agua else None)
-                dibujar_linterna_minero(mundo, jugador2, linterna_p2 and not jugador2.get("muerto", False))
-                if numero_nivel in (5, 6):
-                    dibujar_alerta_oxigeno_personaje(mundo, jugador2, oxigeno_p2, tick_m3)
+        if n.p1_ahogandose or n.p2_ahogandose:
+            reproducir_sonido_ahogamiento()
         else:
-            if not p1_completado: dibujar_personaje(mundo, jugador1, ZONA_AGUA if usar_agua else None)
-            if not p2_completado: dibujar_personaje(mundo, jugador2, ZONA_AGUA if usar_agua else None)
-
-        # Controles tutorial directamente arriba de cada personaje
-        if numero_mundo == 1 and numero_nivel == 1 and mostrar_tutorial:
-            _dibujar_controles_tutorial(mundo, alpha_p1=alpha_tut_p1, alpha_p2=alpha_tut_p2, teclas_actuales=teclas)
-
-        # Efecto de ráfaga y animación de teclas sopladas
-        if numero_mundo == 1 and numero_nivel == 1:
-            _actualizar_y_dibujar_soplado(mundo)
-
-        # Las vistas se calcularon antes de dibujar (calcular_vistas_camara), con este mismo estado
-        for x_dest, cam_x, ancho_vista in vistas_camara:
-            pantalla.blit(mundo, (x_dest, 0), pygame.Rect(cam_x, 0, ancho_vista, ALTO))
-        if len(vistas_camara) > 1:
-            pygame.draw.line(pantalla, (0, 0, 0), (ANCHO // 2, 0), (ANCHO // 2, ALTO), 4)
-
-        # Botones HUD en la esquina superior derecha solo si el nivel continúa activo
-        if not (p1_completado and p2_completado):
-            pos_m_hud = pygame.mouse.get_pos()
-            spr_cfg_hud = spr_config_hover if (rect_btn_config.collidepoint(pos_m_hud) and spr_config_hover) else spr_config_normal
-            spr_c_hud = spr_casa_hover if (rect_btn_casa.collidepoint(pos_m_hud) and spr_casa_hover) else spr_casa_normal
-            spr_r_hud = spr_reiniciar_hover if (rect_btn_reiniciar.collidepoint(pos_m_hud) and spr_reiniciar_hover) else spr_reiniciar_normal
-            spr_x_hud = spr_x_hover if (rect_btn_x.collidepoint(pos_m_hud) and spr_x_hover) else spr_x_normal
-
-            # El fondo detrás de cada botón solo se usa para animar el clic; se copia únicamente
-            # cuando el mouse está cerca del HUD en vez de hacer 4 copias en cada frame.
-            if rect_btn_config.unionall([rect_btn_casa, rect_btn_reiniciar, rect_btn_x]).inflate(80, 80).collidepoint(pos_m_hud):
-                fondo_btn_config = pantalla.subsurface(rect_btn_config).copy()
-                fondo_btn_casa = pantalla.subsurface(rect_btn_casa).copy()
-                fondo_btn_reiniciar = pantalla.subsurface(rect_btn_reiniciar).copy()
-                fondo_btn_x = pantalla.subsurface(rect_btn_x).copy()
-
-            if spr_cfg_hud: pantalla.blit(spr_cfg_hud, rect_btn_config)
-            if spr_c_hud: pantalla.blit(spr_c_hud, rect_btn_casa)
-            if spr_r_hud: pantalla.blit(spr_r_hud, rect_btn_reiniciar)
-            if spr_x_hud: pantalla.blit(spr_x_hud, rect_btn_x)
-
-        if numero_mundo == 3 and numero_nivel == 4 and not (p1_completado and p2_completado):
-            _dibujar_hud_linternas_m3_n4(pantalla, linterna_p1, linterna_p2, p1_color, p2_color)
-        if numero_mundo == 3 and numero_nivel in (5, 6) and not (p1_completado and p2_completado):
-            _dibujar_hud_oxigeno_m3_n5(pantalla, oxigeno_p1, oxigeno_p2, p1_color, p2_color, tick_m3)
-            if numero_nivel == 5:
-                _dibujar_hud_linternas_m3_n4(pantalla, linterna_p1, linterna_p2, p1_color, p2_color, y_base=60)
-
-        pygame.display.flip()
-
-        # Gestión de pantalla de muerte y reinicio según las reglas de cada mundo
-        debe_mostrar_muerte = False
-        muertos = [p for p in (jugador1, jugador2) if p.get("muerto", False)]
-        if numero_mundo == 3:
-            # En Mundo 3 la muerte es individual: si uno muere, el otro permanece vivo.
-            # En cuanto cualquier personaje que haya muerto completa su breve animación de muerte,
-            # se gestiona la derrota de inmediato sin quedarse esperando indefinidamente a que el otro personaje muera.
-            if muertos and any(p.get("muerte_terminada", False) for p in muertos):
-                debe_mostrar_muerte = True
-        else:
-            if muertos and all(p.get("muerte_terminada", False) for p in muertos):
-                debe_mostrar_muerte = True
-
-        if debe_mostrar_muerte:
             detener_sonido_ahogamiento()
-            resultado = pantalla_muerte(pantalla, reloj)
-            if resultado == "salir": return "salir"
-            if resultado == "menu": return "menu"
-            if resultado == "reiniciar":
-                _reiniciar_nivel_completo()
 
-        # Condición de nivel superado
-        nivel_superado = False
-        if numero_mundo == 3:
-            if (p1_completado and p2_completado) or \
-               (jugador1["muerto"] and p2_completado) or \
-               (jugador2["muerto"] and p1_completado):
-                nivel_superado = True
+    if n.usar_soga and not n.p1_completado and not n.p2_completado:
+        aplicar_restriccion_soga(n.jugador1, n.jugador2, DISTANCIA_SOGA_MAXIMA, n.plataformas, n.suelo, n.estado_soga)
+    if n.usar_llave:
+        n.personajes_activos = [p for p, comp in [(n.jugador1, n.p1_completado), (n.jugador2, n.p2_completado)] if not comp and not p["muerto"]]
+        actualizar_llave(n.llave, n.personajes_activos, n.puerta)
+    if n.usar_pinchos:
+        n.p1_toco = False
+        n.p2_toco = False
+        if not n.p1_completado:
+            n.p1_toco = comprobar_pinchos(n.jugador1, n.pinchos)
+        if not n.p2_completado:
+            n.p2_toco = comprobar_pinchos(n.jugador2, n.pinchos)
+
+        if n.numero_mundo != 3:
+            if n.p1_toco and not n.jugador2["muerto"] and not n.p2_completado:
+                matar_personaje(n.jugador2)
+            elif n.p2_toco and not n.jugador1["muerto"] and not n.p1_completado:
+                matar_personaje(n.jugador1)
+
+    if n.laser_nivel is not None:
+        n.em = n.laser_nivel["emisor_rect"]
+        n.y_r = n.laser_nivel["y_rayo"]
+        n.pared_x = n.laser_nivel.get("pared_der_x", 1100)
+        n.x_stop = n.pared_x
+        n.bloqueado = False
+        if n.caja is not None:
+            n.cr = n.caja["rect"]
+            if n.cr.right > n.em.left and n.cr.left < n.pared_x and n.cr.top <= n.y_r <= n.cr.bottom:
+                n.x_stop = max(n.em.right, n.cr.left)
+                n.bloqueado = True
+
+        n.laser_nivel["bloqueado"] = n.bloqueado
+        n.laser_nivel["x_fin"] = n.x_stop
+        n.laser_nivel["rect_dano"].x = n.em.right
+        n.laser_nivel["rect_dano"].width = max(0, n.x_stop - n.em.right)
+
+        for n.p, n.comp in [(n.jugador1, n.p1_completado), (n.jugador2, n.p2_completado)]:
+            if not n.comp and not n.p["muerto"]:
+                if n.laser_nivel["rect_dano"].width > 0 and n.p["hitbox"].colliderect(n.laser_nivel["rect_dano"]):
+                    matar_personaje(n.p)
+                    if n.numero_mundo != 3:
+                        n.otro = n.jugador2 if n.p is n.jugador1 else n.jugador1
+                        n.comp_otro = n.p2_completado if n.p is n.jugador1 else n.p1_completado
+                        if not n.comp_otro and not n.otro.get("muerto", False):
+                            matar_personaje(n.otro)
+
+    # Detección continua de muerte cuando un personaje cae o sale completamente de la pantalla o del escenario
+    for n.p, n.comp, n.otro, n.comp_otro in [
+        (n.jugador1, n.p1_completado, n.jugador2, n.p2_completado),
+        (n.jugador2, n.p2_completado, n.jugador1, n.p1_completado),
+    ]:
+        if not n.comp and not n.p.get("muerto", False):
+            n.hb = n.p["hitbox"]
+            if n.numero_mundo == 3:
+                # En Mundo 3 todos los bordes (izquierdo x=0, derecho x=ancho, techo y=0, suelo marino)
+                # son límites físicos sólidos infranqueables, no zonas mortales ni abismos.
+                # Tocarlos nunca causa daño ni muerte a los personajes.
+                n.caida_abajo = False
+                n.salida_izq = False
+                n.salida_der = False
+                n.salida_arriba = False
+            else:
+                n.caida_abajo = (n.hb.top >= ALTO)
+                n.salida_izq = (n.hb.right <= 0)
+                n.salida_der = (n.hb.left >= n.ancho_mundo_nivel)
+                n.salida_arriba = (n.hb.bottom <= -50)
+
+            if n.caida_abajo or n.salida_izq or n.salida_der or n.salida_arriba:
+                if n.caida_abajo and n.numero_mundo != 3:
+                    # Asegurar que inicie el salto de muerte desde el borde para que sea visible en pantalla
+                    n.hb.top = ALTO
+                matar_personaje(n.p)
+
+                # Si el personaje que cayó portaba la llave, reubicarla en su posición inicial
+                # para que el sobreviviente pueda continuar sin quedar bloqueado indefinidamente
+                if n.usar_llave and n.llave and n.llave.get("recolectada", False) and n.llave.get("portador") is n.p:
+                    n.llave["recolectada"] = False
+                    n.llave["portador"] = None
+                    n.llave["rect"].x = n.llave["x_inicial"]
+                    n.llave["rect"].y = n.llave["y_inicial"]
+                    n.llave["x_float"] = float(n.llave["x_inicial"])
+                    n.llave["y_float"] = float(n.llave["y_inicial"])
+
+                # Reglas por mundo:
+                # - Mundos 1 y 2: muerte compartida (si uno muere, mueren ambos)
+                # - Mundo 3: muerte independiente (el otro continúa con vida)
+                if n.numero_mundo != 3:
+                    if not n.comp_otro and not n.otro.get("muerto", False):
+                        matar_personaje(n.otro)
+
+    dur_max_muerte = 36 if n.numero_mundo == 3 else None
+    actualizar_muerte(n.jugador1, duracion_max=dur_max_muerte, limites_mundo=n.mundo_rect if n.numero_mundo == 3 else None)
+    actualizar_muerte(n.jugador2, duracion_max=dur_max_muerte, limites_mundo=n.mundo_rect if n.numero_mundo == 3 else None)
+
+    # Limitar horizontalmente y techo para personajes vivos, permitiendo caída libre por el fondo
+    for n.p, n.comp in [(n.jugador1, n.p1_completado), (n.jugador2, n.p2_completado)]:
+        if not n.comp and not n.p.get("muerto", False):
+            n.hb = n.p["hitbox"]
+            if n.hb.left < 0:
+                n.hb.left = 0
+            elif n.hb.right > n.ancho_mundo_nivel:
+                n.hb.right = n.ancho_mundo_nivel
+            if n.hb.top < 0:
+                n.hb.top = 0
+
+    # Detección de interacción especial en Mundo 1 Nivel 1: soplar indicadores del personaje quieto al saltar sobre él
+    if n.numero_mundo == 1 and n.numero_nivel == 1:
+        n.ancho_c = 3 * n.TAM_BTN_TUT + 2 * n.GAP_BTN_TUT
+        n.h_c1 = n.badge_p1.get_height() + 4 + (2 * n.TAM_BTN_TUT + n.GAP_BTN_TUT)
+        n.h_c2 = n.badge_p2.get_height() + 4 + (2 * n.TAM_BTN_TUT + n.GAP_BTN_TUT)
+
+        # Caso 1: Jugador 1 está quieto, Jugador 2 salta y atraviesa la zona de sus indicadores
+        if not n.p1_movio and not n.p1_soplado and n.alpha_tut_p1 > 0 and not n.jugador1["muerto"] and not n.p1_completado:
+            if not n.jugador2["muerto"] and not n.p2_completado and not n.p2_sobre_p1:
+                if not n.jugador2["en_suelo"] or abs(n.jugador2["vel_y"]) > 1.0:
+                    n.rect_c1 = pygame.Rect(n.jugador1["hitbox"].centerx - n.ancho_c // 2, (n.jugador1["hitbox"].top - 8) - n.h_c1, n.ancho_c, n.h_c1)
+                    if n.jugador2["hitbox"].colliderect(n.rect_c1):
+                        n.pasa_sobre = abs(n.jugador2["vel_x"]) > 0.3 or (n.jugador2["hitbox"].right > n.jugador1["hitbox"].left + 2 and n.jugador2["hitbox"].left < n.jugador1["hitbox"].right - 2)
+                        if n.pasa_sobre:
+                            n.p1_soplado = True
+                            n.alpha_tut_p1 = 0.0
+                            n.dir_v = 1.0 if n.jugador2["vel_x"] > 0.3 else (-1.0 if n.jugador2["vel_x"] < -0.3 else (1.0 if n.jugador2["hitbox"].centerx >= n.jugador1["hitbox"].centerx else -1.0))
+                            n._crear_efecto_soplar(n.jugador1, es_p1=True, dir_viento=n.dir_v)
+
+        # Caso 2: Jugador 2 está quieto, Jugador 1 salta y atraviesa la zona de sus indicadores
+        if not n.p2_movio and not n.p2_soplado and n.alpha_tut_p2 > 0 and not n.jugador2["muerto"] and not n.p2_completado:
+            if not n.jugador1["muerto"] and not n.p1_completado and not n.p1_sobre_p2:
+                if not n.jugador1["en_suelo"] or abs(n.jugador1["vel_y"]) > 1.0:
+                    n.rect_c2 = pygame.Rect(n.jugador2["hitbox"].centerx - n.ancho_c // 2, (n.jugador2["hitbox"].top - 8) - n.h_c2, n.ancho_c, n.h_c2)
+                    if n.jugador1["hitbox"].colliderect(n.rect_c2):
+                        n.pasa_sobre = abs(n.jugador1["vel_x"]) > 0.3 or (n.jugador1["hitbox"].right > n.jugador2["hitbox"].left + 2 and n.jugador1["hitbox"].left < n.jugador2["hitbox"].right - 2)
+                        if n.pasa_sobre:
+                            n.p2_soplado = True
+                            n.alpha_tut_p2 = 0.0
+                            n.dir_v = 1.0 if n.jugador1["vel_x"] > 0.3 else (-1.0 if n.jugador1["vel_x"] < -0.3 else (1.0 if n.jugador1["hitbox"].centerx >= n.jugador2["hitbox"].centerx else -1.0))
+                            n._crear_efecto_soplar(n.jugador2, es_p1=False, dir_viento=n.dir_v)
+
+    if n.puerta and n.puerta["abierta"]:
+        n.rect_ent = n.puerta.get("rect_entrada", n.puerta["rect"])
+        if not n.p1_completado and n.jugador1["hitbox"].colliderect(n.rect_ent):
+            n.p1_completado = True
+            n.jugador1["hitbox"].x = -9999
+        if not n.p2_completado and n.jugador2["hitbox"].colliderect(n.rect_ent):
+            n.p2_completado = True
+            n.jugador2["hitbox"].x = -9999
+
+
+def _dibujar_frame(n):
+    """Cámara, dibujo del mundo, objetos, personajes, oscuridad y HUD; termina con el flip."""
+    vistas_camara = calcular_vistas_camara(n.jugador1, n.jugador2, n.p1_completado, n.p2_completado, n.numero_mundo, n.puerta, n.ancho_mundo_nivel)
+    rangos_visibles = rangos_visibles_de_vistas(vistas_camara)
+
+    if n.numero_mundo == 3:
+        n.tick_m3 += 1
+        dibujar_submarino_fondo_escenario(n.mundo, n.ancho_mundo_nivel, n.tick_m3, rangos=rangos_visibles)
+        blit_capa_en_rangos(n.mundo, obtener_capa_estatica_m3(
+            "lecho", n.suelo, n.ancho_mundo_nivel, ALTO,
+            lambda capa: dibujar_lecho_marino(capa, n.suelo, n.ancho_mundo_nivel)), rangos_visibles)
+        if n.algas_decorativas:
+            dibujar_algas_decorativas_escenario(n.mundo, n.algas_decorativas, n.tick_m3, capa="fondo")
+        if n.corrientes_marinas:
+            dibujar_corrientes_marinas_escenario(n.mundo, n.corrientes_marinas, n.tick_m3)
+        if n.camaras_aire:
+            dibujar_camaras_aire_escenario(n.mundo, n.camaras_aire, n.tick_m3)
+        if n.rocas_submarinas:
+            blit_capa_en_rangos(n.mundo, obtener_capa_estatica_m3(
+                "rocas", n.rocas_submarinas, n.ancho_mundo_nivel, ALTO,
+                lambda capa: dibujar_rocas_submarinas_escenario(capa, n.rocas_submarinas)), rangos_visibles)
+        if n.barreras_algas:
+            dibujar_barreras_algas_escenario(n.mundo, n.barreras_algas, n.tick_m3)
+        if n.flechas_indicadoras:
+            dibujar_flechas_indicadoras_escenario(n.mundo, n.flechas_indicadoras, n.tick_m3)
+        if n.corales_decorativos:
+            dibujar_corales_escenario(n.mundo, n.corales_decorativos, n.tick_m3)
+        if n.algas_decorativas:
+            dibujar_algas_decorativas_escenario(n.mundo, n.algas_decorativas, n.tick_m3, capa="frente")
+        if n.pinchos:
+            blit_capa_en_rangos(n.mundo, obtener_capa_estatica_m3(
+                "erizos", n.pinchos, n.ancho_mundo_nivel, ALTO,
+                lambda capa: dibujar_peligros_marinos_escenario(capa, n.pinchos)), rangos_visibles)
+        if n.burbujas_m3:
+            actualizar_y_dibujar_burbujas_m3(n.mundo, n.burbujas_m3, [n.jugador1, n.jugador2], n.tick_m3)
+    elif n.numero_mundo == 1:
+        n.tick_m1 += 1
+        dibujar_fondo_mundo1_invierno(n.mundo, n.ancho_mundo_nivel)
+        dibujar_decoraciones_mundo1(n.mundo, n.suelo, n.ancho_mundo_nivel, n.tick_m1)
+        n.plats_dibujar = n.plataformas_base if (n.paredes_colores is not None and n.plataformas_base is not None) else n.plataformas
+        n.plats_estaticas = [p for p in n.plats_dibujar if not (
+            (n.barrera_l_horiz is not None and (p is n.barrera_l_horiz or p is n.barrera_l_vert)) or
+            (n.compuerta is not None and p is n.compuerta["rect"]) or
+            (n.bloque_central is not None and p is n.bloque_central["rect"]) or
+            (n.bloque_peligroso is not None and p is n.bloque_peligroso["rect"]) or
+            (n.plataforma_movil is not None and p is n.plataforma_movil["rect"]) or
+            (n.plataformas_derrumbables is not None and any(p is p_d["rect"] for p_d in n.plataformas_derrumbables))
+        )]
+        dibujar_escenario_mundo1(n.mundo, n.suelo, n.plats_estaticas, n.pozo_nivel)
+        if n.barrera_l_horiz is not None and n.barrera_l_vert is not None:
+            dibujar_barrera_l_escenario(n.mundo, n.barrera_l_horiz, n.barrera_l_vert)
+        if n.pinchos:
+            dibujar_pinchos_escenario(n.mundo, n.pinchos)
+        actualizar_y_dibujar_nieve_mundo1(n.mundo, n.ancho_mundo_nivel, n.tick_m1)
+    elif n.numero_mundo == 2:
+        n.tick_m2 += 1
+        dibujar_fondo_mundo2_ruinas(n.mundo, n.ancho_mundo_nivel)
+        dibujar_decoraciones_mundo2(n.mundo, n.suelo, n.ancho_mundo_nivel, n.tick_m2, n.pozo_nivel)
+        n.plats_dibujar = n.plataformas_base if (n.paredes_colores is not None and n.plataformas_base is not None) else n.plataformas
+        n.plats_estaticas = [p for p in n.plats_dibujar if not (
+            (n.barrera_l_horiz is not None and (p is n.barrera_l_horiz or p is n.barrera_l_vert)) or
+            (n.compuerta is not None and p is n.compuerta["rect"]) or
+            (n.bloque_central is not None and p is n.bloque_central["rect"]) or
+            (n.bloque_peligroso is not None and p is n.bloque_peligroso["rect"]) or
+            (n.bloques_peligrosos and any(p is bp["rect"] for bp in n.bloques_peligrosos)) or
+            (n.plataforma_movil is not None and p is n.plataforma_movil["rect"]) or
+            (n.plataformas_derrumbables is not None and any(p is p_d["rect"] for p_d in n.plataformas_derrumbables))
+        )]
+        dibujar_escenario_mundo2(n.mundo, n.suelo, n.plats_estaticas, n.pozo_nivel)
+        if n.barrera_l_horiz is not None and n.barrera_l_vert is not None:
+            dibujar_barrera_l_escenario(n.mundo, n.barrera_l_horiz, n.barrera_l_vert)
+        if n.numero_nivel == 3:
+            dibujar_pendulo_escenario(n.mundo, n.plataformas, n.plat_elevada, n.pozo_nivel, n.bloque_peligroso)
+        if n.pinchos:
+            dibujar_pinchos_escenario(n.mundo, n.pinchos)
+        for n.bp in n.bloques_peligrosos:
+            if n.bp is not n.bloque_peligroso:
+                dibujar_bloque_peligroso(n.mundo, n.bp)
+        if n.numero_nivel == 4 and n.plataformas_derrumbables is not None:
+            dibujar_plataformas_derrumbables_escenario(n.mundo, n.plataformas_derrumbables, n.pozo_nivel)
+        if n.numero_nivel == 5 and n.plataformas_alternadas is not None:
+            dibujar_plataformas_alternadas_escenario(n.mundo, n.plataformas_alternadas, n.pozo_nivel)
+        actualizar_y_dibujar_polvo_mundo2(n.mundo, n.ancho_mundo_nivel, n.tick_m2)
+    else:
+        n.mundo.fill((255, 240, 195))
+
+        if n.pozo_nivel is not None:
+            n.pz = n.pozo_nivel
+            pygame.draw.rect(n.mundo, (235, 222, 192), (n.pz["x"], n.pz["y"], n.pz["ancho"], n.pz["alto"]))
+            pygame.draw.line(n.mundo, COLOR_BORDE_PLATAFORMA, (n.pz["x"], n.pz["y"]), (n.pz["x"], n.pz["y"] + n.pz["alto"]), 2)
+            pygame.draw.line(n.mundo, COLOR_BORDE_PLATAFORMA, (n.pz["x"] + n.pz["ancho"], n.pz["y"]), (n.pz["x"] + n.pz["ancho"], n.pz["y"] + n.pz["alto"]), 2)
+
+        n.plats_dibujar = n.plataformas_base if (n.paredes_colores is not None and n.plataformas_base is not None) else n.plataformas
+        for n.plat in n.plats_dibujar:
+            if n.barrera_l_horiz is not None and (n.plat is n.barrera_l_horiz or n.plat is n.barrera_l_vert):
+                continue
+            if n.compuerta is not None and n.plat is n.compuerta["rect"]:
+                continue
+            if n.bloque_central is not None and n.plat is n.bloque_central["rect"]:
+                continue
+            if n.bloque_peligroso is not None and n.plat is n.bloque_peligroso["rect"]:
+                continue
+            if n.plataforma_movil is not None and n.plat is n.plataforma_movil["rect"]:
+                continue
+            if n.plataformas_derrumbables is not None and any(n.plat is p_d["rect"] for p_d in n.plataformas_derrumbables):
+                continue
+            if n.plat.bottom >= n.suelo.top:
+                n.rect_torre = pygame.Rect(n.plat.x, n.plat.y, n.plat.width, n.plat.height + 4)
+                pygame.draw.rect(n.mundo, COLOR_PLATAFORMA, n.rect_torre, border_top_left_radius=4, border_top_right_radius=4)
+                pygame.draw.rect(n.mundo, COLOR_BORDE_PLATAFORMA, n.rect_torre, width=2, border_top_left_radius=4, border_top_right_radius=4)
+            else:
+                pygame.draw.rect(n.mundo, COLOR_PLATAFORMA, n.plat, border_radius=4)
+                pygame.draw.rect(n.mundo, COLOR_BORDE_PLATAFORMA, n.plat, width=2, border_radius=4)
+
+        if n.barrera_l_horiz is not None and n.barrera_l_vert is not None:
+            dibujar_barrera_l_escenario(n.mundo, n.barrera_l_horiz, n.barrera_l_vert)
+
+        pygame.draw.rect(n.mundo, (225, 110, 80), n.suelo)
+        if n.pozo_nivel is not None:
+            pygame.draw.line(n.mundo, COLOR_BORDE_PLATAFORMA, (n.pz["x"], n.pz["y"] + n.pz["alto"]), (n.pz["x"] + n.pz["ancho"], n.pz["y"] + n.pz["alto"]), 2)
+
+        if n.pinchos:
+            dibujar_pinchos_escenario(n.mundo, n.pinchos)
+        if n.numero_mundo == 2 and n.numero_nivel == 3:
+            dibujar_pendulo_escenario(n.mundo, n.plataformas, n.plat_elevada, n.pozo_nivel, n.bloque_peligroso)
+        for n.bp in n.bloques_peligrosos:
+            if n.bp is not n.bloque_peligroso:
+                dibujar_bloque_peligroso(n.mundo, n.bp)
+        if n.numero_mundo == 2 and n.numero_nivel == 4 and n.plataformas_derrumbables is not None:
+            dibujar_plataformas_derrumbables_escenario(n.mundo, n.plataformas_derrumbables, n.pozo_nivel)
+        if n.numero_mundo == 2 and n.numero_nivel == 5 and n.plataformas_alternadas is not None:
+            dibujar_plataformas_alternadas_escenario(n.mundo, n.plataformas_alternadas, n.pozo_nivel)
+
+    if n.compuerta is not None and n.compuerta["rect"].width > 0:
+        n.c_rect = n.compuerta["rect"]
+        pygame.draw.rect(n.mundo, (180, 85, 60), n.c_rect, border_radius=3)
+        pygame.draw.rect(n.mundo, (120, 45, 30), n.c_rect, width=2, border_radius=3)
+        for n.lx in range(n.c_rect.left + 14, n.c_rect.right - 6, 18):
+            pygame.draw.line(n.mundo, (130, 55, 35), (n.lx, n.c_rect.top + 3), (n.lx, n.c_rect.bottom - 4), 2)
+
+    if n.boton_compuerta is not None:
+        n.rect_bc = n.boton_compuerta["rect"]
+        n.h_bc = 4 if n.boton_compuerta["presionado"] else 12
+        n.y_bc = n.suelo.top - n.h_bc
+        pygame.draw.rect(n.mundo, (85, 70, 60), (n.rect_bc.left - 6, n.suelo.top - 4, n.rect_bc.width + 12, 10), border_radius=2)
+        n.col_bc = (70, 205, 120) if n.boton_compuerta["presionado"] else (210, 85, 45)
+        n.col_borde_bc = (40, 150, 80) if n.boton_compuerta["presionado"] else (150, 45, 25)
+        pygame.draw.rect(n.mundo, n.col_bc, (n.rect_bc.x, n.y_bc, n.rect_bc.width, n.h_bc), border_top_left_radius=3, border_top_right_radius=3)
+        pygame.draw.rect(n.mundo, n.col_borde_bc, (n.rect_bc.x, n.y_bc, n.rect_bc.width, n.h_bc), width=2, border_top_left_radius=3, border_top_right_radius=3)
+
+    if n.bloque_central is not None:
+        n.bc = n.bloque_central["rect"]
+        pygame.draw.rect(n.mundo, (220, 50, 50), n.bc, border_radius=4)
+        pygame.draw.rect(n.mundo, (140, 25, 25), n.bc, width=2, border_radius=4)
+        for n.by in range(n.bc.top + 16, n.bc.bottom - 8, 16):
+            pygame.draw.line(n.mundo, (160, 30, 30), (n.bc.left + 4, n.by), (n.bc.right - 4, n.by), 2)
+
+    if n.plataforma_movil is not None:
+        n.pm = n.plataforma_movil["rect"]
+        pygame.draw.rect(n.mundo, (215, 105, 75), n.pm, border_radius=5)
+        pygame.draw.rect(n.mundo, (150, 60, 40), n.pm, width=2, border_radius=5)
+        for n.rx in range(n.pm.left + 16, n.pm.right - 8, 24):
+            pygame.draw.circle(n.mundo, (140, 60, 40), (n.rx, n.pm.bottom - 5), 3)
+
+        n.estado_pm = n.plataforma_movil.get("estado", "esperando_inicio")
+        if n.estado_pm == "esperando_retorno":
+            n.t_esp = n.plataforma_movil.get("tiempo_espera_retorno", 0)
+            n.parpadeo = (n.t_esp // 15) % 2 == 0
+            n.col_luz = (255, 235, 40) if n.parpadeo else (100, 85, 20)
+            n.col_halo = (255, 245, 120) if n.parpadeo else (70, 60, 15)
+            if n.parpadeo:
+                pygame.draw.circle(n.mundo, n.col_halo, (n.pm.centerx, n.pm.centery), 8)
+            pygame.draw.circle(n.mundo, n.col_luz, (n.pm.centerx, n.pm.centery), 5)
+            pygame.draw.circle(n.mundo, (255, 255, 200) if n.parpadeo else (60, 50, 10), (n.pm.centerx, n.pm.centery), 5, width=1)
+        elif n.estado_pm in ("avanzando", "regresando"):
+            pygame.draw.circle(n.mundo, (80, 220, 100), (n.pm.centerx, n.pm.centery), 5)
+            pygame.draw.circle(n.mundo, (180, 255, 190), (n.pm.centerx, n.pm.centery), 5, width=1)
         else:
-            if p1_completado and p2_completado:
-                nivel_superado = True
+            n.col_ind = (240, 180, 40) if n.plataforma_movil.get("tiempo_con_peso", 0) > 0 else (180, 80, 55)
+            pygame.draw.circle(n.mundo, n.col_ind, (n.pm.centerx, n.pm.centery), 4)
 
-        if nivel_superado:
-            detener_sonido_ahogamiento()
-            cam_puerta_x = max(0, min(puerta["rect"].centerx - ANCHO // 2, ancho_mundo_nivel - ANCHO)) if puerta else 0
-            return animar_transicion_nivel_completado(
-                pantalla=pantalla,
-                reloj=reloj,
-                hay_siguiente=hay_siguiente_nivel,
-                mundo=numero_mundo,
-                numero_nivel=numero_nivel,
-                puerta=puerta,
-                mundo_surface=mundo,
-                cam_x=cam_puerta_x,
-                ancho_mundo_nivel=ancho_mundo_nivel,
-                color_p1=p1_color,
-                color_p2=p2_color,
-                niveles_desbloqueados=niveles_desbloqueados,
-                partida_id=partida_id,
-                partida_nombre=partida_nombre,
-                snapshot_guardado=snapshot_guardado,
-            )
+    if n.boton_nivel is not None:
+        n.rect_b = n.boton_nivel["rect"]
+        n.h_actual = 4 if n.boton_nivel["presionado"] else 12
+        n.y_actual = n.suelo.top - n.h_actual
+        pygame.draw.rect(n.mundo, (90, 70, 60), (n.rect_b.left - 6, n.suelo.top - 4, n.rect_b.width + 12, 10), border_radius=2)
+        n.col_btn = (80, 200, 100) if n.boton_nivel["presionado"] else (225, 65, 65)
+        n.col_borde_btn = (50, 150, 70) if n.boton_nivel["presionado"] else (175, 45, 45)
+        pygame.draw.rect(n.mundo, n.col_btn, (n.rect_b.x, n.y_actual, n.rect_b.width, n.h_actual), border_top_left_radius=3, border_top_right_radius=3)
+        pygame.draw.rect(n.mundo, n.col_borde_btn, (n.rect_b.x, n.y_actual, n.rect_b.width, n.h_actual), width=2, border_top_left_radius=3, border_top_right_radius=3)
 
+    if n.pared_nivel is not None:
+        n.pr = n.pared_nivel["rect"]
+        for n.y_linea in range(n.pr.top + 30, n.pr.bottom - 10, 35):
+            if 0 <= n.y_linea <= ALTO:
+                pygame.draw.line(n.mundo, COLOR_BORDE_PLATAFORMA, (n.pr.left + 4, n.y_linea), (n.pr.right - 4, n.y_linea), 2)
+
+    if n.laser_nivel is not None:
+        dibujar_laser_escenario(n.mundo, n.laser_nivel)
+
+    if n.paredes_colores is not None:
+        dibujar_paredes_colores_escenario(n.mundo, n.paredes_colores)
+
+    if n.botones_colores is not None:
+        dibujar_botones_colores_escenario(n.mundo, n.botones_colores, n.suelo)
+
+    if n.usar_agua: dibujar_agua(n.mundo, ZONA_AGUA, rangos=rangos_visibles)
+    if n.usar_soga and not n.p1_completado and not n.p2_completado:
+        dibujar_soga_escenario(n.mundo, n.jugador1, n.jugador2, n.estado_soga, DISTANCIA_SOGA_REPOSO, DISTANCIA_SOGA_MAXIMA)
+    if n.usar_caja: n.mundo.blit(n.caja["sprite"], n.caja["rect"])
+
+    if n.usar_llave and n.puerta:
+        actualizar_puerta(n.puerta)
+        n.estado_p = "abierta" if n.puerta["abierta"] else "cerrada"
+        n.mundo.blit(n.puerta["sprites"][n.estado_p], n.puerta["rect"])
+        if n.llave and not n.puerta["abierta"]:
+            if n.numero_mundo == 3:
+                n.halo_surf = pygame.Surface((44, 60), pygame.SRCALPHA)
+                n.alpha_h = int(60 + 25 * math.sin(n.tick_m3 * 0.08))
+                pygame.draw.ellipse(n.halo_surf, (255, 230, 90, n.alpha_h), (0, 0, 44, 60))
+                n.mundo.blit(n.halo_surf, (n.llave["rect"].centerx - 22, n.llave["rect"].centery - 30))
+            n.mundo.blit(n.llave["sprite"], n.llave["rect"])
+
+    if n.numero_mundo == 3 and n.numero_nivel in (4, 5) and n.surf_oscuridad_m3 is not None:
+        aplicar_oscuridad_submarina(
+            n.mundo,
+            [(n.jugador1, n.linterna_p1, n.p1_completado), (n.jugador2, n.linterna_p2, n.p2_completado)],
+            n.surf_oscuridad_m3,
+            n.surf_luz_linterna,
+            n.surf_luz_tenue,
+            rangos=rangos_visibles,
+        )
+        if not n.p1_completado:
+            dibujar_personaje(n.mundo, n.jugador1, ZONA_AGUA if n.usar_agua else None)
+            dibujar_linterna_minero(n.mundo, n.jugador1, n.linterna_p1 and not n.jugador1.get("muerto", False))
+            if n.numero_nivel in (5, 6):
+                dibujar_alerta_oxigeno_personaje(n.mundo, n.jugador1, n.oxigeno_p1, n.tick_m3)
+        if not n.p2_completado:
+            dibujar_personaje(n.mundo, n.jugador2, ZONA_AGUA if n.usar_agua else None)
+            dibujar_linterna_minero(n.mundo, n.jugador2, n.linterna_p2 and not n.jugador2.get("muerto", False))
+            if n.numero_nivel in (5, 6):
+                dibujar_alerta_oxigeno_personaje(n.mundo, n.jugador2, n.oxigeno_p2, n.tick_m3)
+    else:
+        if not n.p1_completado: dibujar_personaje(n.mundo, n.jugador1, ZONA_AGUA if n.usar_agua else None)
+        if not n.p2_completado: dibujar_personaje(n.mundo, n.jugador2, ZONA_AGUA if n.usar_agua else None)
+
+    # Controles tutorial directamente arriba de cada personaje
+    if n.numero_mundo == 1 and n.numero_nivel == 1 and n.mostrar_tutorial:
+        n._dibujar_controles_tutorial(n.mundo, alpha_p1=n.alpha_tut_p1, alpha_p2=n.alpha_tut_p2, teclas_actuales=n.teclas)
+
+    # Efecto de ráfaga y animación de teclas sopladas
+    if n.numero_mundo == 1 and n.numero_nivel == 1:
+        n._actualizar_y_dibujar_soplado(n.mundo)
+
+    # Las vistas se calcularon antes de dibujar (calcular_vistas_camara), con este mismo estado
+    for n.x_dest, n.cam_x, n.ancho_vista in vistas_camara:
+        n.pantalla.blit(n.mundo, (n.x_dest, 0), pygame.Rect(n.cam_x, 0, n.ancho_vista, ALTO))
+    if len(vistas_camara) > 1:
+        pygame.draw.line(n.pantalla, (0, 0, 0), (ANCHO // 2, 0), (ANCHO // 2, ALTO), 4)
+
+    # Botones HUD en la esquina superior derecha solo si el nivel continúa activo
+    if not (n.p1_completado and n.p2_completado):
+        n.pos_m_hud = pygame.mouse.get_pos()
+        n.spr_cfg_hud = n.spr_config_hover if (n.rect_btn_config.collidepoint(n.pos_m_hud) and n.spr_config_hover) else n.spr_config_normal
+        n.spr_c_hud = n.spr_casa_hover if (n.rect_btn_casa.collidepoint(n.pos_m_hud) and n.spr_casa_hover) else n.spr_casa_normal
+        n.spr_r_hud = n.spr_reiniciar_hover if (n.rect_btn_reiniciar.collidepoint(n.pos_m_hud) and n.spr_reiniciar_hover) else n.spr_reiniciar_normal
+        n.spr_x_hud = n.spr_x_hover if (n.rect_btn_x.collidepoint(n.pos_m_hud) and n.spr_x_hover) else n.spr_x_normal
+
+        # El fondo detrás de cada botón solo se usa para animar el clic; se copia únicamente
+        # cuando el mouse está cerca del HUD en vez de hacer 4 copias en cada frame.
+        if n.rect_btn_config.unionall([n.rect_btn_casa, n.rect_btn_reiniciar, n.rect_btn_x]).inflate(80, 80).collidepoint(n.pos_m_hud):
+            n.fondo_btn_config = n.pantalla.subsurface(n.rect_btn_config).copy()
+            n.fondo_btn_casa = n.pantalla.subsurface(n.rect_btn_casa).copy()
+            n.fondo_btn_reiniciar = n.pantalla.subsurface(n.rect_btn_reiniciar).copy()
+            n.fondo_btn_x = n.pantalla.subsurface(n.rect_btn_x).copy()
+
+        if n.spr_cfg_hud: n.pantalla.blit(n.spr_cfg_hud, n.rect_btn_config)
+        if n.spr_c_hud: n.pantalla.blit(n.spr_c_hud, n.rect_btn_casa)
+        if n.spr_r_hud: n.pantalla.blit(n.spr_r_hud, n.rect_btn_reiniciar)
+        if n.spr_x_hud: n.pantalla.blit(n.spr_x_hud, n.rect_btn_x)
+
+    if n.numero_mundo == 3 and n.numero_nivel == 4 and not (n.p1_completado and n.p2_completado):
+        _dibujar_hud_linternas_m3_n4(n.pantalla, n.linterna_p1, n.linterna_p2, n.p1_color, n.p2_color)
+    if n.numero_mundo == 3 and n.numero_nivel in (5, 6) and not (n.p1_completado and n.p2_completado):
+        _dibujar_hud_oxigeno_m3_n5(n.pantalla, n.oxigeno_p1, n.oxigeno_p2, n.p1_color, n.p2_color, n.tick_m3)
+        if n.numero_nivel == 5:
+            _dibujar_hud_linternas_m3_n4(n.pantalla, n.linterna_p1, n.linterna_p2, n.p1_color, n.p2_color, y_base=60)
+
+    pygame.display.flip()
+
+
+def _comprobar_fin_de_nivel(n):
+    """Pantalla de muerte o transición de victoria. Devuelve el resultado del nivel o None para seguir."""
+    # Gestión de pantalla de muerte y reinicio según las reglas de cada mundo
+    debe_mostrar_muerte = False
+    muertos = [p for p in (n.jugador1, n.jugador2) if p.get("muerto", False)]
+    if n.numero_mundo == 3:
+        # En Mundo 3 la muerte es individual: si uno muere, el otro permanece vivo.
+        # En cuanto cualquier personaje que haya muerto completa su breve animación de muerte,
+        # se gestiona la derrota de inmediato sin quedarse esperando indefinidamente a que el otro personaje muera.
+        if muertos and any(p.get("muerte_terminada", False) for p in muertos):
+            debe_mostrar_muerte = True
+    else:
+        if muertos and all(p.get("muerte_terminada", False) for p in muertos):
+            debe_mostrar_muerte = True
+
+    if debe_mostrar_muerte:
+        detener_sonido_ahogamiento()
+        n.resultado = pantalla_muerte(n.pantalla, n.reloj)
+        if n.resultado == "salir": return "salir"
+        if n.resultado == "menu": return "menu"
+        if n.resultado == "reiniciar":
+            n._reiniciar_nivel_completo()
+
+    # Condición de nivel superado
+    nivel_superado = False
+    if n.numero_mundo == 3:
+        if (n.p1_completado and n.p2_completado) or \
+           (n.jugador1["muerto"] and n.p2_completado) or \
+           (n.jugador2["muerto"] and n.p1_completado):
+            nivel_superado = True
+    else:
+        if n.p1_completado and n.p2_completado:
+            nivel_superado = True
+
+    if nivel_superado:
+        detener_sonido_ahogamiento()
+        n.cam_puerta_x = max(0, min(n.puerta["rect"].centerx - ANCHO // 2, n.ancho_mundo_nivel - ANCHO)) if n.puerta else 0
+        return animar_transicion_nivel_completado(
+            pantalla=n.pantalla,
+            reloj=n.reloj,
+            hay_siguiente=n.hay_siguiente_nivel,
+            mundo=n.numero_mundo,
+            numero_nivel=n.numero_nivel,
+            puerta=n.puerta,
+            mundo_surface=n.mundo,
+            cam_x=n.cam_puerta_x,
+            ancho_mundo_nivel=n.ancho_mundo_nivel,
+            color_p1=n.p1_color,
+            color_p2=n.p2_color,
+            niveles_desbloqueados=n.niveles_desbloqueados,
+            partida_id=n.partida_id,
+            partida_nombre=n.partida_nombre,
+            snapshot_guardado=n.snapshot_guardado,
+        )
+
+
+def iniciar_mundo(mecanicas=None, numero_nivel=1, color_p1=None, color_p2=None, mundo=1, niveles_desbloqueados=None, partida_id=None, partida_nombre=None, snapshot_guardado=None, accesorio_p1=None, accesorio_p2=None, partida_password=None):
+    """Corre un nivel completo y devuelve "siguiente", "menu" o "salir"."""
+    n = EstadoNivel(mecanicas, numero_nivel, color_p1, color_p2, mundo, niveles_desbloqueados, partida_id, partida_nombre, snapshot_guardado, accesorio_p1, accesorio_p2, partida_password)
+    while n.ejecutando:
+        n.reloj.tick(FPS)
+        resultado = _procesar_eventos(n)
+        if resultado is not None:
+            return resultado
+        _actualizar_jugadores(n)
+        _actualizar_mecanicas(n)
+        _resolver_interacciones(n)
+        _dibujar_frame(n)
+        resultado = _comprobar_fin_de_nivel(n)
+        if resultado is not None:
+            return resultado
     detener_sonido_ahogamiento()
     return "salir"

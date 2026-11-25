@@ -46,7 +46,7 @@ rutas.py (dónde están los recursos)   ventana.py (pantalla completa)   errores
 |---|---|---|
 | `main.py` | Arranque: crea el estado de los menús (`_EstadoMenu`) y corre el loop que despacha eventos y dibujo a la pantalla activa. | 170 líneas |
 | `menus/` | Un módulo por pantalla (`principal`, `modo_juego`, `partidas`, `personajes`, `opciones`, `seleccion_nivel`), cada uno con su función de eventos, su función de dibujo y su fondo dibujado con código; `estado.py` tiene `_EstadoMenu` con la inicialización, `comunes.py` las constantes e iconos compartidos y `dialogos.py` los diálogos modales de partidas (nombre, contraseña, guardar al salir, borrar, atuendos). | 6.200 en 9 archivos |
-| `pantalla.py` | `iniciar_mundo()`: el loop de un nivel (entrada, física, mecánicas, dibujo, cámara, victoria y muerte) y el dibujo de los tres mundos. | 5.600 |
+| `pantalla.py` | `EstadoNivel` (estado de un nivel y su preparación), una función por fase del cuadro (eventos, jugadores, mecánicas, interacciones, dibujo, fin de nivel), `iniciar_mundo()` que las encadena en el loop, y el dibujo de los tres mundos. | 5.600 |
 | `niveles.py` | Los 15 niveles, una función por nivel (`nivel_1_1` … `nivel_3_5`) que devuelve plataformas, jugadores, llave, puerta y mecánicas. | 1.400 |
 | `movimientos.py` | Física: gravedad, salto, colisiones, empujar la caja, torre humana, soga, natación, llave y puerta, pinchos. | 1.500 |
 | `sprites.py` | Carga y caché de todas las imágenes (personajes, botones, objetos, accesorios), dibujo del personaje con su accesorio. | 1.600 |
@@ -66,7 +66,8 @@ un nivel (`pantalla.iniciar_mundo`). `main` llama a `iniciar_mundo` y espera que
 ## 3. El loop de juego
 
 Todo corre a **60 cuadros por segundo** en una ventana lógica de **1280×720** (pygame la
-escala a la pantalla real). Cada cuadro, `iniciar_mundo` hace, en este orden:
+escala a la pantalla real). `iniciar_mundo` crea un `EstadoNivel` (carga el nivel, los sprites y
+el HUD) y después, en cada cuadro, llama a seis funciones en este orden:
 
 1. **Eventos**: teclado (mover, saltar, nadar, linterna, reiniciar con R), botones del HUD
    (configuración, menú, reiniciar, salir) y cierre de ventana.
@@ -255,8 +256,11 @@ cambio hizo más lento algo.
 
 ## 12. Qué se podría mejorar
 
-- `iniciar_mundo` sigue siendo una función de ~1.900 líneas con unas 60 variables de estado;
-  el siguiente paso natural es un objeto `EstadoNivel`, igual que se hizo con los menús.
+- `EstadoNivel.__init__` tiene ~960 líneas de preparación (HUD, sprites, primer cuadro,
+  animación de apertura); se puede repartir en métodos (`_cargar_hud`, `_dibujar_primer_cuadro`…).
+- Las fases del nivel (`_actualizar_mecanicas`, `_dibujar_frame`) todavía tienen un `if` por
+  mecánica y por mundo; el paso siguiente sería que cada mecánica sea un objeto con `actualizar()`
+  y `dibujar()`.
 - Los personajes y objetos podrían ser clases con sus métodos (`mover`, `dibujar`).
 - Un editor de niveles o un formato de datos (JSON) para que diseñar niveles no requiera
   programar.
@@ -282,4 +286,5 @@ Para que quede claro qué era "el juego" y qué se agregó después, en orden:
    imagen.
 7. **Estructura**: los 15 niveles a `niveles.py`; los menús a `_EstadoMenu` y al paquete
    `menus/` (`main.py` pasó de 4.585 a 174 líneas); los textos a `idiomas.py` y los diálogos de
-   partidas a `menus/dialogos.py`. Todo verificado con la suite.
+   partidas a `menus/dialogos.py`; `iniciar_mundo` (1.992 líneas) a `EstadoNivel` más seis
+   funciones, una por fase del cuadro. Todo verificado con la suite.
