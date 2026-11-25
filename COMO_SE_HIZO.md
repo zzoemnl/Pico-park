@@ -30,7 +30,7 @@ mano. Unas 23.600 líneas de Python en 12 módulos.
 ## 2. Arquitectura general
 
 ```
-main.py ──────────► menús (estado = qué pantalla se ve)        ┐
+main.py ──────────► menus/ (una pantalla por módulo)            ┐
    │                                                            │ usan
    └─ jugar_niveles_desde() ──► pantalla.iniciar_mundo()        │
                                    │  loop de un nivel          │
@@ -44,7 +44,8 @@ rutas.py (dónde están los recursos)   ventana.py (pantalla completa)   errores
 
 | Módulo | Qué hace | Tamaño |
 |---|---|---|
-| `main.py` | Arranque, menú principal, modo de juego, lista de partidas, personajes, opciones, selección de nivel. Una función de eventos y una de dibujo por pantalla, con el estado compartido en un objeto `_EstadoMenu`. | 4.600 líneas |
+| `main.py` | Arranque: crea el estado de los menús (`_EstadoMenu`) y corre el loop que despacha eventos y dibujo a la pantalla activa. | 170 líneas |
+| `menus/` | Un módulo por pantalla (`principal`, `modo_juego`, `partidas`, `personajes`, `opciones`, `seleccion_nivel`), cada uno con su función de eventos, su función de dibujo y su fondo dibujado con código; `estado.py` tiene `_EstadoMenu` con la inicialización y `comunes.py` las constantes e iconos compartidos. | 4.600 en 8 archivos |
 | `pantalla.py` | `iniciar_mundo()`: el loop de un nivel (entrada, física, mecánicas, dibujo, cámara, victoria y muerte) y el dibujo de los tres mundos. | 5.600 |
 | `niveles.py` | Los 15 niveles, una función por nivel (`nivel_1_1` … `nivel_3_5`) que devuelve plataformas, jugadores, llave, puerta y mecánicas. | 1.400 |
 | `movimientos.py` | Física: gravedad, salto, colisiones, empujar la caja, torre humana, soga, natación, llave y puerta, pinchos. | 1.500 |
@@ -158,7 +159,7 @@ puerta y qué mecánicas usa. Agregar un nivel es escribir una función más y r
 
 ## 7. Menús y partidas
 
-`main.py` es una máquina de estados: menú principal → modo de juego → lista de partidas o
+`main.py` y el paquete `menus/` forman una máquina de estados: menú principal → modo de juego → lista de partidas o
 nueva partida → selección de mundo y nivel → jugar. Cada pantalla tiene su función de eventos
 (`_eventos_<pantalla>`) y de dibujo (`_dibujar_<pantalla>`); el estado compartido (partida
 actual, colores elegidos, página de la lista, rectángulos de los botones…) vive en un objeto
