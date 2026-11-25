@@ -32,7 +32,8 @@ from fuentes import (
     obtener_fuente_texto,
     obtener_fuente_titulo,
 )
-from guardado import crear_desbloqueados_inicial, hay_progreso_sin_guardar, mostrar_dialogo_guardar_salir
+from guardado import crear_desbloqueados_inicial, hay_progreso_sin_guardar
+from menus.dialogos import mostrar_dialogo_guardar_salir
 from menus.comunes import ESTADO_MENU_PRINCIPAL, _seleccionar_accesorios_sesion_aleatorios
 from menus.modo_juego import _init_copos_modo
 from menus.partidas import obtener_geometria_panel_partidas

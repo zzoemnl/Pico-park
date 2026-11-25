@@ -91,14 +91,14 @@ mostrar un aviso porque no está firmado: "Más información" → "Ejecutar de t
 | Archivo                                  | Qué hace                                                                                                                                             |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `main.py`                                | Arranque: crea el estado de los menús y corre el loop que despacha a la pantalla activa.                                                            |
-| `menus/`                                 | Un módulo por pantalla: `principal`, `modo_juego`, `partidas`, `personajes`, `opciones`, `seleccion_nivel`; `estado.py` (estado compartido e inicialización) y `comunes.py` (constantes, iconos). |
+| `menus/`                                 | Un módulo por pantalla: `principal`, `modo_juego`, `partidas`, `personajes`, `opciones`, `seleccion_nivel`; `estado.py` (estado compartido e inicialización), `comunes.py` (constantes, iconos) y `dialogos.py` (diálogos de partidas: nombre, contraseña, guardar al salir, borrar). |
 | `pantalla.py`                            | `iniciar_mundo`: el loop de un nivel (física por cuadro, mecánicas, dibujo de cada mundo, cámara, victoria y muerte).                                |
 | `niveles.py`                             | Definición de los 15 niveles, una función por nivel (`nivel_1_1` … `nivel_3_5`).                                                                     |
 | `movimientos.py`                         | Física de personajes, caja, soga, natación, llave y puerta.                                                                                          |
 | `sprites.py`                             | Carga y caché de sprites, botones y accesorios.                                                                                                      |
 | `menu_niveles.py`                        | Menú de selección de nivel y miniaturas.                                                                                                             |
-| `guardado.py`                            | Partidas guardadas (`partidas.txt`) y sus diálogos.                                                                                                  |
-| `configuracion.py`                       | Idiomas, música, efectos, volumen, `configuracion.json`.                                                                                             |
+| `guardado.py`                            | Partidas guardadas (`partidas.txt`): lectura, escritura atómica, contraseñas, progreso.                                                              |
+| `configuracion.py` · `idiomas.py`        | Traducción `t()`, música, efectos, volumen, `configuracion.json`; `idiomas.py` tiene los 226 textos en es/en/zh.                                      |
 | `fuentes.py`                             | Fuentes pixel art, caracteres chinos y caché de textos.                                                                                              |
 | `rutas.py` · `ventana.py` · `errores.py` | Rutas de recursos (código y `.exe`), pantalla completa, registro de errores.                                                                         |
 
@@ -106,8 +106,8 @@ mostrar un aviso porque no está firmado: "Más información" → "Ejecutar de t
 Recursos: `Sprites/` (personajes, botones, objetos, accesorios, miniaturas), `sonidos/` (música),
 `assets/fuentes/`.
 
-Tamaño del código: unas 23.900 líneas de Python. Los archivos más grandes son `pantalla.py` (5.600)
-y los módulos de `menus/` (300–950 cada uno); `main.py` tiene 174.
+Tamaño del código: unas 23.900 líneas de Python. El archivo más grande es `pantalla.py` (5.600); los
+módulos de `menus/` tienen entre 100 y 1.600 líneas; `main.py` tiene 174.
 
 ## Herramientas (carpeta `herramientas`)
 

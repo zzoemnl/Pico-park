@@ -72,12 +72,8 @@ from movimientos import (
     aplicar_fisica_agua,
     ALTO_HITBOX,
 )
-from guardado import (
-    crear_desbloqueados_inicial,
-    mostrar_dialogo_guardar_salir,
-    hay_progreso_sin_guardar,
-    es_partida_admin,
-)
+from guardado import crear_desbloqueados_inicial, hay_progreso_sin_guardar, es_partida_admin
+from menus.dialogos import mostrar_dialogo_guardar_salir
 
 COLOR_SOGA = (200, 160, 100)
 COLOR_BOTON_SALIR = (150, 45, 45)

@@ -7,7 +7,7 @@ import math as _math
 import random as _random
 from configuracion import obtener_idioma, reproducir_musica, seleccionar_musica_menu_aleatoria, t
 from fuentes import TAMANO_SUBTITULO, TAMANO_TITULO, ajustar_tamano_fuente, obtener_fuente_para_texto
-from guardado import flujo_crear_nueva_partida
+from menus.dialogos import flujo_crear_nueva_partida
 from menus.comunes import ESTADO_LISTA_PARTIDAS, ESTADO_MENU_PRINCIPAL, ESTADO_SELECCION_NIVEL
 from menus.seleccion_nivel import jugar_niveles_desde
 from sprites import animar_pulsacion_boton

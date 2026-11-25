@@ -25,22 +25,8 @@ from fuentes import (
     obtener_fuente_para_texto,
     obtener_fuente_pequena,
 )
-from guardado import (
-    TOTAL_NIVELES_ADMIN,
-    TOTAL_NIVELES_NORMALES,
-    calcular_niveles_completados,
-    cargar_partidas,
-    crear_desbloqueados_inicial,
-    eliminar_partida,
-    es_partida_admin,
-    flujo_crear_nueva_partida,
-    guardar_partida,
-    modal_administrar_perfil,
-    mostrar_dialogo_confirmar_atuendos,
-    mostrar_dialogo_confirmar_borrado,
-    obtener_nombre_partida_visible,
-    pedir_password_modal,
-)
+from guardado import TOTAL_NIVELES_ADMIN, TOTAL_NIVELES_NORMALES, calcular_niveles_completados, cargar_partidas, crear_desbloqueados_inicial, eliminar_partida, es_partida_admin, guardar_partida, obtener_nombre_partida_visible
+from menus.dialogos import flujo_crear_nueva_partida, modal_administrar_perfil, mostrar_dialogo_confirmar_atuendos, mostrar_dialogo_confirmar_borrado, pedir_password_modal
 from menu_niveles import COLORES_TABS
 from menus.comunes import (
     ESTADO_MODO_JUEGO,

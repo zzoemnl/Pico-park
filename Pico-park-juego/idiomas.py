@@ -1,0 +1,825 @@
+"""
+Textos del juego en los tres idiomas. Cada clave tiene "es", "en" y "zh".
+Se accede con configuracion.t("clave"). Para agregar un texto, agregar la clave acá en los tres idiomas.
+"""
+
+# ==============================================================================
+# DICCIONARIO DE TRADUCCIONES
+# ==============================================================================
+DICCIONARIO = {
+    # Pestaña de configuración
+    "configuracion": {
+        "es": "CONFIGURACIÓN",
+        "en": "SETTINGS",
+        "zh": "设置",
+    },
+    "volumen": {
+        "es": "VOLUMEN",
+        "en": "VOLUME",
+        "zh": "音量",
+    },
+    "idioma": {
+        "es": "IDIOMA",
+        "en": "LANGUAGE",
+        "zh": "语言",
+    },
+    "cerrar": {
+        "es": "CERRAR",
+        "en": "CLOSE",
+        "zh": "关闭",
+    },
+    "volver_juego": {
+        "es": "VOLVER AL JUEGO",
+        "en": "BACK TO GAME",
+        "zh": "返回游戏",
+    },
+
+    # Idiomas
+    "idioma_es": {
+        "es": "Español",
+        "en": "Spanish",
+        "zh": "西班牙语",
+    },
+    "idioma_en": {
+        "es": "English",
+        "en": "English",
+        "zh": "英语",
+    },
+    "idioma_zh": {
+        "es": "简体中文",
+        "en": "Chinese",
+        "zh": "简体中文",
+    },
+
+    # Pantallas de Juego y Muerte
+    "te_moriste": {
+        "es": "¡Te moriste!",
+        "en": "You died!",
+        "zh": "你失败了！",
+    },
+    "reiniciar_o_salir": {
+        "es": "¿Querés reiniciar o salir?",
+        "en": "Do you want to restart or quit?",
+        "zh": "你想重新开始还是退出？",
+    },
+    "nivel_completado": {
+        "es": "¡NIVEL COMPLETADO!",
+        "en": "LEVEL COMPLETED!",
+        "zh": "关卡完成！",
+    },
+    "buen_trabajo": {
+        "es": "¡Buen trabajo!",
+        "en": "Good job!",
+        "zh": "干得漂亮！",
+    },
+    "siguiente": {
+        "es": "SIGUIENTE",
+        "en": "NEXT",
+        "zh": "下一关",
+    },
+    "finalizar": {
+        "es": "FINALIZAR",
+        "en": "FINISH",
+        "zh": "完成",
+    },
+    "reiniciar": {
+        "es": "REINICIAR",
+        "en": "RESTART",
+        "zh": "重新开始",
+    },
+    "menu": {
+        "es": "MENÚ",
+        "en": "MENU",
+        "zh": "主菜单",
+    },
+
+    # Diálogos de guardado y confirmación
+    "deseas_guardar": {
+        "es": "¿Deseas guardar antes de salir?",
+        "en": "Save before quitting?",
+        "zh": "退出前是否保存进度？",
+    },
+    "guardar_salir": {
+        "es": "Guardar y salir",
+        "en": "Save and quit",
+        "zh": "保存并退出",
+    },
+    "salir_sin_guardar": {
+        "es": "Salir sin guardar",
+        "en": "Quit without saving",
+        "zh": "不保存退出",
+    },
+    "cancelar": {
+        "es": "Cancelar",
+        "en": "Cancel",
+        "zh": "取消",
+    },
+
+    # Menú y niveles
+    "mundo": {
+        "es": "MUNDO",
+        "en": "WORLD",
+        "zh": "世界",
+    },
+    "nivel": {
+        "es": "NIVEL",
+        "en": "LEVEL",
+        "zh": "关卡",
+    },
+    "jugar": {
+        "es": "JUGAR",
+        "en": "PLAY",
+        "zh": "开始游戏",
+    },
+    "personajes": {
+        "es": "PERSONAJES",
+        "en": "CHARACTERS",
+        "zh": "角色设置",
+    },
+    "salir": {
+        "es": "SALIR",
+        "en": "QUIT",
+        "zh": "退出游戏",
+    },
+    "volver": {
+        "es": "VOLVER",
+        "en": "BACK",
+        "zh": "返回",
+    },
+    "seleccion_nivel": {
+        "es": "SELECCIÓN DE NIVEL",
+        "en": "LEVEL SELECTION",
+        "zh": "关卡选择",
+    },
+    "bloqueado": {
+        "es": "BLOQUEADO",
+        "en": "LOCKED",
+        "zh": "未解锁",
+    },
+    "deseas_guardar_sub": {
+        "es": "Puedes guardar tu partida en un perfil antes de salir.",
+        "en": "You can save your game before exiting.",
+        "zh": "退出前您可以将游戏进度保存到档案中。",
+    },
+    "opciones": {
+        "es": "OPCIONES",
+        "en": "SETTINGS",
+        "zh": "设置",
+    },
+    "controles": {
+        "es": "CONTROLES",
+        "en": "CONTROLS",
+        "zh": "操作控制",
+    },
+    "instrucciones": {
+        "es": "INSTRUCCIONES",
+        "en": "INSTRUCTIONS",
+        "zh": "游戏说明",
+    },
+    "sub_opciones": {
+        "es": "Configuración general, controles y guía de aventura",
+        "en": "General settings, controls and adventure guide",
+        "zh": "通用设置、操作控制与冒险指南",
+    },
+    "modo_juego": {
+        "es": "MODO DE JUEGO",
+        "en": "GAME MODE",
+        "zh": "游戏模式",
+    },
+    "subtitulo_modo": {
+        "es": "Selecciona cómo deseas comenzar tu aventura",
+        "en": "Choose how you want to start your adventure",
+        "zh": "选择你开始冒险的方式",
+    },
+    "continuar": {
+        "es": "CONTINUAR",
+        "en": "CONTINUE",
+        "zh": "继续游戏",
+    },
+    "sub_continuar": {
+        "es": "Cargar partida guardada y ver tus niveles alcanzados",
+        "en": "Load saved game and view level progress",
+        "zh": "加载保存的存档并查看关卡进度",
+    },
+    "nueva_partida": {
+        "es": "NUEVA PARTIDA",
+        "en": "NEW GAME",
+        "zh": "新建游戏",
+    },
+    "sub_nueva_partida": {
+        "es": "Reiniciar y comenzar desde el Mundo 1 - Nivel 1",
+        "en": "Restart and begin from World 1 - Level 1",
+        "zh": "重新开始，从世界 1 - 关卡 1 开始",
+    },
+    "partidas_guardadas": {
+        "es": "PARTIDAS GUARDADAS",
+        "en": "SAVED GAMES",
+        "zh": "保存的游戏",
+    },
+    "partida": {
+        "es": "Partida",
+        "en": "Game",
+        "zh": "游戏",
+    },
+    "sub_partidas": {
+        "es": "Registro de expediciones y progreso de aventura",
+        "en": "Expedition record and adventure progress",
+        "zh": "探险记录与冒险进度",
+    },
+    "todos_desbloqueados": {
+        "es": "Todos los niveles desbloqueados",
+        "en": "All levels unlocked",
+        "zh": "所有关卡已解锁",
+    },
+    "completados": {
+        "es": "completados",
+        "en": "completed",
+        "zh": "已完成",
+    },
+    "fecha": {
+        "es": "Fecha",
+        "en": "Date",
+        "zh": "日期",
+    },
+    "hora": {
+        "es": "Hora",
+        "en": "Time",
+        "zh": "时间",
+    },
+    "cargar": {
+        "es": "CARGAR",
+        "en": "LOAD",
+        "zh": "加载",
+    },
+    "gestionar": {
+        "es": "GESTIONAR",
+        "en": "MANAGE",
+        "zh": "管理",
+    },
+    "borrar": {
+        "es": "BORRAR",
+        "en": "DELETE",
+        "zh": "删除",
+    },
+    "no_partidas": {
+        "es": "No se encontraron registros de expedición",
+        "en": "No expedition records found",
+        "zh": "未找到探险记录",
+    },
+    "comenzar_historia": {
+        "es": "Comenzá una nueva partida para escribir tu historia en este diario.",
+        "en": "Start a new game to write your story in this journal.",
+        "zh": "开始新游戏以在此日记中谱写你的故事。",
+    },
+    "comenzar_aventura": {
+        "es": "COMENZAR AVENTURA",
+        "en": "START ADVENTURE",
+        "zh": "开始冒险",
+    },
+    "entrada_pagina": {
+        "es": "Entrada página {0} de {1}",
+        "en": "Journal page {0} of {1}",
+        "zh": "档案页码 {0} / {1}",
+    },
+    "personalizacion_personajes": {
+        "es": "PERSONALIZACIÓN DE PERSONAJES",
+        "en": "CHARACTER CUSTOMIZATION",
+        "zh": "角色定制",
+    },
+    "sub_personalizacion": {
+        "es": "Personaliza el color y los accesorios de cada personaje",
+        "en": "Customize the color and accessories of each character",
+        "zh": "自定义每个角色的颜色和配饰",
+    },
+    "colores": {
+        "es": "COLORES",
+        "en": "COLORS",
+        "zh": "颜色",
+    },
+    "accesorios": {
+        "es": "ACCESORIOS",
+        "en": "ACCESSORIES",
+        "zh": "配饰",
+    },
+    "jugador": {
+        "es": "JUGADOR",
+        "en": "PLAYER",
+        "zh": "玩家",
+    },
+    "colores_disponibles": {
+        "es": "COLORES DISPONIBLES",
+        "en": "AVAILABLE COLORS",
+        "zh": "可用颜色",
+    },
+    "accesorios_disponibles": {
+        "es": "ACCESORIOS DISPONIBLES",
+        "en": "AVAILABLE ACCESSORIES",
+        "zh": "可用配饰",
+    },
+    "administrar_perfil": {
+        "es": "ADMINISTRAR PERFIL",
+        "en": "MANAGE PROFILE",
+        "zh": "管理档案",
+    },
+    "eliminar_perfil": {
+        "es": "ELIMINAR PERFIL",
+        "en": "DELETE PROFILE",
+        "zh": "删除档案",
+    },
+    "confirmar": {
+        "es": "CONFIRMAR",
+        "en": "CONFIRM",
+        "zh": "确认",
+    },
+    "cambiar_nombre": {
+        "es": "CAMBIAR NOMBRE",
+        "en": "CHANGE NAME",
+        "zh": "更改名称",
+    },
+    "cambiar_quitar_clave": {
+        "es": "CAMBIAR / QUITAR CONTRASEÑA",
+        "en": "CHANGE / REMOVE PASSWORD",
+        "zh": "更改 / 移除密码",
+    },
+    "agregar_clave": {
+        "es": "AGREGAR CONTRASEÑA",
+        "en": "ADD PASSWORD",
+        "zh": "添加密码",
+    },
+    "perfil": {
+        "es": "Perfil",
+        "en": "Profile",
+        "zh": "档案",
+    },
+    "estado_protegido": {
+        "es": "Estado: Protegido con contraseña",
+        "en": "Status: Password protected",
+        "zh": "状态：密码保护",
+    },
+    "estado_sin_clave": {
+        "es": "Estado: Sin contraseña",
+        "en": "Status: No password",
+        "zh": "状态：无密码",
+    },
+    "seguro_eliminar_perfil": {
+        "es": "¿Seguro que deseas eliminar este perfil y su partida?",
+        "en": "Are you sure you want to delete this profile and its save?",
+        "zh": "确定要删除此档案及其存档吗？",
+    },
+    "aviso_borrado_progreso": {
+        "es": "Se borrará todo su progreso y no se podrá recuperar.",
+        "en": "All progress will be deleted and cannot be recovered.",
+        "zh": "所有进度都将被删除且无法恢复。",
+    },
+    "borrar_perfil": {
+        "es": "BORRAR PERFIL",
+        "en": "DELETE PROFILE",
+        "zh": "删除档案",
+    },
+    "partida_existente": {
+        "es": "PARTIDA EXISTENTE",
+        "en": "EXISTING GAME",
+        "zh": "已有存档",
+    },
+    "ya_existe_partida_con_nombre": {
+        "es": "Ya existe una partida guardada con el nombre",
+        "en": "A saved game already exists with the name",
+        "zh": "已存在同名存档",
+    },
+    "elegir_otro_o_sobrescribir": {
+        "es": "¿Deseas elegir otro nombre o sobrescribir la partida existente?",
+        "en": "Do you want to choose another name or overwrite the existing game?",
+        "zh": "要选择其他名称还是覆盖现有存档？",
+    },
+    "otro_nombre": {
+        "es": "OTRO NOMBRE",
+        "en": "ANOTHER NAME",
+        "zh": "其他名称",
+    },
+    "sobrescribir": {
+        "es": "SOBRESCRIBIR",
+        "en": "OVERWRITE",
+        "zh": "覆盖",
+    },
+    "ingresa_nombre_partida": {
+        "es": "Ingresa un nombre para tu partida:",
+        "en": "Enter a name for your game:",
+        "zh": "输入存档名称：",
+    },
+    "contrasena_opcional": {
+        "es": "CONTRASEÑA (OPCIONAL)",
+        "en": "PASSWORD (OPTIONAL)",
+        "zh": "密码（可选）",
+    },
+    "sub_contrasena_opcional": {
+        "es": "Establece una contraseña o deja vacío si no deseas protegerla:",
+        "en": "Set a password or leave blank if not needed:",
+        "zh": "设置密码，如不需要保护请留空：",
+    },
+    "campo_no_vacio": {
+        "es": "El campo no puede estar vacío.",
+        "en": "This field cannot be empty.",
+        "zh": "该字段不能为空。",
+    },
+    "guardar_en": {
+        "es": "GUARDAR EN",
+        "en": "SAVE TO",
+        "zh": "保存到",
+    },
+    "crear_nueva_partida": {
+        "es": "CREAR NUEVA PARTIDA",
+        "en": "CREATE NEW GAME",
+        "zh": "创建新存档",
+    },
+    "elige_partida_o_crea": {
+        "es": "Elige una partida para actualizar o crea una nueva:",
+        "en": "Choose a game to update or create a new one:",
+        "zh": "选择要更新的存档或创建新存档：",
+    },
+    "niveles_completados": {
+        "es": "Niveles completados",
+        "en": "Completed levels",
+        "zh": "已完成关卡",
+    },
+    "guardado": {
+        "es": "Guardado",
+        "en": "Saved",
+        "zh": "保存时间",
+    },
+    "partida_actual": {
+        "es": "Partida actual",
+        "en": "Current game",
+        "zh": "当前存档",
+    },
+    "volver_al_menu": {
+        "es": "VOLVER AL MENÚ",
+        "en": "BACK TO MENU",
+        "zh": "返回主菜单",
+    },
+    "blanco": {"es": "Blanco", "en": "White", "zh": "白色"},
+    "gris": {"es": "Gris", "en": "Gray", "zh": "灰色"},
+    "gris claro": {"es": "Gris claro", "en": "Light Gray", "zh": "浅灰色"},
+    "gris oscuro": {"es": "Gris oscuro", "en": "Dark Gray", "zh": "深灰色"},
+    "negro": {"es": "Gris oscuro", "en": "Dark Gray", "zh": "深灰色"},
+    "marron": {"es": "Marrón", "en": "Brown", "zh": "棕色"},
+    "rojo": {"es": "Rojo", "en": "Red", "zh": "红色"},
+    "rosa": {"es": "Rosa", "en": "Pink", "zh": "粉色"},
+    "naranja": {"es": "Naranja", "en": "Orange", "zh": "橙色"},
+    "amarillo": {"es": "Amarillo", "en": "Yellow", "zh": "黄色"},
+    "verde": {"es": "Verde", "en": "Green", "zh": "绿色"},
+    "verde claro": {"es": "Verde claro", "en": "Light Green", "zh": "浅绿色"},
+    "verde oscuro": {"es": "Verde", "en": "Green", "zh": "绿色"},
+    "celeste": {"es": "Celeste", "en": "Sky Blue", "zh": "天蓝色"},
+    "azul": {"es": "Azul", "en": "Blue", "zh": "蓝色"},
+    "violeta": {"es": "Violeta", "en": "Purple", "zh": "紫色"},
+    "ninguno": {"es": "Ninguno", "en": "None", "zh": "无"},
+    "corona": {"es": "Corona", "en": "Crown", "zh": "皇冠"},
+    "gorro": {"es": "Gorro", "en": "Beanie", "zh": "毛线帽"},
+    "anteojos": {"es": "Anteojos", "en": "Glasses", "zh": "眼镜"},
+    "moño": {"es": "Moño", "en": "Bowtie", "zh": "蝴蝶结"},
+    "sombrero": {"es": "Sombrero", "en": "Hat", "zh": "礼帽"},
+    "marrón": {"es": "Marrón", "en": "Brown", "zh": "棕色"},
+    "mono": {"es": "Moño", "en": "Bowtie", "zh": "蝴蝶结"},
+    "gorro azul": {"es": "Gorro Azul", "en": "Blue Beanie", "zh": "蓝帽子"},
+    "gorro_azul": {"es": "Gorro Azul", "en": "Blue Beanie", "zh": "蓝帽子"},
+    "gorro celeste": {"es": "Gorro Celeste", "en": "Cyan Beanie", "zh": "青色帽子"},
+    "gorro_celeste": {"es": "Gorro Celeste", "en": "Cyan Beanie", "zh": "青色帽子"},
+    "duende": {"es": "Duende", "en": "Elf Hat", "zh": "精灵帽"},
+    "papá noel": {"es": "Papá Noel", "en": "Santa", "zh": "圣诞老人"},
+    "papa noel": {"es": "Papá Noel", "en": "Santa", "zh": "圣诞老人"},
+    "papa_noel": {"es": "Papá Noel", "en": "Santa", "zh": "圣诞老人"},
+    "ángel": {"es": "Ángel", "en": "Angel", "zh": "天使"},
+    "angel": {"es": "Ángel", "en": "Angel", "zh": "天使"},
+    "hoja": {"es": "Hoja", "en": "Sprout", "zh": "小树苗"},
+    "rulo": {"es": "Rulo", "en": "Curl", "zh": "卷发"},
+    "popó": {"es": "Popó", "en": "Poop", "zh": "便便"},
+    "popo": {"es": "Popó", "en": "Poop", "zh": "便便"},
+    "caca": {"es": "Popó", "en": "Poop", "zh": "便便"},
+    "pelo arcoíris": {"es": "Pelo Arcoíris", "en": "Rainbow Hair", "zh": "彩虹假发"},
+    "pelo arcoiris": {"es": "Pelo Arcoíris", "en": "Rainbow Hair", "zh": "彩虹假发"},
+    "arcoíris": {"es": "Pelo Arcoíris", "en": "Rainbow Hair", "zh": "彩虹假发"},
+    "arcoiris": {"es": "Pelo Arcoíris", "en": "Rainbow Hair", "zh": "彩虹假发"},
+    "gorro con ratón": {"es": "Gorro con Ratón", "en": "Mouse Hat", "zh": "老鼠帽"},
+    "gorro con raton": {"es": "Gorro con Ratón", "en": "Mouse Hat", "zh": "老鼠帽"},
+    "chucky": {"es": "Chucky", "en": "Chucky", "zh": "恰吉"},
+    "orejas de conejo": {"es": "Orejas de Conejo", "en": "Rabbit Ears", "zh": "兔耳朵"},
+    "among us": {"es": "Among Us", "en": "Among Us", "zh": "Among Us"},
+    "among_us": {"es": "Among Us", "en": "Among Us", "zh": "Among Us"},
+    "argentina": {"es": "Argentina", "en": "Argentina", "zh": "阿根廷"},
+    "bigote": {"es": "Bigote", "en": "Mustache", "zh": "胡子"},
+    "diablo": {"es": "Diablo", "en": "Devil", "zh": "恶魔"},
+    "elegante": {"es": "Elegante", "en": "Fancy", "zh": "绅士"},
+    "exe": {"es": "EXE", "en": "EXE", "zh": "EXE"},
+    "gorra urbana dorada": {"es": "Gorra urbana dorada", "en": "Gold Urban Cap", "zh": "金色潮帽"},
+    "gorra_urbana_dorada": {"es": "Gorra urbana dorada", "en": "Gold Urban Cap", "zh": "金色潮帽"},
+    "gorra urbana plateada": {"es": "Gorra urbana plateada", "en": "Silver Urban Cap", "zh": "银色潮帽"},
+    "gorra_urbana_plateada": {"es": "Gorra urbana plateada", "en": "Silver Urban Cap", "zh": "银色潮帽"},
+    "kenny": {"es": "Kenny", "en": "Kenny", "zh": "肯尼"},
+    "kyle": {"es": "Kyle", "en": "Kyle", "zh": "凯尔"},
+    "moño bi": {"es": "Moño Bi", "en": "Bi Bow", "zh": "双性恋结"},
+    "mono bi": {"es": "Moño Bi", "en": "Bi Bow", "zh": "双性恋结"},
+    "moño_bi": {"es": "Moño Bi", "en": "Bi Bow", "zh": "双性恋结"},
+    "mono_bi": {"es": "Moño Bi", "en": "Bi Bow", "zh": "双性恋结"},
+    "moño g": {"es": "Moño G", "en": "Gay Bow", "zh": "彩虹结"},
+    "mono g": {"es": "Moño G", "en": "Gay Bow", "zh": "彩虹结"},
+    "moño_g": {"es": "Moño G", "en": "Gay Bow", "zh": "彩虹结"},
+    "mono_g": {"es": "Moño G", "en": "Gay Bow", "zh": "彩虹结"},
+    "moño l": {"es": "Moño L", "en": "Lesbian Bow", "zh": "女同结"},
+    "mono l": {"es": "Moño L", "en": "Lesbian Bow", "zh": "女同结"},
+    "moño_l": {"es": "Moño L", "en": "Lesbian Bow", "zh": "女同结"},
+    "mono_l": {"es": "Moño L", "en": "Lesbian Bow", "zh": "女同结"},
+    "moño trans": {"es": "Moño trans", "en": "Trans Bow", "zh": "跨性别结"},
+    "mono trans": {"es": "Moño trans", "en": "Trans Bow", "zh": "跨性别结"},
+    "moño_trans": {"es": "Moño trans", "en": "Trans Bow", "zh": "跨性别结"},
+    "mono_trans": {"es": "Moño trans", "en": "Trans Bow", "zh": "跨性别结"},
+    "nerd": {"es": "Nerd", "en": "Nerd", "zh": "书呆子"},
+    "tatoo": {"es": "Tatoo", "en": "Tattoo", "zh": "纹身"},
+    "tattoo": {"es": "Tatoo", "en": "Tattoo", "zh": "纹身"},
+    "minion": {"es": "Minion", "en": "Minion", "zh": "小黄人"},
+    "pou": {"es": "Pou", "en": "Pou", "zh": "外星宠物Pou"},
+    "cambiar_atuendos": {
+        "es": "CAMBIAR ATUENDOS",
+        "en": "CHANGE OUTFITS",
+        "zh": "更换装扮",
+    },
+    "sub_modificaste_personajes": {
+        "es": "Modificaste los personajes antes de continuar «{0}».",
+        "en": "You modified characters before continuing «{0}».",
+        "zh": "继续«{0}»前你修改了角色装扮。",
+    },
+    "pregunta_mantener_o_cambiar": {
+        "es": "¿Deseas mantener los atuendos guardados o aplicar los nuevos?",
+        "en": "Do you want to keep saved outfits or apply new ones?",
+        "zh": "你想保留已保存的装扮还是应用新装扮？",
+    },
+    "atuendos_guardados": {
+        "es": "ATUENDOS GUARDADOS",
+        "en": "SAVED OUTFITS",
+        "zh": "已保存装扮",
+    },
+    "nuevos_atuendos": {
+        "es": "NUEVOS ATUENDOS",
+        "en": "NEW OUTFITS",
+        "zh": "新装扮",
+    },
+    "mantener_guardados": {
+        "es": "MANTENER GUARDADOS",
+        "en": "KEEP SAVED",
+        "zh": "保留已保存",
+    },
+    "jugador_1": {
+        "es": "Jugador 1",
+        "en": "Player 1",
+        "zh": "玩家 1",
+    },
+    "jugador_2": {
+        "es": "Jugador 2",
+        "en": "Player 2",
+        "zh": "玩家 2",
+    },
+    "accesorio_label": {
+        "es": "Accesorio",
+        "en": "Accessory",
+        "zh": "配饰",
+    },
+    "sin_accesorio": {
+        "es": "Sin accesorio",
+        "en": "No accessory",
+        "zh": "无配饰",
+    },
+    "ajustes_generales": {
+        "es": "AJUSTES GENERALES DEL JUEGO",
+        "en": "GENERAL GAME SETTINGS",
+        "zh": "游戏通用设置",
+    },
+    "controles_teclado": {
+        "es": "CONTROLES Y TECLADO DE LOS JUGADORES",
+        "en": "PLAYER CONTROLS & KEYBOARD",
+        "zh": "玩家操作与键盘按键",
+    },
+    "guia_juego": {
+        "es": "GUÍA DE JUEGO Y MECÁNICAS DE LOS MUNDOS",
+        "en": "GAME GUIDE & WORLD MECHANICS",
+        "zh": "游戏指南与关卡机制",
+    },
+    "volumen_musica_y_sonido": {
+        "es": "VOLUMEN DE MÚSICA Y SONIDO",
+        "en": "MUSIC & SOUND VOLUME",
+        "zh": "音乐与音效音量",
+    },
+    "seleccion_idioma": {
+        "es": "SELECCIÓN DE IDIOMA / LANGUAGE",
+        "en": "LANGUAGE SELECTION",
+        "zh": "语言选择",
+    },
+    "musica_menu_titulo": {
+        "es": "MÚSICA DEL MENÚ",
+        "en": "MENU MUSIC",
+        "zh": "菜单音乐",
+    },
+    "modo_aleatorio": {
+        "es": "ALEATORIO",
+        "en": "RANDOM",
+        "zh": "随机",
+    },
+    "desc_aleatorio": {
+        "es": "Mezcla\n(Caillou / Christmas)",
+        "en": "Mix\n(Caillou / Christmas)",
+        "zh": "随机混合\n(卡由 / 圣诞)",
+    },
+    "modo_caillou": {
+        "es": "CAILLOU",
+        "en": "CAILLOU",
+        "zh": "卡由",
+    },
+    "desc_caillou": {
+        "es": "Tema de Caillou\n[Versión 8-bit]",
+        "en": "Caillou Theme\n[8-bit Tribute]",
+        "zh": "卡由主题曲\n[8位像素音乐]",
+    },
+    "modo_christmas": {
+        "es": "CHRISTMAS",
+        "en": "CHRISTMAS",
+        "zh": "圣诞 (CHRISTMAS)",
+    },
+    "desc_christmas": {
+        "es": "Música Navideña\n[menú.mp3]",
+        "en": "Christmas Music\n[menú.mp3]",
+        "zh": "圣诞节日音乐\n[menú.mp3]",
+    },
+    "cambios_guardados_auto": {
+        "es": "Los cambios se guardan y sincronizan automáticamente.",
+        "en": "Changes are saved and synced automatically.",
+        "zh": "更改将自动保存并同步。",
+    },
+    "flechas_direccion": {
+        "es": "FLECHAS DE DIRECCIÓN",
+        "en": "ARROW KEYS",
+        "zh": "方向键",
+    },
+    "accion_moverse": {
+        "es": "Moverse",
+        "en": "Move",
+        "zh": "移动",
+    },
+    "desc_moverse": {
+        "es": "Izquierda / Derecha",
+        "en": "Left / Right",
+        "zh": "向左 / 向右",
+    },
+    "accion_saltar": {
+        "es": "Saltar",
+        "en": "Jump",
+        "zh": "跳跃",
+    },
+    "desc_saltar": {
+        "es": "Salto normal y rebote",
+        "en": "Normal jump and bounce",
+        "zh": "普通跳跃与弹跳",
+    },
+    "accion_nadar": {
+        "es": "Nadar (Agua)",
+        "en": "Swim (Water)",
+        "zh": "游泳（水下）",
+    },
+    "desc_nadar_p1": {
+        "es": "W: Nadar arriba / S: Sumergirse",
+        "en": "W: Swim up / S: Dive down",
+        "zh": "W: 向上游 / S: 向下潜",
+    },
+    "desc_nadar_p2": {
+        "es": "↑: Nadar arriba / ↓: Sumergirse",
+        "en": "↑: Swim up / ↓: Dive down",
+        "zh": "↑: 向上游 / ↓: 向下潜",
+    },
+    "accion_empujar": {
+        "es": "Empujar",
+        "en": "Push",
+        "zh": "推动",
+    },
+    "desc_empujar": {
+        "es": "Caminar de frente contra cajas",
+        "en": "Walk forward against boxes",
+        "zh": "迎面走向箱子以推动",
+    },
+    "accion_linterna": {
+        "es": "Linterna (M3)",
+        "en": "Flashlight (W3)",
+        "zh": "手电筒（第3世界）",
+    },
+    "desc_linterna": {
+        "es": "Encender / Apagar en oscuridad",
+        "en": "Turn on / off in dark areas",
+        "zh": "在黑暗洞穴中开启/关闭",
+    },
+    "reiniciar_nivel_act": {
+        "es": "Reiniciar nivel actual",
+        "en": "Restart current level",
+        "zh": "重新开始当前关卡",
+    },
+    "pausa_volver_menu": {
+        "es": "Pausa / Volver al menú",
+        "en": "Pause / Return to menu",
+        "zh": "暂停 / 返回主菜单",
+    },
+    "inst_tit_1": {
+        "es": "1. OBJETIVO Y LLAVE DORADA",
+        "en": "1. GOAL & GOLDEN KEY",
+        "zh": "1. 目标与金色钥匙",
+    },
+    "inst_1_1": {
+        "es": "• Cooperen en equipo para guiar a ambos personajes.",
+        "en": "• Cooperate as a team to guide both characters.",
+        "zh": "• 团队协作引导两名角色前进。",
+    },
+    "inst_1_2": {
+        "es": "• Encuentren y recojan la LLAVE DORADA del nivel.",
+        "en": "• Find and collect the level's GOLDEN KEY.",
+        "zh": "• 寻找并拾取关卡中的金色钥匙。",
+    },
+    "inst_1_3": {
+        "es": "• La llave abre el candado de la PUERTA DE SALIDA.",
+        "en": "• The key unlocks the EXIT DOOR lock.",
+        "zh": "• 钥匙可解开终点大门的门锁。",
+    },
+    "inst_1_4": {
+        "es": "• ¡Ambos jugadores deben entrar para ganar!",
+        "en": "• Both players must enter together to win!",
+        "zh": "• 两名玩家必须全部进入方可通关！",
+    },
+    "inst_tit_2": {
+        "es": "2. CAJAS Y BOTONES DE PRESIÓN",
+        "en": "2. CRATES & PRESSURE BUTTONS",
+        "zh": "2. 木箱与压力开关",
+    },
+    "inst_2_1": {
+        "es": "• Empujen cajas juntos caminando hacia ellas.",
+        "en": "• Push crates together by walking into them.",
+        "zh": "• 迎面走向木箱合力将其推动。",
+    },
+    "inst_2_2": {
+        "es": "• Las cajas sirven como escalón o contrapeso.",
+        "en": "• Crates serve as step-ups or counterweights.",
+        "zh": "• 木箱可用作垫脚台阶或重力配重。",
+    },
+    "inst_2_3": {
+        "es": "• Pisen los BOTONES del suelo para abrir compuertas.",
+        "en": "• Step on floor BUTTONS to open gates.",
+        "zh": "• 踩下地面开关以开启机关闸门。",
+    },
+    "inst_2_4": {
+        "es": "• Algunos botones requieren peso continuo encima.",
+        "en": "• Some buttons require continuous weight on them.",
+        "zh": "• 部分开关需要持续保持重压。",
+    },
+    "inst_tit_3": {
+        "es": "3. MUNDOS 1 Y 2: TRABAJO EN EQUIPO",
+        "en": "3. WORLDS 1 & 2: TEAMWORK",
+        "zh": "3. 世界1与2：团队协作",
+    },
+    "inst_3_1": {
+        "es": "• Mundo 1: Suban uno encima de otro para llegar alto.",
+        "en": "• World 1: Climb on each other to reach heights.",
+        "zh": "• 世界1：叠罗汉踩在队友头上跳上高处。",
+    },
+    "inst_3_2": {
+        "es": "• Mundo 2: ¡Están unidos por una SOGA resistente!",
+        "en": "• World 2: Connected by a sturdy ROPE!",
+        "zh": "• 世界2：两名玩家由坚韧绳索相连！",
+    },
+    "inst_3_3": {
+        "es": "• La soga tiene distancia máxima y transmite tirones.",
+        "en": "• The rope has max length and pulls each other.",
+        "zh": "• 绳索有长度上限并会相互拉拽牵引。",
+    },
+    "inst_3_4": {
+        "es": "• Si un jugador cae, tirará de su compañero.",
+        "en": "• If one player falls, they pull their partner.",
+        "zh": "• 一人跌落将会把同伴一同拽下。",
+    },
+    "inst_tit_4": {
+        "es": "4. MUNDO 3: AVENTURA SUBMARINA",
+        "en": "4. WORLD 3: UNDERWATER ADVENTURE",
+        "zh": "4. 世界3：水下奇妙冒险",
+    },
+    "inst_4_1": {
+        "es": "• Zonas sumergidas con físicas de natación y buceo.",
+        "en": "• Underwater zones with swim and dive physics.",
+        "zh": "• 水下区域具有真实游泳与潜水浮力。",
+    },
+    "inst_4_2": {
+        "es": "• Atentos al nivel de OXÍGENO y burbujas de aire.",
+        "en": "• Keep an eye on OXYGEN level and bubbles.",
+        "zh": "• 密切留意氧气存量并及时吸取气泡。",
+    },
+    "inst_4_3": {
+        "es": "• Las CORRIENTES marinas arrastran con fuerza.",
+        "en": "• Ocean CURRENTS push with strong forces.",
+        "zh": "• 强劲的水下暗流会产生推动与阻力。",
+    },
+    "inst_4_4": {
+        "es": "• Usen LINTERNAS en las cavernas oscuras (E / L).",
+        "en": "• Use FLASHLIGHTS in dark caves (E / L).",
+        "zh": "• 在漆黑洞穴中开启手电筒照明 (E / L)。",
+    },
+}
