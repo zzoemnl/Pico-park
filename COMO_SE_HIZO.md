@@ -63,7 +63,102 @@ un nivel (`pantalla.iniciar_mundo`). `main` llama a `iniciar_mundo` y espera que
 
 ---
 
-## 3. El loop de juego
+## 3. Recorrido guiado: qué pasa cuando abrís el juego
+
+Esta sección explica el código como si lo recorriéramos con el dedo, para poder contarlo.
+
+### 3.1 Del doble clic al menú
+
+1. **`main.py` es el punto de entrada.** Al final del archivo hay un `if __name__ == "__main__":`.
+   Esa línea significa "esto se ejecuta solo si abrís este archivo directamente, no si otro
+   módulo lo importa". Ahí se llama a `ejecutar_protegido(main)` (de `errores.py`), que corre
+   `main()` y, si algo explota, escribe el error en `errores.log` y muestra un aviso.
+2. **`main()` crea el estado de los menús**: `m = _EstadoMenu()`. Esa línea carga todos los
+   sprites de botones, las fuentes y calcula dónde va cada botón en la pantalla (ver
+   `menus/estado.py`). Es lo que antes se hacía con cientos de variables sueltas.
+3. **Después entra al loop**: `while m.ejecutando:`. Un loop de juego es un `while` que da una
+   vuelta por cada cuadro de la pantalla. `m.reloj.tick(FPS)` lo frena a 60 vueltas por segundo.
+   En cada vuelta:
+   - se asegura de que suene la música del menú y de que el idioma no haya cambiado;
+   - carga bajo demanda los recursos de la pantalla actual (`m._cargar_recursos_partidas()`…);
+   - **lee los eventos** (`for evento in pygame.event.get()`): clics, teclas, cerrar ventana.
+     Según en qué pantalla estemos (`m.estado_actual`), le pasa el clic a la función de esa
+     pantalla: `_eventos_menu_principal(m, evento)`, `_eventos_lista_partidas(m, evento)`, etc.
+     Esas funciones cambian el estado (por ejemplo, `m.estado_actual = ESTADO_MODO_JUEGO` al
+     apretar JUGAR);
+   - **dibuja** la pantalla actual con `_dibujar_<pantalla>(m)` y la muestra con
+     `pygame.display.flip()`.
+4. **Cuando el jugador elige un nivel**, `_eventos_seleccion_nivel` llama a
+   `jugar_niveles_desde(...)`, que llama a `pantalla.iniciar_mundo(...)`. Ahí el menú queda
+   "congelado" esperando; el nivel tiene su propio loop (sección 4). Cuando el nivel termina,
+   `iniciar_mundo` devuelve `"siguiente"`, `"menu"` o `"salir"`, y el menú sigue desde ahí.
+
+Es decir: hay **dos loops** en el juego, el del menú (`main.py`) y el del nivel
+(`pantalla.iniciar_mundo`), y nunca corren al mismo tiempo.
+
+### 3.2 Por qué está organizado así
+
+**Por qué hay varios archivos en vez de uno.** Cada archivo tiene una responsabilidad:
+`movimientos.py` sabe de física, `sprites.py` de imágenes, `guardado.py` de partidas. Cuando
+algo falla o hay que cambiarlo, se sabe adónde ir. Y dos personas pueden trabajar a la vez
+sin pisarse (la que hace niveles toca `niveles.py`; la que hace arte, `sprites.py`).
+
+**Por qué `menus/` es una carpeta (un "paquete").** Las seis pantallas del menú son parecidas
+entre sí: cada una tiene una función de eventos, una de dibujo y un fondo. Agruparlas en una
+carpeta con un archivo por pantalla hace que el patrón se vea de un vistazo. El archivo
+`menus/__init__.py` (casi vacío) es lo que le dice a Python que esa carpeta se puede importar
+como `from menus.partidas import ...`.
+
+**Por qué funciones y no un bloque largo.** `main()` tenía 2.500 líneas con todo mezclado.
+Ahora el loop se lee en 15 líneas y cada pantalla es una función con nombre. Una función es
+un bloque con nombre, entradas y salida: se puede leer sola, probar sola y buscar por nombre.
+Lo mismo con el nivel: `iniciar_mundo` llama a seis funciones, una por fase del cuadro.
+
+**Por qué un objeto de estado (`_EstadoMenu`, `EstadoNivel`).** Las funciones de una pantalla
+necesitan compartir datos: qué partida está cargada, qué color eligió cada jugador, dónde
+están los botones. Las opciones eran variables globales (desordenado), pasar cincuenta
+parámetros (imposible de leer) o un objeto que las agrupe. El objeto se crea una vez y se pasa
+como `m` (menú) o `n` (nivel); cada función lee y escribe `m.lo_que_necesite`.
+
+**Por qué `niveles.py` devuelve diccionarios.** Un nivel es "qué hay y dónde": plataformas,
+jugadores, llave, puerta, mecánicas. Una función por nivel que devuelve eso en un diccionario
+permite agregar un nivel sin tocar el loop, y leer un nivel de arriba a abajo como una lista.
+
+**Por qué los recursos están fuera del código.** `Sprites/`, `sonidos/` y `assets/` son
+imágenes, música y fuentes: no son Python y los edita la persona que hace arte, con otras
+herramientas. `rutas.py` es el único lugar que sabe dónde están (en desarrollo, en la carpeta
+del repositorio; dentro del `.exe`, en `_internal`).
+
+**Por qué `herramientas/` está aparte.** Son scripts para quien desarrolla (probar un nivel,
+correr la regresión, reducir imágenes), no parte del juego. No se empaquetan en el `.exe`.
+
+**Convenciones que se ven en el código.**
+- Nombres que empiezan con `_` (`_dibujar_frame`, `_cache_botones`): uso interno del módulo,
+  no pensados para importar desde afuera.
+- `MAYÚSCULAS` (`FPS`, `ANCHO`, `ESTADO_MODO_JUEGO`): constantes, valores que no cambian.
+- Todo texto que ve el jugador pasa por `t("clave")`, nunca va escrito directo: así existe en
+  los tres idiomas.
+- `import` al principio de cada archivo: declara de qué otros módulos depende. Si `A` importa
+  `B` y `B` importa `A` hay un ciclo y Python falla; por eso `pantalla.py` importa `niveles.py`
+  recién cuando lo necesita.
+
+### 3.3 "Si quiero cambiar X, ¿adónde voy?"
+
+| Quiero… | Archivo |
+|---|---|
+| Cambiar o agregar un texto / traducción | `idiomas.py` |
+| Que el salto sea más alto o la caída más rápida | `movimientos.py` (`GRAVEDAD`, `fuerza_salto`) |
+| Agregar o modificar un nivel | `niveles.py` (y su miniatura en `menu_niveles.py`) |
+| Cambiar cómo se ve o se comporta una pantalla del menú | `menus/<pantalla>.py` |
+| Agregar un sombrero o accesorio | `sprites.py` (`_ACCESORIOS_REGISTRADOS`) y su PNG en `Sprites/Accesorios` |
+| Cambiar la música de un mundo | poner el mp3 en `sonidos/mundoN/` |
+| Cambiar qué guarda una partida | `guardado.py` |
+| Tocar cómo se dibuja un mundo (fondo, nieve, agua) | `pantalla.py` (funciones `dibujar_*`) |
+| Cambiar la lógica de muerte, llave o puerta | `pantalla.py` (`_resolver_interacciones`) |
+
+---
+
+## 4. El loop de juego
 
 Todo corre a **60 cuadros por segundo** en una ventana lógica de **1280×720** (pygame la
 escala a la pantalla real). `iniciar_mundo` crea un `EstadoNivel` (carga el nivel, los sprites y
@@ -88,7 +183,7 @@ el HUD) y después, en cada cuadro, llama a seis funciones en este orden:
 
 ---
 
-## 4. Física (movimientos.py)
+## 5. Física (movimientos.py)
 
 Los personajes son diccionarios con posición (`hitbox`, un `Rect` de 50×85), velocidades,
 estado (`en_suelo`, `en_agua`, `muerto`) y animación. Constantes principales:
@@ -116,7 +211,7 @@ Mecánicas cooperativas construidas sobre eso:
 
 ---
 
-## 5. Los niveles (niveles.py)
+## 6. Los niveles (niveles.py)
 
 Cada nivel es una función que devuelve un diccionario con todo lo que existe en ese nivel:
 ancho del mundo, suelo, plataformas, posición inicial de los jugadores, caja, pinchos, llave,
@@ -142,7 +237,7 @@ puerta y qué mecánicas usa. Agregar un nivel es escribir una función más y r
 
 ---
 
-## 6. Gráficos
+## 7. Gráficos
 
 - **Personajes**: PNG dibujados a mano, 13 colores, con 20 estados de animación (quieto,
   8 cuadros de caminar, saltar, 8 de empujar, muerto…). Se cargan a 440×527 y se reducen a
@@ -159,7 +254,7 @@ puerta y qué mecánicas usa. Agregar un nivel es escribir una función más y r
 
 ---
 
-## 7. Menús y partidas
+## 8. Menús y partidas
 
 `main.py` y el paquete `menus/` forman una máquina de estados: menú principal → modo de juego → lista de partidas o
 nueva partida → selección de mundo y nivel → jugar. Cada pantalla tiene su función de eventos
@@ -187,7 +282,7 @@ interfaz se sintetizan por código.
 
 ---
 
-## 8. Del código al ejecutable
+## 9. Del código al ejecutable
 
 - `rutas.py` resuelve dónde están los recursos: en desarrollo, en la raíz del repositorio;
   dentro del `.exe`, en la carpeta `_internal` que crea PyInstaller. Las partidas y la
@@ -202,7 +297,7 @@ interfaz se sintetizan por código.
 
 ---
 
-## 9. Rendimiento: problemas encontrados y cómo se resolvieron
+## 10. Rendimiento: problemas encontrados y cómo se resolvieron
 
 Medido con un arnés que corre el juego sin ventana y sin límite de 60 fps (menos milisegundos
 por cuadro = más margen en máquinas lentas). Los números se pueden reproducir con
@@ -221,7 +316,7 @@ más que 700 líneas dibujadas). Con color llave fue 8 veces más rápida. Siemp
 
 ---
 
-## 10. Cómo se verifica que nada se rompe
+## 11. Cómo se verifica que nada se rompe
 
 `herramientas/regresion_visual.py` corre el juego sin ventana, de forma **determinista**
 (reloj, tiempo y azar fijados), y captura la pantalla en cuadros concretos de 35 escenas:
@@ -236,7 +331,7 @@ cambio hizo más lento algo.
 
 ---
 
-## 11. Decisiones que vale la pena explicar
+## 12. Decisiones que vale la pena explicar
 
 - **Sin motor, sin librerías**: pygame solo da ventana, imágenes y eventos; todo lo demás es
   propio. Más trabajo, pero se entiende cada línea.
@@ -254,7 +349,7 @@ cambio hizo más lento algo.
 
 ---
 
-## 12. Qué se podría mejorar
+## 13. Qué se podría mejorar
 
 - `EstadoNivel.__init__` tiene ~960 líneas de preparación (HUD, sprites, primer cuadro,
   animación de apertura); se puede repartir en métodos (`_cargar_hud`, `_dibujar_primer_cuadro`…).
@@ -270,7 +365,7 @@ cambio hizo más lento algo.
 
 ---
 
-## 13. Historial de lo que se hizo sobre la versión original
+## 14. Historial de lo que se hizo sobre la versión original
 
 Para que quede claro qué era "el juego" y qué se agregó después, en orden:
 
