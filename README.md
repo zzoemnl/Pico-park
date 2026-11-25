@@ -1,97 +1,110 @@
-● Nombre del juego: pico park
+# Pico Park
 
-● integrantes: Malena Albarracin, Zoe Mennella
+Juego de plataformas **cooperativo para dos jugadores** en la misma computadora, inspirado en
+Pico Park. Hecho en Python con pygame-ce.
 
-● Descripción y objetivo: trabajar en equipo para conseguir la llave de cada nivel y hacer que todos los jugadores crucen la puerta de salida.
+- **Integrantes:** Malena Albarracin (documentación, diseño de niveles, ideas) y Zoe Mennella
+  (código, arte, sprites).
+- **Objetivo:** trabajar en equipo para conseguir la llave de cada nivel y hacer que los dos
+  jugadores crucen la puerta de salida. Si uno se queda afuera, no se gana.
+- Para entender cómo está construido el juego por dentro: [`COMO_SE_HIZO.md`](COMO_SE_HIZO.md).
+  Para las mediciones de rendimiento: [`OPTIMIZACION.md`](OPTIMIZACION.md).
 
-● Controles: 1° jugardor WASD y 2° jugador flechitas. F11 alterna entre pantalla completa y ventana.
+## Controles
 
-El juego arranca en pantalla completa y se adapta a cualquier resolución de monitor: se dibuja a 1280x720 y pygame lo escala al tamaño real de la pantalla (con bandas negras si la proporción no es 16:9).
+| | Jugador 1 | Jugador 2 |
+|---|---|---|
+| Moverse / saltar / nadar | W A S D | Flechas |
+| Linterna (mundo 3) | E, F o Espacio | L, Enter, Shift der. o Ctrl der. |
+| Reiniciar el nivel | R | |
+| Pantalla completa / ventana | F11 | |
 
-● Reglas: El grupo debe conseguir la llave del mapa y entrar todos los jugadores por la puerta de salida. Si alguien se queda afuera, no se gana.
+El juego arranca en pantalla completa y se adapta a cualquier monitor: se dibuja a 1280×720 y
+se escala al tamaño real (con bandas negras si la proporción no es 16:9).
 
-● Niveles: 3 mundos (nieve, ruinas y submarino) de 6 niveles cada uno. El sexto nivel de cada mundo es un jefe:
+## Reglas y niveles
 
-- 1-6 El Muñeco de Nieve: lanza bolas que ruedan y matan al tocarlas. Para golpearlo hay que pisar los dos
-  botones de colores AL MISMO TIEMPO y mantenerlos un instante; con cada golpe los botones cambian de lugar
-  y las bolas se aceleran. Al tercer golpe se derrite y aparecen la llave y la puerta.
-- 2-6 El Guardián de piedra (con soga): golpea el suelo y lanza una onda expansiva que hay que saltar, más
-  rocas que caen sobre cada jugador (avisadas por una sombra). Después queda aturdido unos segundos con la
-  runa del pecho brillando: está demasiado alta para un salto, hay que hacer la torre humana (uno salta
-  desde la cabeza del otro) y tocarla. Tres toques y se desmorona.
-- 3-6 El Kraken (jefe final, nadando, con oxígeno y cámaras de aire): tentáculos que suben del lecho
-  (avisados con burbujas) y tinta a partir del segundo golpe. Aparece un orbe de luz: los dos jugadores
-  tienen que meterse adentro al mismo tiempo y aguantar un segundo para cargarlo; el orbe vuela al ojo
-  del Kraken. Tres golpes y se hunde.
+Hay que conseguir la llave y entrar **los dos** por la puerta. Si un jugador muere (pinchos,
+láser, caer fuera del mapa o quedarse sin oxígeno), pierde el equipo y el nivel se reinicia;
+en el mundo submarino la muerte es individual.
 
-La lógica y el dibujo de cada jefe están en Pico-park-juego\jefe_nieve.py, jefe_ruinas.py y jefe_kraken.py
-(todo dibujado con código, como los fondos; se puede reemplazar por sprites a mano). jefes.py es el punto
-de entrada común que usa pantalla.py. Las constantes de dificultad (tiempos, velocidades, posiciones) están
-al principio de cada módulo. La cantidad de niveles por mundo se define en NIVELES_POR_MUNDO
-(Pico-park-juego\guardado.py).
+3 mundos de 5 niveles, cada uno con su mecánica cooperativa:
 
-Si un solo jugador muere (cae a los picos, toca un láser o queda atrapado en el mapa), todo el equipo pierde y el nivel se reinicia desde el principio.
+| Mundo | Mecánica | Niveles |
+|---|---|---|
+| 1 — Nieve | Torre humana, caja que empuja botones, láser, paredes y botones de colores | Tutorial · La torre humana · La caja y el botón · El láser y la caja · Las cuatro paredes de colores |
+| 2 — Ruinas | Los dos jugadores unidos por una soga | El arrastre básico · La plataforma móvil · El péndulo · Las plataformas que se derrumban · Las plataformas alternadas |
+| 3 — Submarino | Natación, oxígeno, oscuridad con linternas, corrientes | El jardín de algas · El laberinto de coral · Las rocas peligrosas · El laberinto oscuro · El abismo submarino |
 
-● Instrucciones de instalación y ejecución:
+Los niveles se van desbloqueando al completar el anterior y el progreso se guarda en
+partidas con nombre (y contraseña opcional). Se puede elegir el color de cada personaje y un
+accesorio. Idiomas: español, inglés y chino.
 
-Clonar o descargar el repositorio:
-Obtén los archivos del proyecto en tu equipo y abre la terminal en la carpeta raíz.
+## Cómo ejecutarlo desde el código
 
-Instalar las dependencias:
-Ejecuta el siguiente comando para instalar Pygame y cualquier otra librería requerida desde el archivo requirements.txt:
-pip install -r requirements.txt
+Requiere Python 3.12 o superior.
 
-Ejecutar el proyecto:
-Inicia el juego ejecutando el archivo principal main.py
-
-● Dependencias:
-pygame
-
-● Organización general del proyecto (carpeta Pico-park-juego):
-main.py            menús (principal, modo de juego, partidas, personajes, opciones) y arranque
-pantalla.py        iniciar_mundo: loop de juego, física por frame, dibujo de cada mundo, cámara
-niveles.py         definición de los 15 niveles, una función por nivel (nivel_1_1 … nivel_3_5)
-movimientos.py     física de personajes, caja, soga, llave y puerta
-sprites.py         carga y caché de sprites, botones y accesorios
-menu_niveles.py    menú de selección de niveles y miniaturas
-guardado.py        partidas guardadas (partidas.txt) y sus diálogos
-configuracion.py   idiomas, audio, volumen, configuracion.json
-fuentes.py         fuentes y caché de textos
-rutas.py, ventana.py, errores.py   rutas de recursos, pantalla completa, registro de errores
-herramientas/      scripts de mantenimiento: jugar_nivel.py, regresion_visual.py, reducir_botones.py
-
-
-● Distribución de tareas entre integrantes:
-male: documentacion, textual, teorico, ideas, niveles, etc
-zoe: visual, codigo, sprites
-
-
-Generar el ejecutable
-
-Crear el entorno virtual:
+```powershell
+git clone https://github.com/zzoemnl/Pico-park.git
+cd Pico-park
 python -m venv .venv
-
-Activarlo:
 .\.venv\Scripts\Activate.ps1
-
-Instalar dependencias:
 python -m pip install -r requirements.txt
+python Pico-park-juego\main.py
+```
+
+Dependencia: `pygame-ce` (fork mantenido de pygame; se importa como `pygame` y tiene versiones
+compiladas para Python 3.12+, el `pygame` original no).
+
+Para abrir un nivel directo, sin pasar por el menú ni desbloquearlo:
+
+```powershell
+python herramientas\jugar_nivel.py 2 3        # mundo 2, nivel 3
+```
+
+## Cómo generar el ejecutable
+
+Desde la raíz del repositorio, con el entorno virtual activado:
+
+```powershell
 python -m pip install pyinstaller
+python -m PyInstaller --noconfirm --clean --windowed --name PicoPark --add-data "Sprites;Sprites" --add-data "sonidos;sonidos" --add-data "assets;assets" Pico-park-juego\main.py
+```
 
-Empaquetar (desde la raíz del repositorio):
-python -m PyInstaller --noconfirm --clean --windowed --name PicoPark `
-  --add-data "Sprites;Sprites" `
-  --add-data "sonidos;sonidos" `
-  --add-data "assets;assets" `
-  Pico-park-juego\main.py
+El ejecutable queda en `dist\PicoPark\PicoPark.exe`. Para compartirlo hay que enviar la carpeta
+`dist\PicoPark` completa (comprimida en zip), no solo el `.exe`. Windows SmartScreen puede
+mostrar un aviso porque no está firmado: "Más información" → "Ejecutar de todas formas".
 
-El ejecutable queda en dist\PicoPark\PicoPark.exe. Para compartirlo hay que
-enviar la carpeta dist\PicoPark completa (comprimida en zip), no solo el .exe.
+- Las partidas (`partidas.txt`) y la configuración (`configuracion.json`) se guardan al lado del
+  `.exe`, así que sobreviven a regenerarlo.
+- Si el juego falla con un error inesperado, muestra un aviso y deja el detalle en
+  `errores.log` al lado del `.exe`. Pedirle ese archivo a quien reporte el problema.
 
-Las rutas de recursos se resuelven en Pico-park-juego\rutas.py: en desarrollo
-apuntan a la raíz del repo y dentro del .exe a la carpeta _internal. Las partidas
-(partidas.txt) y la configuración (configuracion.json) se guardan al lado del .exe.
+## Organización del código (carpeta `Pico-park-juego`)
 
-Si el juego falla con un error inesperado, se cierra mostrando un aviso y deja el
-detalle en errores.log al lado del .exe (Pico-park-juego\errores.py). Pedirle ese
-archivo a quien reporte el problema.
+| Archivo | Qué hace |
+|---|---|
+| `main.py` | Arranque y menús: principal, modo de juego, partidas, personajes, opciones, selección de nivel. Una función de eventos y una de dibujo por pantalla. |
+| `pantalla.py` | `iniciar_mundo`: el loop de un nivel (física por cuadro, mecánicas, dibujo de cada mundo, cámara, victoria y muerte). |
+| `niveles.py` | Definición de los 15 niveles, una función por nivel (`nivel_1_1` … `nivel_3_5`). |
+| `movimientos.py` | Física de personajes, caja, soga, natación, llave y puerta. |
+| `sprites.py` | Carga y caché de sprites, botones y accesorios. |
+| `menu_niveles.py` | Menú de selección de nivel y miniaturas. |
+| `guardado.py` | Partidas guardadas (`partidas.txt`) y sus diálogos. |
+| `configuracion.py` | Idiomas, música, efectos, volumen, `configuracion.json`. |
+| `fuentes.py` | Fuentes pixel art, caracteres chinos y caché de textos. |
+| `rutas.py` · `ventana.py` · `errores.py` | Rutas de recursos (código y `.exe`), pantalla completa, registro de errores. |
+
+Recursos: `Sprites/` (personajes, botones, objetos, accesorios, miniaturas), `sonidos/` (música),
+`assets/fuentes/`.
+
+## Herramientas (carpeta `herramientas`)
+
+| Script | Para qué |
+|---|---|
+| `jugar_nivel.py <mundo> <nivel>` | Abre un nivel directo, para probarlo. |
+| `regresion_visual.py capturar <carpeta>` / `comparar <a> <b>` | Corre 35 escenas sin ventana, de forma determinista, captura la pantalla y mide ms por cuadro. Comparando las capturas de antes y después de un cambio se verifica que no cambió ni un píxel. |
+| `reducir_botones.py [--dry-run]` | Reduce los PNG de botones que estén a más de 1088 px de ancho. |
+
+Antes de cambiar algo en el código, conviene correr `regresion_visual.py capturar antes`, hacer el
+cambio, `capturar despues` y `comparar antes despues`.
