@@ -39,6 +39,7 @@ _CACHE_MARCOS_BOTONES = {}
 _CACHE_BOTONES_PERSONALIZADOS = {}
 _CACHE_FUENTES_PIXAMUSE = {}
 _MAPA_BOTONES = None
+_CACHE_BOTONES_POR_RUTA = {}
 RUTA_FUENTE_PIXAMUSE = ruta_recurso("Sprites", "Fuentes", "PixAmuse.ttf")
 
 
@@ -133,6 +134,11 @@ def cargar_boton(nombre):
         return _CACHE_BOTONES[nombre]
 
     def _cargar(ruta_archivo):
+        # Un mismo PNG puede pedirse con dos nombres ("boton-x.png" y "HUD/boton-x.png");
+        # se carga una sola vez y las dos claves comparten la superficie.
+        clave_ruta = os.path.normcase(os.path.abspath(ruta_archivo))
+        if clave_ruta in _CACHE_BOTONES_POR_RUTA:
+            return _CACHE_BOTONES_POR_RUTA[clave_ruta]
         try:
             img = pygame.image.load(ruta_archivo)
             try:
@@ -146,6 +152,7 @@ def cargar_boton(nombre):
             if w > ANCHO_MAX_BOTON:
                 nh = max(1, round(h * ANCHO_MAX_BOTON / w))
                 img = pygame.transform.smoothscale(img, (ANCHO_MAX_BOTON, nh))
+            _CACHE_BOTONES_POR_RUTA[clave_ruta] = img
             return img
         except (FileNotFoundError, pygame.error):
             return None
@@ -573,6 +580,12 @@ def generar_boton_con_texto(sprite_base, w, h, texto=None, color_texto=(60, 45, 
 
 
 
+def _es_variante_presionada(nombre):
+    """Las variantes -semiapretado / -apretado nunca se muestran con hover: no hace falta aclararlas."""
+    base = os.path.basename(nombre).lower()
+    return "-semiapretado" in base or "-apretado" in base
+
+
 def precargar_botones_comunes():
     """
     Precarga y prepara en memoria todos los sprites de botones utilizados
@@ -593,7 +606,7 @@ def precargar_botones_comunes():
     ]
     for b in botones_menu_272_80:
         s = cargar_boton_escalado(b, 272, 80)
-        if s:
+        if s and not _es_variante_presionada(b):
             aclarar_boton(s)
 
     # 2. Botones de HUD superior (44, 52)
@@ -608,7 +621,7 @@ def precargar_botones_comunes():
     ]
     for b in botones_hud_44_52:
         s = cargar_boton_escalado(b, 44, 52)
-        if s:
+        if s and not _es_variante_presionada(b):
             aclarar_boton(s)
 
     # 3. Botones de Configuración (Volumen y Cerrar)
@@ -625,7 +638,7 @@ def precargar_botones_comunes():
     ]
     for b, w, h in botones_cfg:
         s = cargar_boton_escalado(b, w, h)
-        if s:
+        if s and not _es_variante_presionada(b):
             aclarar_boton(s)
 
     # 4. Botones de Volver y Navegación (238, 70)
@@ -636,7 +649,7 @@ def precargar_botones_comunes():
     ]
     for b in botones_nav_238_70:
         s = cargar_boton_escalado(b, 238, 70)
-        if s:
+        if s and not _es_variante_presionada(b):
             aclarar_boton(s)
 
     # 5. Botones de Selección de Modo (425, 100)
@@ -646,7 +659,7 @@ def precargar_botones_comunes():
     ]
     for b in botones_modo_425_100:
         s = cargar_boton_escalado(b, 425, 100)
-        if s:
+        if s and not _es_variante_presionada(b):
             aclarar_boton(s)
 
     # 6. Botones de Guardar / Salir y Tarjetas
@@ -675,7 +688,7 @@ def precargar_botones_comunes():
     ]
     for b, w, h in botones_guardar:
         s = cargar_boton_escalado(b, w, h)
-        if s:
+        if s and not _es_variante_presionada(b):
             aclarar_boton(s)
 
     # 7. Controles tutoriales (54, 54) y (32, 32)
