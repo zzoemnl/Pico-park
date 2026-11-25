@@ -1252,7 +1252,7 @@ METADATA_ACCESORIOS = {
     "Among Us": {"offset": (15, 24), "size": (52, 29)},
     "Argentina": {"offset": (9, 45), "size": (58, 9)},
     "Bigote": {"offset": (19, 45), "size": (46, 13)},
-    "Diablo": {"offset": (-1, -18), "size": (70, 100)},
+    "Diablo": {"offset": (-6, -18), "size": (75, 100)},
     "Elegante": {"offset": (0, -38), "size": (70, 105)},
     "EXE": {"offset": (18, 34), "size": (48, 20)},
     "Gorra urbana dorada": {"offset": (-7, -7), "size": (76, 69)},
@@ -1439,14 +1439,18 @@ def cargar_accesorio(id_accesorio):
                     return comp
 
                 if id_accesorio == "Diablo":
-                    # Cuernos perfectamente simétricos centrados en la cabeza (x=35) y colita en la parte inferior trasera
-                    horns_raw = surf.subsurface((275, 121, 220, 132))
+                    # Cuernos simétricos cubriendo por completo el borde interno de ambas orejas
+                    # y colita elevada junto al contorno sin tocar ni superponerse al cuerpo
+                    left_horn_raw = surf.subsurface((275, 121, 66, 132))
+                    right_horn_raw = surf.subsurface((429, 121, 66, 132))
                     tail_raw = surf.subsurface((143, 539, 132, 88))
-                    horns_scaled = pygame.transform.scale(horns_raw, (48, 29))
+                    left_horn_scaled = pygame.transform.scale(left_horn_raw, (16, 29))
+                    right_horn_scaled = pygame.transform.scale(right_horn_raw, (15, 29))
                     tail_scaled = pygame.transform.scale(tail_raw, (24, 16))
-                    comp = pygame.Surface((70, 100), pygame.SRCALPHA)
-                    comp.blit(horns_scaled, (11, 0))
-                    comp.blit(tail_scaled, (0, 84))
+                    comp = pygame.Surface((75, 100), pygame.SRCALPHA)
+                    comp.blit(left_horn_scaled, (16, 0))
+                    comp.blit(right_horn_scaled, (50, 0))
+                    comp.blit(tail_scaled, (0, 75))
                     _CACHE_ACCESORIOS[id_accesorio] = comp
                     return comp
 
