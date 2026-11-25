@@ -12,6 +12,7 @@ if DIRECTORIO_ACTUAL not in sys.path:
     sys.path.insert(0, DIRECTORIO_ACTUAL)
 
 from sprites import (
+    escalar_cacheado,
     ANCHO,
     ALTO,
     FPS,
@@ -4007,11 +4008,11 @@ def main():
             r_mini_p1 = pygame.Rect(cx_dec - 55, cy_dec, 50, 62)
             r_mini_p2 = pygame.Rect(cx_dec + 5, cy_dec, 50, 62)
             if sp_p1_d:
-                pantalla.blit(pygame.transform.scale(sp_p1_d, (50, 62)), r_mini_p1)
+                pantalla.blit(escalar_cacheado(sp_p1_d, (50, 62)), r_mini_p1)
                 if accesorio_p1:
                     dibujar_accesorio_en_personaje(pantalla, accesorio_p1, sprite_personaje=sp_p1_d, rect_personaje=r_mini_p1, mirando_derecha=True)
             if sp_p2_d:
-                pantalla.blit(pygame.transform.scale(sp_p2_d, (50, 62)), r_mini_p2)
+                pantalla.blit(escalar_cacheado(sp_p2_d, (50, 62)), r_mini_p2)
                 if accesorio_p2:
                     dibujar_accesorio_en_personaje(pantalla, accesorio_p2, sprite_personaje=sp_p2_d, rect_personaje=r_mini_p2, mirando_derecha=True)
 

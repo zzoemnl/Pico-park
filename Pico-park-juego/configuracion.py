@@ -8,6 +8,7 @@ Gestiona:
 """
 
 import os
+import time
 import sys
 import json
 import math
@@ -93,6 +94,15 @@ CARPETAS_AUDIO = [
 # Estado interno del reproductor de música y efectos
 _pista_activa_tipo = None
 _archivo_musica_actual = None
+# Cada cuántos segundos se vuelve a mirar el disco cuando se pide la pista que ya está sonando
+INTERVALO_RECHEQUEO_MUSICA = 2.0
+_ultimo_chequeo_musica = 0.0
+_ALIAS_TIPO_MUSICA = {
+    "menu": ("menu", "principal", "navegacion", "menu_1", "menu1", "menu 1", "menú 1", "menú_1"),
+    "mundo_1": ("mundo_1", "mundo1", "1"),
+    "mundo_2": ("mundo_2", "mundo2", "2"),
+    "mundo_3": ("mundo_3", "mundo3", "3"),
+}
 _musica_menu_sesion = None
 _modo_musica_menu = "aleatorio"  # "aleatorio", "caillou", "christmas"
 _CANAL_AHOGAMIENTO = None
@@ -1375,6 +1385,16 @@ def reproducir_musica(tipo="menu", forzar=False):
 
     # Normalizar identificador del tipo de pista
     tipo_str = str(tipo).lower().strip()
+
+    # El menú llama a esta función en cada frame. Resolver la ruta implica ir al disco
+    # (os.path.isfile / os.listdir), así que si la pista pedida es la que ya suena solo se
+    # vuelve a comprobar el disco cada INTERVALO_RECHEQUEO_MUSICA segundos.
+    global _ultimo_chequeo_musica
+    ahora = time.monotonic()
+    if not forzar and _pista_activa_tipo is not None and tipo_str in _ALIAS_TIPO_MUSICA.get(_pista_activa_tipo, (_pista_activa_tipo,)):
+        if ahora - _ultimo_chequeo_musica < INTERVALO_RECHEQUEO_MUSICA:
+            return
+    _ultimo_chequeo_musica = ahora
 
     if tipo_str in ("menu", "principal", "navegacion", "menu_1", "menu1", "menu 1", "menú 1", "menú_1"):
         tipo_normalizado = "menu"

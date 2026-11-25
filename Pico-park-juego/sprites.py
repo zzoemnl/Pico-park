@@ -814,11 +814,31 @@ def aplicar_tinta(imagen_base, color_rgb):
     if color_rgb is None or not isinstance(color_rgb, (tuple, list)) or color_rgb[:3] == (255, 255, 255):
         return imagen_base
 
-    img_tintada = imagen_base.copy()
-    superficie_color = pygame.Surface(img_tintada.get_size(), flags=pygame.SRCALPHA)
-    superficie_color.fill((*color_rgb[:3], 255))
-    img_tintada.blit(superficie_color, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    clave = (imagen_base, tuple(color_rgb[:3]))
+    img_tintada = _CACHE_TINTADOS.get(clave)
+    if img_tintada is None:
+        img_tintada = imagen_base.copy()
+        superficie_color = pygame.Surface(img_tintada.get_size(), flags=pygame.SRCALPHA)
+        superficie_color.fill((*color_rgb[:3], 255))
+        img_tintada.blit(superficie_color, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        _CACHE_TINTADOS[clave] = img_tintada
     return img_tintada
+
+
+# Tintados por (sprite base, color): se pedían en cada frame y se recreaban desde cero.
+_CACHE_TINTADOS = {}
+
+_CACHE_ESCALADOS = {}
+
+
+def escalar_cacheado(superficie, tamano):
+    """transform.scale memorizado por (superficie, tamaño) para miniaturas que se dibujan cada frame."""
+    clave = (superficie, tuple(tamano))
+    res = _CACHE_ESCALADOS.get(clave)
+    if res is None:
+        res = pygame.transform.scale(superficie, tamano)
+        _CACHE_ESCALADOS[clave] = res
+    return res
 
 
 _CACHE_SPRITES_PERSONAJES = {}
@@ -1077,6 +1097,46 @@ def obtener_estado(p):
     return "quieto"
 
 
+# Derivados por frame del sprite de un personaje (reflejo, sin piernas, tinte de agua).
+# Los sprites base viven en caché y nunca se modifican, así que se pueden usar como
+# clave: antes se creaban superficies nuevas en cada frame y, como calcular_anclaje_sprite
+# cachea por superficie, el escaneo de píxeles se repetía 60 veces por segundo.
+_CACHE_REFLEJADOS = {}
+_CACHE_SIN_PIERNAS = {}
+_CACHE_TINTE_AGUA = {}
+
+
+def _sprite_reflejado(sprite):
+    res = _CACHE_REFLEJADOS.get(sprite)
+    if res is None:
+        res = pygame.transform.flip(sprite, True, False)
+        _CACHE_REFLEJADOS[sprite] = res
+    return res
+
+
+def _sprite_sin_piernas(sprite):
+    res = _CACHE_SIN_PIERNAS.get(sprite)
+    if res is None:
+        res = sprite.copy()
+        w_s, h_s = res.get_size()
+        y_corte = int(h_s * 0.72)
+        for y_px in range(y_corte, h_s):
+            for x_px in range(w_s):
+                res.set_at((x_px, y_px), (0, 0, 0, 0))
+        _CACHE_SIN_PIERNAS[sprite] = res
+    return res
+
+
+def _sprite_tinte_agua(sprite):
+    res = _CACHE_TINTE_AGUA.get(sprite)
+    if res is None:
+        res = pygame.Surface(sprite.get_size(), pygame.SRCALPHA)
+        res.fill((0, 100, 180, 70))
+        res.blit(sprite, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        _CACHE_TINTE_AGUA[sprite] = res
+    return res
+
+
 def dibujar_personaje(pantalla, p, zona_agua=None):
     actualizar_temporizadores(p)
     estado = obtener_estado(p)
@@ -1095,16 +1155,11 @@ def dibujar_personaje(pantalla, p, zona_agua=None):
         p["mirando_derecha"] = False
 
     if not p["mirando_derecha"]:
-        sprite = pygame.transform.flip(sprite, True, False)
+        sprite = _sprite_reflejado(sprite)
 
     if p.get("equipo_buceo"):
         # Ocultar completamente las piernas y los pies del personaje debajo del equipo
-        sprite_a_dibujar = sprite.copy()
-        w_s, h_s = sprite_a_dibujar.get_size()
-        y_corte = int(h_s * 0.72)
-        for y_px in range(y_corte, h_s):
-            for x_px in range(w_s):
-                sprite_a_dibujar.set_at((x_px, y_px), (0, 0, 0, 0))
+        sprite_a_dibujar = _sprite_sin_piernas(sprite)
     else:
         sprite_a_dibujar = sprite
 
@@ -1133,9 +1188,7 @@ def dibujar_personaje(pantalla, p, zona_agua=None):
             pantalla.blit(s_g, (bx_g, by_g))
 
     if zona_agua is not None and p.get("en_agua", False):
-        sprite_agua = pygame.Surface(sprite.get_size(), pygame.SRCALPHA)
-        sprite_agua.fill((0, 100, 180, 70))
-        sprite_agua.blit(sprite, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        sprite_agua = _sprite_tinte_agua(sprite)
 
         clip_anterior = pantalla.get_clip()
         pantalla.set_clip(pygame.Rect(zona_agua.left, zona_agua.top, zona_agua.width, pantalla.get_height() - zona_agua.top))
@@ -1590,7 +1643,7 @@ COLOR_AGUA = (0, 140, 240, 130)
 _CACHE_AGUA = {}
 
 
-def dibujar_agua(pantalla, zona_agua=None):
+def dibujar_agua(pantalla, zona_agua=None, rangos=None):
     """
     Dibuja la masa de agua translúcida sobre el escenario.
     Usa una superficie con canal alfa (SRCALPHA) para que los personajes
@@ -1607,4 +1660,12 @@ def dibujar_agua(pantalla, zona_agua=None):
         superficie.fill(COLOR_AGUA)
         _CACHE_AGUA[clave] = superficie
 
-    pantalla.blit(superficie, (zona_agua.x, zona_agua.y))
+    if rangos is None:
+        pantalla.blit(superficie, (zona_agua.x, zona_agua.y))
+        return
+    # Solo las franjas horizontales que la cámara va a mostrar este frame
+    for x0, x1 in rangos:
+        a = max(zona_agua.x, x0)
+        b = min(zona_agua.right, x1)
+        if b > a:
+            pantalla.blit(superficie, (a, zona_agua.y), pygame.Rect(a - zona_agua.x, 0, b - a, zona_agua.height))

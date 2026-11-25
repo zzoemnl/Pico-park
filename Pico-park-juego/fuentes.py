@@ -78,7 +78,46 @@ TAMANO_DECORATIVA = 22             # Textos decorativos y registros de aventuras
 # ==============================================================================
 # 3. GESTIÓN Y CARGA OPTIMIZADA CON CACHÉ
 # ==============================================================================
-_CACHE_FUENTES = {}
+class _FuenteConCache:
+    """
+    Envoltorio de pygame.font.Font que memoriza los resultados de render().
+    El menú y los HUD renderizan los mismos textos estáticos en cada frame; con esto cada
+    (texto, color) se rasteriza una sola vez. Las superficies devueltas no se modifican
+    en ningún lado, así que compartirlas es seguro. Cualquier otro método se delega.
+    """
+    __slots__ = ("_fuente", "_cache")
+    _MAX = 600
+
+    def __init__(self, fuente):
+        self._fuente = fuente
+        self._cache = {}
+
+    def render(self, texto, antialias=True, color=(255, 255, 255), bgcolor=None):
+        try:
+            clave = (texto, bool(antialias), tuple(color), None if bgcolor is None else tuple(bgcolor))
+        except TypeError:
+            return self._fuente.render(texto, antialias, color, bgcolor)
+        surf = self._cache.get(clave)
+        if surf is None:
+            if len(self._cache) >= self._MAX:
+                self._cache.clear()
+            surf = self._fuente.render(texto, antialias, color, bgcolor)
+            self._cache[clave] = surf
+        return surf
+
+    def __getattr__(self, nombre):
+        return getattr(self._fuente, nombre)
+
+
+class _CacheFuentes(dict):
+    """Todo Font que entra al caché de fuentes queda envuelto con caché de render."""
+    def __setitem__(self, clave, fuente):
+        if not isinstance(fuente, _FuenteConCache):
+            fuente = _FuenteConCache(fuente)
+        super().__setitem__(clave, fuente)
+
+
+_CACHE_FUENTES = _CacheFuentes()
 
 FUENTES_SISTEMA_CJK = ["Microsoft YaHei", "SimHei", "SimSun", "Segoe UI", "Arial Unicode MS"]
 

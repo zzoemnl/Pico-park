@@ -100,7 +100,49 @@ centraliza la resolución:
   menú principal y se leyó el uso de memoria con `tasklist`.
 - Entorno: Windows 11, Python 3.14.7, pygame-ce 2.5.8, PyInstaller 6.22.3.
 
-## 5. Pendientes sugeridos (no aplicados)
+## 5. Segunda ronda (24/11/2026): costo por frame
+
+Medido en headless con el límite de 60 fps desactivado (menos ms por frame = más
+margen en máquinas lentas). Sin cambios de gameplay ni de imagen: las capturas del
+frame 100 de las 15 escenas y del menú, más pantalla dividida y transición de
+victoria, son píxel a píxel idénticas antes y después (`herramientas/regresion_visual.py`).
+
+| Escena | Antes | Después |
+|---|---|---|
+| Menú principal | 14,6 ms (68 fps máx) | 2,9 ms (344 fps máx) |
+| Nivel 3-5 (oscuridad + oxígeno) | 14,6 ms (69 fps máx) | 10,4 ms (96 fps máx) |
+| Nivel 3-4 | ~12 ms | 8,8 ms |
+| Niveles 1-x / 2-x | 2–3 ms | 2–3 ms |
+
+Qué se cambió:
+
+1. **Menú: el caché de anclajes de accesorios nunca acertaba.** `dibujar_personaje`
+   creaba con `transform.flip` una superficie nueva por frame, y `calcular_anclaje_sprite`
+   cachea por superficie, así que escaneaba los 5950 píxeles del sprite con `get_at` 60
+   veces por segundo. Ahora el reflejo, el tintado, el recorte de piernas del equipo de
+   buceo y el tinte de agua se memorizan por sprite base (`sprites.py`), y el anclaje
+   se calcula una sola vez.
+2. **Mundo 3: se dibuja solo lo que la cámara muestra.** La cámara se calcula una vez por
+   frame en `calcular_vistas_camara()` (una vista, o dos en pantalla dividida) y la usan
+   tanto el dibujo como el blit final. El fondo, los rayos de sol, las ondas, la capa de
+   agua y la oscuridad se pintan solo en esos tramos en vez de en los 2600 px del mundo.
+3. **Menú: `reproducir_musica("menu")` iba al disco en cada frame.** Si la pista pedida es
+   la que ya suena, solo se vuelve a mirar el disco cada 2 s (`configuracion.py`).
+4. **Textos y miniaturas.** Las fuentes del caché quedan envueltas en `_FuenteConCache`
+   (`fuentes.py`), que memoriza `render()` por (texto, color); el menú rasterizaba unos
+   38 textos estáticos por frame. Las miniaturas de personajes del menú se escalan una
+   vez (`escalar_cacheado`) y el HUD del nivel copia el fondo de sus botones solo cuando
+   el mouse está cerca (antes 4 copias por frame).
+
+Para repetir la verificación después de cualquier cambio:
+
+```powershell
+python herramientas\regresion_visual.py capturar capturas_antes      # con el código viejo
+python herramientas\regresion_visual.py capturar capturas_despues    # con el código nuevo
+python herramientas\regresion_visual.py comparar capturas_antes capturas_despues
+```
+
+## 6. Pendientes sugeridos (no aplicados)
 
 Por orden de valor. Ninguno es urgente para la entrega.
 

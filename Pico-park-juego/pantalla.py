@@ -2019,7 +2019,7 @@ _SURF_RAYOS_SOL = None
 _CACHE_BURBUJAS_M3 = {}
 
 
-def dibujar_submarino_fondo_escenario(superficie, ancho_mundo, tick=0):
+def dibujar_submarino_fondo_escenario(superficie, ancho_mundo, tick=0, rangos=None):
     """
     Renderiza el fondo marino completo con gradiente oceánico profundo,
     rayos de sol volumétricos y siluetas subacuáticas distantes.
@@ -2053,20 +2053,28 @@ def dibujar_submarino_fondo_escenario(superficie, ancho_mundo, tick=0):
 
         _CACHE_FONDO_MUNDO3[ancho_mundo] = surf_fondo
 
-    superficie.blit(_CACHE_FONDO_MUNDO3[ancho_mundo], (0, 0))
+    # El mundo mide hasta 2600 px pero la cámara muestra 1280: con `rangos` solo se pintan
+    # los tramos que se van a ver este frame (el resultado visible es idéntico).
+    if rangos is None:
+        rangos = [(0, ancho_mundo)]
+    for x0, x1 in rangos:
+        superficie.blit(_CACHE_FONDO_MUNDO3[ancho_mundo], (x0, 0), pygame.Rect(x0, 0, x1 - x0, alto))
 
     # Rayos de sol volumétricos que filtran desde la superficie (reutiliza superficie para evitar sobrecarga de memoria)
     global _SURF_RAYOS_SOL
     if _SURF_RAYOS_SOL is None or _SURF_RAYOS_SOL.get_width() != ancho_mundo:
         _SURF_RAYOS_SOL = pygame.Surface((ancho_mundo, 520), pygame.SRCALPHA)
     else:
-        _SURF_RAYOS_SOL.fill((0, 0, 0, 0))
+        for x0, x1 in rangos:
+            _SURF_RAYOS_SOL.fill((0, 0, 0, 0), pygame.Rect(x0, 0, x1 - x0, 520))
 
     paso_rayo = 380
     for rx in range(80, ancho_mundo + 200, paso_rayo):
         oscilacion = math.sin((tick * 0.02) + (rx * 0.005)) * 25.0
         x_base = rx + oscilacion
         ancho_rayo = 90
+        if not any(x_base - 140 < x1 and x_base + ancho_rayo > x0 for x0, x1 in rangos):
+            continue
         poly_pts = [
             (x_base, 0),
             (x_base + ancho_rayo, 0),
@@ -2076,10 +2084,13 @@ def dibujar_submarino_fondo_escenario(superficie, ancho_mundo, tick=0):
         alpha_rayo = int(20 + 8 * math.sin(tick * 0.03 + rx))
         pygame.draw.polygon(_SURF_RAYOS_SOL, (220, 245, 255, max(10, alpha_rayo)), poly_pts)
 
-    superficie.blit(_SURF_RAYOS_SOL, (0, 0))
+    for x0, x1 in rangos:
+        superficie.blit(_SURF_RAYOS_SOL, (x0, 0), pygame.Rect(x0, 0, x1 - x0, 520))
 
     # Ondulación translúcida en la superficie superior del agua (y = 0..25)
     for wx in range(0, ancho_mundo, 24):
+        if not any(wx + 16 >= x0 and wx <= x1 for x0, x1 in rangos):
+            continue
         onda_y = int(math.sin((wx + tick * 2.0) * 0.06) * 3)
         pygame.draw.line(superficie, (180, 235, 255), (wx, 10 + onda_y), (wx + 16, 10 + onda_y), 2)
 
@@ -2780,7 +2791,49 @@ def dibujar_linterna_minero(superficie, jugador, encendida):
         pygame.draw.circle(superficie, (75, 80, 90), (lamp_x, lamp_y), 4)
 
 
-def aplicar_oscuridad_submarina(superficie, jugadores_info, surf_oscuridad, surf_luz, surf_tenue):
+def calcular_vistas_camara(jugador1, jugador2, p1_completado, p2_completado, numero_mundo, puerta, ancho_mundo):
+    """
+    Decide qué tramos del mundo se muestran este frame. Devuelve una lista de
+    (x_destino_en_pantalla, cam_x, ancho): una vista normal o dos en pantalla dividida.
+    La usan tanto el dibujo (para no pintar lo que no se ve) como el blit final a pantalla.
+    """
+    if p1_completado and not p2_completado:
+        # Jugador 1 ya pasó por la puerta: cámara completa siguiendo al Jugador 2
+        return [(0, max(0, min(jugador2["hitbox"].centerx - ANCHO // 2, ancho_mundo - ANCHO)), ANCHO)]
+    if p2_completado and not p1_completado:
+        # Jugador 2 ya pasó por la puerta: cámara completa siguiendo al Jugador 1
+        return [(0, max(0, min(jugador1["hitbox"].centerx - ANCHO // 2, ancho_mundo - ANCHO)), ANCHO)]
+    if (p1_completado and p2_completado) or (numero_mundo == 3 and ((jugador1["muerto"] and p2_completado) or (jugador2["muerto"] and p1_completado))):
+        # Nivel completado: cámara fija centrada en la puerta de salida
+        return [(0, max(0, min(puerta["rect"].centerx - ANCHO // 2, ancho_mundo - ANCHO)), ANCHO)]
+    # Ambos personajes están en juego
+    distancia = abs(jugador1["hitbox"].centerx - jugador2["hitbox"].centerx)
+    if distancia <= DISTANCIA_SPLIT:
+        centro = (jugador1["hitbox"].centerx + jugador2["hitbox"].centerx) // 2
+        return [(0, max(0, min(centro - ANCHO // 2, ancho_mundo - ANCHO)), ANCHO)]
+    ancho_m = ANCHO // 2
+    if jugador1["hitbox"].centerx <= jugador2["hitbox"].centerx:
+        p_izq, p_der = jugador1, jugador2
+    else:
+        p_izq, p_der = jugador2, jugador1
+    cam_izq_x = max(0, min(p_izq["hitbox"].centerx - ancho_m // 2, ancho_mundo - ancho_m))
+    cam_der_x = max(0, min(p_der["hitbox"].centerx - ancho_m // 2, ancho_mundo - ancho_m))
+    return [(0, cam_izq_x, ancho_m), (ancho_m, cam_der_x, ancho_m)]
+
+
+def rangos_visibles_de_vistas(vistas):
+    """Convierte las vistas de cámara en tramos [x0, x1) del mundo, fusionando los que se solapan."""
+    tramos = sorted((cam_x, cam_x + ancho) for _, cam_x, ancho in vistas)
+    res = []
+    for x0, x1 in tramos:
+        if res and x0 <= res[-1][1]:
+            res[-1] = (res[-1][0], max(res[-1][1], x1))
+        else:
+            res.append((x0, x1))
+    return res
+
+
+def aplicar_oscuridad_submarina(superficie, jugadores_info, surf_oscuridad, surf_luz, surf_tenue, rangos=None):
     """
     Aplica la capa de oscuridad total sobre el mundo y substrae los haces de luz circulares
     de las linternas activas de cada personaje:
@@ -2790,7 +2843,10 @@ def aplicar_oscuridad_submarina(superficie, jugadores_info, surf_oscuridad, surf
     - Si dos linternas iluminan zonas cercanas, sus áreas de luz se combinan de manera natural en surf_oscuridad.
     - Los elementos fuera del haz de luz (rocas, pinchos, corrientes, llave, puerta, flechas) quedan ocultos en la penumbra.
     """
-    surf_oscuridad.fill((3, 7, 15, 252))
+    if rangos is None:
+        rangos = [(0, surf_oscuridad.get_width())]
+    for x0, x1 in rangos:
+        surf_oscuridad.fill((3, 7, 15, 252), pygame.Rect(x0, 0, x1 - x0, surf_oscuridad.get_height()))
 
     w_luz, h_luz = surf_luz.get_size()
     rad_luz = w_luz // 2
@@ -2807,7 +2863,8 @@ def aplicar_oscuridad_submarina(superficie, jugadores_info, surf_oscuridad, surf
         else:
             surf_oscuridad.blit(surf_tenue, (cx - rad_tenue, cy - rad_tenue), special_flags=pygame.BLEND_RGBA_SUB)
 
-    superficie.blit(surf_oscuridad, (0, 0))
+    for x0, x1 in rangos:
+        superficie.blit(surf_oscuridad, (x0, 0), pygame.Rect(x0, 0, x1 - x0, surf_oscuridad.get_height()))
 
 
 # Alias para compatibilidad con código existente
@@ -6400,9 +6457,12 @@ def iniciar_mundo(
                 p2_completado = True
                 jugador2["hitbox"].x = -9999
 
+        vistas_camara = calcular_vistas_camara(jugador1, jugador2, p1_completado, p2_completado, numero_mundo, puerta, ancho_mundo_nivel)
+        rangos_visibles = rangos_visibles_de_vistas(vistas_camara)
+
         if numero_mundo == 3:
             tick_m3 += 1
-            dibujar_submarino_fondo_escenario(mundo, ancho_mundo_nivel, tick_m3)
+            dibujar_submarino_fondo_escenario(mundo, ancho_mundo_nivel, tick_m3, rangos=rangos_visibles)
             dibujar_lecho_marino(mundo, suelo, ancho_mundo_nivel)
             if algas_decorativas:
                 dibujar_algas_decorativas_escenario(mundo, algas_decorativas, tick_m3, capa="fondo")
@@ -6595,7 +6655,7 @@ def iniciar_mundo(
         if botones_colores is not None:
             dibujar_botones_colores_escenario(mundo, botones_colores, suelo)
 
-        if usar_agua: dibujar_agua(mundo, ZONA_AGUA)
+        if usar_agua: dibujar_agua(mundo, ZONA_AGUA, rangos=rangos_visibles)
         if usar_soga and not p1_completado and not p2_completado:
             dibujar_soga_escenario(mundo, jugador1, jugador2, estado_soga, DISTANCIA_SOGA_REPOSO, DISTANCIA_SOGA_MAXIMA)
         if usar_caja: mundo.blit(caja["sprite"], caja["rect"])
@@ -6618,7 +6678,8 @@ def iniciar_mundo(
                 [(jugador1, linterna_p1, p1_completado), (jugador2, linterna_p2, p2_completado)],
                 surf_oscuridad_m3,
                 surf_luz_linterna,
-                surf_luz_tenue
+                surf_luz_tenue,
+                rangos=rangos_visibles,
             )
             if not p1_completado:
                 dibujar_personaje(mundo, jugador1, ZONA_AGUA if usar_agua else None)
@@ -6642,38 +6703,11 @@ def iniciar_mundo(
         if numero_mundo == 1 and numero_nivel == 1:
             _actualizar_y_dibujar_soplado(mundo)
 
-        if p1_completado and not p2_completado:
-            # Jugador 1 ya pasó por la puerta: cámara completa siguiendo al Jugador 2
-            cam_x = max(0, min(jugador2["hitbox"].centerx - ANCHO // 2, ancho_mundo_nivel - ANCHO))
-            pantalla.blit(mundo, (0, 0), pygame.Rect(cam_x, 0, ANCHO, ALTO))
-        elif p2_completado and not p1_completado:
-            # Jugador 2 ya pasó por la puerta: cámara completa siguiendo al Jugador 1
-            cam_x = max(0, min(jugador1["hitbox"].centerx - ANCHO // 2, ancho_mundo_nivel - ANCHO))
-            pantalla.blit(mundo, (0, 0), pygame.Rect(cam_x, 0, ANCHO, ALTO))
-        elif (p1_completado and p2_completado) or (numero_mundo == 3 and ((jugador1["muerto"] and p2_completado) or (jugador2["muerto"] and p1_completado))):
-            # Nivel completado: cámara fija centrada en la puerta de salida
-            cam_x = max(0, min(puerta["rect"].centerx - ANCHO // 2, ancho_mundo_nivel - ANCHO))
-            pantalla.blit(mundo, (0, 0), pygame.Rect(cam_x, 0, ANCHO, ALTO))
-        else:
-            # Ambos personajes están en juego
-            distancia = abs(jugador1["hitbox"].centerx - jugador2["hitbox"].centerx)
-            if distancia <= DISTANCIA_SPLIT:
-                centro = (jugador1["hitbox"].centerx + jugador2["hitbox"].centerx) // 2
-                cam_x = max(0, min(centro - ANCHO // 2, ancho_mundo_nivel - ANCHO))
-                pantalla.blit(mundo, (0, 0), pygame.Rect(cam_x, 0, ANCHO, ALTO))
-            else:
-                ancho_m = ANCHO // 2
-                if jugador1["hitbox"].centerx <= jugador2["hitbox"].centerx:
-                    p_izq, p_der = jugador1, jugador2
-                else:
-                    p_izq, p_der = jugador2, jugador1
-
-                cam_izq_x = max(0, min(p_izq["hitbox"].centerx - ancho_m // 2, ancho_mundo_nivel - ancho_m))
-                cam_der_x = max(0, min(p_der["hitbox"].centerx - ancho_m // 2, ancho_mundo_nivel - ancho_m))
-
-                pantalla.blit(mundo, (0, 0), pygame.Rect(cam_izq_x, 0, ancho_m, ALTO))
-                pantalla.blit(mundo, (ancho_m, 0), pygame.Rect(cam_der_x, 0, ancho_m, ALTO))
-                pygame.draw.line(pantalla, (0, 0, 0), (ancho_m, 0), (ancho_m, ALTO), 4)
+        # Las vistas se calcularon antes de dibujar (calcular_vistas_camara), con este mismo estado
+        for x_dest, cam_x, ancho_vista in vistas_camara:
+            pantalla.blit(mundo, (x_dest, 0), pygame.Rect(cam_x, 0, ancho_vista, ALTO))
+        if len(vistas_camara) > 1:
+            pygame.draw.line(pantalla, (0, 0, 0), (ANCHO // 2, 0), (ANCHO // 2, ALTO), 4)
 
         # Botones HUD en la esquina superior derecha solo si el nivel continúa activo
         if not (p1_completado and p2_completado):
@@ -6683,10 +6717,13 @@ def iniciar_mundo(
             spr_r_hud = spr_reiniciar_hover if (rect_btn_reiniciar.collidepoint(pos_m_hud) and spr_reiniciar_hover) else spr_reiniciar_normal
             spr_x_hud = spr_x_hover if (rect_btn_x.collidepoint(pos_m_hud) and spr_x_hover) else spr_x_normal
 
-            fondo_btn_config = pantalla.subsurface(rect_btn_config).copy()
-            fondo_btn_casa = pantalla.subsurface(rect_btn_casa).copy()
-            fondo_btn_reiniciar = pantalla.subsurface(rect_btn_reiniciar).copy()
-            fondo_btn_x = pantalla.subsurface(rect_btn_x).copy()
+            # El fondo detrás de cada botón solo se usa para animar el clic; se copia únicamente
+            # cuando el mouse está cerca del HUD en vez de hacer 4 copias en cada frame.
+            if rect_btn_config.unionall([rect_btn_casa, rect_btn_reiniciar, rect_btn_x]).inflate(80, 80).collidepoint(pos_m_hud):
+                fondo_btn_config = pantalla.subsurface(rect_btn_config).copy()
+                fondo_btn_casa = pantalla.subsurface(rect_btn_casa).copy()
+                fondo_btn_reiniciar = pantalla.subsurface(rect_btn_reiniciar).copy()
+                fondo_btn_x = pantalla.subsurface(rect_btn_x).copy()
 
             if spr_cfg_hud: pantalla.blit(spr_cfg_hud, rect_btn_config)
             if spr_c_hud: pantalla.blit(spr_c_hud, rect_btn_casa)
