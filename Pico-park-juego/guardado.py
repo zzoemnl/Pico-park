@@ -7,6 +7,7 @@ import secrets
 import pygame
 
 from rutas import ruta_datos
+from errores import registrar_error
 
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
 if DIRECTORIO_ACTUAL not in sys.path:
@@ -331,7 +332,7 @@ def cargar_partidas():
                     except (ValueError, IndexError):
                         continue
     except Exception as e:
-        print(f"Error al leer partidas.txt: {e}")
+        registrar_error(f"Error al leer partidas.txt: {e!r}")
         return []
 
     # Asegurar que siempre exista la partida especial del administrador
@@ -391,7 +392,7 @@ def guardar_partidas_seguras(partidas):
         invalidar_cache_partidas()
         return True
     except Exception as e:
-        print(f"Error crítico al guardar partidas.txt: {e}")
+        registrar_error(f"Error crítico al guardar partidas.txt: {e!r}")
         invalidar_cache_partidas()
         if os.path.exists(ruta_tmp):
             try:

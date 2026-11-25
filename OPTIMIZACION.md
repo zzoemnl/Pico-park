@@ -110,9 +110,13 @@ victoria, son píxel a píxel idénticas antes y después (`herramientas/regresi
 | Escena | Antes | Después |
 |---|---|---|
 | Menú principal | 14,6 ms (68 fps máx) | 2,9 ms (344 fps máx) |
-| Nivel 3-5 (oscuridad + oxígeno) | 14,6 ms (69 fps máx) | 10,4 ms (96 fps máx) |
-| Nivel 3-4 | ~12 ms | 8,8 ms |
+| Nivel 3-5 (oscuridad + oxígeno) | 14,6 ms (69 fps máx) | 9,6 ms (104 fps máx) |
+| Nivel 3-4 | ~12 ms | ~8 ms |
+| Nivel 3-1 | ~9 ms | 7,3 ms |
 | Niveles 1-x / 2-x | 2–3 ms | 2–3 ms |
+
+(En el arnés determinista, sin ruido del sistema: 3-5 de 9,2 a 6,2 ms; 3-4 de 8,3 a 5,0 ms;
+menú de 4,4 a 1,8 ms.)
 
 Qué se cambió:
 
@@ -133,6 +137,15 @@ Qué se cambió:
    38 textos estáticos por frame. Las miniaturas de personajes del menú se escalan una
    vez (`escalar_cacheado`) y el HUD del nivel copia el fondo de sus botones solo cuando
    el mouse está cerca (antes 4 copias por frame).
+5. **Mundo 3: capas estáticas.** Lecho, rocas y erizos (~700 llamadas a `pygame.draw` por
+   frame que nunca cambian) se dibujan una vez por nivel en una superficie con color llave
+   (`obtener_capa_estatica_m3`) y después solo se copia el tramo visible. Nota: la primera
+   versión usó superficies con canal alfa y el blit resultó más caro que los dibujos que
+   reemplazaba; con color llave + RLE el blit es varias veces más rápido.
+6. **Robustez (sin efecto visible):** `configuracion.json` se escribe en un archivo temporal
+   y se reemplaza con `os.replace` (antes un corte a mitad lo dejaba corrupto), y los errores
+   de lectura/escritura de `partidas.txt` van a `errores.log` con `errores.registrar_error`
+   (antes un `print` que el `.exe` sin consola perdía).
 
 Para repetir la verificación después de cualquier cambio:
 

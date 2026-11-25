@@ -987,8 +987,14 @@ def _guardar_configuracion_disco():
             "idioma": "es",
             "musica_menu": _modo_musica_menu,
         }
-        with open(RUTA_CONFIG_JSON, "w", encoding="utf-8") as f:
+        # Escritura atómica: primero a un archivo temporal y después se reemplaza, así un corte
+        # a mitad de la escritura no deja configuracion.json corrupto (mismo patrón que partidas.txt).
+        ruta_tmp = RUTA_CONFIG_JSON + ".tmp"
+        with open(ruta_tmp, "w", encoding="utf-8") as f:
             json.dump(datos, f, indent=4)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(ruta_tmp, RUTA_CONFIG_JSON)
     except Exception:
         pass
 

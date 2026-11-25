@@ -2095,6 +2095,47 @@ def dibujar_submarino_fondo_escenario(superficie, ancho_mundo, tick=0, rangos=No
         pygame.draw.line(superficie, (180, 235, 255), (wx, 10 + onda_y), (wx + 16, 10 + onda_y), 2)
 
 
+# ------------------------------------------------------------------------------
+# Capas estáticas del mundo 3 (lecho, rocas, erizos): se dibujan una sola vez por nivel
+# en una superficie con alfa y después solo se copia el tramo visible. Son ~700 llamadas
+# a pygame.draw por frame que no cambian nunca. Las funciones de dibujo originales se
+# siguen usando para generar la capa, así que el resultado es píxel a píxel el mismo.
+# ------------------------------------------------------------------------------
+_CAPAS_ESTATICAS_M3 = {}
+_MAX_CAPAS_ESTATICAS_M3 = 6
+_COLOR_LLAVE_CAPAS = (1, 1, 2)   # color que no usa ninguna de estas funciones de dibujo
+
+
+def obtener_capa_estatica_m3(nombre, origen, ancho_mundo, alto, dibujar):
+    """
+    Devuelve la capa cacheada para `origen` (la lista/rect que define el dibujo). La clave
+    guarda una referencia a `origen` para no confundir objetos distintos que reutilicen el
+    mismo id; al reiniciar un laberinto aleatorio se genera una capa nueva y la más vieja
+    se descarta.
+    """
+    clave = (nombre, id(origen), ancho_mundo)
+    entrada = _CAPAS_ESTATICAS_M3.get(clave)
+    if entrada is None or entrada[0] is not origen:
+        # Superficie opaca con color llave en vez de canal alfa: todo lo que dibujan estas
+        # funciones es opaco, y el blit con color llave (RLE) es varias veces más rápido
+        # que una mezcla alfa de 1280x720 por capa y por frame.
+        capa = pygame.Surface((ancho_mundo, alto)).convert()
+        capa.fill(_COLOR_LLAVE_CAPAS)
+        dibujar(capa)
+        capa.set_colorkey(_COLOR_LLAVE_CAPAS, pygame.RLEACCEL)
+        if len(_CAPAS_ESTATICAS_M3) >= _MAX_CAPAS_ESTATICAS_M3:
+            del _CAPAS_ESTATICAS_M3[next(iter(_CAPAS_ESTATICAS_M3))]
+        entrada = (origen, capa)
+        _CAPAS_ESTATICAS_M3[clave] = entrada
+    return entrada[1]
+
+
+def blit_capa_en_rangos(superficie, capa, rangos):
+    alto = capa.get_height()
+    for x0, x1 in rangos:
+        superficie.blit(capa, (x0, 0), pygame.Rect(x0, 0, x1 - x0, alto))
+
+
 def dibujar_lecho_marino(superficie, suelo_rect, ancho_mundo):
     """
     Dibuja el lecho marino con arena oceánica texturizada, conchillas y relieve.
@@ -6463,7 +6504,9 @@ def iniciar_mundo(
         if numero_mundo == 3:
             tick_m3 += 1
             dibujar_submarino_fondo_escenario(mundo, ancho_mundo_nivel, tick_m3, rangos=rangos_visibles)
-            dibujar_lecho_marino(mundo, suelo, ancho_mundo_nivel)
+            blit_capa_en_rangos(mundo, obtener_capa_estatica_m3(
+                "lecho", suelo, ancho_mundo_nivel, ALTO,
+                lambda capa: dibujar_lecho_marino(capa, suelo, ancho_mundo_nivel)), rangos_visibles)
             if algas_decorativas:
                 dibujar_algas_decorativas_escenario(mundo, algas_decorativas, tick_m3, capa="fondo")
             if corrientes_marinas:
@@ -6471,7 +6514,9 @@ def iniciar_mundo(
             if camaras_aire:
                 dibujar_camaras_aire_escenario(mundo, camaras_aire, tick_m3)
             if rocas_submarinas:
-                dibujar_rocas_submarinas_escenario(mundo, rocas_submarinas)
+                blit_capa_en_rangos(mundo, obtener_capa_estatica_m3(
+                    "rocas", rocas_submarinas, ancho_mundo_nivel, ALTO,
+                    lambda capa: dibujar_rocas_submarinas_escenario(capa, rocas_submarinas)), rangos_visibles)
             if barreras_algas:
                 dibujar_barreras_algas_escenario(mundo, barreras_algas, tick_m3)
             if flechas_indicadoras:
@@ -6481,7 +6526,9 @@ def iniciar_mundo(
             if algas_decorativas:
                 dibujar_algas_decorativas_escenario(mundo, algas_decorativas, tick_m3, capa="frente")
             if pinchos:
-                dibujar_peligros_marinos_escenario(mundo, pinchos)
+                blit_capa_en_rangos(mundo, obtener_capa_estatica_m3(
+                    "erizos", pinchos, ancho_mundo_nivel, ALTO,
+                    lambda capa: dibujar_peligros_marinos_escenario(capa, pinchos)), rangos_visibles)
             if burbujas_m3:
                 actualizar_y_dibujar_burbujas_m3(mundo, burbujas_m3, [jugador1, jugador2], tick_m3)
         elif numero_mundo == 1:

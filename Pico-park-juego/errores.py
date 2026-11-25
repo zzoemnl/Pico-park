@@ -28,6 +28,17 @@ def registrar_excepcion(exc_type, exc_value, exc_tb):
     sys.stderr.write(texto)
 
 
+def registrar_error(mensaje):
+    """Anota un error recuperable (sin cerrar el juego) en errores.log y en la consola."""
+    marca = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        with open(RUTA_LOG, "a", encoding="utf-8") as f:
+            f.write(f"[{marca}] {mensaje}\n")
+    except OSError:
+        pass
+    sys.stderr.write(f"{mensaje}\n")
+
+
 def mostrar_aviso():
     """Cuadro de diálogo nativo de Windows; en otros sistemas no hace nada."""
     if sys.platform != "win32":
