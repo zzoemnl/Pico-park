@@ -17,6 +17,8 @@ Escenas:
     menu/nueva       JUGAR -> NUEVA PARTIDA
     menu/personajes  clic en PERSONAJES
     menu/config      clic en OPCIONES
+    menu/niveles     JUGAR -> CONTINUAR -> CARGAR (primera partida): selección de nivel
+    menu/gestionar   JUGAR -> CONTINUAR -> GESTIONAR (primera partida)
 Los escenarios capturan los frames 60, 100 y 130.
 
 Uso (desde la raíz del repo, con el .venv activado):
@@ -33,7 +35,7 @@ import sys
 RAIZ = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 NIVELES = [f"{m}-{n}" for m in (1, 2, 3) for n in (1, 2, 3, 4, 5)]
 ESCENARIOS_NIVEL = ["split", "victoria", "reinicio", "muerte"]
-ESCENARIOS_MENU = ["modo", "partidas", "nueva", "personajes", "config"]
+ESCENARIOS_MENU = ["modo", "partidas", "nueva", "personajes", "config", "niveles", "gestionar"]
 ESCENAS = (NIVELES
            + [f"{n}/{e}" for n in ("1-3", "2-2", "3-5") for e in ESCENARIOS_NIVEL]
            + ["menu"] + [f"menu/{e}" for e in ESCENARIOS_MENU])
@@ -43,6 +45,7 @@ FRAMES_TOTAL = 160
 BOTONES_MENU = {
     "jugar": (640, 254), "personajes": (640, 348), "opciones": (640, 442),
     "continuar": (640, 325), "nueva_partida": (640, 445),
+    "cargar_primera": (786, 152), "gestionar_primera": (919, 152),   # fila 1 de la lista de partidas
 }
 
 
@@ -106,7 +109,9 @@ def _correr_escena(carpeta, escena):
     eventos_programados = {}
     if base == "menu":
         secuencia = {"modo": ["jugar"], "partidas": ["jugar", "continuar"], "nueva": ["jugar", "nueva_partida"],
-                     "personajes": ["personajes"], "config": ["opciones"]}.get(modo, [])
+                     "personajes": ["personajes"], "config": ["opciones"],
+                     "niveles": ["jugar", "continuar", "cargar_primera"],
+                     "gestionar": ["jugar", "continuar", "gestionar_primera"]}.get(modo, [])
         for i, boton in enumerate(secuencia):
             eventos_programados[40 + i * 30] = _clic(BOTONES_MENU[boton])
     elif modo == "reinicio":
