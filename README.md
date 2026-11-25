@@ -3,8 +3,7 @@
 Juego de plataformas **cooperativo para dos jugadores** en la misma computadora, inspirado en
 Pico Park. Hecho en Python con pygame-ce.
 
-- **Integrantes:** Malena Albarracin (documentación, diseño de niveles, ideas) y Zoe Mennella
-(código, arte, sprites).
+- **Integrantes:** Malena Albarracin (código, documentación, diseño de niveles, ) y Zoe Mennella (arte, sprites, ideas).
 - **Objetivo:** trabajar en equipo para conseguir la llave de cada nivel y hacer que los dos
 jugadores crucen la puerta de salida. Si uno se queda afuera, no se gana.
 - Para entender cómo está construido el juego por dentro, qué se optimizó y cómo se verifica:
