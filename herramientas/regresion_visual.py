@@ -92,7 +92,17 @@ def _correr_escena(carpeta, escena):
     ventana.crear_ventana = lambda pantalla_completa=True: pygame.display.set_mode((1280, 720))
     import pantalla
     import main
+    import menu_niveles
     from menu_niveles import obtener_mecanicas_nivel
+
+    # El juego regenera y sobrescribe Sprites/Miniaturas si alguna miniatura no carga. La prueba
+    # trabaja sobre una copia temporal para no tocar nunca los archivos del repositorio.
+    import shutil
+    import tempfile
+    copia_miniaturas = os.path.join(tempfile.gettempdir(), "picopark_regresion_miniaturas")
+    shutil.rmtree(copia_miniaturas, ignore_errors=True)
+    shutil.copytree(menu_niveles.RUTA_MINIATURAS, copia_miniaturas)
+    menu_niveles.RUTA_MINIATURAS = copia_miniaturas
 
     flip_original = pygame.display.flip
 
