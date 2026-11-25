@@ -23,7 +23,7 @@ individual) y el nivel se reinicia.
 
 **Tecnología**: Python 3 + pygame-ce (fork mantenido de pygame). Sin motor de juego ni
 librerías adicionales: la física, las animaciones, los menús y el guardado están hechos a
-mano. Unas 23.600 líneas de Python en 12 módulos.
+mano. Unas 23.900 líneas de Python en 20 archivos (12 módulos más el paquete `menus/`).
 
 ---
 
@@ -203,7 +203,8 @@ interfaz se sintetizan por código.
 ## 9. Rendimiento: problemas encontrados y cómo se resolvieron
 
 Medido con un arnés que corre el juego sin ventana y sin límite de 60 fps (menos milisegundos
-por cuadro = más margen en máquinas lentas). Detalle en `OPTIMIZACION.md`.
+por cuadro = más margen en máquinas lentas). Los números se pueden reproducir con
+`herramientas/regresion_visual.py capturar <carpeta>`, que imprime los ms por cuadro de cada escena.
 
 | Problema | Causa | Solución | Resultado |
 |---|---|---|---|
@@ -244,9 +245,10 @@ cambio hizo más lento algo.
   animar (nieve, burbujas). Los personajes y botones sí son arte a mano, porque ahí importa.
 - **Resolución lógica fija (1280×720) + escalado**: el código nunca tiene que pensar en el
   tamaño real del monitor.
-- **Refactors mecánicos con verificación**: los dos cambios estructurales grandes se hicieron
-  con scripts que mueven el código tal cual (comentarios incluidos) y se validaron con las
-  capturas, en lugar de reescribir a mano.
+- **Refactors mecánicos con verificación**: los cambios estructurales grandes (niveles a
+  `niveles.py`, menús a un objeto de estado y después al paquete `menus/`) se hicieron con
+  scripts que analizan el código (AST) y lo mueven tal cual, comentarios incluidos, y se
+  validaron con las capturas. Reescribir a mano 4.000 líneas habría metido errores seguro.
 
 ---
 
@@ -258,3 +260,24 @@ cambio hizo más lento algo.
 - Un editor de niveles o un formato de datos (JSON) para que diseñar niveles no requiera
   programar.
 - Pruebas automáticas de la física (saltos, colisiones) además de las visuales.
+- Que el juego solo genere las miniaturas que faltan en vez de regenerar y sobrescribir las 15
+  cuando una no carga.
+
+---
+
+## 13. Historial de lo que se hizo sobre la versión original
+
+Para que quede claro qué era "el juego" y qué se agregó después, en orden:
+
+1. **Ejecutable**: `rutas.py` para que los recursos se encuentren dentro del `.exe`, partidas y
+   configuración al lado del ejecutable, `errores.log` para fallos sin consola.
+2. **Memoria y arranque**: botones de 6800 px reducidos; de 2,1 GB a 200 MB de RAM y de 11 s a
+   0,5 s de arranque.
+3. **Pantalla completa adaptativa** con `pygame.SCALED` y F11.
+4. **Limpieza del repositorio**: scripts de prueba viejos y datos de usuario fuera del control de
+   versiones.
+5. **Suite de regresión visual** (`herramientas/regresion_visual.py`): 35 escenas deterministas.
+6. **Rendimiento por cuadro**: menú de 14,6 a 2,9 ms; mundo 3 de 14,6 a 9,6 ms; sin cambios de
+   imagen.
+7. **Estructura**: los 15 niveles a `niveles.py`; los menús a `_EstadoMenu` y al paquete
+   `menus/` (`main.py` pasó de 4.585 a 174 líneas). Todo verificado con la suite.

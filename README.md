@@ -4,20 +4,23 @@ Juego de plataformas **cooperativo para dos jugadores** en la misma computadora,
 Pico Park. Hecho en Python con pygame-ce.
 
 - **Integrantes:** Malena Albarracin (documentación, diseño de niveles, ideas) y Zoe Mennella
-  (código, arte, sprites).
+(código, arte, sprites).
 - **Objetivo:** trabajar en equipo para conseguir la llave de cada nivel y hacer que los dos
-  jugadores crucen la puerta de salida. Si uno se queda afuera, no se gana.
-- Para entender cómo está construido el juego por dentro: [`COMO_SE_HIZO.md`](COMO_SE_HIZO.md).
-  Para las mediciones de rendimiento: [`OPTIMIZACION.md`](OPTIMIZACION.md).
+jugadores crucen la puerta de salida. Si uno se queda afuera, no se gana.
+- Para entender cómo está construido el juego por dentro, qué se optimizó y cómo se verifica:
+[`COMO_SE_HIZO.md`](COMO_SE_HIZO.md).
+
 
 ## Controles
 
-| | Jugador 1 | Jugador 2 |
-|---|---|---|
-| Moverse / saltar / nadar | W A S D | Flechas |
-| Linterna (mundo 3) | E, F o Espacio | L, Enter, Shift der. o Ctrl der. |
-| Reiniciar el nivel | R | |
-| Pantalla completa / ventana | F11 | |
+
+|                             | Jugador 1      | Jugador 2                        |
+| --------------------------- | -------------- | -------------------------------- |
+| Moverse / saltar / nadar    | W A S D        | Flechas                          |
+| Linterna (mundo 3)          | E, F o Espacio | L, Enter, Shift der. o Ctrl der. |
+| Reiniciar el nivel          | R              |                                  |
+| Pantalla completa / ventana | F11            |                                  |
+
 
 El juego arranca en pantalla completa y se adapta a cualquier monitor: se dibuja a 1280×720 y
 se escala al tamaño real (con bandas negras si la proporción no es 16:9).
@@ -30,11 +33,13 @@ en el mundo submarino la muerte es individual.
 
 3 mundos de 5 niveles, cada uno con su mecánica cooperativa:
 
-| Mundo | Mecánica | Niveles |
-|---|---|---|
-| 1 — Nieve | Torre humana, caja que empuja botones, láser, paredes y botones de colores | Tutorial · La torre humana · La caja y el botón · El láser y la caja · Las cuatro paredes de colores |
-| 2 — Ruinas | Los dos jugadores unidos por una soga | El arrastre básico · La plataforma móvil · El péndulo · Las plataformas que se derrumban · Las plataformas alternadas |
-| 3 — Submarino | Natación, oxígeno, oscuridad con linternas, corrientes | El jardín de algas · El laberinto de coral · Las rocas peligrosas · El laberinto oscuro · El abismo submarino |
+
+| Mundo         | Mecánica                                                                   | Niveles                                                                                                               |
+| ------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 1 — Nieve     | Torre humana, caja que empuja botones, láser, paredes y botones de colores | Tutorial · La torre humana · La caja y el botón · El láser y la caja · Las cuatro paredes de colores                  |
+| 2 — Ruinas    | Los dos jugadores unidos por una soga                                      | El arrastre básico · La plataforma móvil · El péndulo · Las plataformas que se derrumban · Las plataformas alternadas |
+| 3 — Submarino | Natación, oxígeno, oscuridad con linternas, corrientes                     | El jardín de algas · El laberinto de coral · Las rocas peligrosas · El laberinto oscuro · El abismo submarino         |
+
 
 Los niveles se van desbloqueando al completar el anterior y el progreso se guarda en
 partidas con nombre (y contraseña opcional). Se puede elegir el color de cada personaje y un
@@ -76,35 +81,43 @@ El ejecutable queda en `dist\PicoPark\PicoPark.exe`. Para compartirlo hay que en
 mostrar un aviso porque no está firmado: "Más información" → "Ejecutar de todas formas".
 
 - Las partidas (`partidas.txt`) y la configuración (`configuracion.json`) se guardan al lado del
-  `.exe`, así que sobreviven a regenerarlo.
+`.exe`, así que sobreviven a regenerarlo.
 - Si el juego falla con un error inesperado, muestra un aviso y deja el detalle en
-  `errores.log` al lado del `.exe`. Pedirle ese archivo a quien reporte el problema.
+`errores.log` al lado del `.exe`. Pedirle ese archivo a quien reporte el problema.
 
 ## Organización del código (carpeta `Pico-park-juego`)
 
-| Archivo | Qué hace |
-|---|---|
-| `main.py` | Arranque y menús: principal, modo de juego, partidas, personajes, opciones, selección de nivel. Una función de eventos y una de dibujo por pantalla. |
-| `pantalla.py` | `iniciar_mundo`: el loop de un nivel (física por cuadro, mecánicas, dibujo de cada mundo, cámara, victoria y muerte). |
-| `niveles.py` | Definición de los 15 niveles, una función por nivel (`nivel_1_1` … `nivel_3_5`). |
-| `movimientos.py` | Física de personajes, caja, soga, natación, llave y puerta. |
-| `sprites.py` | Carga y caché de sprites, botones y accesorios. |
-| `menu_niveles.py` | Menú de selección de nivel y miniaturas. |
-| `guardado.py` | Partidas guardadas (`partidas.txt`) y sus diálogos. |
-| `configuracion.py` | Idiomas, música, efectos, volumen, `configuracion.json`. |
-| `fuentes.py` | Fuentes pixel art, caracteres chinos y caché de textos. |
-| `rutas.py` · `ventana.py` · `errores.py` | Rutas de recursos (código y `.exe`), pantalla completa, registro de errores. |
+
+| Archivo                                  | Qué hace                                                                                                                                             |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `main.py`                                | Arranque: crea el estado de los menús y corre el loop que despacha a la pantalla activa.                                                            |
+| `menus/`                                 | Un módulo por pantalla: `principal`, `modo_juego`, `partidas`, `personajes`, `opciones`, `seleccion_nivel`; `estado.py` (estado compartido e inicialización) y `comunes.py` (constantes, iconos). |
+| `pantalla.py`                            | `iniciar_mundo`: el loop de un nivel (física por cuadro, mecánicas, dibujo de cada mundo, cámara, victoria y muerte).                                |
+| `niveles.py`                             | Definición de los 15 niveles, una función por nivel (`nivel_1_1` … `nivel_3_5`).                                                                     |
+| `movimientos.py`                         | Física de personajes, caja, soga, natación, llave y puerta.                                                                                          |
+| `sprites.py`                             | Carga y caché de sprites, botones y accesorios.                                                                                                      |
+| `menu_niveles.py`                        | Menú de selección de nivel y miniaturas.                                                                                                             |
+| `guardado.py`                            | Partidas guardadas (`partidas.txt`) y sus diálogos.                                                                                                  |
+| `configuracion.py`                       | Idiomas, música, efectos, volumen, `configuracion.json`.                                                                                             |
+| `fuentes.py`                             | Fuentes pixel art, caracteres chinos y caché de textos.                                                                                              |
+| `rutas.py` · `ventana.py` · `errores.py` | Rutas de recursos (código y `.exe`), pantalla completa, registro de errores.                                                                         |
+
 
 Recursos: `Sprites/` (personajes, botones, objetos, accesorios, miniaturas), `sonidos/` (música),
 `assets/fuentes/`.
 
+Tamaño del código: unas 23.900 líneas de Python. Los archivos más grandes son `pantalla.py` (5.600)
+y los módulos de `menus/` (300–950 cada uno); `main.py` tiene 174.
+
 ## Herramientas (carpeta `herramientas`)
 
-| Script | Para qué |
-|---|---|
-| `jugar_nivel.py <mundo> <nivel>` | Abre un nivel directo, para probarlo. |
+
+| Script                                                        | Para qué                                                                                                                                                                                      |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `jugar_nivel.py <mundo> <nivel>`                              | Abre un nivel directo, para probarlo.                                                                                                                                                         |
 | `regresion_visual.py capturar <carpeta>` / `comparar <a> <b>` | Corre 35 escenas sin ventana, de forma determinista, captura la pantalla y mide ms por cuadro. Comparando las capturas de antes y después de un cambio se verifica que no cambió ni un píxel. |
-| `reducir_botones.py [--dry-run]` | Reduce los PNG de botones que estén a más de 1088 px de ancho. |
+| `reducir_botones.py [--dry-run]`                              | Reduce los PNG de botones que estén a más de 1088 px de ancho.                                                                                                                                |
+
 
 Antes de cambiar algo en el código, conviene correr `regresion_visual.py capturar antes`, hacer el
 cambio, `capturar despues` y `comparar antes despues`.
